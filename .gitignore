@@ -1,0 +1,15 @@
+# runtime
+.run/
+__pycache__/
+*.pyc
+
+# generated
+eval/results/
+logs/
+index/
+models/
+data/
+
+# local env
+.local/
+.env
