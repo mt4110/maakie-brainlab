@@ -32,3 +32,10 @@ eval/results/
 *.bak
 *.bak.*
 Makefile.bak.*
+
+# backup variants
+*.bak*
+
+# env files (infra)
+*.env
+infra/*.env*
