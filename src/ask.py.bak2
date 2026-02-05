@@ -144,50 +144,49 @@ def main() -> None:
         out = out.rstrip() + "\n\n参照:\n" + "\n".join(f"- {s}" for s in sources) + "\n"
 
 
+# --- postprocess: eval S1/S2 guard ---
+# sources がある場合は、参照と不確実性を“決定論”で固定する（unknown混入を防ぐ）
+if sources:
+    # sources をユニーク化（順序保持）
+    _uniq = []
+    for _s in sources:
+        if _s and _s not in _uniq:
+            _uniq.append(_s)
+    sources = _uniq
 
-    # --- postprocess: eval S1/S2 guard ---
-    # sources がある場合は、参照と不確実性を“決定論”で固定する（unknown混入を防ぐ）
-    if sources:
-        # sources をユニーク化（順序保持）
-        _uniq = []
-        for _s in sources:
-            if _s and _s not in _uniq:
-                _uniq.append(_s)
-        sources = _uniq
+    _refs_block = "\n参照:\n" + "\n".join(f"- {s}" for s in sources) + "\n"
+    if "参照:" in out:
+        out = re.sub(r"(?s)\n参照:\n.*?(?=\n\n不確実性:|\Z)", _refs_block, out, count=1)
+    else:
+        out = out.rstrip() + "\n\n" + _refs_block
 
-        _refs_block = "\n参照:\n" + "\n".join(f"- {s}" for s in sources) + "\n"
-        if "参照:" in out:
-            out = re.sub(r"(?s)\n参照:\n.*?(?=\n\n不確実性:|\Z)", _refs_block, out, count=1)
-        else:
-            out = out.rstrip() + "\n\n" + _refs_block
+# 結論が空なら、根拠の先頭を結論に採用（捏造せずに穴埋め）
+_lines = out.splitlines()
+_i_conc = next((i for i,l in enumerate(_lines) if l.strip() == "結論:"), None)
+_i_evi  = next((i for i,l in enumerate(_lines) if l.strip() == "根拠:"), None)
+if _i_conc is not None:
+    k = _i_conc + 1
+    while k < len(_lines) and _lines[k].strip() == "":
+        k += 1
+    if k < len(_lines) and _lines[k].lstrip().startswith("-"):
+        _conc = _lines[k].lstrip()[1:].strip()
+        if _conc == "" and _i_evi is not None:
+            m = _i_evi + 1
+            while m < len(_lines) and _lines[m].strip() == "":
+                m += 1
+            if m < len(_lines) and _lines[m].lstrip().startswith("-"):
+                _ev = _lines[m].lstrip()[1:].strip()
+                if _ev:
+                    _lines[k] = "- " + _ev
+out = "\n".join(_lines)
 
-    # 結論が空なら、根拠の先頭を結論に採用（捏造せずに穴埋め）
-    _lines = out.splitlines()
-    _i_conc = next((i for i,l in enumerate(_lines) if l.strip() == "結論:"), None)
-    _i_evi  = next((i for i,l in enumerate(_lines) if l.strip() == "根拠:"), None)
-    if _i_conc is not None:
-        k = _i_conc + 1
-        while k < len(_lines) and _lines[k].strip() == "":
-            k += 1
-        if k < len(_lines) and _lines[k].lstrip().startswith("-"):
-            _conc = _lines[k].lstrip()[1:].strip()
-            if _conc == "" and _i_evi is not None:
-                m = _i_evi + 1
-                while m < len(_lines) and _lines[m].strip() == "":
-                    m += 1
-                if m < len(_lines) and _lines[m].lstrip().startswith("-"):
-                    _ev = _lines[m].lstrip()[1:].strip()
-                    if _ev:
-                        _lines[k] = "- " + _ev
-    out = "\n".join(_lines)
-
-    # sources があるなら、不確実性は固定（unknown語彙を出さない）
-    if sources:
-        if "不確実性:" in out:
-            out = re.sub(r"(?s)\n不確実性:\n.*$", "\n不確実性:\n- 不確実な情報はありません。\n", out)
-        else:
-            out = out.rstrip() + "\n\n不確実性:\n- 不確実な情報はありません。\n"
-
+# sources があるなら、不確実性は固定（unknown語彙を出さない）
+if sources:
+    if "不確実性:" in out:
+        out = re.sub(r"(?s)\n不確実性:\n.*$", "\n不確実性:\n- 不確実な情報はありません。\n", out)
+    else:
+        out = out.rstrip() + "\n\n不確実性:\n- 不確実な情報はありません。\n"
     print(out)
+
 if __name__ == "__main__":
     main()

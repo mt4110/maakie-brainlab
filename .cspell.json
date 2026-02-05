@@ -1,0 +1,26 @@
+{
+    "version": "0.2",
+    "language": "en",
+    "words": [
+        "maakie",
+        "brainlab",
+        "jsonl",
+        "chunk",
+        "chunks",
+        "npx",
+        "sqlite",
+        "openai",
+        "gguf",
+        "qwen",
+        "instuct"
+    ],
+    "flagWords": [],
+    "ignorePaths": [
+        ".git/**",
+        ".vscode/**",
+        ".run/**",
+        "**/*.jsonl",
+        "**/*.sqlite3",
+        "logs/**"
+    ]
+}

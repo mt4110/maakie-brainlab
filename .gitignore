@@ -1,15 +1,34 @@
-# runtime
-.run/
+# secrets / env
+.env
+.env.*
+!.env.example
+
+# virtual env / caches
+.venv/
 __pycache__/
 *.pyc
 
-# generated
-eval/results/
-logs/
-index/
-models/
-data/
+# local runtime
+.run/
+*.pid
 
-# local env
-.local/
-.env
+# generated / bulky (keep out of git)
+data
+index
+logs
+models
+eval/results/
+
+# editors / tools
+.vscode/
+.direnv/
+.trunk/
+
+# macOS junk
+.DS_Store
+._*
+
+# backups
+*.bak
+*.bak.*
+Makefile.bak.*

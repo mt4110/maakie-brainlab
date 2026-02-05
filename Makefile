@@ -16,7 +16,7 @@ log:
 	tail -n 200 -f logs/llama-server.log
 
 ingest:
-	$(PYENV) $(PY) src/build_index.py --raw-dir data/raw --index-dir index
+	bash scripts/ingest.sh
 
 ask:
 	$(PYENV) $(PY) src/ask.py "$(Q)"

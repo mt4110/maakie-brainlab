@@ -1,3 +1,23 @@
-{"id":"Q01","question":"hello.md には何が書いてありますか？"}
-{"id":"Q02","question":"この知識ベースに hello.md は存在しますか？存在するなら要点は？"}
-{"id":"Q03","question":"参照(sources)を必ず出してください。hello.md を根拠に答えてください。"}
+{"id": "Q01", "question": "hello.md には何が書いてありますか？", "type": "normal", "expected_source": "hello.md", "expected_evidence": ["これはテスト用の知識です。"]}
+{"id": "Q02", "question": "この知識ベースに hello.md は存在しますか？存在するなら要点は？", "type": "normal", "expected_source": "hello.md", "expected_evidence": ["これはテスト用の知識です。"]}
+{"id": "Q03", "question": "参照(sources)を必ず出してください。hello.md を根拠に答えてください。", "type": "normal", "expected_source": "hello.md", "expected_evidence": ["これはテスト用の知識です。"]}
+{"id": "Q11", "question": "hello.md に書かれている火星の首都はどこですか？", "type": "negative_control"}
+{"id": "Q12", "question": "sample_note.md におけるバナナの価格設定を教えてください。", "type": "negative_control"}
+{"id": "Q13", "question": "プロジェクトXの秘密は何ですか？", "type": "negative_control"}
+{"id": "Q14", "question": "この文書の著者は誰ですか？", "type": "negative_control"}
+{"id": "Q15", "question": "空は青いですか？（知識ベースに基づいて回答）", "type": "negative_control"}
+{"id": "Q21", "question": "sample_note.md のキーワードは何ですか？", "type": "ref_distractor", "expected_source": "sample_note.md", "expected_evidence": ["quality engineering", "determinism", "evidence"]}
+{"id": "Q22", "question": "hello.md の合格条件は何ですか？", "type": "ref_distractor", "expected_source": "hello.md", "expected_evidence": ["RAGがこの内容を参照して回答し"]}
+{"id": "Q23", "question": "ingest 儀式について教えてください。", "type": "ref_distractor", "expected_source": "sample_note.md", "expected_evidence": ["make ingest で data/raw に移動される"]}
+{"id": "Q24", "question": "あえて聞きますが、hello.md は index に載りますか？", "type": "ref_distractor", "expected_source": "sample_note.md", "expected_evidence": ["hello.md と一緒に index に載る"]}
+{"id": "Q25", "question": "evidence という言葉はどこに出てきますか？", "type": "ref_distractor", "expected_source": "sample_note.md", "expected_evidence": ["evidence"]}
+{"id": "Q31", "question": "sample_note.md と hello.md の関係を教えてください。", "type": "multi_chunk", "expected_source": "sample_note.md", "expected_evidence": ["hello.md と一緒に index に載る"]}
+{"id": "Q32", "question": "テスト用の知識と動作確認用メモの違いは何ですか？", "type": "multi_chunk", "expected_source": "#chunk-0", "expected_evidence": ["テスト用の知識", "動作確認用メモ"]}
+{"id": "Q33", "question": "ingest されたあとに走るプロセスは？", "type": "multi_chunk", "expected_source": "sample_note.md", "expected_evidence": ["build_index -> run_eval が走る"]}
+{"id": "Q34", "question": "この知識ベースにある2つのファイルの目的を要約してください。", "type": "multi_chunk", "expected_source": "#chunk-0"}
+{"id": "Q35", "question": "hello.md は ingest されるとどこに移動されますか？", "type": "multi_chunk", "expected_source": "sample_note.md", "expected_evidence": ["data/raw に移動"]}
+{"id": "Q41", "question": "hello.md の文言「合格条件:」の続きを正確に答えてください。", "type": "boundary", "expected_source": "hello.md", "expected_evidence": ["RAGがこの内容を参照して回答し"]}
+{"id": "Q42", "question": "sample_note.md の最後の行（キーワード）に含まれる3つの単語は？", "type": "boundary", "expected_source": "sample_note.md", "expected_evidence": ["quality engineering", "determinism", "evidence"]}
+{"id": "Q43", "question": "hello.md は何行程度の短い文書ですか？（推測でOK）", "type": "boundary", "expected_source": "hello.md"}
+{"id": "Q44", "question": "sample_note.md に「make ingest」というコマンドは登場しますか？", "type": "boundary", "expected_source": "sample_note.md", "expected_evidence": ["make ingest"]}
+{"id": "Q45", "question": "hello.md のタイトル（# ...）は何ですか？", "type": "boundary", "expected_source": "hello.md", "expected_evidence": ["hello"]}

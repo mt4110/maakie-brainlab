@@ -1,4 +1,3 @@
-cat >infra/llama-server.stop.sh <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 
@@ -42,6 +41,3 @@ kill -9 "$pid" 2>/dev/null || true
 rm -f "$pid_file"
 echo "[llama-server] killed"
 echo "log: $log_file"
-EOF
-
-chmod +x infra/llama-server.stop.sh
