@@ -19,7 +19,6 @@ logs
 models
 eval/results/
 .local/
-s3_review_pack_*/
 
 # editors / tools
 .vscode/
@@ -43,6 +42,11 @@ Makefile.bak.*
 infra/*.env*
 
 # review packs (local artifacts)
-s3_review_pack_*.tar.gz
-*_review_pack_*.tar.gz
+s3_review_pack_*
+*_review_pack_*
+review_bundle_*.txt
+
+# review packs (local artifacts)
+s3_review_pack_*
+*_review_pack_*
 review_bundle_*.txt
