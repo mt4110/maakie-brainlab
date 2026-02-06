@@ -28,64 +28,79 @@ def read_text_file(path: Path) -> str:
         text = raw.decode("utf-8", errors="replace")
     return text.replace("\r\n", "\n").replace("\r", "\n")
 
-def chunk_text(text: str, chunk_size: int, overlap: int) -> List[Tuple[int, int, str]]:
-    paras = [p for p in text.split("\n\n") if p.strip() != ""]
-    chunks: List[Tuple[int, int, str]] = []
-    cursor = 0
-    buf = ""
-    buf_start = 0
+def _split_long_chunk(text: str, start_pos: int, chunk_size: int, overlap: int) -> List[Tuple[int, int, str]]:
+    result = []
+    i = 0
+    step = (chunk_size - overlap) if chunk_size > overlap else chunk_size
+    while i < len(text):
+        part = text[i : i + chunk_size]
+        part_start = start_pos + i
+        part_end = part_start + len(part)
+        result.append((part_start, part_end, part.strip()))
+        i += step
+    return result
 
-    def flush_buf(end_pos: int) -> None:
-        nonlocal buf, buf_start
-        t = buf.strip()
+class TextChunker:
+    def __init__(self, text: str, chunk_size: int, overlap: int):
+        self.text = text
+        self.chunk_size = chunk_size
+        self.overlap = overlap
+        self.chunks: List[Tuple[int, int, str]] = []
+        self.buf = ""
+        self.buf_start = 0
+        self.cursor = 0
+
+    def chunk(self) -> List[Tuple[int, int, str]]:
+        paras = [p for p in self.text.split("\n\n") if p.strip() != ""]
+        for p in paras:
+            self._process_paragraph(p)
+
+        if self.buf:
+            self._flush_buf(min(len(self.text), self.buf_start + len(self.buf)))
+
+        return [(s, e, t) for (s, e, t) in self.chunks if t.strip()]
+
+    def _flush_buf(self, end_pos: int) -> None:
+        t = self.buf.strip()
         if t:
-            chunks.append((buf_start, end_pos, t))
-        buf = ""
+            self.chunks.append((self.buf_start, end_pos, t))
+        self.buf = ""
 
-    for p in paras:
-        pos = text.find(p, cursor)
+    def _process_paragraph(self, p: str) -> None:
+        pos = self.text.find(p, self.cursor)
         if pos == -1:
-            pos = cursor
-        cursor = pos + len(p)
+            pos = self.cursor
+        self.cursor = pos + len(p)
 
-        if not buf:
-            buf_start = pos
+        if not self.buf:
+            self.buf_start = pos
 
-        candidate = (buf + ("\n\n" if buf else "") + p)
-        if len(candidate) <= chunk_size:
-            buf = candidate
-            continue
+        candidate = (self.buf + ("\n\n" if self.buf else "") + p)
+        if len(candidate) <= self.chunk_size:
+            self.buf = candidate
+            return
 
-        if not buf:
-            # 段落が長すぎる → 固定幅
-            start = pos
-            s = p
-            i = 0
-            step = (chunk_size - overlap) if chunk_size > overlap else chunk_size
-            while i < len(s):
-                part = s[i:i + chunk_size]
-                part_start = start + i
-                part_end = part_start + len(part)
-                chunks.append((part_start, part_end, part.strip()))
-                i += step
-            buf = ""
-            continue
+        if not self.buf:
+            # Logic for long paragraph (extracted)
+            self.chunks.extend(_split_long_chunk(p, pos, self.chunk_size, self.overlap))
+            return
 
-        flush_buf(pos)
+        self._flush_buf(pos)
+        self._handle_overlap(p, pos)
 
-        if overlap > 0 and chunks:
-            prev = chunks[-1][2]
-            carry = prev[-overlap:] if len(prev) > overlap else prev
-            buf = carry + "\n\n" + p
-            buf_start = max(0, pos - len(carry))
+    def _handle_overlap(self, p: str, pos: int) -> None:
+        if self.overlap > 0 and self.chunks:
+            prev = self.chunks[-1][2]
+            carry = prev[-self.overlap:] if len(prev) > self.overlap else prev
+            self.buf = carry + "\n\n" + p
+            self.buf_start = max(0, pos - len(carry))
         else:
-            buf = p
-            buf_start = pos
+            self.buf = p
+            self.buf_start = pos
 
-    if buf:
-        flush_buf(min(len(text), buf_start + len(buf)))
-
-    return [(s, e, t) for (s, e, t) in chunks if t.strip()]
+def chunk_text(text: str, chunk_size: int, overlap: int) -> List[Tuple[int, int, str]]:
+    chunker = TextChunker(text, chunk_size, overlap)
+    return chunker.chunk()
 
 def iter_documents(raw_dir: Path) -> Iterable[Path]:
     for p in sorted(raw_dir.rglob("*")):
@@ -99,13 +114,13 @@ def open_db(db_path: Path) -> sqlite3.Connection:
 
     conn.execute("""
     CREATE TABLE IF NOT EXISTS chunks (
-      chunk_id    TEXT PRIMARY KEY,
-      path        TEXT NOT NULL,
-      chunk_index INTEGER NOT NULL,
-      start       INTEGER NOT NULL,
-      end         INTEGER NOT NULL,
-      text        TEXT NOT NULL,
-      text_sha256 TEXT NOT NULL
+    chunk_id    TEXT PRIMARY KEY,
+    path        TEXT NOT NULL,
+    chunk_index INTEGER NOT NULL,
+    start       INTEGER NOT NULL,
+    end         INTEGER NOT NULL,
+    text        TEXT NOT NULL,
+    text_sha256 TEXT NOT NULL
     );
     """)
 

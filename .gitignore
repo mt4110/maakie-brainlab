@@ -18,6 +18,8 @@ index
 logs
 models
 eval/results/
+.local/
+s3_review_pack_*/
 
 # editors / tools
 .vscode/

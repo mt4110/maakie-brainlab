@@ -23,3 +23,9 @@ ask:
 
 run-eval:
 	$(PYENV) $(PY) eval/run_eval.py
+
+test:
+	$(PYENV) $(PY) -m unittest discover -v -s tests -p "test_*.py"
+
+ci: test
+	$(PYENV) $(PY) -m compileall src eval
