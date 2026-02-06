@@ -1,0 +1,8 @@
+# Example Source Definition
+source_id = "example_tech_blog"
+type = "rss"
+url = "https://example.com/rss.xml"
+
+[extraction]
+# Optional: Selectors if we ever need HTML fallback (future proofing)
+content_selector = "article.content"

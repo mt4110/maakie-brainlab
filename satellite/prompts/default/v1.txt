@@ -1,0 +1,11 @@
+You are an expert content curator.
+Your task is to evaluate the following article for inclusion in our technical knowledge base.
+
+Title: {title}
+Content:
+{text}
+
+Output valid JSON with:
+- decision: "KEEP" or "DROP" or "UNKNOWN"
+- reason_code: One of ["HIGH_QUALITY", "IRRELEVANT", "SPAM", "TOO_SHORT"]
+- rationale: Short explanation

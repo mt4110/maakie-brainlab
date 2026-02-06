@@ -1,0 +1,12 @@
+# Example Gate-1 Rules
+source_id = "example_tech_blog"
+
+[allowlist]
+keywords = ["AI", "LLM", "Python"]
+
+[denylist]
+keywords = ["PR", "Advertisement", "Sponsored"]
+
+[constraints]
+min_chars = 100
+require_japanese = false

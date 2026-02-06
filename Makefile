@@ -29,3 +29,32 @@ test:
 
 ci: test
 	$(PYENV) $(PY) -m compileall src eval
+
+# S4 Satellite Pipeline (Placeholder)
+sat-collect:
+	@echo "[WARN] sat-collect: Not implemented"
+	@exit 0
+
+sat-normalize:
+	@echo "[WARN] sat-normalize: Not implemented"
+	@exit 0
+
+sat-gate:
+	@echo "[WARN] sat-gate: Not implemented"
+	@exit 0
+
+sat-store:
+	@echo "[WARN] sat-store: Not implemented"
+	@exit 0
+
+sat-digest:
+	@echo "[WARN] sat-digest: Not implemented"
+	@exit 0
+
+sat-index:
+	@echo "[WARN] sat-index: Not implemented"
+	@exit 0
+
+sat-run: sat-collect sat-normalize sat-gate sat-store sat-digest sat-index
+	@echo "[WARN] sat-run: Pipeline finish (not implemented real steps yet)"
+	@exit 0
