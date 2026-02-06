@@ -17,14 +17,15 @@ OUT_DIR = ROOT / "eval" / "results"
 # S1: unknown/参照なし を fail 扱い（安全側に倒す）
 UNKNOWN_TOKENS = (
     "不明",
-    "参照なし",
-    "参照: 不明",
     "わかりません",
     "unknown",
+    "参照なし",
+    "参照: 不明",
+    "参照できる根拠が見つかりません",
+    "資料が見つかりません",
+    "存在しない可能性があります",
     "記載されていません",
-    "記述されていません",
     "見当たりません",
-    "情報はありません",
 )
 
 
@@ -44,6 +45,7 @@ class ReasonCode:
 
     ASK_EXIT_NONZERO = "ASK_EXIT_NONZERO"
     POSITIVE_HALLUCINATION = "POSITIVE_HALLUCINATION"
+    FORMAT_INVALID = "FORMAT_INVALID"
 
 
 def parse_sources(answer: str) -> list[str]:
@@ -201,10 +203,10 @@ def analyze_result(
     conclusion_line = extract_conclusion_line(answer)
 
     # 2. Unknown Check (Strict: only in Conclusion)
-    # 結論行が取れない場合は answer 全体を見るか、それとも False にするか？
-    # 安全側（誤通過防止）なら全体みるべきだが、今回は「unknown誤爆」を減らしたい。
-    # 結論行があればそこで判定、なければ全体フォールバックとする。
-    target_text = conclusion_line if conclusion_line else answer
+    # 結論行が取れない場合は FORMAT_INVALID とする（空でない場合）
+    format_invalid = (exit_code == 0 and bool(answer) and conclusion_line is None)
+
+    target_text = conclusion_line or ""
     mentions_unknown = any(tok in target_text for tok in UNKNOWN_TOKENS)
 
     # 3. Source Check (Strict)
@@ -250,9 +252,12 @@ def analyze_result(
             matched_evidence_all = matches
 
     # 5. Determine Fail Reason
-    fail_reason_code = determine_standard_fail_reason(
-        answer, stderr, exit_code, mentions_unknown, has_sources
-    )
+    if format_invalid:
+        fail_reason_code = ReasonCode.FORMAT_INVALID
+    else:
+        fail_reason_code = determine_standard_fail_reason(
+            answer, stderr, exit_code, mentions_unknown, has_sources
+        )
 
     # 6. Evaluate Constraints based on Type
     final_reason_code = apply_type_constraints(q_type, fail_reason_code, has_required_source, has_expected_evidence, conclusion_line, has_sources)

@@ -9,6 +9,42 @@ import requests
 
 ROOT = Path(__file__).resolve().parents[1]
 
+def normalize_rag_blocks(out: str) -> str:
+    """
+    LLM出力が崩れても eval が安定して解析できるように、
+    4ブロック（結論/根拠/参照/不確実性）を最低限の箇条書き形式へ正規化する。
+    """
+    headers = {"結論:", "根拠:", "参照:", "不確実性:"}
+    lines = out.splitlines()
+
+    def is_header(line: str) -> bool:
+        return line.strip() in headers
+
+    # 結論: の直後1行は必ず "- ..." にする（最初の非空行だけ）
+    for i, line in enumerate(lines):
+        if line.strip() == "結論:":
+            j = i + 1
+            while j < len(lines) and lines[j].strip() == "":
+                j += 1
+            if j < len(lines) and not is_header(lines[j]):
+                if not lines[j].lstrip().startswith("-"):
+                    lines[j] = "- " + lines[j].strip()
+            break
+
+    # 根拠/参照/不確実性: は、ブロック内の非空行をすべて "- ..." に揃える
+    for h in ("根拠:", "参照:", "不確実性:"):
+        try:
+            i = next(idx for idx, line in enumerate(lines) if line.strip() == h)
+        except StopIteration:
+            continue
+        k = i + 1
+        while k < len(lines) and not is_header(lines[k]):
+            t = lines[k].strip()
+            if t and not t.startswith("-") and not t.startswith("---"):
+                lines[k] = "- " + t
+            k += 1
+
+    return "\n".join(lines)
 
 def load_text(path: Path) -> str:
     return path.read_text(encoding="utf-8").replace("\r\n", "\n").replace("\r", "\n")
@@ -228,6 +264,7 @@ def main() -> None:
         f"{context}\n\n"
         "INSTRUCTION:\n"
         "- CONTEXT に基づいて回答してください。CONTEXT外は推測禁止。\n"
+        "- 回答は日本語で記述してください。\n"
         "- 根拠はCONTEXTの記述を引用して示してください。\n"
         "- 出力フォーマットは必ず以下に従ってください。\n\n"
         f"{rag_format}\n\n"
@@ -299,7 +336,7 @@ def main() -> None:
         else:
             out = out.rstrip() + "\n\n不確実性:\n- 不確実な情報はありません。\n"
 
-    print(out)
+    print(normalize_rag_blocks(out))
 
 
 if __name__ == "__main__":
