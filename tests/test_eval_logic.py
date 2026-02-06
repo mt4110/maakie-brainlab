@@ -14,15 +14,29 @@ class TestEvalLogic(unittest.TestCase):
         # Case 2: Source in text but not in reference block -> FAIL (NO_SOURCES or MISSING_REQUIRED_SOURCE)
         # Note: If no reference block is found, it is NO_SOURCES.
         ans_fake = "参照: はありませんが hello.md#chunk-0 に書いてあります。"
+        # This misses "結論:" block, so it hits FORMAT_INVALID first!
         res = analyze_result(q, ans_fake, 0, "")
         self.assertFalse(res["passed"])
-        self.assertEqual(res["reason_code"], ReasonCode.NO_SOURCES)
+        self.assertEqual(res["reason_code"], ReasonCode.FORMAT_INVALID)
 
         # Case 3: Partial match (file-level expectation vs chunk-level answer)
         q2 = {"id": "T02", "expected_source": "hello.md"}
-        ans2 = "参照:\n- hello.md#chunk-99"
+        ans2 = "結論:\n- OK\n\n参照:\n- hello.md#chunk-99"
         res = analyze_result(q2, ans2, 0, "")
         self.assertTrue(res["passed"])
+
+    def test_format_invalid(self):
+        # No conclusion block
+        ans = "これは回答ですが、フォーマットに従っていません。"
+        res = analyze_result({"id": "T99"}, ans, 0, "")
+        self.assertFalse(res["passed"])
+        self.assertEqual(res["reason_code"], ReasonCode.FORMAT_INVALID)
+
+        # Conclusion block present but empty?
+        ans_empty_list = "結論:\n\n参照:\n- s1" # extract_conclusion_line returns None if no item found
+        res = analyze_result({"id": "T99"}, ans_empty_list, 0, "")
+        self.assertFalse(res["passed"])
+        self.assertEqual(res["reason_code"], ReasonCode.FORMAT_INVALID)
 
     def test_evidence_mode_any_vs_all(self):
         # Case 1: Normal (ANY) - 1 out of 3 is enough
@@ -58,6 +72,12 @@ class TestEvalLogic(unittest.TestCase):
         res = analyze_result(q, ans, 0, "")
         self.assertFalse(res["passed"])
         self.assertEqual(res["reason_code"], ReasonCode.UNKNOWN_ANSWER)
+
+        # Case 1b: "不確実な情報はありません" should NOT trigger Unknown
+        # UNKNOWN_TOKENS no longer includes "情報はありません"
+        ans_safe2 = "結論:\n- 答え。\n\n参照:\n- s1\n\n不確実性:\n- 不確実な情報はありません。"
+        res = analyze_result(q, ans_safe2, 0, "")
+        self.assertTrue(res["passed"])
 
         # Case 2: Unknown token in body text but Conclusion is fine -> PASS
         # (e.g. "unknown이라는 단어는...")
