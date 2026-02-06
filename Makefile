@@ -1,6 +1,6 @@
 .PHONY: server-start server-stop server-status log ingest ask run-eval
 
-PY=python3
+PY=.venv/bin/python
 PYENV=PYTHONPATH=.
 
 server-start:
@@ -32,8 +32,16 @@ ci: test
 
 # S4 Satellite Pipeline (Placeholder)
 sat-collect:
-	@echo "[WARN] sat-collect: Not implemented"
-	@exit 0
+	$(PYENV) $(PY) src/satellite/collect.py $(SOURCE)
+
+bootstrap:
+	python3 -m venv .venv
+	.venv/bin/pip install --upgrade pip
+	.venv/bin/pip install -e .
+
+# S4 Satellite Pipeline (Placeholder)
+sat-collect:
+	$(PYENV) $(PY) src/satellite/collect.py $(SOURCE)
 
 sat-normalize:
 	@echo "[WARN] sat-normalize: Not implemented"

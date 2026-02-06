@@ -45,8 +45,7 @@ infra/*.env*
 s3_review_pack_*
 *_review_pack_*
 review_bundle_*.txt
+review_pack_*
 
-# review packs (local artifacts)
-s3_review_pack_*
-*_review_pack_*
-review_bundle_*.txt
+# python package info
+*.egg-info/
