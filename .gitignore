@@ -41,3 +41,8 @@ Makefile.bak.*
 # env files (infra)
 *.env
 infra/*.env*
+
+# review packs (local artifacts)
+s3_review_pack_*.tar.gz
+*_review_pack_*.tar.gz
+review_bundle_*.txt
