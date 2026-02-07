@@ -1,4 +1,5 @@
-.PHONY: server-start server-stop server-status log ingest ask run-eval
+.PHONY: server-start server-stop server-status log ingest ask run-eval test ci bootstrap \
+        sat-collect sat-normalize sat-gate sat-store sat-digest sat-index sat-run
 
 PY=.venv/bin/python
 PYENV=PYTHONPATH=.
@@ -30,22 +31,17 @@ test:
 ci: test
 	$(PYENV) $(PY) -m compileall src eval
 
-# S4 Satellite Pipeline (Placeholder)
-sat-collect:
-	$(PYENV) $(PY) src/satellite/collect.py $(SOURCE)
-
 bootstrap:
 	python3 -m venv .venv
 	.venv/bin/pip install --upgrade pip
 	.venv/bin/pip install -e .
 
-# S4 Satellite Pipeline (Placeholder)
+# S4 Satellite Pipeline
 sat-collect:
 	$(PYENV) $(PY) src/satellite/collect.py $(SOURCE)
 
 sat-normalize:
-	@echo "[WARN] sat-normalize: Not implemented"
-	@exit 0
+	$(PYENV) $(PY) src/satellite/normalize.py $(SOURCE)
 
 sat-gate:
 	@echo "[WARN] sat-gate: Not implemented"
