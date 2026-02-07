@@ -62,3 +62,6 @@ sat-index:
 sat-run: sat-collect sat-normalize sat-gate sat-store sat-digest sat-index
 	@echo "[WARN] sat-run: Pipeline finish (not implemented real steps yet)"
 	@exit 0
+
+gate1:
+	bash ops/gate1.sh
