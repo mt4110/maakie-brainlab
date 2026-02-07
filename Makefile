@@ -1,7 +1,7 @@
 .PHONY: server-start server-stop server-status log ingest ask run-eval test ci bootstrap \
         sat-collect sat-normalize sat-gate sat-store sat-digest sat-index sat-run
 
-PY=.venv/bin/python
+PY?=.venv/bin/python
 PYENV=PYTHONPATH=.
 
 server-start:

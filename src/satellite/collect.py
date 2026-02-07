@@ -3,7 +3,10 @@ import hashlib
 import json
 import feedparser
 import sys
-import tomllib
+try:
+    import tomllib
+except ImportError:
+    import tomli as tomllib
 from datetime import datetime
 from pathlib import Path
 from typing import Any
