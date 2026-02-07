@@ -4,8 +4,8 @@
 - [ ] **Run Gate-1**: `make gate1` must PASS.
 - [ ] **Scope Check**: No changes to `data/`, `index/`, `models/` structure (symlinks respected).
 - [ ] **Eval Verification**:
-    - [ ] `pass=True` for all relevant questions.
-    - [ ] `sources=True` (or equivalent citation) is present for all answered questions.
+    - [ ] `passed=True` for all relevant questions.
+    - [ ] `details.has_sources=True` (or equivalent citation) is present for all answered questions (Exception: `negative_control` types).
 - [ ] **Determinism**: Running the pipeline/eval twice yields consistent results.
 
 ## Troubleshooting Gate-1 Failure

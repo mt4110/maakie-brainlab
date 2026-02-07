@@ -20,9 +20,10 @@ Code in this repo MUST NOT assume ownership of these paths or attempt to "clean"
 - **Fail Closed**: When a component encounters an unknown state or failure, it must **stop or return failure**, rather than returning a "best guess" or hallucination.
 
 ## 3. Invariants (MUST)
-1. **Answer Structure**: Every answer produced by `src/ask.py` MUST maintain the structure of `Conclusion`, `Evidence` (Citation), `Uncertainty`.
+1. **Answer Structure**: Every answer produced by `src/ask.py` MUST maintain the structure of `Conclusion` (結論), `Evidence` (Citation/参照), `Uncertainty`.
 2. **No Groundless Assertions**: Answers MUST be backed by a cited Source. If no source supports the answer, the system MUST state "Reference Unknown" or similar.
-3. **Eval Integrity**: Evaluation (`run_eval.py`) MUST enforce `sources=True`. An answer that is "correct" but lacks sources is a **FAILURE**.
+3. **Eval Integrity**: Evaluation (`run_eval.py`) MUST enforce `passed=True` and `details.has_sources=True` (or equivalent citation).
+   - **Exception**: `negative_control` questions are EXEMPT from the sources requirement (they typically should NOT have sources).
 4. **Scope Lock**: Tools and scripts MUST NOT modify files outside the repo's tracked files or the specific data subpaths they own.
 
 ## 4. Prohibitions (MUST NOT)
@@ -31,7 +32,7 @@ Code in this repo MUST NOT assume ownership of these paths or attempt to "clean"
 3. **Ignoring Gate Failure**: Do not proceed to deployment or merge if `make gate1` fails.
 
 ## 5. Exceptions
-- **Explicit Override**: If a specific evaluation question allows "General Knowledge" (no source), it must be explicitly tagged in `eval/questions.jsonl` (e.g., `requires_source: false`).
+- **Explicit Override**: `negative_control` type questions do not require sources.
 - **Logging**: All exceptions (allowed or failed) MUST be logged to `logs/` or stdout.
 
 ## 6. Decision Flow

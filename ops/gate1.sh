@@ -44,51 +44,58 @@ fi
 echo "[Gate-1] Verifying Eval Results (Pass + Sources)..."
 
 # Find latest result file (by mtime)
-LATEST_RESULT=$(ls -t eval/results/eval_*.jsonl 2>/dev/null | head -n1)
+LATEST_RESULT=$(ls -t eval/results/*.jsonl 2>/dev/null | head -n1)
 
-if [ -z "$LATEST_RESULT" ]; then
-    echo "[FAIL] No eval results found in eval/results/."
-    exit 1
+if [ -z "${LATEST_RESULT:-}" ]; then
+  echo "[FAIL] No eval results found in eval/results/."
+  exit 1
 fi
 
 echo "   Latest result: $LATEST_RESULT"
 
-# Verify Content:
-# 1. pass must be true
-# 2. sources must not be empty (list) or null
-python3 - <<EOF
-import sys
-import json
+python3 - <<'PY'
+import sys, json
 
-path = "$LATEST_RESULT"
+path = sys.argv[1]
 failed = False
 
-try:
-    with open(path) as f:
-        for i, line in enumerate(f, 1):
-            if not line.strip(): continue
-            record = json.loads(line)
-            
-            # Check PASS
-            if not record.get("pass", False):
-                print(f"[FAIL] Row {i}: pass=False (Question: {record.get('question_id', '?')})")
-                failed = True
-                
-            # Check SOURCES (Must be present and non-empty list)
-            sources = record.get("sources", [])
-            if not sources or not isinstance(sources, list):
-                 # Check for explicit exception tag if we had one, but strict rule says NO by default
-                 # For now, Gate-1 mandates sources for ALL answers in this pipeline.
-                 print(f"[FAIL] Row {i}: Missing sources (Question: {record.get('question_id', '?')})")
-                 failed = True
+with open(path, encoding="utf-8") as f:
+    for i, line in enumerate(f, 1):
+        if not line.strip():
+            continue
+        rec = json.loads(line)
 
-except Exception as e:
-    print(f"[FAIL] Error parsing result file: {e}")
-    sys.exit(1)
+        # Skip meta line
+        if rec.get("meta") == "pre_flight":
+            continue
+
+        qid = rec.get("id", "?")
+        qtype = rec.get("type", "?")
+
+        # 1) PASS check
+        if rec.get("passed") is not True:
+            print(f"[FAIL] Row {i}: passed=False (id={qid} type={qtype})")
+            failed = True
+
+        # 2) SOURCES check (exception for negative_control)
+        details = rec.get("details") or {}
+        has_sources = bool(details.get("has_sources"))
+
+        if qtype == "negative_control":
+            # Optional stronger rule:
+            # if has_sources:
+            #   print(f"[FAIL] Row {i}: negative_control must not have sources (id={qid})")
+            #   failed = True
+            continue
+
+        if not has_sources:
+            print(f"[FAIL] Row {i}: Missing sources (id={qid} type={qtype})")
+            failed = True
 
 if failed:
     sys.exit(1)
+
 print("[OK] All records passed strict check.")
-EOF
+PY "$LATEST_RESULT"
 
 echo "=== Gate-1 PASSED: System is Truthful & Verified ==="
