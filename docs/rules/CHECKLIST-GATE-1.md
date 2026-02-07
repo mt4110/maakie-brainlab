@@ -10,10 +10,10 @@
 
 ## Troubleshooting Gate-1 Failure
 1. **Did `pytest` fail?**
-    - Check unit test logs. Fix strict logic bugs first.
+    - Check unit test logs (`make test`). Fix strict logic bugs first.
 2. **Did `eval` fail?**
-    - Check `pass=False`: Model gave wrong answer.
-    - Check `pass=True` but `gate1` failed: Model gave right answer **without sources** (Hallucination/Lucky Guess).
+    - Check `passed=False`: Model gave wrong answer.
+    - Check `passed=True` but `gate1` failed: Model gave right answer **without details.has_sources=True** (Hallucination/Lucky Guess).
     - Check `latency`: Is the model responding?
-3. **Environment/Link issues?**
-    - Run `ls -l data index models` to verify symlinks are active.
+3. **Did `links` fail?**
+    - Run `ls -l data index models` to verify symlinks are active to external storage.
