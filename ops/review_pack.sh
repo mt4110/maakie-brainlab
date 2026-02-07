@@ -1,6 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
+# avoid macOS AppleDouble (._*) in tar
+export COPYFILE_DISABLE=1
+
 # S4.3 Review Pack Generator (Reusable)
 # Usage: bash ops/review_pack.sh [N_COMMITS]
 
@@ -25,6 +28,14 @@ mkdir -p "${PACK_DIR}"
 echo "--- 01_status.txt ---"
 git status > "${PACK_DIR}/01_status.txt"
 
+echo "--- 20_secrets_scan.txt ---"
+# Scan tracked files only, capturing output but allowing 'no match' exit code
+if git grep -nE 'sk-[A-Za-z0-9]{20,}|BEGIN (RSA|EC|OPENSSH) PRIVATE KEY' -- $(git ls-files); then
+    echo "[WARN] Potential secrets found!"
+else
+    echo "No secrets found."
+fi > "${PACK_DIR}/20_secrets_scan.txt"
+
 echo "--- 10_git_log.txt ---"
 git log -n "${N_COMMITS}" --stat > "${PACK_DIR}/10_git_log.txt"
 
@@ -48,6 +59,14 @@ git ls-files | grep -E '\.py$|\.toml$|Makefile' | while read -r file; do
     cp "$file" "${PACK_DIR}/src_snapshot/$file"
 done
 
+# 6. Verification (before cleanup)
+echo "=== Verification ==="
+if grep -qE "FAILED|Traceback|ERROR" "${PACK_DIR}/30_make_test.log"; then
+  echo "[WARN] make test looks FAILED (see 30_make_test.log)"
+else
+  echo "[OK] make test looks PASSED"
+fi
+
 # 5. Create Archive
 tar -czf "${ARCHIVE}" "${PACK_DIR}"
 echo "Pack created: ${ARCHIVE}"
@@ -55,11 +74,3 @@ echo "Pack created: ${ARCHIVE}"
 # 6. Cleanup
 rm -rf "${PACK_DIR}"
 echo "Cleanup done: ${PACK_DIR}"
-
-# 7. Verification
-echo "=== Verification ==="
-if grep -q "FAIL" "${PACK_DIR}/30_make_test.log"; then
-    echo "[WARN] make test FAILED in log!"
-else
-    echo "[OK] make test PASSED in log"
-fi
