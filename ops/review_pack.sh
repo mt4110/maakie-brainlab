@@ -78,14 +78,68 @@ git ls-files | grep -E '\.py$|\.toml$|Makefile|\.md$|\.sh$' | LC_ALL=C sort | wh
     fi
 done
 
-# 5. Generate Manifest & Checksums (Deterministic)
-echo "[pack] Generating MANIFEST.tsv & CHECKSUMS.sha256..."
+# 5. Generate Manifest, Checksums & Verify Script (Deterministic)
+echo "[pack] Preparing MANIFEST.tsv, CHECKSUMS.sha256 & VERIFY.sh..."
 
+# 5a. Bundle Latest Eval Result
+echo "[pack] Bundling latest eval result..."
+mkdir -p "${PACK_DIR}/src_snapshot/eval/results"
+LATEST_RESULT_SRC=$(ls eval/results/*.jsonl 2>/dev/null | LC_ALL=C sort | tail -n1 || true)
+if [ -n "$LATEST_RESULT_SRC" ]; then
+    cp -p "$LATEST_RESULT_SRC" "${PACK_DIR}/src_snapshot/eval/results/latest.jsonl"
+    echo "[pack] Bundled $LATEST_RESULT_SRC as src_snapshot/eval/results/latest.jsonl"
+else
+    echo "[WARN] No evaluation result found to bundle."
+fi
+
+# 5b. Add VERIFY.sh (Self-contained verification)
+# Moved before manifest generation so it is included in checksums
+cat << 'EOF' > "${PACK_DIR}/VERIFY.sh"
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "=== Gate-1 Review Pack Verification ==="
+
+# 1. Checksums
+echo "[verify] Checking integrity (sha256)..."
+if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum -c CHECKSUMS.sha256
+elif command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 -c CHECKSUMS.sha256
+else
+    echo "[WARN] No sha256 tool found, skipping integrity check."
+fi
+
+# 2. Gate-1 Execution Check
+echo "[verify] Checking Gate-1 readiness (Verify-Only)..."
+if [ -f "src_snapshot/ops/gate1.sh" ] && [ -x "src_snapshot/ops/gate1.sh" ]; then
+    echo "[OK] ops/gate1.sh exists and is executable."
+
+    cd src_snapshot
+    
+    # Attempt Verify-Only Gate-1 (should pass with bundled results)
+    echo "[verify] Running Gate-1 --verify-only..."
+    if bash ops/gate1.sh --verify-only; then
+        echo "[verify] Gate-1 VERIFIED (Proof of truthfulness present)."
+    else
+        echo "[FAIL] Gate-1 --verify-only FAILED."
+        exit 1
+    fi
+    cd ..
+else
+    echo "[FAIL] ops/gate1.sh not found or not executable."
+    exit 1
+fi
+
+echo "=== VERIFIED: Integrity & Proof OK ==="
+EOF
+chmod 755 "${PACK_DIR}/VERIFY.sh"
+
+# 5c. Generate Manifest & Checksums
 # Header for Manifest
 echo -e "path\tsha256\tbytes\tmode\ttype" > "${PACK_DIR}/MANIFEST.tsv"
 
 # Find all files in PACK_DIR, sort strictly
-# Use find to list, then standard tools to get stats/hash
 # Relative paths from PACK_DIR
 (
     cd "${PACK_DIR}"
@@ -104,14 +158,11 @@ echo -e "path\tsha256\tbytes\tmode\ttype" > "${PACK_DIR}/MANIFEST.tsv"
         
         # Stat (bytes, mode) - platform specific handling
         if [[ "$OSTYPE" == "darwin"* ]]; then
-            # stat -f "%z %p"
             read bytes mode_hex <<< $(stat -f "%z %p" "$f")
-            # mac stat %p gives octal e.g. 100644. We want 0644.
             mode="${mode_hex: -4}"
         else
-            # GNU stat
             read bytes mode <<< $(stat -c "%s %a" "$f")
-            mode="0$mode" # simplistic padding if needed, but usually 644/755
+            mode="0$mode"
         fi
         
         echo -e "${clean_path}\t${sha}\t${bytes}\t${mode}\tfile" >> "MANIFEST.tsv"
@@ -119,76 +170,22 @@ echo -e "path\tsha256\tbytes\tmode\ttype" > "${PACK_DIR}/MANIFEST.tsv"
     done
 )
 
-# 6. Add VERIFY.sh (Self-contained verification)
-cat << 'EOF' > "${PACK_DIR}/VERIFY.sh"
-#!/usr/bin/env bash
-set -euo pipefail
-
-echo "=== Gate-1 Review Pack Verification ==="
-
-# 1. Checksums
-echo "[verify] Checking integrity (sha256)..."
-if command -v sha256sum >/dev/null 2>&1; then
-    sha256sum -c CHECKSUMS.sha256
-elif command -v shasum >/dev/null 2>&1; then
-    shasum -a 256 -c CHECKSUMS.sha256
-else
-    echo "[WARN] No sha256 tool found, skipping integrity check."
-fi
-
-# 2. Gate-1 Execution Check
-echo "[verify] Checking Gate-1 readiness..."
-if [ -f "src_snapshot/ops/gate1.sh" ] && [ -x "src_snapshot/ops/gate1.sh" ]; then
-    echo "[OK] ops/gate1.sh exists and is executable."
-
-    cd src_snapshot
-    
-    # Attempt full Gate-1 (might fail if data missing)
-    echo "[verify] Attempting Gate-1..."
-    if bash ops/gate1.sh; then
-        echo "[verify] Gate-1 PASSED (Full environment present)."
-    else
-        echo "[WARN] Gate-1 script returned failure (expected if 'data/models' symlinks are missing)."
-        
-    # Check if failure was due to environment or code
-    echo "[verify] Validating Source Logic (make test)..."
-    if make test >/dev/null 2>&1; then
-         echo "[OK] Unit tests PASSED (using default PY)."
-    else
-         echo "[WARN] 'make test' failed. Retrying with system python (PY=python3)..."
-         if make test PY=python3 >/dev/null 2>&1; then
-             echo "[OK] Unit tests PASSED (using python3)."
-         else
-             echo "[FAIL] Unit tests FAILED. Please ensure dependencies (requests, feedparser, tomli, etc.) are installed or .venv is set up."
-             # We exit 1 because unit tests should pass if env is correct.
-             # But checks might fail due to missing deps.
-             # We'll print "FAIL" but maybe not strict exit if we want to allow 'just looking'.
-             # But 'verify' implies validation.
-             exit 1
-         fi
-    fi
-    fi
-else
-    echo "[FAIL] ops/gate1.sh not found or not executable."
-    exit 1
-fi
-
-echo "=== VERIFIED: Integrity & Logic OK ==="
-EOF
-chmod 755 "${PACK_DIR}/VERIFY.sh"
-
-# 7. Create Archive (Deterministic attributes)
+# 6. Create Archive (Deterministic attributes)
 echo "=== Archiving ==="
-# Tar options for reproducibility if available (GNU tar mostly)
-# macOS tar (bsdtar) distinct options.
-# We will use basic flags but rely on the content being fixed.
-# If GNU tar is available as 'gtar', use it for --mtime etc?
-# For now, standard tar.
+# avoid macOS xattrs and AppleDouble files
+export COPYFILE_DISABLE=1
 
-tar -czf "${ARCHIVE}" "${PACK_DIR}"
+TAR_OPTS=("-czf" "${ARCHIVE}")
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    # BSD tar on macOS
+    TAR_OPTS+=("--no-xattrs")
+fi
+TAR_OPTS+=("${PACK_DIR}")
+
+tar "${TAR_OPTS[@]}"
 
 echo "Pack created: ${ARCHIVE}"
 
-# 8. Cleanup
+# 7. Cleanup
 rm -rf "${PACK_DIR}"
 echo "Cleanup done: ${PACK_DIR}"

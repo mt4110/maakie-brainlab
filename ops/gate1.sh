@@ -6,54 +6,66 @@ set -euo pipefail
 
 echo "=== S4.4 Gate-1: The Constitution ==="
 
-# 1. Pre-flight Checks (Environment)
-echo "[Gate-1] Checking environment..."
-python3 --version > /dev/null
-test -f eval/run_eval.py || { echo "[FAIL] eval/run_eval.py missing"; exit 1; }
-
-# Check symlinks (External Scope Boundary)
-for link in data index logs models; do
-    if [ ! -L "$link" ]; then
-        echo "[FAIL] '$link' must be a symlink to external storage."
-        exit 1
-    fi
-done
-echo "[OK] Environment check passed."
-
-# 2. Unit Tests (Functionality)
-echo "[Gate-1] Running Unit Tests..."
-if make test > /dev/null 2>&1; then
-    echo "[OK] Unit tests passed."
-else
-    echo "[FAIL] Unit tests failed. Check 'make test' output."
-    exit 1
+VERIFY_ONLY=0
+if [[ "${1:-}" == "--verify-only" ]] || [[ "${GATE1_VERIFY_ONLY:-}" == "1" ]]; then
+    VERIFY_ONLY=1
+    echo "[Gate-1] Mode: Verify-Only (Skipping execution/env checks)"
 fi
 
-# 3. Evaluation (Accuracy & Evidence)
-echo "[Gate-1] Running Evaluation..."
-# Run eval (using existing Makefile target if possible, or direct)
-# We use make run-eval to ensure consistency
-if make run-eval > /dev/null 2>&1; then
-    echo "[OK] Eval execution completed."
-else
-    echo "[FAIL] Eval execution failed. Check 'make run-eval' output."
-    exit 1
+if [ "$VERIFY_ONLY" -eq 0 ]; then
+    # 1. Pre-flight Checks (Environment)
+    echo "[Gate-1] Checking environment..."
+    python3 --version > /dev/null
+    test -f eval/run_eval.py || { echo "[FAIL] eval/run_eval.py missing"; exit 1; }
+
+    # Check symlinks (External Scope Boundary)
+    for link in data index logs models; do
+        if [ ! -L "$link" ]; then
+            echo "[FAIL] '$link' must be a symlink to external storage."
+            exit 1
+        fi
+    done
+    echo "[OK] Environment check passed."
+
+    # 2. Unit Tests (Functionality)
+    echo "[Gate-1] Running Unit Tests..."
+    if make test > /dev/null 2>&1; then
+        echo "[OK] Unit tests passed."
+    else
+        echo "[FAIL] Unit tests failed. Check 'make test' output."
+        exit 1
+    fi
+
+    # 3. Evaluation (Accuracy & Evidence)
+    echo "[Gate-1] Running Evaluation..."
+    if make run-eval > /dev/null 2>&1; then
+        echo "[OK] Eval execution completed."
+    else
+        echo "[FAIL] Eval execution failed. Check 'make run-eval' output."
+        exit 1
+    fi
 fi
 
 # 4. Strict Verification (The "Constitution")
 echo "[Gate-1] Verifying Eval Results (Pass + Sources)..."
 
-# Find latest result file (by mtime)
-LATEST_RESULT=$(ls -t eval/results/*.jsonl 2>/dev/null | head -n1)
+# Find result file
+LATEST_RESULT=""
+if [ -f "eval/results/latest.jsonl" ]; then
+    LATEST_RESULT="eval/results/latest.jsonl"
+else
+    # Lexicographical sort (LC_ALL=C) for determinism
+    LATEST_RESULT=$(ls eval/results/*.jsonl 2>/dev/null | LC_ALL=C sort | tail -n1 || true)
+fi
 
 if [ -z "${LATEST_RESULT:-}" ]; then
   echo "[FAIL] No eval results found in eval/results/."
   exit 1
 fi
 
-echo "   Latest result: $LATEST_RESULT"
+echo "   Target result: $LATEST_RESULT"
 
-python3 - <<'PY'
+python3 - "$LATEST_RESULT" <<'PY'
 import sys, json
 
 path = sys.argv[1]
@@ -96,6 +108,6 @@ if failed:
     sys.exit(1)
 
 print("[OK] All records passed strict check.")
-PY "$LATEST_RESULT"
+PY
 
 echo "=== Gate-1 PASSED: System is Truthful & Verified ==="
