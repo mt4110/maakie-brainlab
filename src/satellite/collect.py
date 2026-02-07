@@ -86,7 +86,7 @@ class Collector:
             temp_path = target_path.with_suffix(".tmp")
             try:
                 with open(temp_path, "w", encoding="utf-8") as f:
-                    json.dump(raw_data, f, ensure_ascii=False, indent=2)
+                    json.dump(raw_data, f, ensure_ascii=False, indent=2, sort_keys=True)
                 
                 # Rename is atomic on POSIX
                 temp_path.replace(target_path)

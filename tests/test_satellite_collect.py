@@ -1,16 +1,16 @@
-import unittest
-import json
-import tempfile
-import sys
+import shutil
+from datetime import datetime
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 import feedparser
 
 # Fix import path
 ROOT = Path(__file__).resolve().parents[1]
+import sys
 sys.path.insert(0, str(ROOT / "src"))
 
 from satellite.collect import Collector, compute_raw_uid  # noqa: E402
+import json
 
 class TestSatelliteCollect(unittest.TestCase):
     def setUp(self):
@@ -80,6 +80,45 @@ class TestSatelliteCollect(unittest.TestCase):
         # Verify artifact sorting (Policy B check implicitly via manifest util, but explicit check here)
         paths = [a["path"] for a in manifest["artifacts"]]
         self.assertEqual(paths, sorted(paths))
+
+    @patch("satellite.collect.datetime")
+    @patch("satellite.collect.Collector.fetch_feed")
+    def test_collector_idempotency(self, mock_fetch, mock_dt):
+        """Test that running twice produces identical state (no phantom duplicates)."""
+        fixture_path = ROOT / "tests/fixtures/rss_sample.xml"
+        if not fixture_path.exists():
+             self.skipTest("Fixture not found")
+        
+        # Mock datetime to ensure fetched_at is constant
+        mock_now = datetime(2023, 10, 6, 12, 0, 0)
+        mock_dt.utcnow.return_value = mock_now
+        mock_dt.isoformat.return_value = "2023-10-06T12:00:00"
+
+        feed_obj = feedparser.parse(fixture_path.read_text())
+        mock_fetch.return_value = feed_obj
+        
+        date = "2023-10-06"
+        col = Collector(self.source_id, date, self.root)
+        
+        # Run 1
+        col.run()
+        manifest1_path = self.root / f"data/satellite/{self.source_id}/manifests/{date}.manifest.json"
+        with open(manifest1_path, "rb") as f:
+            m1 = f.read()
+            
+        # Run 2
+        col.run()
+        
+        # Verify Raw File Count (Should still be 2)
+        raw_dir = self.root / f"data/satellite/{self.source_id}/raw/{date}"
+        files = list(raw_dir.glob("*.json"))
+        self.assertEqual(len(files), 2, "Raw files should not multiply on re-run")
+        
+        # Verify Manifest Identity
+        with open(manifest1_path, "rb") as f:
+            m2 = f.read()
+            
+        self.assertEqual(m1, m2, "Manifest should be byte-identical after re-run")
 
 if __name__ == "__main__":
     unittest.main()
