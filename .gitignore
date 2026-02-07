@@ -46,6 +46,7 @@ s3_review_pack_*
 *_review_pack_*
 review_bundle_*.txt
 review_pack_*
+review_pack_*.tar.gz
 
 # python package info
 *.egg-info/
