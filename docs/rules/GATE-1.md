@@ -20,7 +20,7 @@ Code in this repo MUST NOT assume ownership of these paths or attempt to "clean"
 - **Fail Closed**: When a component encounters an unknown state or failure, it must **stop or return failure**, rather than returning a "best guess" or hallucination.
 
 ## 3. Invariants (MUST)
-1. **Answer Structure**: Every answer produced by `src/ask.py` MUST maintain the structure of `Conclusion` (結論), `Evidence` (Citation/参照), `Uncertainty`.
+1. **Answer Structure**: Every answer produced by `src/ask.py` MUST include explicit sections with these headings: `結論:` and `参照:` and `不確実性:`. It SHOULD include `根拠:` when applicable. English labels may be included in addition, but the Japanese headings are canonical for review and stability.
 2. **No Groundless Assertions**: Answers MUST be backed by a cited Source. If no source supports the answer, the system MUST state "Reference Unknown" or similar.
 3. **Eval Integrity**: Evaluation (`run_eval.py`) MUST enforce `passed=True` and `details.has_sources=True` (or equivalent citation).
    - **Exception**: `negative_control` questions are EXEMPT from the sources requirement (they typically should NOT have sources).
