@@ -54,7 +54,8 @@ make run-eval > "${PACK_DIR}/31_make_run_eval.log" 2>&1 || true
 echo "--- Source Code ---"
 mkdir -p "${PACK_DIR}/src_snapshot"
 # Use git ls-files to avoid untracked garbage
-git ls-files | grep -E '\.py$|\.toml$|Makefile' | while read -r file; do
+# Extended to include docs (.md) and ops scripts (.sh) for Gate-1 review
+git ls-files | grep -E '\.py$|\.toml$|Makefile|\.md$|\.sh$' | while read -r file; do
     mkdir -p "${PACK_DIR}/src_snapshot/$(dirname "$file")"
     cp "$file" "${PACK_DIR}/src_snapshot/$file"
 done
