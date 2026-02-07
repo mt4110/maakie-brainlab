@@ -1,16 +1,17 @@
-import shutil
+import json
+import sys
+import unittest
+import tempfile
 from datetime import datetime
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 import feedparser
 
 # Fix import path
 ROOT = Path(__file__).resolve().parents[1]
-import sys
 sys.path.insert(0, str(ROOT / "src"))
 
 from satellite.collect import Collector, compute_raw_uid  # noqa: E402
-import json
 
 class TestSatelliteCollect(unittest.TestCase):
     def setUp(self):
@@ -87,7 +88,7 @@ class TestSatelliteCollect(unittest.TestCase):
         """Test that running twice produces identical state (no phantom duplicates)."""
         fixture_path = ROOT / "tests/fixtures/rss_sample.xml"
         if not fixture_path.exists():
-             self.skipTest("Fixture not found")
+            self.skipTest("Fixture not found")
         
         # Mock datetime to ensure fetched_at is constant
         mock_now = datetime(2023, 10, 6, 12, 0, 0)

@@ -3,13 +3,13 @@ import json
 import tempfile
 import sys
 from pathlib import Path
-from unittest.mock import patch
+
 
 # Fix import path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from satellite.normalize import Normalizer, compute_norm_uid
+from satellite.normalize import Normalizer  # noqa: E402
 
 class TestSatelliteNormalize(unittest.TestCase):
     def setUp(self):
