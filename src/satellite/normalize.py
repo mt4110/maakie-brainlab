@@ -52,7 +52,7 @@ class Normalizer:
         published_at = feed_entry.get("published") # Might be None or string
         title = feed_entry.get("title", "")
         text = feed_entry.get("summary", "") # Use summary as text for RSS
-        lang = getattr(feed_entry, "language", None) # Optional
+        lang = feed_entry.get("language") # Optional
 
         # Hashes
         raw_bytes = raw_path.read_bytes()
@@ -72,9 +72,6 @@ class Normalizer:
             "raw_sha256": raw_sha256
         }
         
-        # Calculate norm_sha256 (self hash excluding itself of course, but included in final object if needed? 
-        # Usually IL doesn't self-hash inside. We hash the line.)
-        
         return il_item
 
     def run(self) -> None:
@@ -85,8 +82,6 @@ class Normalizer:
         files = sorted(list(self.raw_dir.glob("*.json")))
         if not files:
             print(f"{YELLOW}Warning: No raw files found in {self.raw_dir}{RESET}", file=sys.stderr)
-            # Produce empty JSONL? Or exit?
-            # Better to produce empty JSONL to signify "done but empty"
         
         print(f"Normalizing {len(files)} raw items...")
         
@@ -102,22 +97,13 @@ class Normalizer:
         # Atomic Write
         temp_path = self.output_path.with_suffix(".tmp")
         
-        try:
-            with open(temp_path, "w", encoding="utf-8") as f:
-                for item in il_items:
-                    # Enforce key order by json.dumps default? 
-                    # sort_keys=True guarantees stability
-                    line = json.dumps(item, sort_keys=True, ensure_ascii=False)
-                    f.write(line + "\n")
-            
-            temp_path.replace(self.output_path)
-            print(f"{GREEN}Saved {len(il_items)} IL items to {self.output_path}{RESET}")
-            
-        except Exception as e:
-            print(f"{RED}WRITE_FAILED: {e}{RESET}", file=sys.stderr)
-            if temp_path.exists():
-                temp_path.unlink()
-            sys.exit(1)
+        with open(temp_path, "w", encoding="utf-8") as f:
+            for item in il_items:
+                line = json.dumps(item, sort_keys=True, ensure_ascii=False)
+                f.write(line + "\n")
+        
+        temp_path.replace(self.output_path)
+        print(f"{GREEN}Saved {len(il_items)} IL items to {self.output_path}{RESET}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -127,9 +113,5 @@ if __name__ == "__main__":
     
     root = Path(__file__).resolve().parents[2]
     
-    try:
-        norm = Normalizer(args.source_id, args.date, root)
-        norm.run()
-    except Exception as e:
-        print(f"{RED}Failed: {e}{RESET}", file=sys.stderr)
-        sys.exit(1)
+    norm = Normalizer(args.source_id, args.date, root)
+    norm.run()

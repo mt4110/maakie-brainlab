@@ -75,11 +75,7 @@ class Collector:
             sys.exit(1)
             
         print(f"Fetching {url}...")
-        try:
-            raw_bytes = self.fetch_feed(url)
-        except Exception as e:
-            print(f"{RED}FETCH_FAILED: {e}{RESET}", file=sys.stderr)
-            sys.exit(1)
+        raw_bytes = self.fetch_feed(url)
             
         feed = feedparser.parse(raw_bytes)
         
@@ -168,9 +164,5 @@ if __name__ == "__main__":
     
     root = Path(__file__).resolve().parents[2] # src/satellite/collect.py -> root
     
-    try:
-        col = Collector(args.source_id, args.date, root)
-        col.run()
-    except Exception as e:
-        print(f"{RED}Failed: {e}{RESET}")
-        sys.exit(1)
+    col = Collector(args.source_id, args.date, root)
+    col.run()
