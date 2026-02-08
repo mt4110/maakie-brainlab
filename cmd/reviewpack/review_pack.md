@@ -22,6 +22,9 @@
 # Pack生成
 go run cmd/reviewpack/main.go pack [--timebox 300] [--skip-eval] [N_COMMITS]
 
+# 提出用の “1コマンド儀式” です。pack生成〜検証（verify-only）までを一気に実行し、提出用の SHA256 も表示します。
+go run cmd/reviewpack/main.go submit
+
 # Fix: evalスキップ（直近1コミット）
 go run cmd/reviewpack/main.go pack --skip-eval 1
 
