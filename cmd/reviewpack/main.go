@@ -119,7 +119,24 @@ func packToTar(args []string) string {
 
 	// 1. Git Status & Meta
 	writeMeta(packDir, timestamp, *timebox, *skipEval)
+	// preflight: capture full status for log
 	runCmd(repoRoot, "git", "status", ">", filepath.Join(packDir, "01_status.txt"))
+
+	// preflight: strict clean check
+	// We use --porcelain to avoid locale issues.
+	// We want to FAIL if there is ANY output (untracked files, modified files, etc).
+	// But first, let's make sure we are checking the repoRoot.
+	cmd := exec.Command("git", "status", "--porcelain")
+	cmd.Dir = repoRoot
+	porcelainOut, err := cmd.Output()
+	if err != nil {
+		log.Fatalf("[FATAL] git status --porcelain failed: %v", err)
+	}
+	if len(bytes.TrimSpace(porcelainOut)) > 0 {
+		// print the diff to stderr so user sees what is dirty
+		log.Printf("[FATAL] preflight: working tree is dirty:\n%s", string(porcelainOut))
+		os.Exit(1)
+	}
 
 	nCommits := "5" // default
 	if fs.NArg() > 0 {
@@ -234,10 +251,9 @@ func check01Status(path string) error {
 	if regexp.MustCompile(`(?mi)\bfatal\b`).MatchString(s) {
 		return fmt.Errorf("01_status.txt contains 'fatal' (see %s)", path)
 	}
-	// clean っぽい記述が無いと「クリーン保証」が崩れる
-	if !regexp.MustCompile(`(?mi)(working tree clean|nothing to commit)`).MatchString(s) {
-		return fmt.Errorf("01_status.txt does not mention clean working tree (see %s)", path)
-	}
+	// We no longer check for "clean working tree" string here because it's locale dependent
+	// and we already enforced strict check during pack phase via `git status --porcelain`.
+	// check01Status is now just a sanity check that we actually captured something non-fatal.
 	return nil
 }
 
@@ -534,11 +550,48 @@ func copyFile(src, dst string) {
 }
 
 func copyLatestEval(snapshotDir string) {
-	// Copy eval/results/latest.jsonl if exists in repo
-	src := filepath.Join("eval", "results", "latest.jsonl")
-	if _, err := os.Stat(src); err == nil {
-		copyFile(src, filepath.Join(snapshotDir, src))
+	// Find latest result in eval/results (excluding latest.jsonl itself)
+	// We want to verify Gate-1, which requires eval/results/latest.jsonl.
+	// We do not rely on mtime. We rely on filename (YYYYMMDD-HHMMSS.jsonl).
+
+	const resultsDir = "eval/results"
+	entries, err := os.ReadDir(resultsDir)
+	if err != nil {
+		// If dir doesn't exist, it's a fatal error for this requirement
+		if os.IsNotExist(err) {
+			log.Fatalf("[FATAL] missing %s directory (run: make run-eval)", resultsDir)
+		}
+		log.Fatalf("[FATAL] read %s: %v", resultsDir, err)
 	}
+
+	var candidates []string
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		name := e.Name()
+		if !strings.HasSuffix(name, ".jsonl") {
+			continue
+		}
+		if name == "latest.jsonl" {
+			continue
+		}
+		candidates = append(candidates, name)
+	}
+
+	if len(candidates) == 0 {
+		log.Fatalf("[FATAL] no eval results found in %s/*.jsonl (run: make run-eval)", resultsDir)
+	}
+
+	sort.Strings(candidates)
+	latest := candidates[len(candidates)-1]
+
+	srcPath := filepath.Join(resultsDir, latest)
+	// Destination inside snapshot: eval/results/latest.jsonl
+	dstPath := filepath.Join(snapshotDir, resultsDir, "latest.jsonl")
+
+	fmt.Printf("[INFO] bundling latest eval result: %s -> latest.jsonl\n", latest)
+	copyFile(srcPath, dstPath)
 }
 
 func writeReadme(dir string) {
@@ -650,19 +703,16 @@ func createManifestAndChecksums(dir string) {
 		checksumLines = append(checksumLines, fmt.Sprintf("%s %s", h, rel))
 	}
 
-    // Ensure MANIFEST.tsv is covered too
-    if err := manFile.Close(); err != nil {
-        log.Fatalf("[FATAL] close MANIFEST.tsv: %v", err)
-    }
 
-    manHash, err := fileSha256(manifestPath)
-    if err != nil {
-        log.Fatalf("[FATAL] sha256 MANIFEST.tsv: %v", err)
-    }
-
-    // (Do not append MANIFEST.tsv's own hash line into MANIFEST.tsv itself.)
-    checksumLines = append(checksumLines, fmt.Sprintf("%s %s", manHash, "MANIFEST.tsv"))
-
+	// Ensure MANIFEST.tsv is covered too
+	// Ensure MANIFEST.tsv is included in CHECKSUMS (but not in MANIFEST itself, to avoid circularity)
+	manHash, err := fileSha256(manifestPath)
+	if err != nil {
+		log.Fatalf("[FATAL] sha256 MANIFEST.tsv: %v", err)
+	}
+	// We do NOT write MANIFEST.tsv line into MANIFEST.tsv
+	
+	checksumLines = append(checksumLines, fmt.Sprintf("%s %s", manHash, "MANIFEST.tsv"))
 	sort.Strings(checksumLines)
 
 	checkPath := filepath.Join(dir, "CHECKSUMS.sha256")
