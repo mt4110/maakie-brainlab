@@ -534,11 +534,48 @@ func copyFile(src, dst string) {
 }
 
 func copyLatestEval(snapshotDir string) {
-	// Copy eval/results/latest.jsonl if exists in repo
-	src := filepath.Join("eval", "results", "latest.jsonl")
-	if _, err := os.Stat(src); err == nil {
-		copyFile(src, filepath.Join(snapshotDir, src))
+	// Find latest result in eval/results (excluding latest.jsonl itself)
+	// We want to verify Gate-1, which requires eval/results/latest.jsonl.
+	// We do not rely on mtime. We rely on filename (YYYYMMDD-HHMMSS.jsonl).
+
+	const resultsDir = "eval/results"
+	entries, err := os.ReadDir(resultsDir)
+	if err != nil {
+		// If dir doesn't exist, it's a fatal error for this requirement
+		if os.IsNotExist(err) {
+			log.Fatalf("[FATAL] missing %s directory (run: make run-eval)", resultsDir)
+		}
+		log.Fatalf("[FATAL] read %s: %v", resultsDir, err)
 	}
+
+	var candidates []string
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		name := e.Name()
+		if !strings.HasSuffix(name, ".jsonl") {
+			continue
+		}
+		if name == "latest.jsonl" {
+			continue
+		}
+		candidates = append(candidates, name)
+	}
+
+	if len(candidates) == 0 {
+		log.Fatalf("[FATAL] no eval results found in %s/*.jsonl (run: make run-eval)", resultsDir)
+	}
+
+	sort.Strings(candidates)
+	latest := candidates[len(candidates)-1]
+
+	srcPath := filepath.Join(resultsDir, latest)
+	// Destination inside snapshot: eval/results/latest.jsonl
+	dstPath := filepath.Join(snapshotDir, resultsDir, "latest.jsonl")
+
+	fmt.Printf("[INFO] bundling latest eval result: %s -> latest.jsonl\n", latest)
+	copyFile(srcPath, dstPath)
 }
 
 func writeReadme(dir string) {
