@@ -652,11 +652,11 @@ func createManifestAndChecksums(dir string) {
 
 	// Ensure MANIFEST.tsv is covered too
 	manHash, err := fileSha256(manifestPath)
-	if err != nil {
-		log.Fatalf("[FATAL] sha256 MANIFEST.tsv: %v", err)
+	if err := manFile.Close(); err != nil {
+		log.Fatalf("[FATAL] close MANIFEST.tsv: %v", err)
 	}
-	manSt, _ := os.Stat(manifestPath)
-	fmt.Fprintf(manFile, "MANIFEST.tsv\t%s\t%d\t%#o\tfile\n", manHash, manSt.Size(), manSt.Mode().Perm())
+	// manSt, _ := os.Stat(manifestPath)
+	// fmt.Fprintf(manFile, "MANIFEST.tsv\t%s\t%d\t%#o\tfile\n", manHash, manSt.Size(), manSt.Mode().Perm())
 
 	checksumLines = append(checksumLines, fmt.Sprintf("%s %s", manHash, "MANIFEST.tsv"))
 	sort.Strings(checksumLines)
