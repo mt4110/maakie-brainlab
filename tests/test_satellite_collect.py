@@ -53,9 +53,10 @@ class TestSatelliteCollect(unittest.TestCase):
             self.skipTest("Fixture not found")
             
         # Mock feedparser response
+        # Mock feedparser response
         # We parse the fixture using real feedparser to simulate real object structure
-        feed_obj = feedparser.parse(fixture_path.read_text())
-        mock_fetch.return_value = feed_obj
+        # In strict timeout mode, fetch_feed returns bytes
+        mock_fetch.return_value = fixture_path.read_bytes()
         
         date = "2023-10-06"
         col = Collector(self.source_id, date, self.root)
@@ -97,8 +98,7 @@ class TestSatelliteCollect(unittest.TestCase):
 
         mock_dt.isoformat.return_value = "2023-10-06T12:00:00"
 
-        feed_obj = feedparser.parse(fixture_path.read_text())
-        mock_fetch.return_value = feed_obj
+        mock_fetch.return_value = fixture_path.read_bytes()
         
         date = "2023-10-06"
         col = Collector(self.source_id, date, self.root)

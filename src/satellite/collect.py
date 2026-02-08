@@ -45,7 +45,7 @@ class Collector:
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.manifest_path = self.root / f"data/satellite/{source_id}/manifests/{date_str}.manifest.json"
 
-    def fetch_feed(self, url: str) -> Any:
+    def fetch_feed(self, url: str) -> bytes:
         # Wrapper for easy mocking with hard timeout
         # Prevents indefinite hangs in agent runs
         timeout = self.config.get("timeout_sec", 10)
@@ -62,8 +62,7 @@ class Collector:
                 headers={"User-Agent": "satellite"},
             )
             with urllib.request.urlopen(req, timeout=timeout_sec) as resp:
-                raw_bytes = resp.read()
-                return feedparser.parse(raw_bytes)
+                return resp.read()
         except Exception as e:
             # Re-raise to be caught by run() which expects exceptions on failure
             raise e
@@ -77,10 +76,12 @@ class Collector:
             
         print(f"Fetching {url}...")
         try:
-            feed = self.fetch_feed(url)
+            raw_bytes = self.fetch_feed(url)
         except Exception as e:
             print(f"{RED}FETCH_FAILED: {e}{RESET}", file=sys.stderr)
             sys.exit(1)
+            
+        feed = feedparser.parse(raw_bytes)
         
         if hasattr(feed, "bozo") and feed.bozo:
             print(f"{YELLOW}PARSE_WARN: Feed parsing error: {feed.bozo_exception}{RESET}", file=sys.stderr)
