@@ -3,7 +3,10 @@ import hashlib
 import json
 import feedparser
 import sys
+import urllib.request
+import urllib.error
 try:
+
     import tomllib
 except ImportError:
     import tomli as tomllib
@@ -43,8 +46,28 @@ class Collector:
         self.manifest_path = self.root / f"data/satellite/{source_id}/manifests/{date_str}.manifest.json"
 
     def fetch_feed(self, url: str) -> Any:
-        # Wrapper for easy mocking
-        return feedparser.parse(url)
+        # Wrapper for easy mocking with hard timeout
+        # Prevents indefinite hangs in agent runs
+        timeout = self.config.get("timeout_sec", 10)
+        try:
+            timeout_sec = float(timeout)
+        except (ValueError, TypeError):
+            timeout_sec = 10.0
+        if timeout_sec <= 0:
+            timeout_sec = 10.0
+
+        try:
+            req = urllib.request.Request(
+                url,
+                headers={"User-Agent": "satellite"},
+            )
+            with urllib.request.urlopen(req, timeout=timeout_sec) as resp:
+                raw_bytes = resp.read()
+                return feedparser.parse(raw_bytes)
+        except Exception as e:
+            # Re-raise to be caught by run() which expects exceptions on failure
+            raise e
+
 
     def run(self) -> None:
         url = self.config.get("url")
