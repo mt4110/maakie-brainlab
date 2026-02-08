@@ -46,6 +46,14 @@ Code in this repo MUST NOT assume ownership of these paths or attempt to "clean"
 ## 7. Operations
 - **Run Gate-1**: `make gate1`
 - **On Failure**:
-    1. Check `ops/gate1.sh` output.
-    2. If `pytest` failed: fix the code.
-    3. If `eval` failed: check `eval/results/` for the specific failure (Wrong Answer vs Missing Source).
+  - `make gate1` (または `bash ops/gate1.sh`) を実行して、上記チェックを全自動で行う。
+
+### 検証専用モード (Verify-Only Mode)
+
+レビューパック（review_pack）等の配布物において、実行環境が制限されている場合や過去の評価結果を再検証したい場合に利用する。
+
+- **実行方法**: `bash ops/gate1.sh --verify-only`
+- **挙動**:
+    - `run-eval` を実行せず、`eval/results/latest.jsonl` を直接検証する。
+    - ユニットテストや環境チェック（シンボリックリンク等）をスキップする。
+    - 評価済みの「正しさの証跡」のみを確認する。

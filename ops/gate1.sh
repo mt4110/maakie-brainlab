@@ -5,6 +5,8 @@ set -euo pipefail
 # Validates invariants: Testing, Eval Success, Source Citation
 
 echo "=== S4.4 Gate-1: The Constitution ==="
+echo "[SAFEGUARD] Timebox: 5 minutes. If this script hangs >5m, Abort (Ctrl+C) and report debug logs."
+
 
 VERIFY_ONLY=0
 if [[ "${1:-}" == "--verify-only" ]] || [[ "${GATE1_VERIFY_ONLY:-}" == "1" ]]; then

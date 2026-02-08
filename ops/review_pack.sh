@@ -20,6 +20,8 @@ ARCHIVE="${PACK_NAME}.tar.gz"
 echo "=== S4.3 Review Pack Generator ==="
 echo "Target: ${ARCHIVE}"
 echo "Commits: Last ${N_COMMITS} (from ${BASE_REF})"
+echo "[SAFEGUARD] Timebox: 5 minutes. If this script hangs >5m, Abort (Ctrl+C) and report debug logs."
+
 
 # 1. Create Pack Directory
 mkdir -p "${PACK_DIR}"
@@ -78,10 +80,37 @@ git ls-files | grep -E '\.py$|\.toml$|Makefile|\.md$|\.sh$' | LC_ALL=C sort | wh
     fi
 done
 
-# 5. Generate Manifest, Checksums & Verify Script (Deterministic)
-echo "[pack] Preparing MANIFEST.tsv, CHECKSUMS.sha256 & VERIFY.sh..."
+# 5. Generate Review Guidance, Manifest, Checksums & Verify Script
+echo "[pack] Preparing guidance & integrity files..."
 
-# 5a. Bundle Latest Eval Result
+# 5a. Task A: Add README.md to pack root
+cat << 'EOF' > "${PACK_DIR}/README.md"
+# review_pack
+
+This pack is self-contained. A third party can verify it without running eval.
+
+## Quick Start (do this first)
+```bash
+bash VERIFY.sh
+```
+
+**Expected Results:**
+- `checksums`: OK
+- `Gate-1 (verify-only)`: PASS
+
+## Review Order (Recommended)
+1. **Rules**: `src_snapshot/docs/rules/`
+2. **Verify**: `VERIFY.sh`
+3. **Evidence**: `src_snapshot/eval/results/latest.jsonl`
+4. **Manifest**: `MANIFEST.tsv`
+
+## Safety / Non-goals
+- No secrets must exist in this pack (.env / token / credential / logs are forbidden).
+- macOS metadata/xattr must not be included.
+- Pack generation should be deterministic (stable order / stable manifest / stable procedure).
+EOF
+
+# 5b. Bundle Latest Eval Result
 echo "[pack] Bundling latest eval result..."
 mkdir -p "${PACK_DIR}/src_snapshot/eval/results"
 LATEST_RESULT_SRC=$(ls eval/results/*.jsonl 2>/dev/null | LC_ALL=C sort | tail -n1 || true)
@@ -92,15 +121,24 @@ else
     echo "[WARN] No evaluation result found to bundle."
 fi
 
-# 5b. Add VERIFY.sh (Self-contained verification)
-# Moved before manifest generation so it is included in checksums
+# 5c. Task C: Add VERIFY.sh (Self-contained verification)
 cat << 'EOF' > "${PACK_DIR}/VERIFY.sh"
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Ensure execution from script directory
+cd "$(dirname "$0")"
+
 echo "=== Gate-1 Review Pack Verification ==="
 
-# 1. Checksums
+# 1. Manifest Coverage Check (Task B/C)
+echo "[verify] Checking manifest integrity coverage..."
+grep -qE '  MANIFEST\.tsv$' CHECKSUMS.sha256 || {
+  echo "[FAIL] MANIFEST.tsv is not covered by CHECKSUMS.sha256"
+  exit 1
+}
+
+# 2. Checksums
 echo "[verify] Checking integrity (sha256)..."
 if command -v sha256sum >/dev/null 2>&1; then
     sha256sum -c CHECKSUMS.sha256
@@ -110,13 +148,12 @@ else
     echo "[WARN] No sha256 tool found, skipping integrity check."
 fi
 
-# 2. Gate-1 Execution Check
+# 3. Gate-1 Execution Check
 echo "[verify] Checking Gate-1 readiness (Verify-Only)..."
 if [ -f "src_snapshot/ops/gate1.sh" ] && [ -x "src_snapshot/ops/gate1.sh" ]; then
     echo "[OK] ops/gate1.sh exists and is executable."
 
     cd src_snapshot
-    
     # Attempt Verify-Only Gate-1 (should pass with bundled results)
     echo "[verify] Running Gate-1 --verify-only..."
     if bash ops/gate1.sh --verify-only; then
@@ -135,28 +172,26 @@ echo "=== VERIFIED: Integrity & Proof OK ==="
 EOF
 chmod 755 "${PACK_DIR}/VERIFY.sh"
 
-# 5c. Generate Manifest & Checksums
+# 5d. Task B: Generate Manifest & Checksums (Inclusion Guarantee)
 # Header for Manifest
 echo -e "path\tsha256\tbytes\tmode\ttype" > "${PACK_DIR}/MANIFEST.tsv"
 
-# Find all files in PACK_DIR, sort strictly
-# Relative paths from PACK_DIR
 (
     cd "${PACK_DIR}"
-    # Note: sort -z is not available on BSD/macOS. 
-    # We assume filenames do not contain newlines (safe for this repo).
-    find . -type f -not -name "MANIFEST.tsv" -not -name "CHECKSUMS.sha256" -print | LC_ALL=C sort | while IFS= read -r f; do
-        # Clean path (./foo -> foo)
+    # Find all files except checksums itself
+    # Note: MANIFEST.tsv IS included in CHECKSUMS.sha256
+    find . -type f -not -name "CHECKSUMS.sha256" -print | LC_ALL=C sort | while IFS= read -r f; do
         clean_path="${f#./}"
-        
-        # Calculate SHA256 (portable)
+        if [ "$clean_path" = "CHECKSUMS.sha256" ]; then continue; fi
+
+        # Calculate SHA256
         if command -v sha256sum >/dev/null; then
             sha=$(sha256sum "$f" | cut -d' ' -f1)
         else
             sha=$(shasum -a 256 "$f" | cut -d' ' -f1)
         fi
         
-        # Stat (bytes, mode) - platform specific handling
+        # Stat
         if [[ "$OSTYPE" == "darwin"* ]]; then
             read bytes mode_hex <<< $(stat -f "%z %p" "$f")
             mode="${mode_hex: -4}"
@@ -165,27 +200,41 @@ echo -e "path\tsha256\tbytes\tmode\ttype" > "${PACK_DIR}/MANIFEST.tsv"
             mode="0$mode"
         fi
         
-        echo -e "${clean_path}\t${sha}\t${bytes}\t${mode}\tfile" >> "MANIFEST.tsv"
+        # Don't add MANIFEST to itself, but add to CHECKSUMS
+        if [ "$clean_path" != "MANIFEST.tsv" ]; then
+            echo -e "${clean_path}\t${sha}\t${bytes}\t${mode}\tfile" >> "MANIFEST.tsv"
+        fi
         echo "${sha}  ${clean_path}" >> "CHECKSUMS.sha256"
     done
 )
 
-# 6. Create Archive (Deterministic attributes)
-echo "=== Archiving ==="
-# avoid macOS xattrs and AppleDouble files
+# 6. Task D: Create Archive (Deterministic attributes)
+echo "=== Archiving (Deterministic Selection) ==="
 export COPYFILE_DISABLE=1
+export COPY_EXTENDED_ATTRIBUTES_DISABLE=1
 
-TAR_OPTS=("-czf" "${ARCHIVE}")
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    # BSD tar on macOS
-    TAR_OPTS+=("--no-xattrs")
+TAR_CMD="tar"
+TAR_DET_OPTS=("")
+
+# Check for gtar
+if command -v gtar >/dev/null 2>&1; then
+    echo "[pack] gtar detected. Using deterministic flags."
+    TAR_CMD="gtar"
+    TAR_DET_OPTS=("--sort=name" "--mtime=@0" "--owner=0" "--group=0" "--numeric-owner")
 fi
-TAR_OPTS+=("${PACK_DIR}")
 
-tar "${TAR_OPTS[@]}"
+# Use --no-xattrs (supported by both BSD and GNU tar usually, but we check OSTYPE to be safe)
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    TAR_DET_OPTS+=("--no-xattrs")
+fi
+
+# Create tar (uncompressed first)
+"$TAR_CMD" "${TAR_DET_OPTS[@]}" -cf "${PACK_NAME}.tar" "${PACK_DIR}"
+
+# Compress with gzip -n (no timestamp metadata)
+gzip -n "${PACK_NAME}.tar"
 
 echo "Pack created: ${ARCHIVE}"
 
 # 7. Cleanup
 rm -rf "${PACK_DIR}"
-echo "Cleanup done: ${PACK_DIR}"
