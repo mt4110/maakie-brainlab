@@ -230,6 +230,7 @@ func runVerify(args []string) {
 
 	// 2. Strict check for extra files
 	// Allowed exception: CHECKSUMS.sha256
+	var extraFiles []string
 	err = filepath.WalkDir(verifyRoot, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -242,13 +243,21 @@ func runVerify(args []string) {
 			return nil
 		}
 		if !validFiles[rel] {
-			log.Printf("[FAIL] Extra file detected: %s (not in CHECKSUMS.sha256)", rel)
-			os.Exit(11)
+			extraFiles = append(extraFiles, rel)
 		}
 		return nil
 	})
 	if err != nil {
 		log.Fatalf("[FAIL] WalkDir: %v", err)
+	}
+
+	if len(extraFiles) > 0 {
+		log.Printf("[FAIL] Extra files detected (not in CHECKSUMS.sha256):")
+		sort.Strings(extraFiles)
+		for _, f := range extraFiles {
+			log.Printf("  - %s", f)
+		}
+		os.Exit(11)
 	}
 
 	fmt.Println("=== ALL PASS ===")
