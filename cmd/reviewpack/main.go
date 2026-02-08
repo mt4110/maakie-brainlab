@@ -70,6 +70,19 @@ func runPack(args []string) {
 		log.Fatalf("[FATAL] Getwd: %v", err)
 	}
 
+	// Resolve repo root via git (works even if invoked from subdir)
+	out, err := exec.Command("git", "rev-parse", "--show-toplevel").Output()
+	if err != nil {
+		log.Fatalf("[FATAL] git rev-parse --show-toplevel failed: %v", err)
+	}
+	repoRoot = strings.TrimSpace(string(out))
+	if repoRoot == "" {
+		log.Fatalf("[FATAL] git rev-parse --show-toplevel returned empty")
+	}
+	if err := os.Chdir(repoRoot); err != nil {
+		log.Fatalf("[FATAL] chdir to repo root failed: %v", err)
+	}
+
 	// Environment overrides
 	if os.Getenv("TIMEBOX_SEC") != "" {
 		fmt.Sscanf(os.Getenv("TIMEBOX_SEC"), "%d", timebox)
@@ -285,16 +298,26 @@ func runReproCheck(args []string) {
 // --- HELPERS ---
 
 func writeMeta(dir, timestamp string, timebox int, skipEval bool) {
-	f, _ := os.Create(filepath.Join(dir, "00_meta.txt"))
-	defer f.Close()
+	path := filepath.Join(dir, "00_meta.txt")
+	f, err := os.Create(path)
+	if err != nil {
+		log.Fatalf("[FATAL] create %s: %v", path, err)
+	}
+	defer func() { _ = f.Close() }()
 	fmt.Fprintf(f, "timestamp=%s\n", timestamp)
-	cwd, _ := os.Getwd()
+	cwd, err := os.Getwd()
+	if err != nil {
+		log.Fatalf("[FATAL] Getwd: %v", err)
+	}
 	fmt.Fprintf(f, "repo_root=%s\n", cwd)
 	fmt.Fprintf(f, "timebox_sec=%d\n", timebox)
 	fmt.Fprintf(f, "skip_eval=%v\n", skipEval)
 
 	// Git head
-	out, _ := exec.Command("git", "rev-parse", "HEAD").Output()
+	out, err := exec.Command("git", "rev-parse", "HEAD").Output()
+	if err != nil {
+		log.Fatalf("[FATAL] git rev-parse HEAD failed: %v", err)
+	}
 	fmt.Fprintf(f, "git_head=%s", out)
 }
 
@@ -338,16 +361,22 @@ func scanSecrets(dir string) {
 
 	found := false
 	reportPath := filepath.Join(dir, "20_secrets_scan.txt")
-	f, _ := os.Create(reportPath)
-	defer f.Close()
+	f, err := os.Create(reportPath)
+	if err != nil {
+		log.Fatalf("[FATAL] create %s: %v", reportPath, err)
+	}
+	defer func() { _ = f.Close() }()
 
 	for _, path := range files {
 		data, err := os.ReadFile(path)
-		if err == nil {
-			if ptn.Match(data) {
-				fmt.Fprintf(f, "MATCH %s\n", path)
-				found = true
-			}
+		if err != nil {
+			fmt.Fprintf(f, "READ_ERROR %s: %v\n", path, err)
+			fmt.Printf("[FAIL] secrets scan could not read tracked file: %s\n", path)
+			os.Exit(3)
+		}
+		if ptn.Match(data) {
+			fmt.Fprintf(f, "MATCH %s\n", path)
+			found = true
 		}
 	}
 
@@ -406,36 +435,51 @@ func runMake(dir, logName string, cmdArgs []string, timeoutSec int, failCode int
 }
 
 func copyFile(src, dst string) {
-	os.MkdirAll(filepath.Dir(dst), 0755)
+	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
+		log.Fatalf("[FATAL] mkdir %s: %v", filepath.Dir(dst), err)
+	}
 
-	// Don't follow symlinks for safety?
-	// Go's Copy should prob read link content or file content.
-	// Simple file copy:
 	in, err := os.Open(src)
 	if err != nil {
-		return // skip missing?
+		log.Fatalf("[FATAL] open %s: %v", src, err)
 	}
-	defer in.Close()
+	defer func() { _ = in.Close() }()
 
 	out, err := os.Create(dst)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("[FATAL] create %s: %v", dst, err)
 	}
-	defer out.Close()
-	io.Copy(out, in)
+	defer func() { _ = out.Close() }()
+
+	if _, err := io.Copy(out, in); err != nil {
+		log.Fatalf("[FATAL] copy %s -> %s: %v", src, dst, err)
+	}
 }
 
 func copyLatestEval(dir string) {
 	// Glob eval/results/*.jsonl
-	matches, _ := filepath.Glob("eval/results/*.jsonl")
+	matches, err := filepath.Glob("eval/results/*.jsonl")
+	if err != nil {
+		log.Fatalf("[FATAL] glob eval/results/*.jsonl: %v", err)
+	}
+
+	dstDir := filepath.Join(dir, "eval", "results")
+	if err := os.MkdirAll(dstDir, 0755); err != nil {
+		log.Fatalf("[FATAL] mkdir %s: %v", dstDir, err)
+	}
+
 	if len(matches) == 0 {
-		os.WriteFile(filepath.Join(dir, "eval/results/README_NO_RESULTS.txt"), []byte("No results found."), 0644)
+		path := filepath.Join(dstDir, "README_NO_RESULTS.txt")
+		if err := os.WriteFile(path, []byte("No results found.\n"), 0644); err != nil {
+			log.Fatalf("[FATAL] write %s: %v", path, err)
+		}
 		return
 	}
+
 	// Sort and pick last
 	sort.Strings(matches)
 	latest := matches[len(matches)-1]
-	copyFile(latest, filepath.Join(dir, "eval/results/latest.jsonl"))
+	copyFile(latest, filepath.Join(dstDir, "latest.jsonl"))
 }
 
 func writeReadme(dir string) {
@@ -466,7 +510,10 @@ cd src_snapshot
 bash ops/gate1.sh --verify-only
 ` + "```" + `
 `
-	os.WriteFile(filepath.Join(dir, "README.md"), []byte(content), 0644)
+	path := filepath.Join(dir, "README.md")
+	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		log.Fatalf("[FATAL] write %s: %v", path, err)
+	}
 }
 
 func writeVerifyScript(dir string) {
@@ -489,45 +536,71 @@ echo "[OK] Checksums passed."
 echo "[INFO] For strict verification (and extra-file detection), run:"
 echo "  go run ./src_snapshot/cmd/reviewpack/main.go verify ."
 `
-	os.WriteFile(filepath.Join(dir, "VERIFY.sh"), []byte(script), 0755)
+	path := filepath.Join(dir, "VERIFY.sh")
+	if err := os.WriteFile(path, []byte(script), 0755); err != nil {
+		log.Fatalf("[FATAL] write %s: %v", path, err)
+	}
 }
 
 func createManifestAndChecksums(dir string) {
 	manifestPath := filepath.Join(dir, "MANIFEST.tsv")
-	manFile, _ := os.Create(manifestPath)
-	fmt.Fprintln(manFile, "path\tsha256\tbytes\tmode\ttype")
+	manFile, err := os.Create(manifestPath)
+	if err != nil {
+		log.Fatalf("[FATAL] create %s: %v", manifestPath, err)
+	}
+	defer func() { _ = manFile.Close() }()
+	fmt.Fprintln(manFile, "path	sha256	bytes	mode	type")
 
 	var files []string
-	filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+	if err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
 		if d.IsDir() || filepath.Base(path) == "MANIFEST.tsv" || filepath.Base(path) == "CHECKSUMS.sha256" {
 			return nil
 		}
-		rel, _ := filepath.Rel(dir, path)
+		rel, err := filepath.Rel(dir, path)
+		if err != nil {
+			return err
+		}
 		files = append(files, rel)
 		return nil
-	})
+	}); err != nil {
+		log.Fatalf("[FATAL] WalkDir: %v", err)
+	}
 	sort.Strings(files) // sort for determinism
 
 	for _, f := range files {
 		abs := filepath.Join(dir, f)
-		info, _ := os.Stat(abs)
-		sha, _ := fileSha256(abs)
+		info, err := os.Stat(abs)
+		if err != nil {
+			log.Fatalf("[FATAL] stat %s: %v", abs, err)
+		}
+		sha, err := fileSha256(abs)
+		if err != nil {
+			log.Fatalf("[FATAL] sha256 %s: %v", abs, err)
+		}
 		mode := fmt.Sprintf("0%o", info.Mode().Perm())
-		fmt.Fprintf(manFile, "%s\t%s\t%d\t%s\tfile\n", f, sha, info.Size(), mode)
+		fmt.Fprintf(manFile, "%s	%s	%d	%s	file\n", f, sha, info.Size(), mode)
 	}
-	manFile.Close()
 
 	// Checksums: include MANIFEST.tsv
 	files = append(files, "MANIFEST.tsv")
 	sort.Strings(files)
 
 	sumPath := filepath.Join(dir, "CHECKSUMS.sha256")
-	sumFile, _ := os.Create(sumPath)
-	defer sumFile.Close()
+	sumFile, err := os.Create(sumPath)
+	if err != nil {
+		log.Fatalf("[FATAL] create %s: %v", sumPath, err)
+	}
+	defer func() { _ = sumFile.Close() }()
 
 	for _, f := range files {
 		abs := filepath.Join(dir, f)
-		sha, _ := fileSha256(abs)
+		sha, err := fileSha256(abs)
+		if err != nil {
+			log.Fatalf("[FATAL] sha256 %s: %v", abs, err)
+		}
 		fmt.Fprintf(sumFile, "%s  %s\n", sha, f)
 	}
 }
@@ -536,13 +609,12 @@ func runSelfVerify(dir string) {
 	// Run the generated VERIFY.sh or just internal verify?
 	// User requested "40_self_verify.log" creation
 	logPath := filepath.Join(dir, "40_self_verify.log")
-	f, _ := os.Create(logPath)
-	defer f.Close()
+	f, err := os.Create(logPath)
+	if err != nil {
+		log.Fatalf("[FATAL] create %s: %v", logPath, err)
+	}
+	defer func() { _ = f.Close() }()
 
-	// We can just verify internally
-	// Re-read CHECKSUMS and verify everything exists and matches
-	// But since we JUST validated/created it, it's trivial.
-	// The point is to "Fail if we messed up".
 	fmt.Fprintln(f, "Self-check: pack files were generated successfully. This file is included in CHECKSUMS.sha256.")
 }
 
@@ -552,23 +624,28 @@ func createDeterministicTar(srcDir, rootName, dstFile string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer out.Close()
+	defer func() { _ = out.Close() }()
 
 	// Gzip
 	gw := gzip.NewWriter(out)
 	gw.Header.ModTime = time.Unix(0, 0) // Deterministic Gzip
-	gw.Header.Name = dstFile
-	defer gw.Close()
+	gw.Header.Name = filepath.Base(dstFile)
+	defer func() { _ = gw.Close() }()
 
 	tw := tar.NewWriter(gw)
-	defer tw.Close()
+	defer func() { _ = tw.Close() }()
 
 	// Walk
 	var paths []string
-	filepath.WalkDir(srcDir, func(path string, d fs.DirEntry, err error) error {
+	if err := filepath.WalkDir(srcDir, func(path string, d fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
 		paths = append(paths, path)
 		return nil
-	})
+	}); err != nil {
+		log.Fatal(err)
+	}
 	sort.Strings(paths) // Deterministic order
 
 	for _, path := range paths {
@@ -582,7 +659,10 @@ func createDeterministicTar(srcDir, rootName, dstFile string) {
 		}
 
 		// Rel path inside tar
-		rel, _ := filepath.Rel(srcDir, path)
+		rel, err := filepath.Rel(srcDir, path)
+		if err != nil {
+			log.Fatal(err)
+		}
 		name := filepath.Join(rootName, rel)
 
 		// Header
@@ -609,8 +689,11 @@ func createDeterministicTar(srcDir, rootName, dstFile string) {
 			if err != nil {
 				log.Fatal(err)
 			}
-			io.Copy(tw, f)
-			f.Close()
+			if _, err := io.Copy(tw, f); err != nil {
+				_ = f.Close()
+				log.Fatal(err)
+			}
+			_ = f.Close()
 		}
 	}
 }
@@ -648,16 +731,29 @@ func runCmd(dir, name string, args ...string) {
 	cmd := exec.Command(name, cleanArgs...)
 	cmd.Dir = dir
 	if outPath != "" {
-		f, _ := os.Create(outPath)
-		defer f.Close()
+		f, err := os.Create(outPath)
+		if err != nil {
+			log.Fatalf("[FATAL] create %s: %v", outPath, err)
+		}
+		defer func() { _ = f.Close() }()
 		cmd.Stdout = f
 		cmd.Stderr = f // redirect both
+	} else {
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
 	}
-	cmd.Run()
+	if err := cmd.Run(); err != nil {
+		log.Fatalf("[FATAL] command failed: dir=%s cmd=%s args=%v err=%v", dir, name, cleanArgs, err)
+	}
 }
 
 func extractTar(tarPath, dstDir string) {
 	// Use system tar for extraction simplicity or implementing un-tar
 	// Let's use system tar to avoid reimplementing decompression
-	exec.Command("tar", "-xzf", tarPath, "-C", dstDir).Run()
+	cmd := exec.Command("tar", "-xzf", tarPath, "-C", dstDir)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		log.Fatalf("[FATAL] tar extract failed: %v", err)
+	}
 }

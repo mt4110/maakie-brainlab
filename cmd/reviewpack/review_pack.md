@@ -22,7 +22,7 @@
 # Pack生成
 go run cmd/reviewpack/main.go pack [--timebox 300] [--skip-eval] [N_COMMITS]
 
-# 例：evalスキップ、直近1コミット
+# Fix: evalスキップ（直近1コミット）
 go run cmd/reviewpack/main.go pack --skip-eval 1
 
 # 検証（展開ディレクトリ or tar.gz）
@@ -90,5 +90,5 @@ bash ops/gate1.sh --verify-only
 
 ### 5) Secrets Fail-Fast
 
-- Git 管理下のファイルに秘密鍵やトークン（例：`sk-...`）が含まれる場合、即座に失敗し、アーカイブを生成しません。
+- Git 管理下のファイルに秘密鍵やトークン（Fix: `sk-...`）が含まれる場合、即座に失敗し、アーカイブを生成しません。
 - 証拠は `20_secrets_scan.txt` に残ります。
