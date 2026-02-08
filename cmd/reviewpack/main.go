@@ -650,15 +650,19 @@ func createManifestAndChecksums(dir string) {
 		checksumLines = append(checksumLines, fmt.Sprintf("%s %s", h, rel))
 	}
 
-	// Ensure MANIFEST.tsv is covered too
-	manHash, err := fileSha256(manifestPath)
-	if err := manFile.Close(); err != nil {
-		log.Fatalf("[FATAL] close MANIFEST.tsv: %v", err)
-	}
-	// manSt, _ := os.Stat(manifestPath)
-	// fmt.Fprintf(manFile, "MANIFEST.tsv\t%s\t%d\t%#o\tfile\n", manHash, manSt.Size(), manSt.Mode().Perm())
+    // Ensure MANIFEST.tsv is covered too
+    if err := manFile.Close(); err != nil {
+        log.Fatalf("[FATAL] close MANIFEST.tsv: %v", err)
+    }
 
-	checksumLines = append(checksumLines, fmt.Sprintf("%s %s", manHash, "MANIFEST.tsv"))
+    manHash, err := fileSha256(manifestPath)
+    if err != nil {
+        log.Fatalf("[FATAL] sha256 MANIFEST.tsv: %v", err)
+    }
+
+    // (Do not append MANIFEST.tsv's own hash line into MANIFEST.tsv itself.)
+    checksumLines = append(checksumLines, fmt.Sprintf("%s %s", manHash, "MANIFEST.tsv"))
+
 	sort.Strings(checksumLines)
 
 	checkPath := filepath.Join(dir, "CHECKSUMS.sha256")
