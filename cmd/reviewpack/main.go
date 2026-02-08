@@ -286,8 +286,14 @@ func generatePackFilelist(dir string) []string {
 		base := filepath.Base(path)
 
 		// 1. Names
-		if base == ".DS_Store" || base == ".env" || strings.HasSuffix(base, ".pem") || strings.HasPrefix(base, "id_rsa") || strings.HasSuffix(base, ".log") || strings.HasSuffix(base, ".swp") || strings.HasSuffix(base, "~") {
+		if base == ".DS_Store" || base == ".env" || strings.HasSuffix(base, ".pem") || strings.HasPrefix(base, "id_rsa") || strings.HasSuffix(base, ".swp") || strings.HasSuffix(base, "~") {
 			violations = append(violations, fmt.Sprintf("Prohibited file: %s", rel))
+		}
+		if strings.HasSuffix(base, ".log") {
+			// Whitelist generated evidence logs
+			if base != "30_make_test.log" && base != "31_make_run_eval.log" && base != "40_self_verify.log" {
+				violations = append(violations, fmt.Sprintf("Prohibited file: %s", rel))
+			}
 		}
 
 		// 2. Symlinks (S4-06-03)
