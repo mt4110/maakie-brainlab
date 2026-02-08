@@ -8,6 +8,15 @@
       system = "aarch64-darwin";
       pkgs = import nixpkgs { inherit system; };
     in {
+      packages.${system}.prverify = pkgs.writeShellScriptBin "prverify" ''
+        bash ops/gate1.sh
+      '';
+
+      apps.${system}.prverify = {
+        type = "app";
+        program = "${self.packages.${system}.prverify}/bin/prverify";
+      };
+
       devShells.${system}.default = pkgs.mkShell {
         packages = [
           pkgs.git
