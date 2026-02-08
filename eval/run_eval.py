@@ -152,7 +152,7 @@ def apply_type_constraints(
         is_unknown = (fail_reason_code == ReasonCode.UNKNOWN_ANSWER)
         
         if has_sources and not is_unknown:
-             return ReasonCode.POSITIVE_HALLUCINATION
+            return ReasonCode.POSITIVE_HALLUCINATION
 
         # Pass if Unknown/NoSource/ContextEmpty
         if fail_reason_code in (
@@ -171,7 +171,7 @@ def apply_type_constraints(
     # Normal/Ref/Boundary/MultiChunk
     if fail_reason_code is None:
         if not has_required_source:
-             return ReasonCode.MISSING_REQUIRED_SOURCE
+            return ReasonCode.MISSING_REQUIRED_SOURCE
         
         # Evidence Check Logic
         if not has_expected_evidence:
