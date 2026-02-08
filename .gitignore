@@ -58,3 +58,4 @@ verify_*/
 verify_manual/
 verify_test/
 debug_*.log
+SUBMIT_HISTORY.sha256

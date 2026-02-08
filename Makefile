@@ -65,3 +65,10 @@ sat-run: sat-collect sat-normalize sat-gate sat-store sat-digest sat-index
 
 gate1:
 	bash ops/gate1.sh
+
+# S5-02 Review Pack
+s5:
+	bash ops/s5_pack.sh
+
+s5-verify:
+	bash ops/s5_verify_pack.sh "$(PACK)"
