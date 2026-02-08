@@ -63,9 +63,9 @@ class Collector:
             )
             with urllib.request.urlopen(req, timeout=timeout_sec) as resp:
                 return resp.read()
-        except Exception as e:
+        except Exception:
             # Re-raise to be caught by run() which expects exceptions on failure
-            raise e
+            raise
 
 
     def run(self) -> None:
@@ -105,7 +105,12 @@ class Collector:
             raw_data = {
                 "source_id": self.source_id,
                 "fetched_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-                "feed_entry": entry
+                # Sanitize feed_entry to minimal fields to avoid JSON serialization issues with complex objects
+                "feed_entry": {
+                    k: getattr(entry, k) 
+                    for k in ["link", "title", "summary", "published", "updated", "id"] 
+                    if hasattr(entry, k)
+                }
             }
             
             # Atomic Write

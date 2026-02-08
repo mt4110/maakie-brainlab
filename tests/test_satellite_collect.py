@@ -53,7 +53,6 @@ class TestSatelliteCollect(unittest.TestCase):
             self.skipTest("Fixture not found")
             
         # Mock feedparser response
-        # Mock feedparser response
         # We parse the fixture using real feedparser to simulate real object structure
         # In strict timeout mode, fetch_feed returns bytes
         mock_fetch.return_value = fixture_path.read_bytes()
