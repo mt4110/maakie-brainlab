@@ -61,8 +61,8 @@ else
 fi
 
 if [ -z "${LATEST_RESULT:-}" ]; then
-  echo "[FAIL] No eval results found in eval/results/."
-  exit 1
+    echo "[FAIL] No eval results found in eval/results/."
+    exit 1
 fi
 
 echo "   Target result: $LATEST_RESULT"
