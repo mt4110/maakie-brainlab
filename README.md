@@ -17,6 +17,7 @@ bash ops/gate1.sh --verify-only
 配布されたレビューパック内では、`./VERIFY.sh` を実行することで整合性と Gate-1 のパスを確認できます。
 
 ## Quickstart
+
 1) Start llama-server
 2) Build index
 3) Ask
