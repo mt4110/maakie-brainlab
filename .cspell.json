@@ -16,6 +16,7 @@
         "direnv",
         "dotenv",
         "feedparser",
+        "Filelist",
         "frozenlist",
         "gguf",
         "gtar",
