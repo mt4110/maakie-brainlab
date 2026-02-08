@@ -2,7 +2,7 @@ import argparse
 import hashlib
 import json
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Any, Optional
 
@@ -76,8 +76,8 @@ class Normalizer:
 
     def run(self) -> None:
         if not self.raw_dir.exists():
-             print(f"{RED}Error: Raw dir not found: {self.raw_dir}{RESET}", file=sys.stderr)
-             sys.exit(1)
+            print(f"{RED}Error: Raw dir not found: {self.raw_dir}{RESET}", file=sys.stderr)
+            sys.exit(1)
 
         files = sorted(list(self.raw_dir.glob("*.json")))
         if not files:
@@ -108,7 +108,7 @@ class Normalizer:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("source_id", help="Source ID")
-    parser.add_argument("--date", help="YYYY-MM-DD", default=datetime.utcnow().strftime("%Y-%m-%d"))
+    parser.add_argument("--date", help="YYYY-MM-DD", default=datetime.now(timezone.utc).strftime("%Y-%m-%d"))
     args = parser.parse_args()
     
     root = Path(__file__).resolve().parents[2]

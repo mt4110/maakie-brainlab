@@ -66,7 +66,15 @@ mkdir -p "${PACK_DIR}/src_snapshot"
 echo "[pack] Collecting source files..."
 # Extended to include docs (.md) and ops scripts (.sh) for Gate-1 review
 # explicitly sort for determinism. Note: sort -z not supported on macOS, using standard sort (newline assumption)
-git ls-files | grep -E '\.py$|\.toml$|Makefile|\.md$|\.sh$' | LC_ALL=C sort | while IFS= read -r file; do
+  
+  # Adjust extensions/paths as needed.
+  # NOTE: tests may depend on non-.py fixtures; include tests/fixtures/** explicitly so
+  #       a reviewer can re-run tests from the pack without missing assets.
+  local allowed_extensions
+  allowed_extensions=$(
+    git ls-files | grep -E '\\.py$|\\.toml$|Makefile$|\\.md$|\\.sh$|\\.json$|\\.jsonl$|\\.yml$|\\.yaml$|\\.txt$|\\.tsv$|\\.csv$|\\.xml$|\\.rss$|^tests/fixtures/' || true
+  )
+  echo "$allowed_extensions" | LC_ALL=C sort | while IFS= read -r file; do
     # Create dir structure
     mkdir -p "${PACK_DIR}/src_snapshot/$(dirname "$file")"
     
