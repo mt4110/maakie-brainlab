@@ -32,7 +32,8 @@ git status > "${PACK_DIR}/01_status.txt"
 
 echo "--- 20_secrets_scan.txt ---"
 # Scan tracked files only, capturing output but allowing 'no match' exit code
-if git grep -nE 'sk-[A-Za-z0-9]{20,}|BEGIN (RSA|EC|OPENSSH) PRIVATE KEY' -- $(git ls-files); then
+# Scan tracked files only, capturing output but allowing 'no match' exit code
+if git grep -nE 'sk-[A-Za-z0-9]{20,}|BEGIN (RSA|EC|OPENSSH) PRIVATE KEY'; then
     echo "[WARN] Potential secrets found!"
 else
     echo "No secrets found."
@@ -193,10 +194,10 @@ echo -e "path\tsha256\tbytes\tmode\ttype" > "${PACK_DIR}/MANIFEST.tsv"
         
         # Stat
         if [[ "$OSTYPE" == "darwin"* ]]; then
-            read bytes mode_hex <<< $(stat -f "%z %p" "$f")
+            read bytes mode_hex <<< "$(stat -f "%z %p" "$f")"
             mode="${mode_hex: -4}"
         else
-            read bytes mode <<< $(stat -c "%s %a" "$f")
+            read bytes mode <<< "$(stat -c "%s %a" "$f")"
             mode="0$mode"
         fi
         

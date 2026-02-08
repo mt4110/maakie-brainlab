@@ -7,7 +7,7 @@ try:
     import tomllib
 except ImportError:
     import tomli as tomllib
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from satellite.manifest import generate_run_id, save_manifest, compute_config_sha
@@ -80,7 +80,7 @@ class Collector:
             # Prepare minimal raw data + meta
             raw_data = {
                 "source_id": self.source_id,
-                "fetched_at": datetime.utcnow().isoformat() + "Z",
+                "fetched_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
                 "feed_entry": entry
             }
             
@@ -134,7 +134,7 @@ class Collector:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("source_id", help="Source ID (e.g. example_tech_blog)")
-    parser.add_argument("--date", help="YYYY-MM-DD", default=datetime.utcnow().strftime("%Y-%m-%d"))
+    parser.add_argument("--date", help="YYYY-MM-DD", default=datetime.now(timezone.utc).strftime("%Y-%m-%d"))
     args = parser.parse_args()
     
     root = Path(__file__).resolve().parents[2] # src/satellite/collect.py -> root

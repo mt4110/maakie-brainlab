@@ -93,6 +93,8 @@ class TestSatelliteCollect(unittest.TestCase):
         # Mock datetime to ensure fetched_at is constant
         mock_now = datetime(2023, 10, 6, 12, 0, 0)
         mock_dt.utcnow.return_value = mock_now
+        mock_dt.now.return_value = mock_now
+
         mock_dt.isoformat.return_value = "2023-10-06T12:00:00"
 
         feed_obj = feedparser.parse(fixture_path.read_text())
