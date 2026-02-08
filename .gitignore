@@ -53,3 +53,8 @@ verify_manual_*.log
 
 # python package info
 *.egg-info/
+.local/
+verify_*/
+verify_manual/
+verify_test/
+debug_*.log
