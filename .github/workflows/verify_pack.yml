@@ -1,0 +1,43 @@
+name: Verify Pack
+
+on:
+  push:
+    branches: [ "main", "s7-*" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  verify-pack:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.25'
+
+    # S7-01: GPG Key Generation (Ephemeral for CI)
+    - name: Generate Ephemeral Keys
+      run: |
+        go run cmd/gopsign/main.go -mode=keygen -id="CI Builder"
+        echo "S6_SIGNING_KEY=$(pwd)/privkey.asc" >> $GITHUB_ENV
+        echo "S6_VERIFY_KEY=$(pwd)/pubkey.asc" >> $GITHUB_ENV
+
+    # S5: Evidence Pack
+    - name: Create Evidence Pack
+      run: make s5
+
+    # Review Bundle
+    - name: Create Review Bundle
+      run: go run cmd/reviewpack/main.go cmd/reviewpack/sign.go pack -sign-key="$S6_SIGNING_KEY"
+
+    # Verification (Unified)
+    - name: Verify Evidence Pack
+      run: |
+        PACK=$(ls -t .local/reviewpack_artifacts/evidence_pack_*.tar.gz | head -n 1)
+        make verify-pack PACK="$PACK"
+
+    - name: Verify Review Bundle
+      run: |
+        PACK=$(ls -t review_bundle_*.tar.gz | head -n 1)
+        make verify-pack PACK="$PACK"

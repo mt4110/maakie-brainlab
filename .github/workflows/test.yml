@@ -1,0 +1,27 @@
+name: Test
+
+on:
+  push:
+    branches: [ "main", "s7-*" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.25'
+    
+    - name: Verify dependencies
+      run: go mod verify
+
+    - name: Run Unit Tests
+      run: make test
+
+    # Linting could be added here (e.g. golangci-lint)
+    - name: Vet
+      run: go vet ./...
