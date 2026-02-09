@@ -30,7 +30,7 @@ fi
 # -----------------------------------------------------------------------------
 
 # Generate Timestamp (UTC)
-TS=$(date -u +"%Y%m%dT%H%M%SZ")
+TS=${TS:-$(date -u +"%Y%m%dT%H%M%SZ")}
 PACK_DIR=".local/reviewpack_artifacts"
 mkdir -p "$PACK_DIR"
 
@@ -63,8 +63,11 @@ echo "[S5] Target result: $RESULT_SRC"
 # 3. Staging & Packing
 # -----------------------------------------------------------------------------
 
-STAGE_DIR="/tmp/s5_stage_$TS"
-rm -rf "$STAGE_DIR"
+# Setup staging with guaranteed cleanup
+STAGE_DIR=$(mktemp -d "/tmp/s5_stage.XXXXXX")
+trap 'rm -rf "$STAGE_DIR"' EXIT
+
+echo "[S5] Staging dir: $STAGE_DIR"
 mkdir -p "$STAGE_DIR/ops" "$STAGE_DIR/eval/results" "$STAGE_DIR/docs"
 
 # Copy files
@@ -96,13 +99,19 @@ HEAD_HASH=$(git rev-parse HEAD)
 PACK_NAME="review_pack_$TS.tar.gz"
 PACK_PATH="$PACK_DIR/$PACK_NAME"
 
+if [ -f "$PACK_PATH" ]; then
+    echo "[FAIL] Pack file already exists: $PACK_PATH"
+    echo "       Log: $GATE1_LOG"
+    exit 1
+fi
+
 (cd "$STAGE_DIR" && COPYFILE_DISABLE=1 tar -czf - .) > "$PACK_PATH"
 
 # Calculate pack SHA256
 PACK_SHA=$(sha256sum "$PACK_PATH" | awk '{print $1}')
 
-# Cleanup stage
-rm -rf "$STAGE_DIR"
+# Cleanup stage (handled by trap)
+# rm -rf "$STAGE_DIR"
 
 # -----------------------------------------------------------------------------
 # 4. Finalize
