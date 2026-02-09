@@ -11,6 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GATE1_VERIFY_ONLY: "1"
+      S5_MODE: "verify-only"
     steps:
       - uses: actions/checkout@v4
 
@@ -33,6 +34,8 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version-file: go.mod
+          cache: true
+          cache-dependency-path: go.sum
 
       # S7-01: GPG Key Generation (Ephemeral for CI)
       # S7-01: GPG Key Generation (Ephemeral for CI)
@@ -83,9 +86,14 @@ jobs:
           ls -1t .local/reviewpack_artifacts/gate1.*.log 2>/dev/null | head -n 1 \
             | xargs -I {} cp {} ci_out/gate1.log || echo "No gate1 log found" > ci_out/gate1.log
 
+          # Observability (S7-20)
+          echo "== verify_pack.log (tail 120) =="
+          tail -n 120 ci_out/verify_pack.log || true
+
           # Create artifact upload manifest & Diagnostics
           {
             echo "== preflight =="
+            echo "date=$(date -u)"
             echo "pwd=$(pwd)"
             echo "git_root=$(git rev-parse --show-toplevel 2>/dev/null || echo '-')"
             echo "git_status:"
@@ -93,6 +101,8 @@ jobs:
             echo "go env GOMOD=$(go env GOMOD 2>/dev/null || echo '-')"
             echo "python=$(python -V 2>&1 || true)"
             echo "venv_python=$(.venv/bin/python -V 2>&1 || echo 'missing')"
+            echo "pip freeze:"
+            .venv/bin/pip freeze | head -n 20
             echo
             echo "== ci_out tree =="
             ls -R ci_out || true
@@ -100,6 +110,8 @@ jobs:
             echo "== .local/reviewpack_artifacts tree =="
             ls -R .local/reviewpack_artifacts 2>/dev/null || true
           } > ci_out/artifact_upload.log
+          
+          cp ci_out/artifact_upload.log ci_out/diagnostics.txt
 
           exit "$EXIT_CODE"
 

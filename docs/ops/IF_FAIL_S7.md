@@ -41,6 +41,12 @@ This document outlines how to diagnose and resolve failures in the S7 Continuous
 2.  **Signature Fail**: GPG signature invalid. Check `S6_VERIFY_KEY` matches the signing key.
 3.  **Content Fail**: `latest.jsonl` missing or invalid.
 
+## Triage Order
+1. `ci_out/gate1.log` (Did checks pass?)
+2. `ci_out/verify_pack.log` (Did pack generation fail?)
+3. `ci_out/diagnostics.txt` (Env issues?)
+4. `ci_out/artifact_upload.log` (File tree checks)
+
 ## IF-07: Strict Mode Failure (Exit 5)
 **Symptom**: `submit --mode strict` or `make s5` fails with `exit status 5`.
 **Log**: `31_make_run_eval.log` (internal to pack or in artifacts).

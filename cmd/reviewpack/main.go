@@ -331,11 +331,25 @@ func packToTarForSubmit(args []string, timebox int, mode string) string {
 			os.Exit(5) // Using 5 to indicate eval-related failure (pre-check)
 		}
 
-		// Write SKIP log
-		logContent := fmt.Sprintf("[SKIP] make run-eval (mode=%s)\nreason=verify-only mode must not depend on local LLM server\nusing=eval/results/latest.jsonl\n", mode)
+		// Calculate stats for skip log
+		latestPath := filepath.Join(repoRoot, "eval/results/latest.jsonl")
+		latestSha, err := fileSha256(latestPath)
+		if err != nil {
+			log.Fatalf("[FATAL] sha256 latest: %v", err)
+		}
+		st, err := os.Stat(latestPath)
+		if err != nil {
+			log.Fatalf("[FATAL] stat latest: %v", err)
+		}
+
+		// Write SKIP log (Fixed format S7-20)
+		logContent := fmt.Sprintf("mode=%s\nreason=reuse_latest\nlatest_path=eval/results/latest.jsonl\nlatest_sha256=%s\nlatest_bytes=%d\n", 
+			mode, latestSha, st.Size())
 		if err := os.WriteFile(filepath.Join(packDir, "31_make_run_eval.log"), []byte(logContent), 0644); err != nil {
 			log.Fatalf("[FATAL] write skip log: %v", err)
 		}
+		
+		fmt.Printf("[INFO] verify-only: reusing %s (sha=%s)\n", latestPath, latestSha)
 	}
 
 	// 5. Source Snapshot & Measure Eval Result
@@ -991,6 +1005,7 @@ func copyFile(src, dst string) {
 	}
 	defer func() { _ = out.Close() }()
 
+	if _, err := io.Copy(out, in); err != nil {
 		log.Fatalf("[FATAL] copy %s -> %s: %v", src, dst, err)
 	}
 }
