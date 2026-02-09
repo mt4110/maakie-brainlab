@@ -14,6 +14,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Create venv
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install -r requirements.txt
+
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
@@ -22,36 +32,53 @@ jobs:
       # S7-01: GPG Key Generation (Ephemeral for CI)
       - name: Generate Ephemeral Keys
         run: |
-          go run cmd/gopsign/main.go -mode=keygen -id="CI Builder"
-          echo "S6_SIGNING_KEY=$(pwd)/privkey.asc" >> $GITHUB_ENV
-          echo "S6_VERIFY_KEY=$(pwd)/pubkey.asc" >> $GITHUB_ENV
+          KEYDIR="$(mktemp -d)"
+          pushd "$KEYDIR" >/dev/null
+          # Create dummy keys (or real ones if needed, but in tmp)
+          go run "$GITHUB_WORKSPACE/cmd/gopsign/main.go" -mode=keygen -id="CI Builder"
+          popd >/dev/null
 
-      # S5: Evidence Pack
+          echo "S6_SIGNING_KEY=$KEYDIR/privkey.asc" >> "$GITHUB_ENV"
+          echo "S6_VERIFY_KEY=$KEYDIR/pubkey.asc" >> "$GITHUB_ENV"
+
+      # S5: Evidence Pack (Clean Execution)
       - name: Create Evidence Pack
         id: create_evidence_pack
         shell: bash
         run: |
-          mkdir -p ci_out
           set +e
-          make s5 2>&1 | tee ci_out/verify_pack.log
+          TMPDIR="$(mktemp -d)"
+
+          # Run make s5 without polluting repo with ci_out yet
+          make s5 2>&1 | tee "$TMPDIR/verify_pack.log"
           EXIT_CODE=${PIPESTATUS[0]}
+
           set -e
+          mkdir -p ci_out
+          cp "$TMPDIR/verify_pack.log" ci_out/verify_pack.log || true
 
+          # Save Gate-1 log if exists (copy latest)
           echo "Searching for gate1 logs..."
-          ls -1t .local/reviewpack_artifacts/gate1.*.log 2>/dev/null | head -n 1 | xargs -I {} cp {} ci_out/gate1.log || echo "No gate1 log found"
+          ls -1t .local/reviewpack_artifacts/gate1.*.log 2>/dev/null | head -n 1 \
+            | xargs -I {} cp {} ci_out/gate1.log || echo "No gate1 log found"
 
-          echo "Artifacts to upload:" > ci_out/artifact_upload.log
-          ls -R ci_out >> ci_out/artifact_upload.log
-          ls -R .local/reviewpack_artifacts >> ci_out/artifact_upload.log 2>/dev/null || true
+          # Create artifact upload manifest
+          {
+            echo "Artifacts to upload:"
+            echo "== ci_out =="
+            ls -R ci_out
+            echo "== .local/reviewpack_artifacts =="
+            ls -R .local/reviewpack_artifacts 2>/dev/null || true
+          } > ci_out/artifact_upload.log
 
-          exit $EXIT_CODE
+          exit "$EXIT_CODE"
 
       - name: Upload Artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: verify-pack-logs-${{ github.run_id }}-${{ github.sha }}
           if-no-files-found: warn
+          name: verify-pack-logs-${{ github.run_id }}-${{ github.sha }}
           path: |
             ci_out/
             .local/reviewpack_artifacts/
