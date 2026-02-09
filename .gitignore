@@ -59,3 +59,10 @@ verify_manual/
 verify_test/
 debug_*.log
 SUBMIT_HISTORY.sha256
+
+# GPG Keys & Signatures
+*.asc
+*.key
+*.gpg
+privkey.asc
+pubkey.asc
