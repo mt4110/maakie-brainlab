@@ -9,6 +9,8 @@ on:
 jobs:
   verify-pack:
     runs-on: ubuntu-latest
+    env:
+      GATE1_VERIFY_ONLY: "1"
     steps:
       - uses: actions/checkout@v4
 
