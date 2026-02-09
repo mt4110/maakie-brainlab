@@ -184,6 +184,9 @@ func packToTar(args []string) string {
 	writeReadme(packDir)
 	writeVerifyScript(packDir)
 
+	// C10-03: PACK_KIND Identity
+	_ = os.WriteFile(filepath.Join(packDir, "review_pack_v1"), []byte("1\n"), 0644)
+
 	// 7. Self-Verify
 	runSelfVerify(packDir)
 
@@ -521,6 +524,11 @@ func runVerify(args []string) {
 		log.Fatalf("[FAIL] No CHECKSUMS.sha256 found: %v", err)
 	}
 
+	// C10-03: PACK_KIND Check
+	if _, err := os.Stat(filepath.Join(verifyRoot, "review_pack_v1")); os.IsNotExist(err) {
+		log.Fatalf("[FAIL] Missing PACK_KIND file: review_pack_v1")
+	}
+
 	validFiles := make(map[string]bool)
 	scanner := bufio.NewScanner(bytes.NewReader(content))
 	for scanner.Scan() {
@@ -797,6 +805,10 @@ func writeVerifyScript(dir string) {
 set -euo pipefail
 cd "$(dirname "$0")"
 echo "=== VERIFY (legacy wrapper) ==="
+if [ ! -f "review_pack_v1" ]; then
+    echo "[FAIL] Missing review_pack_v1 identity file"
+    exit 1
+fi
 if ! grep -q " MANIFEST.tsv$" CHECKSUMS.sha256; then
   echo "[FATAL] CHECKSUMS.sha256 does not include MANIFEST.tsv" >&2
   exit 3
