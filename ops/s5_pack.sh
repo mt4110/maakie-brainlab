@@ -14,6 +14,9 @@ if [ -n "$(git status --porcelain)" ]; then
     exit 1
 fi
 
+# 0.1 Check for forbidden file:// links
+bash ops/check_no_file_url.sh
+
 # Check for required files
 if [ ! -f "docs/rules" ] && [ ! -d "docs/rules" ]; then # docs/rules can be a dir or file depending on repo structure, prompt says "docs/rules exists"
     echo "[FAIL] docs/rules not found."
