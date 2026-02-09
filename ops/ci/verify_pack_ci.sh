@@ -19,7 +19,7 @@ fi
 
 echo "[S7-CI] Verify Pack CI Started"
 echo "URL: $EVIDENCE_PACK_URL"
-echo "URL: $EVIDENCE_PACK_URL"
+
 echo "OUT: $OUT_DIR"
 
 # 2.5 Env Metadata (S7-C07)
