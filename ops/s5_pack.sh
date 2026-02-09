@@ -83,6 +83,9 @@ if [ -f "VERIFY" ]; then
     cp VERIFY "$STAGE_DIR/"
 fi
 
+# C10-02: PACK_KIND Identity
+echo "1" > "$STAGE_DIR/evidence_pack_v1"
+
 # Generate MANIFEST.txt
 MANIFEST="$STAGE_DIR/MANIFEST.txt"
 HEAD_HASH=$(git rev-parse HEAD)

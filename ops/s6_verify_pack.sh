@@ -34,6 +34,7 @@ REQUIRED_PATHS=(
     "ops/gate1.sh"
     "eval/results/latest.jsonl"
     "MANIFEST.txt"
+    "evidence_pack_v1"
 )
 
 MISSING=0
