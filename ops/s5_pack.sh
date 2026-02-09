@@ -39,6 +39,12 @@ mkdir -p "$PACK_DIR"
 
 GATE1_LOG="$PACK_DIR/gate1.$TS.log"
 
+# S5_MODE Logic (Phase 04)
+if [ "${S5_MODE:-}" == "verify-only" ]; then
+    export GATE1_VERIFY_ONLY=1
+    echo "[S5] Mode: verify-only (Skipping run-eval)"
+fi
+
 echo "[S5] Running Gate-1..."
 if ! make gate1 > "$GATE1_LOG" 2>&1; then
     echo "[FAIL] Gate-1 failed. See log: $GATE1_LOG"
