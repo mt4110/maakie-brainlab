@@ -21,5 +21,14 @@ echo "[S7-CI] Verify Pack CI Started"
 echo "URL: $EVIDENCE_PACK_URL"
 echo "OUT: $OUT_DIR"
 
-# Placeholder for next steps
-exit 0
+# 3. Download (S7-C04B)
+PACK_FILE="$OUT_DIR/evidence_pack.tar.gz"
+LOG_DOWNLOAD="$OUT_DIR/verify_download.log"
+
+echo "[S7-CI] Downloading pack..."
+if ! curl -fL "$EVIDENCE_PACK_URL" -o "$PACK_FILE" > "$LOG_DOWNLOAD" 2>&1; then
+    echo "[FAIL] IF-01: Download failed. See $LOG_DOWNLOAD"
+    cat "$LOG_DOWNLOAD"
+    exit 1
+fi
+echo "[OK] Downloaded $(stat -f%z "$PACK_FILE") bytes to $PACK_FILE"
