@@ -78,8 +78,10 @@ s5-verify:
 s6-verify:
 	bash ops/s6_verify_pack.sh "$(PACK)"
 
+.PHONY: check-doc-links
 check-doc-links:
 	@bash ops/check_no_file_url.sh
+
 
 # C10 Unified Verification
 verify-pack:

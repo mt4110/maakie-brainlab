@@ -1,59 +1,51 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
 
-# ops/check_no_file_url.sh
-# Checks for accidental `file://` links in documentation and key artifacts.
-#
-# Rules:
-# 1. Deny markdown links: `](file://`
-# 2. Deny autolinks: `<file://`
-# 3. Allow text examples: `file://` (when not part of a link structure)
-
-# Files to check
-TARGETS=(
-    "docs"
-    "walkthrough.md"
-    "task.md"
-    "implementation_plan.md"
-)
-
-# Convert arrays to find args if needed, or just pass to grep
-# We use grep -r for directories and files directly.
-
-# Pattern explanation:
-# - `\]\(file://` : Matches markdown link target starting with file://
-# - `<file://`    : Matches autolink starting with file://
+ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+if [[ -z "${ROOT}" ]]; then
+  echo "[FAIL] not a git repo. run inside repo." >&2
+  exit 2
+fi
+cd "$ROOT"
 
 echo "[CHECK] Scanning for forbidden file:// links..."
 
-FOUND=0
+targets=()
+[[ -d docs ]] && targets+=("docs")
+[[ -d .github ]] && targets+=(".github")
 
-# Use grep with line numbers and recursive for directories
-# We use extended regex (-E)
-# Note: we need to handle potential absence of files gracefully, but robustly.
+# root-level markdown files
+while IFS= read -r -d '' f; do
+  targets+=("$f")
+done < <(find . -maxdepth 1 -type f -name "*.md" -print0 2>/dev/null || true)
 
-for target in "${TARGETS[@]}"; do
-    if [ -e "$target" ]; then
-        if grep -r -n -E '\]\(file://|<file://' "$target"; then
-            echo "[FAIL] Found forbidden file:// link in $target"
-            FOUND=1
-        fi
-    else
-        # It's okay if a target doesn't exist (e.g. no docs dir yet), but warn.
-        # implementation_plan.md and task.md SHOULD exist.
-        if [[ "$target" == "task.md" || "$target" == "implementation_plan.md" ]]; then
-             echo "[WARN] Required artifact missing: $target"
-        fi
-    fi
+if (( ${#targets[@]} == 0 )); then
+  echo "[FAIL] no scan targets found (docs/.github/*.md missing). Are you in repo root?" >&2
+  exit 2
+fi
+
+echo "[INFO] targets:"
+for t in "${targets[@]}"; do
+  echo " - $t"
 done
 
-if [ "$FOUND" -eq 1 ]; then
-    echo ""
-    echo "[ERROR] 'file://' links detected!"
-    echo "       Please remove them or convert to relative paths."
-    echo "       See docs/ops/IF_FAIL_C10.md for details."
-    exit 1
-else
-    echo "[OK] No forbidden file:// links found."
-    exit 0
+# Deny: link-style or raw file URLs (to prevent accidental clickables)
+pattern='\]\(file://|<file://|file:///'
+
+matches=()
+for t in "${targets[@]}"; do
+  if [[ -d "$t" ]]; then
+    while IFS= read -r line; do matches+=("$line"); done < <(grep -R -n -E "$pattern" "$t" || true)
+  else
+    while IFS= read -r line; do matches+=("$line"); done < <(grep -n -E "$pattern" "$t" || true)
+  fi
+done
+
+if (( ${#matches[@]} > 0 )); then
+  echo "[FAIL] Forbidden file:// link(s) found:" >&2
+  printf '%s\n' "${matches[@]}" >&2
+  echo "next: remove link-style file:// and use repo-relative paths. See docs/ops/IF_FAIL_S7.md" >&2
+  exit 1
 fi
+
+echo "[OK] No forbidden file:// links found."
