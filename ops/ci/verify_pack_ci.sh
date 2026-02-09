@@ -48,3 +48,21 @@ if ! grep -qE "evidence_pack_v1|review_pack_v1" "$LOG_TAR_LIST"; then
     exit 1
 fi
 echo "[OK] Format identity detected."
+
+# 5. Verify SHA (S7-C04D)
+LOG_SHA="$OUT_DIR/verify_sha256.log"
+if [ -n "${EVIDENCE_PACK_SHA256:-}" ]; then
+    echo "[S7-CI] Verifying SHA256..."
+    CURRENT_SHA=$(shasum -a 256 "$PACK_FILE" | cut -d' ' -f1)
+    echo "Expected: $EVIDENCE_PACK_SHA256" > "$LOG_SHA"
+    echo "Actual:   $CURRENT_SHA" >> "$LOG_SHA"
+    
+    if [ "$CURRENT_SHA" != "$EVIDENCE_PACK_SHA256" ]; then
+        echo "[FAIL] IF-02: SHA mismatch. See $LOG_SHA"
+        exit 1
+    fi
+    echo "[OK] SHA256 matched."
+else
+    echo "SKIP: EVIDENCE_PACK_SHA256 not set" > "$LOG_SHA"
+    echo "[INFO] Skipping SHA verification (not set)"
+fi
