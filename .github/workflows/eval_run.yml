@@ -1,0 +1,55 @@
+name: Eval Run (Self-Hosted)
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *' # Midnight UTC
+
+jobs:
+  eval-strict:
+    name: S8 Eval Lane (Strict)
+    runs-on: self-hosted
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version-file: go.mod
+
+      - name: Install Dependencies
+        run: |
+          python3 -m venv .venv
+          . .venv/bin/activate
+          pip install -r requirements.txt
+
+      - name: Check LLM Server Status
+        run: make server-status
+        
+      - name: Run Eval (Strict Mode)
+        # Using submit --mode strict which wraps make run-eval
+        run: |
+          . .venv/bin/activate
+          go run cmd/reviewpack/main.go submit --mode strict --timebox 900
+        env:
+            GATE1_VERIFY_ONLY: "0"
+
+      - name: Upload Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-results-${{ github.sha }}
+          path: |
+            eval/results/latest.jsonl
+            review_bundle_*.tar.gz
+            31_make_run_eval.log
+          retention-days: 7
