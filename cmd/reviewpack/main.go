@@ -23,7 +23,7 @@ import (
 
 const (
 	defaultTimeboxSec = 300
-	packPrefix        = "review_pack"
+	packPrefix        = "review_bundle"
 )
 
 func main() {
@@ -184,7 +184,7 @@ func packToTar(args []string) string {
 	writeReadme(packDir)
 	writeVerifyScript(packDir)
 
-	// C10-03: PACK_KIND Identity
+	// C10-03: PACK_KIND Identity (Always review_pack_v1 inside review_pack root)
 	_ = os.WriteFile(filepath.Join(packDir, "review_pack_v1"), []byte("1\n"), 0644)
 
 	// 7. Self-Verify
@@ -213,7 +213,13 @@ func packToTar(args []string) string {
 	// We re-scan to include CHECKSUMS.sha256 which wasn't in step 8
 	// Final list for tar: everything in packDir
 	finalFileList := generatePackFilelist(packDir)
+	finalFileList := generatePackFilelist(packDir)
 	createDeterministicTar(packDir, finalFileList, "review_pack", tarFile)
+
+    // C10-06B: Legacy Copy (review_pack_...)
+    legacyName := strings.Replace(packName, "review_bundle", "review_pack", 1) + ".tar.gz"
+    copyFile(tarFile, legacyName)
+    fmt.Printf("[INFO] Created legacy copy: %s\n", legacyName)
 
 	return tarFile
 }

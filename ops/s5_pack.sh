@@ -110,7 +110,7 @@ HEAD_HASH=$(git rev-parse HEAD)
 } > "$MANIFEST"
 
 # Create tar.gz
-PACK_NAME="review_pack_$TS.tar.gz"
+PACK_NAME="evidence_pack_$TS.tar.gz"
 PACK_PATH="$PACK_DIR/$PACK_NAME"
 
 if [ -f "$PACK_PATH" ]; then
