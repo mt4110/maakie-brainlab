@@ -1,7 +1,5 @@
 name: Verify Evidence Pack
 
-name: Verify Evidence Pack
-
 on:
   workflow_dispatch:
     inputs:
