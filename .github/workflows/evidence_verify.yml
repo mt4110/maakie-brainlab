@@ -13,6 +13,8 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
@@ -32,3 +34,12 @@ jobs:
         run: |
           chmod +x ops/ci/verify_pack_ci.sh
           ./ops/ci/verify_pack_ci.sh
+
+      # S7-C05E: Upload Artifacts (Always)
+      - name: Upload Verification Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verify-logs
+          path: out/
+          retention-days: 3
