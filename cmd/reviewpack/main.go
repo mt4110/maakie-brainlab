@@ -223,12 +223,7 @@ func packToTar(args []string) string {
 		}
 	}
 
-	// S7-01: Signing
-	if *signKey != "" {
-		if err := signFile(*signKey, tarFile); err != nil {
-			log.Fatalf("[FATAL] Signing failed: %v", err)
-		}
-	}
+
 
     // C10-06B: Legacy Copy (review_pack_...)
     legacyName := strings.Replace(packName, "review_bundle", "review_pack", 1) + ".tar.gz"
