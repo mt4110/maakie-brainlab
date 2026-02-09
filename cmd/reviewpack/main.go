@@ -228,12 +228,10 @@ func packToTar(args []string) string {
 		}
 	}
 
-
-
-    // C10-06B: Legacy Copy (review_pack_...)
-    legacyName := strings.Replace(packName, "review_bundle", "review_pack", 1) + ".tar.gz"
-    copyFile(tarFile, legacyName)
-    fmt.Printf("[INFO] Created legacy copy: %s\n", legacyName)
+	// C10-06B: Legacy Copy (review_pack_...)
+	legacyName := strings.Replace(packName, "review_bundle", "review_pack", 1) + ".tar.gz"
+	copyFile(tarFile, legacyName)
+	fmt.Printf("[INFO] Created legacy copy: %s\n", legacyName)
 
 	return tarFile
 }
@@ -264,7 +262,7 @@ func packToTarForSubmit(args []string, timebox int, mode string) string {
 		fmt.Sscanf(os.Getenv("TIMEBOX_SEC"), "%d", &timebox)
 	}
 	// mode is passed in, but check env override if needed? No, flag is explicit.
-	// But allow SKIP_EVAL env to force verify-only if consistent? 
+	// But allow SKIP_EVAL env to force verify-only if consistent?
 	// The user requirement says "CI will use --mode verify-only".
 	// Let's stick to explicit mode.
 
@@ -329,7 +327,7 @@ func packToTarForSubmit(args []string, timebox int, mode string) string {
 			log.Printf("[FATAL] verify-only mode requires valid eval/results/latest.jsonl: %v", err)
 			os.Exit(5) // Using 5 to indicate eval-related failure (pre-check)
 		}
-		
+
 		// Write SKIP log
 		logContent := fmt.Sprintf("[SKIP] make run-eval (mode=%s)\nreason=verify-only mode must not depend on local LLM server\nusing=eval/results/latest.jsonl\n", mode)
 		if err := os.WriteFile(filepath.Join(packDir, "31_make_run_eval.log"), []byte(logContent), 0644); err != nil {
@@ -383,10 +381,10 @@ func packToTarForSubmit(args []string, timebox int, mode string) string {
 	// Not exposing --sign-key in submit CLI for now as per requirements, but if we wanted to support it we could.
 	// For now, no signing in locally submitted packs unless we add the flag back to submit.
 
-    // C10-06B: Legacy Copy
-    legacyName := strings.Replace(packName, "review_bundle", "review_pack", 1) + ".tar.gz"
-    copyFile(tarFile, legacyName)
-    fmt.Printf("[INFO] Created legacy copy: %s\n", legacyName)
+	// C10-06B: Legacy Copy
+	legacyName := strings.Replace(packName, "review_bundle", "review_pack", 1) + ".tar.gz"
+	copyFile(tarFile, legacyName)
+	fmt.Printf("[INFO] Created legacy copy: %s\n", legacyName)
 
 	return tarFile
 }
@@ -409,7 +407,7 @@ func checkLatestJsonlForVerifyOnly(repoRoot string) error {
 		return err
 	}
 	defer f.Close()
-	
+
 	scanner := bufio.NewScanner(f)
 	if scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -423,6 +421,7 @@ func checkLatestJsonlForVerifyOnly(repoRoot string) error {
 		return fmt.Errorf("file contains no readable lines")
 	}
 	return nil
+}
 
 // --- SUBMIT (pack + verify-only) ---
 func runSubmit(args []string) {
@@ -459,7 +458,7 @@ func runSubmit(args []string) {
 
 	// Find the root (fixed internal name or timestamped name check)
 	// We know createDeterministicTar uses "review_pack" as internal root.
-	root := filepath.Join(tmpDir, "review_pack") 
+	root := filepath.Join(tmpDir, "review_pack")
 	if _, err := os.Stat(root); os.IsNotExist(err) {
 		// Fallback: try to find it
 		r, err := findDirContainingFile(tmpDir, "PACK_VERSION", 2)
@@ -555,7 +554,7 @@ func generatePackFilelist(dir string) []string {
 func writeVersionAndSpec(dir string) {
 	// S4-05
 	_ = os.WriteFile(filepath.Join(dir, "PACK_VERSION"), []byte("1\n"), 0644)
-	
+
 	spec := `# Reviewpack Specification (v1)
 
 ## 0. Philosophy
@@ -608,7 +607,7 @@ func createManifest(dir string, files []string) {
 		}
 		fmt.Fprintf(manFile, "%s\t%s\t%d\n", rel, h, st.Size())
 	}
-	
+
 	// Critical Fix (S4-01): Explicit Close before returning/hashing
 	if err := manFile.Close(); err != nil {
 		log.Fatalf("[FATAL] close MANIFEST: %v", err)
@@ -816,7 +815,7 @@ func signFile(privKeyPath, targetPath string) error {
 	if err != nil {
 		return fmt.Errorf("read key: %w", err)
 	}
-	
+
 	block, err := armor.Decode(bytes.NewReader(keyBytes))
 	if err != nil {
 		return fmt.Errorf("decode armor: %w", err)
@@ -1019,8 +1018,6 @@ func copyLatestEval(snapshotDir string) {
 	copyFile(srcPath, dstPath)
 }
 
-
-
 func runSelfVerify(dir string) {
 	// Write self verify log, and include in checksums (already ensured by createManifestAndChecksums walking)
 	logPath := filepath.Join(dir, "40_self_verify.log")
@@ -1184,7 +1181,7 @@ func findDirContainingFile(base, filename string, maxDepth int) (string, error) 
 		}
 		if !d.IsDir() && filepath.Base(path) == filename {
 			found = filepath.Dir(path)
-			return io.EOF 
+			return io.EOF
 		}
 		return nil
 	})
@@ -1260,14 +1257,14 @@ func runCmd(dir, name string, args ...string) {
 	// Simple wrapper for executing commands and handling redirection syntax roughly
 	// This was present in the original code implicitly? No, it was used in runPack.
 	// But wait, the original code had runCmd?
-	// I missed copying `runCmd` from the original file! 
+	// I missed copying `runCmd` from the original file!
 	// I must add it.
-	
+
 	// Re-implementing a simple runCmd that handles ">" redirection if present in args
 	// Logic: look for ">" and filename
 	var cmdArgs []string
 	var outFile string
-	
+
 	for i, arg := range args {
 		if arg == ">" {
 			if i+1 < len(args) {
@@ -1283,7 +1280,7 @@ func runCmd(dir, name string, args ...string) {
 
 	c := exec.Command(name, cmdArgs...)
 	c.Dir = dir
-	
+
 	if outFile != "" {
 		f, err := os.Create(outFile)
 		if err != nil {
@@ -1313,12 +1310,12 @@ func min(a, b int) int {
 func recordEvalMeta(packDir, snapshotDir string) {
 	// Calculate hash of the included result
 	resultPath := filepath.Join(snapshotDir, "eval/results/latest.jsonl")
-	
+
 	// Default values if missing (e.g. strict mode failed but we are packing anyway? verify check should catch it)
 	// But let's be safe
 	sha := "missing"
 	size := int64(0)
-	
+
 	if info, err := os.Stat(resultPath); err == nil {
 		size = info.Size()
 		if s, err := fileSha256(resultPath); err == nil {
