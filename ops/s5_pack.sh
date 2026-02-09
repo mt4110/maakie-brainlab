@@ -82,6 +82,7 @@ MANIFEST="$STAGE_DIR/MANIFEST.txt"
 HEAD_HASH=$(git rev-parse HEAD)
 
 {
+    echo "format=v1"
     echo "ts=$TS"
     echo "head=$HEAD_HASH"
     echo "result_src=$RESULT_SRC"
