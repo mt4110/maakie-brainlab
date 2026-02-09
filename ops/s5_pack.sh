@@ -124,6 +124,13 @@ fi
 # Calculate pack SHA256
 PACK_SHA=$(sha256sum "$PACK_PATH" | awk '{print $1}')
 
+# S7-01: GPG Signing (Optional)
+if [ -n "$S6_SIGNING_KEY" ] && [ -f "$S6_SIGNING_KEY" ]; then
+    echo "[S5] Signing pack with key: $S6_SIGNING_KEY"
+    go run cmd/gopsign/main.go -mode=sign -key="$S6_SIGNING_KEY" -target="$PACK_PATH"
+    echo "[S5] Signature created: $PACK_PATH.asc"
+fi
+
 # Cleanup stage (handled by trap)
 # rm -rf "$STAGE_DIR"
 
