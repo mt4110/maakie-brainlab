@@ -32,3 +32,19 @@ if ! curl -fL "$EVIDENCE_PACK_URL" -o "$PACK_FILE" > "$LOG_DOWNLOAD" 2>&1; then
     exit 1
 fi
 echo "[OK] Downloaded $(stat -f%z "$PACK_FILE") bytes to $PACK_FILE"
+
+# 4. List Content (S7-C04C)
+LOG_TAR_LIST="$OUT_DIR/tar_list.log"
+echo "[S7-CI] Listing tar content..."
+if ! tar -tf "$PACK_FILE" > "$LOG_TAR_LIST"; then
+    echo "[FAIL] Failed to list tar content. Corrupt?"
+    exit 1
+fi
+
+# Check for markers (IF-03)
+if ! grep -qE "evidence_pack_v1|review_pack_v1" "$LOG_TAR_LIST"; then
+    echo "[FAIL] IF-03: Unknown pack format. No identity marker found."
+    echo "See $LOG_TAR_LIST for content."
+    exit 1
+fi
+echo "[OK] Format identity detected."
