@@ -66,3 +66,18 @@ else
     echo "SKIP: EVIDENCE_PACK_SHA256 not set" > "$LOG_SHA"
     echo "[INFO] Skipping SHA verification (not set)"
 fi
+
+# 6. Dispatcher Verify (S7-C04E)
+LOG_DISPATCH="$OUT_DIR/verify_dispatch.log"
+echo "[S7-CI] Running ops/verify_pack.sh..."
+# Note: verify_pack.sh extracts and detects kind, but does NOT run inner verify yet if we stop here?
+# Actually verify_pack.sh runs the inner verify script immediately if found.
+# So this step covers S7-C04E AND S7-C04F effectively if we use ops/verify_pack.sh.
+# But for S7-02 we want to capture logs.
+
+if ! bash ops/verify_pack.sh "$PACK_FILE" > "$LOG_DISPATCH" 2>&1; then
+    echo "[FAIL] IF-04/05: Verification failed. See $LOG_DISPATCH"
+    cat "$LOG_DISPATCH"
+    exit 1
+fi
+echo "[OK] Dispatcher & Inner Verification passed."
