@@ -91,7 +91,7 @@ HEAD_HASH=$(git rev-parse HEAD)
 PACK_NAME="review_pack_$TS.tar.gz"
 PACK_PATH="$PACK_DIR/$PACK_NAME"
 
-(cd "$STAGE_DIR" && tar -czf - .) > "$PACK_PATH"
+(cd "$STAGE_DIR" && COPYFILE_DISABLE=1 tar -czf - .) > "$PACK_PATH"
 
 # Calculate pack SHA256
 PACK_SHA=$(sha256sum "$PACK_PATH" | awk '{print $1}')
