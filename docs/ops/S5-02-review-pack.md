@@ -1,12 +1,12 @@
-# S5-02 Review Pack
+# S5-02 Review Pack Pipeline
 
 ## Overview
 This automated process (S5-02) consolidates the "HEAD confirmation" process. It ensures that a specific git HEAD, its evaluation results, and validation logs are bundled together in a reproducible way.
 
 ## Usage
 
-### Creating a Review Pack
-To generate a review pack, run:
+### Creating an Evidence Pack
+To generate an evidence pack (formerly review pack), run:
 
 ```bash
 make s5
@@ -15,44 +15,35 @@ make s5
 This will:
 1.  Verify the git repository is clean.
 2.  Run `make gate1` (including environment checks, unit tests, and evaluation).
-3.  Package the results, `gate1.sh`, `docs/rules`, and `VERIFY` (if present) into a `tar.gz` archive.
+3.  Package the results, `gate1.sh`, `docs/rules`, and `VERIFY_EVIDENCE.sh` into a `tar.gz` archive.
 4.  Update `SUBMIT_HISTORY.sha256` with the pack's SHA256, filename, HEAD, timestamp, and result source.
 
-**Output Location:** `.local/reviewpack_artifacts/review_pack_<TIMESTAMP>.tar.gz`
+**Output Location:** `.local/reviewpack_artifacts/evidence_pack_<TIMESTAMP>.tar.gz`
 
-### Verifying a Review Pack (Internal / Git-Based)
-To verify a review pack using the local repository context, run:
+### Creating a Review Bundle
+To generate a comprehensive review bundle (with source snapshot):
 
 ```bash
-make s5-verify PACK=<path_to_pack>
+go run cmd/reviewpack/main.go pack
 ```
 
-Example:
+**Output Location:** `review_bundle_<TIMESTAMP>.tar.gz`
+
+### Verifying a Pack (Unified)
+To verify ANY pack type (Evidence, Review Bundle, or Legacy), use the unified target:
+
 ```bash
-make s5-verify PACK=.local/reviewpack_artifacts/review_pack_20260208T142021Z.tar.gz
+make verify-pack PACK=<path_to_pack>
 ```
+(Or run `bash ops/verify_pack.sh <PACK>` directly)
 
 This will:
-1.  Check if the pack file exists.
-2.  Verify that the `head` in the pack's manifest matches the current repository `HEAD`.
-3.  Verify the SHA256 checksums of all files included in the pack.
-
-### Verifying a Review Pack (External / Standalone)
-To verify a review pack in a clean environment (no git required), run:
-
-```bash
-make s6-verify PACK=<path_to_pack>
-```
-(Or run `bash ops/s6_verify_pack.sh <PACK>` directly)
-
-This will:
-1.  Verify the pack structure (required files).
-2.  Verify `MANIFEST.txt` has `format=v1`.
-3.  Verify SHA256 integrity of all files.
-4.  Perform a best-effort check for `pass=true` and `sources=true` in the results (warn only).
+1.  **Detect Identity**: Check for `evidence_pack_v1` or `review_pack_v1`.
+2.  **Dispatch Verifier**: Run the bundled `VERIFY_EVIDENCE.sh` or `VERIFY.sh`.
+3.  **Verify Integrity**: Ensure all checksums match `MANIFEST.txt` (or `.tsv`).
 
 ## Troubleshooting
 
 -   **"Git working tree is dirty"**: Commit or stash your changes before running `make s5`.
--   **"Gate-1 failed"**: Check the log file indicated in the error message for details on why the tests or evaluation failed.
--   **"Pack HEAD ... does not match current repo HEAD"**: When verifying, ensure you have checked out the specific commit that was used to generate the pack.
+-   **"Gate-1 failed"**: Check the log file indicated in the error message for details.
+-   **"Unknown pack format"**: Ensure the pack contains a valid identity file (`evidence_pack_v1` or `review_pack/review_pack_v1`).
