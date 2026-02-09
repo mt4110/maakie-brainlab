@@ -41,6 +41,14 @@ This document outlines how to diagnose and resolve failures in the S7 Continuous
 2.  **Signature Fail**: GPG signature invalid. Check `S6_VERIFY_KEY` matches the signing key.
 3.  **Content Fail**: `latest.jsonl` missing or invalid.
 
+## IF-07: Strict Mode Failure (Exit 5)
+**Symptom**: `submit --mode strict` or `make s5` fails with `exit status 5`.
+**Log**: `31_make_run_eval.log` (internal to pack or in artifacts).
+**Checks**:
+1.  **LLM Server**: Is the local LLM server running? (`make server-status`)
+2.  **Verify-Only Leak**: If this happens in GitHub-hosted CI, it's a critical bug. CI should NEVER run strict mode. Check `GATE1_VERIFY_ONLY` env var.
+3.  **Evidence**: Check `eval/results/latest.jsonl` permissions and content.
+
 ## IF-06: Upload Fail
 **Symptom**: CI finishes but artifacts are not in the storage/output location.
 **Log**: GitHub Actions "Upload Artifact" step logs.

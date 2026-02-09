@@ -57,7 +57,7 @@ func usage() {
 	fmt.Fprintf(os.Stderr, "Usage: reviewpack <command> [args]\n")
 	fmt.Fprintf(os.Stderr, "Commands:\n")
 	fmt.Fprintf(os.Stderr, "  pack [--timebox N] [--skip-eval] [N_COMMITS]\n")
-	fmt.Fprintf(os.Stderr, "  submit [--timebox N] [--skip-eval] [N_COMMITS]\n")
+	fmt.Fprintf(os.Stderr, "  submit [--timebox N] [--mode strict|verify-only] [N_COMMITS]\n")
 	fmt.Fprintf(os.Stderr, "  verify <dir|tar.gz>\n")
 	fmt.Fprintf(os.Stderr, "  repro-check\n")
 }
@@ -134,7 +134,9 @@ func packToTar(args []string) string {
 
 	// 1. Preflight: Git Status & Meta
 	log.Println("DEBUG: Starting preflight checks...")
-	writeMeta(packDir, timestamp, *timebox, *skipEval)
+	// 1. Preflight: Git Status & Meta
+	log.Println("DEBUG: Starting preflight checks...")
+	writeMeta(packDir, timestamp, *timebox, *skipEval, "unknown")
 	runCmd(repoRoot, "git", "status", ">", filepath.Join(packDir, "01_status.txt"))
 
 	// Strict clean check
@@ -236,11 +238,210 @@ func packToTar(args []string) string {
 	return tarFile
 }
 
+func packToTarForSubmit(args []string, timebox int, mode string) string {
+	defer logPhase("packToTarForSubmit")()
+
+	repoRoot, err := os.Getwd()
+	if err != nil {
+		log.Fatalf("[FATAL] Getwd: %v", err)
+	}
+
+	// Resolve repo root via git
+	out, err := exec.Command("git", "rev-parse", "--show-toplevel").Output()
+	if err != nil {
+		log.Fatalf("[FATAL] git rev-parse --show-toplevel failed: %v", err)
+	}
+	repoRoot = strings.TrimSpace(string(out))
+	if repoRoot == "" {
+		log.Fatalf("[FATAL] git rev-parse --show-toplevel returned empty")
+	}
+	if err := os.Chdir(repoRoot); err != nil {
+		log.Fatalf("[FATAL] chdir to repo root failed: %v", err)
+	}
+
+	// Environment overrides
+	if os.Getenv("TIMEBOX_SEC") != "" {
+		fmt.Sscanf(os.Getenv("TIMEBOX_SEC"), "%d", &timebox)
+	}
+	// mode is passed in, but check env override if needed? No, flag is explicit.
+	// But allow SKIP_EVAL env to force verify-only if consistent? 
+	// The user requirement says "CI will use --mode verify-only".
+	// Let's stick to explicit mode.
+
+	skipEval := (mode == "verify-only")
+
+	// 0. Setup
+	timestamp := time.Now().Format("20060102_150405")
+	packName := fmt.Sprintf("%s_%s", packPrefix, timestamp)
+
+	// Use a temp dir for construction
+	tmpDir, err := os.MkdirTemp("", "reviewpack-*")
+	if err != nil {
+		log.Fatalf("[FATAL] MkdirTemp: %v", err)
+	}
+	packDir := filepath.Join(tmpDir, packName)
+	if err := os.MkdirAll(packDir, 0755); err != nil {
+		log.Fatalf("[FATAL] MkdirAll: %v", err)
+	}
+	// Cleanup happens, tarball is moved out first
+	defer os.RemoveAll(tmpDir)
+
+	fmt.Printf("=== review_pack (S7 Run Always) ===\nTarget : %s.tar.gz\nTimebox: %ds\nMode   : %s\nWork   : %s\n", packName, timebox, mode, packDir)
+
+	// 1. Preflight: Git Status & Meta
+	log.Println("DEBUG: Starting preflight checks...")
+	writeMeta(packDir, timestamp, timebox, skipEval, mode)
+	runCmd(repoRoot, "git", "status", ">", filepath.Join(packDir, "01_status.txt"))
+
+	// Strict clean check
+	log.Println("DEBUG: Checking git status --porcelain...")
+	cmd := exec.Command("git", "status", "--porcelain")
+	cmd.Dir = repoRoot
+	porcelainOut, err := cmd.Output()
+	if err != nil {
+		log.Fatalf("[FATAL] git status --porcelain failed: %v", err)
+	}
+	if len(bytes.TrimSpace(porcelainOut)) > 0 {
+		log.Printf("[FATAL] preflight: working tree is dirty:\n%s", string(porcelainOut))
+		os.Exit(1)
+	}
+
+	nCommits := "5"
+	if len(args) > 0 {
+		nCommits = args[0]
+	}
+	runCmd(repoRoot, "git", "log", "-n", nCommits, "--stat", ">", filepath.Join(packDir, "10_git_log.txt"))
+	runCmd(repoRoot, "git", "diff", "HEAD~"+nCommits, "HEAD", ">", filepath.Join(packDir, "11_git_diff.patch"))
+
+	// 2. Secrets Scan
+	scanSecrets(packDir)
+
+	// 3. Make Test
+	runMake(packDir, "30_make_test.log", []string{"make", "test"}, timebox, 4)
+
+	// 4. Make Run-Eval (Branched Logic)
+	if mode == "strict" {
+		// Strict: Run eval, fail if fails
+		runMake(packDir, "31_make_run_eval.log", []string{"make", "run-eval"}, timebox, 5)
+	} else {
+		// Verify-only: Skip eval, check latest.jsonl
+		if err := checkLatestJsonlForVerifyOnly(repoRoot); err != nil {
+			log.Printf("[FATAL] verify-only mode requires valid eval/results/latest.jsonl: %v", err)
+			os.Exit(5) // Using 5 to indicate eval-related failure (pre-check)
+		}
+		
+		// Write SKIP log
+		logContent := fmt.Sprintf("[SKIP] make run-eval (mode=%s)\nreason=verify-only mode must not depend on local LLM server\nusing=eval/results/latest.jsonl\n", mode)
+		if err := os.WriteFile(filepath.Join(packDir, "31_make_run_eval.log"), []byte(logContent), 0644); err != nil {
+			log.Fatalf("[FATAL] write skip log: %v", err)
+		}
+	}
+
+	// 5. Source Snapshot
+	log.Println("DEBUG: Creating src_snapshot...")
+	snapshotDir := filepath.Join(packDir, "src_snapshot")
+	if err := os.MkdirAll(snapshotDir, 0755); err != nil {
+		log.Fatalf("[FATAL] src_snapshot mkdir: %v", err)
+	}
+	trackedFiles := listTrackedFiles()
+	for _, f := range trackedFiles {
+		copyFile(f, filepath.Join(snapshotDir, f))
+	}
+	// Copy latest eval result (Gate-1 requirement)
+	copyLatestEval(snapshotDir)
+
+	// 6. Documentation & Specifications (S4-05, S4-08)
+	writeVersionAndSpec(packDir)
+	writeReadme(packDir)
+	writeVerifyScript(packDir)
+
+	// C10-03: PACK_KIND Identity
+	_ = os.WriteFile(filepath.Join(packDir, "review_pack_v1"), []byte("1\n"), 0644)
+
+	// 7. Self-Verify
+	runSelfVerify(packDir)
+
+	// 8. Determinism
+	log.Println("DEBUG: Generating pack file list & checking contamination...")
+	filesToPack := generatePackFilelist(packDir)
+
+	// 9. Manifest
+	log.Println("DEBUG: Creating MANIFEST.tsv...")
+	createManifest(packDir, filesToPack)
+
+	// 10. Checksums
+	log.Println("DEBUG: Creating CHECKSUMS.sha256...")
+	createChecksums(packDir)
+
+	// 11. Deterministic Tarball
+	log.Println("DEBUG: Creating deterministic tarball...")
+	tarFile := packName + ".tar.gz" // in cwd
+	finalFileList := generatePackFilelist(packDir)
+	createDeterministicTar(packDir, finalFileList, "review_bundle", tarFile)
+
+	// Signing (optional for now in submit, but good to have if key present)
+	// Not exposing --sign-key in submit CLI for now as per requirements, but if we wanted to support it we could.
+	// For now, no signing in locally submitted packs unless we add the flag back to submit.
+
+    // C10-06B: Legacy Copy
+    legacyName := strings.Replace(packName, "review_bundle", "review_pack", 1) + ".tar.gz"
+    copyFile(tarFile, legacyName)
+    fmt.Printf("[INFO] Created legacy copy: %s\n", legacyName)
+
+	return tarFile
+}
+
+func checkLatestJsonlForVerifyOnly(repoRoot string) error {
+	path := filepath.Join(repoRoot, "eval/results/latest.jsonl")
+	info, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("file not found: %s", path)
+		}
+		return err
+	}
+	if info.Size() == 0 {
+		return fmt.Errorf("file is empty: %s", path)
+	}
+	// Check if it looks like JSONL (read first line)
+	f, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	
+	scanner := bufio.NewScanner(f)
+	if scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if len(line) > 0 && !strings.HasPrefix(line, "{") {
+			return fmt.Errorf("first line does not look like JSON: %s...", line[:min(len(line), 20)])
+		}
+	} else {
+		if err := scanner.Err(); err != nil {
+			return err
+		}
+		return fmt.Errorf("file contains no readable lines")
+	}
+	return nil
+
 // --- SUBMIT (pack + verify-only) ---
 func runSubmit(args []string) {
-	fmt.Println("=== SUBMIT (pack + verify-only) ===")
+	fmt.Println("=== SUBMIT (strict / verify-only) ===")
 
-	tarFile := packToTar(args)
+	fs := flag.NewFlagSet("submit", flag.ExitOnError)
+	timebox := fs.Int("timebox", defaultTimeboxSec, "Timebox in seconds")
+	// Deprecated: existing skip-eval for pack, but for submit we use mode
+	_ = fs.Bool("skip-eval", false, "Deprecated: use --mode verify-only")
+	mode := fs.String("mode", "strict", "submit mode: strict | verify-only")
+	// nCommits positional
+	fs.Parse(args)
+
+	if *mode != "strict" && *mode != "verify-only" {
+		log.Fatalf("[FATAL] Invalid mode: %s (must be strict or verify-only)", *mode)
+	}
+
+	// 1. Pack with mode-specific logic
+	tarFile := packToTarForSubmit(fs.Args(), *timebox, *mode)
 	packSha, err := fileSha256(tarFile)
 	if err != nil {
 		log.Fatalf("[FATAL] sha256(%s): %v", tarFile, err)
@@ -659,8 +860,8 @@ func runReproCheck(args []string) {
 
 // --- HELPERS ---
 
-func writeMeta(dir, timestamp string, timebox int, skipEval bool) {
-	meta := fmt.Sprintf("timestamp=%s\ntimebox_sec=%d\nskip_eval=%v\n", timestamp, timebox, skipEval)
+func writeMeta(dir, timestamp string, timebox int, skipEval bool, evalMode string) {
+	meta := fmt.Sprintf("timestamp=%s\ntimebox_sec=%d\nskip_eval=%v\neval_mode=%s\n", timestamp, timebox, skipEval, evalMode)
 	if err := os.WriteFile(filepath.Join(dir, "00_meta.txt"), []byte(meta), 0644); err != nil {
 		log.Fatalf("[FATAL] write meta: %v", err)
 	}
@@ -1100,4 +1301,38 @@ func runCmd(dir, name string, args ...string) {
 	if err := c.Run(); err != nil {
 		log.Fatalf("[FATAL] %s %v failed: %v", name, cmdArgs, err)
 	}
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func recordEvalMeta(packDir, snapshotDir string) {
+	// Calculate hash of the included result
+	resultPath := filepath.Join(snapshotDir, "eval/results/latest.jsonl")
+	
+	// Default values if missing (e.g. strict mode failed but we are packing anyway? verify check should catch it)
+	// But let's be safe
+	sha := "missing"
+	size := int64(0)
+	
+	if info, err := os.Stat(resultPath); err == nil {
+		size = info.Size()
+		if s, err := fileSha256(resultPath); err == nil {
+			sha = s
+		}
+	}
+
+	f, err := os.OpenFile(filepath.Join(packDir, "00_meta.txt"), os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Printf("[WARN] Could not update 00_meta.txt: %v", err)
+		return
+	}
+	defer f.Close()
+
+	fmt.Fprintf(f, "eval_result_sha256=%s\n", sha)
+	fmt.Fprintf(f, "eval_result_bytes=%d\n", size)
 }

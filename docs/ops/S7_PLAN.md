@@ -35,6 +35,24 @@ This ensures that we never break the verification chain and that our artifacts r
         -   Generate Review Bundle (Signed).
         -   Verify both using `ops/verify_pack.sh`.
 
+### 3.3 2-Lane Operation (Run Always)
+S7 implements a "Run Always" strategy by splitting verification into two distinct lanes:
+
+1.  **PR/CI Lane (GitHub-hosted)**
+    -   **Mode**: `verify-only` (`submit --mode verify-only` / `GATE1_VERIFY_ONLY=1`)
+    -   **Requirement**: Must NEVER depend on local/self-hosted LLM servers.
+    -   **Action**: Reuses `eval/results/latest.jsonl` (must be present). Skips `make run-eval`.
+    -   **Goal**: Ensure packaging, signing, and deterministic structure are valid. Green CI means "Safe to Ship" (assuming Eval logic is unchanged).
+
+2.  **Evaluation Lane (Self-hosted / Local)**
+    -   **Mode**: `strict` (`submit --mode strict`)
+    -   **Requirement**: Needs local LLM server.
+    -   **Action**: Runs `make run-eval`. Fails if server is down or accuracy drops.
+    -   **Goal**: Ensure model performance and rigorous correctness.
+    -   **Recovery**: If this lane fails, it produces logs/artifacts but doesn't block the PR lane (unless policy dictates).
+
+This split ensures that infrastructure flakes (e.g., self-hosted runner down) do not paralyze development velocity.
+
 ## 4. Safety & Security
 -   **Keys**: Private keys are NEVER committed. CI uses ephemeral keys or secrets (future).
 -   **Git**: `gitignore` must exclude `*.asc` and `*.key`.
