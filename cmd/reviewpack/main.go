@@ -213,7 +213,6 @@ func packToTar(args []string) string {
 	// We re-scan to include CHECKSUMS.sha256 which wasn't in step 8
 	// Final list for tar: everything in packDir
 	finalFileList := generatePackFilelist(packDir)
-	finalFileList := generatePackFilelist(packDir)
 	createDeterministicTar(packDir, finalFileList, "review_pack", tarFile)
 
     // C10-06B: Legacy Copy (review_pack_...)
