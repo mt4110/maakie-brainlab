@@ -58,4 +58,3 @@ Error logs in `verify_pack_ci.sh` are prefixed with `[FAIL] IF-XX` to map direct
 -   `verify_sha256.log`: Checksum comparison.
 -   `tar_list.log`: Content of the tarball.
 -   `verify_dispatch.log`: Output of `ops/verify_pack.sh`.
-
