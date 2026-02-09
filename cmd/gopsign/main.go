@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 
 	"golang.org/x/crypto/openpgp"
 	"golang.org/x/crypto/openpgp/armor"
@@ -18,6 +19,8 @@ func main() {
 	sigFile := flag.String("sig", "", "Signature file for verification (optional for sign, defaults to target.asc)")
 	identity := flag.String("id", "S6 Builder <builder@s6.ops>", "Identity name for keygen")
 
+	outDir := flag.String("out-dir", ".", "Output directory for keygen")
+
 	flag.Parse()
 
 	if *mode == "" {
@@ -26,7 +29,10 @@ func main() {
 
 	switch *mode {
 	case "keygen":
-		if err := generateKeys(*identity); err != nil {
+		if err := os.MkdirAll(*outDir, 0755); err != nil {
+			log.Fatalf("Mkdir %s: %v", *outDir, err)
+		}
+		if err := generateKeys(*identity, *outDir); err != nil {
 			log.Fatalf("Keygen failed: %v", err)
 		}
 	case "sign":
@@ -48,7 +54,7 @@ func main() {
 	}
 }
 
-func generateKeys(name string) error {
+func generateKeys(name, outDir string) error {
 	const bitLength = 2048 // RSA 2048 for compatibility/speed
 
 	// Generate Key
@@ -60,7 +66,7 @@ func generateKeys(name string) error {
 	// Serialize Private Key
 	privHeader := make(map[string]string)
 	privHeader["Version"] = "S6 GoSign 1.0"
-	
+
 	privBuf := new(bytes.Buffer)
 	wPriv, err := armor.Encode(privBuf, openpgp.PrivateKeyType, privHeader)
 	if err != nil {
@@ -70,10 +76,12 @@ func generateKeys(name string) error {
 		return err
 	}
 	wPriv.Close()
-	if err := os.WriteFile("privkey.asc", privBuf.Bytes(), 0600); err != nil {
+
+	privPath := filepath.Join(outDir, "privkey.asc")
+	if err := os.WriteFile(privPath, privBuf.Bytes(), 0600); err != nil {
 		return err
 	}
-	fmt.Println("Generated privkey.asc")
+	fmt.Printf("Generated %s\n", privPath)
 
 	// Serialize Public Key
 	pubHeader := make(map[string]string)
@@ -88,10 +96,12 @@ func generateKeys(name string) error {
 		return err
 	}
 	wPub.Close()
-	if err := os.WriteFile("pubkey.asc", pubBuf.Bytes(), 0644); err != nil {
+
+	pubPath := filepath.Join(outDir, "pubkey.asc")
+	if err := os.WriteFile(pubPath, pubBuf.Bytes(), 0644); err != nil {
 		return err
 	}
-	fmt.Println("Generated pubkey.asc")
+	fmt.Printf("Generated %s\n", pubPath)
 	return nil
 }
 
@@ -101,7 +111,7 @@ func signFile(privKeyPath, targetPath string) error {
 	if err != nil {
 		return fmt.Errorf("read key: %w", err)
 	}
-	
+
 	block, err := armor.Decode(bytes.NewReader(keyBytes))
 	if err != nil {
 		return fmt.Errorf("decode armor: %w", err)
@@ -166,14 +176,14 @@ func verifyFile(pubKeyPath, targetPath, sigPath string) error {
 	if err != nil {
 		return fmt.Errorf("read sig: %w", err)
 	}
-	
+
 	// OpenPGP returns entity and error
 	// CheckArmoredDetachedSignature takes (keyRing, data, armor)
 	_, err = openpgp.CheckArmoredDetachedSignature(keyRing, bytes.NewReader(targetBytes), bytes.NewReader(sigBytes))
 	if err != nil {
 		return err
 	}
-	
+
 	fmt.Println("Signature Verified")
 	return nil
 }
