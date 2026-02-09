@@ -1,4 +1,14 @@
-# S4.4 Gate-1 Checklist
+# S4.4 Gate-1 Checklist (verify-only)
+
+## Context
+This checklist is for verifying the implementation of S7-20 (Unified Submit Logic).
+
+## Verification Steps
+
+- [ ] Run `make test` locally to ensure no regressions.
+- [ ] Run `go run cmd/reviewpack/main.go submit --mode verify-only` locally.
+- [ ] Verify that `31_make_run_eval.log` indicates SKIP and records reason/sha.
+- [ ] Verify that `00_meta.txt` contains `eval_source_path` and `eval_result_sha`.
 
 ## Pre-PR / Pre-Merge Check
 - [ ] **Run Gate-1**: `make gate1` must PASS.
