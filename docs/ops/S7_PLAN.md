@@ -40,5 +40,22 @@ This ensures that we never break the verification chain and that our artifacts r
 -   **Git**: `gitignore` must exclude `*.asc` and `*.key`.
 -   **Verification**: The `verify_pack.sh` script is the single source of truth for integrity.
 
-## 5. Playbook (If CI Fails)
-See `docs/ops/IF_FAIL_S7.md` (Planned).
+## 5. Usage
+
+### Triggering CI
+-   **Push**: Automatically runs `test.yml` (Unit Tests) and `verify_pack.yml` (End-to-end Pack Verification).
+-   **Schedule**: `evidence_verify.yml` runs weekly on Mondays (00:00 UTC).
+-   **Manual**: Go to Actions -> Verify Evidence Pack -> Run workflow.
+    -   `evidence_pack_url`: URL to tar.gz (e.g., from S3 or release).
+    -   `evidence_pack_sha256`: (Optional) Expected SHA256.
+
+## 6. Diagnostics (IF_FAIL)
+If CI fails, refer to `docs/ops/IF_FAIL_S7.md` for a playbook.
+Error logs in `verify_pack_ci.sh` are prefixed with `[FAIL] IF-XX` to map directly to the playbook.
+
+### Key Log Files (Artifacts)
+-   `verify_download.log`: Curl output.
+-   `verify_sha256.log`: Checksum comparison.
+-   `tar_list.log`: Content of the tarball.
+-   `verify_dispatch.log`: Output of `ops/verify_pack.sh`.
+
