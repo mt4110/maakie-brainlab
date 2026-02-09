@@ -1047,6 +1047,7 @@ func copyLatestEval(snapshotDir string) string {
 
 	fmt.Printf("[INFO] bundling latest eval result: %s -> latest.jsonl\n", latest)
 	copyFile(srcPath, dstPath)
+	return dstPath
 }
 
 func runSelfVerify(dir string) {
