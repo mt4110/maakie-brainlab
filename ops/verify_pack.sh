@@ -33,8 +33,8 @@ fi
 # 1. Evidence Pack (Flat root, evidence_pack_v1)
 if [ -f "$WORK_DIR/evidence_pack_v1" ]; then
     echo "[verify_pack] Detected: Evidence Pack (v1)"
-    if [ -x "$WORK_DIR/VERIFY_EVIDENCE.sh" ]; then
-        (cd "$WORK_DIR" && ./VERIFY_EVIDENCE.sh)
+    if [ -f "$WORK_DIR/VERIFY_EVIDENCE.sh" ]; then
+        (cd "$WORK_DIR" && bash VERIFY_EVIDENCE.sh)
         exit $?
     else
         echo "[FAIL] Missing VERIFY_EVIDENCE.sh in Evidence Pack."
