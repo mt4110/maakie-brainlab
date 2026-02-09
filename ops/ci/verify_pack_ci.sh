@@ -81,3 +81,10 @@ if ! bash ops/verify_pack.sh "$PACK_FILE" > "$LOG_DISPATCH" 2>&1; then
     exit 1
 fi
 echo "[OK] Dispatcher & Inner Verification passed."
+
+# 7. Success Marker (S7-C04G)
+RESULT_FILE="$OUT_DIR/RESULT.ok"
+date > "$RESULT_FILE"
+echo "Verified: $PACK_FILE" >> "$RESULT_FILE"
+echo "[S7-CI] SUCCESS: Artifact verified."
+exit 0
