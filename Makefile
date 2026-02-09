@@ -80,3 +80,7 @@ s6-verify:
 
 check-doc-links:
 	@bash ops/check_no_file_url.sh
+
+# C10 Unified Verification
+verify-pack:
+	bash ops/verify_pack.sh "$(PACK)"
