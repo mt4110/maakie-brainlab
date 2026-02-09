@@ -81,6 +81,7 @@ func packToTar(args []string) string {
 
 	timebox := fs.Int("timebox", defaultTimeboxSec, "Timebox in seconds")
 	skipEval := fs.Bool("skip-eval", false, "Skip make run-eval")
+	signKey := fs.String("sign-key", "", "Path to private key for signing")
 	// nCommits is positional
 	fs.Parse(args)
 
@@ -213,7 +214,21 @@ func packToTar(args []string) string {
 	// We re-scan to include CHECKSUMS.sha256 which wasn't in step 8
 	// Final list for tar: everything in packDir
 	finalFileList := generatePackFilelist(packDir)
-	createDeterministicTar(packDir, finalFileList, "review_pack", tarFile)
+	createDeterministicTar(packDir, finalFileList, "review_bundle", tarFile)
+
+	// S7-01: Signing
+	if *signKey != "" {
+		if err := signFile(*signKey, tarFile); err != nil {
+			log.Fatalf("[FATAL] Signing failed: %v", err)
+		}
+	}
+
+	// S7-01: Signing
+	if *signKey != "" {
+		if err := signFile(*signKey, tarFile); err != nil {
+			log.Fatalf("[FATAL] Signing failed: %v", err)
+		}
+	}
 
     // C10-06B: Legacy Copy (review_pack_...)
     legacyName := strings.Replace(packName, "review_bundle", "review_pack", 1) + ".tar.gz"
