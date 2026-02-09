@@ -20,8 +20,8 @@ This will:
 
 **Output Location:** `.local/reviewpack_artifacts/review_pack_<TIMESTAMP>.tar.gz`
 
-### Verifying a Review Pack
-To verify a review pack, run:
+### Verifying a Review Pack (Internal / Git-Based)
+To verify a review pack using the local repository context, run:
 
 ```bash
 make s5-verify PACK=<path_to_pack>
@@ -36,6 +36,20 @@ This will:
 1.  Check if the pack file exists.
 2.  Verify that the `head` in the pack's manifest matches the current repository `HEAD`.
 3.  Verify the SHA256 checksums of all files included in the pack.
+
+### Verifying a Review Pack (External / Standalone)
+To verify a review pack in a clean environment (no git required), run:
+
+```bash
+make s6-verify PACK=<path_to_pack>
+```
+(Or run `bash ops/s6_verify_pack.sh <PACK>` directly)
+
+This will:
+1.  Verify the pack structure (required files).
+2.  Verify `MANIFEST.txt` has `format=v1`.
+3.  Verify SHA256 integrity of all files.
+4.  Perform a best-effort check for `pass=true` and `sources=true` in the results (warn only).
 
 ## Troubleshooting
 
