@@ -70,5 +70,10 @@ gate1:
 s5:
 	bash ops/s5_pack.sh
 
+
 s5-verify:
 	bash ops/s5_verify_pack.sh "$(PACK)"
+
+# S6 v1 Verify (Git-Free)
+s6-verify:
+	bash ops/s6_verify_pack.sh "$(PACK)"
