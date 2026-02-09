@@ -19,7 +19,20 @@ fi
 
 echo "[S7-CI] Verify Pack CI Started"
 echo "URL: $EVIDENCE_PACK_URL"
+echo "URL: $EVIDENCE_PACK_URL"
 echo "OUT: $OUT_DIR"
+
+# 2.5 Env Metadata (S7-C07)
+echo "[S7-CI] capturing env metadata..."
+{
+    echo "=== Environment Metadata ==="
+    date
+    uname -a
+    bash --version | head -n1
+    tar --version 2>&1 | head -n1
+    curl --version | head -n1
+    echo "============================"
+} > "$OUT_DIR/env_meta.txt"
 
 # 3. Download (S7-C04B)
 PACK_FILE="$OUT_DIR/evidence_pack.tar.gz"
