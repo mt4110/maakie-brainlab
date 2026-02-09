@@ -21,9 +21,7 @@ jobs:
 
       # S7-C05C: Link Check
       - name: Check Doc Links
-        run: |
-          # TODO: Implement make check-doc-links
-          echo "Skipping check-doc-links (S7-C05C pending)"
+        run: make check-doc-links
 
       # S7-C05D: Run Verification
       - name: Run Verification Script
