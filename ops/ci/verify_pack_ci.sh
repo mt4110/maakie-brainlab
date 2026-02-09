@@ -28,6 +28,7 @@ LOG_DOWNLOAD="$OUT_DIR/verify_download.log"
 echo "[S7-CI] Downloading pack..."
 if ! curl -fL "$EVIDENCE_PACK_URL" -o "$PACK_FILE" > "$LOG_DOWNLOAD" 2>&1; then
     echo "[FAIL] IF-01: Download failed. See $LOG_DOWNLOAD"
+    echo "Ref: docs/ops/IF_FAIL_S7.md#if-01-download-fail"
     cat "$LOG_DOWNLOAD"
     exit 1
 fi
@@ -44,6 +45,7 @@ fi
 # Check for markers (IF-03)
 if ! grep -qE "evidence_pack_v1|review_pack_v1" "$LOG_TAR_LIST"; then
     echo "[FAIL] IF-03: Unknown pack format. No identity marker found."
+    echo "Ref: docs/ops/IF_FAIL_S7.md#if-03-kind-missing"
     echo "See $LOG_TAR_LIST for content."
     exit 1
 fi
@@ -59,6 +61,7 @@ if [ -n "${EVIDENCE_PACK_SHA256:-}" ]; then
     
     if [ "$CURRENT_SHA" != "$EVIDENCE_PACK_SHA256" ]; then
         echo "[FAIL] IF-02: SHA mismatch. See $LOG_SHA"
+        echo "Ref: docs/ops/IF_FAIL_S7.md#if-02-sha-mismatch"
         exit 1
     fi
     echo "[OK] SHA256 matched."
@@ -77,6 +80,7 @@ echo "[S7-CI] Running ops/verify_pack.sh..."
 
 if ! bash ops/verify_pack.sh "$PACK_FILE" > "$LOG_DISPATCH" 2>&1; then
     echo "[FAIL] IF-04/05: Verification failed. See $LOG_DISPATCH"
+    echo "Ref: docs/ops/IF_FAIL_S7.md"
     cat "$LOG_DISPATCH"
     exit 1
 fi
