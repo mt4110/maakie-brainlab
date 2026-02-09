@@ -65,3 +65,9 @@ If scripts are unavailable:
 - The pack is generated from a clean git state.
 - `SUBMIT_HISTORY.sha256` (in `.local/reviewpack_artifacts/`) tracks the lineage of generated packs.
 - `HEAD` in `MANIFEST.txt` links the pack to specific source code revision.
+
+## 6. Legacy Compatibility (C10-FIX)
+- **Review Pack Legacy Copy**: The build system produces a `review_pack_<TS>.tar.gz` alongside `review_bundle_<TS>.tar.gz`.
+    - **Semantics**: This file is **File Name Compatible Only**.
+    - **Content**: Accurate copy of the bundle. The internal root directory remains `review_bundle/`.
+    - **Usage**: Use this if strictly required by toolchains expecting the filename pattern, but be aware of the internal `review_bundle` root.
