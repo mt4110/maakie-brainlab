@@ -83,6 +83,14 @@ if [ -f "VERIFY" ]; then
     cp VERIFY "$STAGE_DIR/"
 fi
 
+# C10-04: Bundled Verifier
+cp ops/VERIFY_EVIDENCE.sh "$STAGE_DIR/"
+chmod +x "$STAGE_DIR/VERIFY_EVIDENCE.sh"
+
+# C10-04: Bundled Verifier
+cp ops/VERIFY_EVIDENCE.sh "$STAGE_DIR/"
+chmod +x "$STAGE_DIR/VERIFY_EVIDENCE.sh"
+
 # C10-02: PACK_KIND Identity
 echo "1" > "$STAGE_DIR/evidence_pack_v1"
 
