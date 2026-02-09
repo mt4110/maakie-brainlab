@@ -1,0 +1,34 @@
+name: Verify Evidence Pack
+
+on:
+  workflow_dispatch:
+    inputs:
+      evidence_pack_url:
+        description: 'URL of the Evidence Pack (tar.gz)'
+        required: true
+      evidence_pack_sha256:
+        description: 'SHA256 Checksum (Optional)'
+        required: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      # S7-C05C: Link Check
+      - name: Check Doc Links
+        run: |
+          # TODO: Implement make check-doc-links
+          echo "Skipping check-doc-links (S7-C05C pending)"
+
+      # S7-C05D: Run Verification
+      - name: Run Verification Script
+        env:
+          EVIDENCE_PACK_URL: ${{ inputs.evidence_pack_url }}
+          EVIDENCE_PACK_SHA256: ${{ inputs.evidence_pack_sha256 }}
+          OUT_DIR: out
+        run: |
+          chmod +x ops/ci/verify_pack_ci.sh
+          ./ops/ci/verify_pack_ci.sh
