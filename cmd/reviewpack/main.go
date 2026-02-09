@@ -136,7 +136,7 @@ func packToTar(args []string) string {
 	log.Println("DEBUG: Starting preflight checks...")
 	// 1. Preflight: Git Status & Meta
 	log.Println("DEBUG: Starting preflight checks...")
-	writeMeta(packDir, timestamp, *timebox, *skipEval, "unknown")
+	writeMeta(packDir, timestamp, *timebox, *skipEval, "unknown", "pending", 0)
 	runCmd(repoRoot, "git", "status", ">", filepath.Join(packDir, "01_status.txt"))
 
 	// Strict clean check
@@ -288,7 +288,10 @@ func packToTarForSubmit(args []string, timebox int, mode string) string {
 
 	// 1. Preflight: Git Status & Meta
 	log.Println("DEBUG: Starting preflight checks...")
-	writeMeta(packDir, timestamp, timebox, skipEval, mode)
+	// 1. Preflight: Git Status & Meta
+	log.Println("DEBUG: Starting preflight checks...")
+	writeMeta(packDir, timestamp, timebox, skipEval, mode, "pending", 0)
+	runCmd(repoRoot, "git", "status", ">", filepath.Join(packDir, "01_status.txt"))
 	runCmd(repoRoot, "git", "status", ">", filepath.Join(packDir, "01_status.txt"))
 
 	// Strict clean check
@@ -335,7 +338,7 @@ func packToTarForSubmit(args []string, timebox int, mode string) string {
 		}
 	}
 
-	// 5. Source Snapshot
+	// 5. Source Snapshot & Measure Eval Result
 	log.Println("DEBUG: Creating src_snapshot...")
 	snapshotDir := filepath.Join(packDir, "src_snapshot")
 	if err := os.MkdirAll(snapshotDir, 0755); err != nil {
@@ -346,7 +349,20 @@ func packToTarForSubmit(args []string, timebox int, mode string) string {
 		copyFile(f, filepath.Join(snapshotDir, f))
 	}
 	// Copy latest eval result (Gate-1 requirement)
-	copyLatestEval(snapshotDir)
+	resultPath := copyLatestEval(snapshotDir)
+	
+	// Measure result for meta
+	resultSha, err := fileSha256(resultPath)
+	if err != nil {
+		log.Fatalf("[FATAL] sha256 result: %v", err)
+	}
+	st, err := os.Stat(resultPath)
+	if err != nil {
+		log.Fatalf("[FATAL] stat result: %v", err)
+	}
+	
+	// Re-write Meta with result info
+	writeMeta(packDir, timestamp, timebox, skipEval, mode, resultSha, st.Size())
 
 	// 6. Documentation & Specifications (S4-05, S4-08)
 	writeVersionAndSpec(packDir)
@@ -859,8 +875,9 @@ func runReproCheck(args []string) {
 
 // --- HELPERS ---
 
-func writeMeta(dir, timestamp string, timebox int, skipEval bool, evalMode string) {
-	meta := fmt.Sprintf("timestamp=%s\ntimebox_sec=%d\nskip_eval=%v\neval_mode=%s\n", timestamp, timebox, skipEval, evalMode)
+func writeMeta(dir, timestamp string, timebox int, skipEval bool, evalMode string, resultSha string, resultBytes int64) {
+	meta := fmt.Sprintf("timestamp=%s\ntimebox_sec=%d\nskip_eval=%v\neval_mode=%s\neval_result_sha256=%s\neval_result_bytes=%d\n",
+		timestamp, timebox, skipEval, evalMode, resultSha, resultBytes)
 	if err := os.WriteFile(filepath.Join(dir, "00_meta.txt"), []byte(meta), 0644); err != nil {
 		log.Fatalf("[FATAL] write meta: %v", err)
 	}
@@ -974,12 +991,11 @@ func copyFile(src, dst string) {
 	}
 	defer func() { _ = out.Close() }()
 
-	if _, err := io.Copy(out, in); err != nil {
 		log.Fatalf("[FATAL] copy %s -> %s: %v", src, dst, err)
 	}
 }
 
-func copyLatestEval(snapshotDir string) {
+func copyLatestEval(snapshotDir string) string {
 	const resultsDir = "eval/results"
 	entries, err := os.ReadDir(resultsDir)
 	if err != nil {
