@@ -44,7 +44,7 @@ done
 if (( ${#matches[@]} > 0 )); then
   echo "[FAIL] Forbidden file:// link(s) found:" >&2
   printf '%s\n' "${matches[@]}" >&2
-  echo "next: remove link-style file:// and use repo-relative paths. See docs/ops/IF_FAIL_S7.md" >&2
+  echo "next: remove link-style file:// and use repo-relative paths. See docs/ops/IF_FAIL_C10FIX04.md" >&2
   exit 1
 fi
 
