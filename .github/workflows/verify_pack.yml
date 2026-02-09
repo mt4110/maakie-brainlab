@@ -2,42 +2,70 @@ name: Verify Pack
 
 on:
   push:
-    branches: [ "main", "s7-*" ]
+    branches: ["main", "s7-*"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   verify-pack:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: '1.25'
+      - uses: actions/checkout@v4
 
-    # S7-01: GPG Key Generation (Ephemeral for CI)
-    - name: Generate Ephemeral Keys
-      run: |
-        go run cmd/gopsign/main.go -mode=keygen -id="CI Builder"
-        echo "S6_SIGNING_KEY=$(pwd)/privkey.asc" >> $GITHUB_ENV
-        echo "S6_VERIFY_KEY=$(pwd)/pubkey.asc" >> $GITHUB_ENV
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version-file: go.mod
 
-    # S5: Evidence Pack
-    - name: Create Evidence Pack
-      run: make s5
+      # S7-01: GPG Key Generation (Ephemeral for CI)
+      - name: Generate Ephemeral Keys
+        run: |
+          go run cmd/gopsign/main.go -mode=keygen -id="CI Builder"
+          echo "S6_SIGNING_KEY=$(pwd)/privkey.asc" >> $GITHUB_ENV
+          echo "S6_VERIFY_KEY=$(pwd)/pubkey.asc" >> $GITHUB_ENV
 
-    # Review Bundle
-    - name: Create Review Bundle
-      run: go run cmd/reviewpack/main.go cmd/reviewpack/sign.go pack -sign-key="$S6_SIGNING_KEY"
+      # S5: Evidence Pack
+      - name: Create Evidence Pack
+        id: create_evidence_pack
+        shell: bash
+        run: |
+          mkdir -p ci_out
+          set +e
+          make s5 2>&1 | tee ci_out/verify_pack.log
+          EXIT_CODE=${PIPESTATUS[0]}
+          set -e
 
-    # Verification (Unified)
-    - name: Verify Evidence Pack
-      run: |
-        PACK=$(ls -t .local/reviewpack_artifacts/evidence_pack_*.tar.gz | head -n 1)
-        make verify-pack PACK="$PACK"
+          echo "Searching for gate1 logs..."
+          ls -1t .local/reviewpack_artifacts/gate1.*.log 2>/dev/null | head -n 1 | xargs -I {} cp {} ci_out/gate1.log || echo "No gate1 log found"
 
-    - name: Verify Review Bundle
-      run: |
-        PACK=$(ls -t review_bundle_*.tar.gz | head -n 1)
-        make verify-pack PACK="$PACK"
+          echo "Artifacts to upload:" > ci_out/artifact_upload.log
+          ls -R ci_out >> ci_out/artifact_upload.log
+          ls -R .local/reviewpack_artifacts >> ci_out/artifact_upload.log 2>/dev/null || true
+
+          exit $EXIT_CODE
+
+      - name: Upload Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verify-pack-logs-${{ github.run_id }}-${{ github.sha }}
+          if-no-files-found: warn
+          path: |
+            ci_out/
+            .local/reviewpack_artifacts/
+
+      # Review Bundle
+      - name: Create Review Bundle
+        run: |
+          go run cmd/reviewpack/main.go cmd/reviewpack/sign.go pack -sign-key="$S6_SIGNING_KEY"
+
+      # Verification (Unified)
+      - name: Verify Evidence Pack
+        run: |
+          PACK=$(ls -t .local/reviewpack_artifacts/evidence_pack_*.tar.gz | head -n 1)
+          make verify-pack PACK="$PACK"
+
+      - name: Verify Review Bundle
+        run: |
+          PACK=$(ls -t review_bundle_*.tar.gz | head -n 1)
+          make verify-pack PACK="$PACK"
