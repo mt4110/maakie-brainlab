@@ -17,12 +17,14 @@ jobs:
         python-version: '3.11'
 
     - name: Create venv
-      run: python -m venv .venv
+      run: |
+        python -m venv .venv
+        .venv/bin/pip install -r requirements.txt
 
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: '1.25'
+        go-version-file: go.mod
     
     - name: Verify dependencies
       run: go mod verify
