@@ -148,7 +148,20 @@ jobs:
       # Review Bundle
       - name: Create Review Bundle
         run: |
-          go run cmd/reviewpack/main.go cmd/reviewpack/sign.go pack -sign-key="$S6_SIGNING_KEY"
+          set -euo pipefail
+
+          # Review bundle を生成（CIでも動く確実なコマンド）
+          go run ./cmd/reviewpack/main.go submit --mode verify-only
+
+          # 生成物の存在確認
+          PACK=$(ls -t review_bundle_*.tar.gz | head -n 1)
+          test -s "$PACK"
+          echo "[OK] Created: $PACK"
+
+          # 署名（任意だが、CIキーを使う設計ならここでやる）
+          go run ./cmd/gopsign/main.go -mode=sign -key="$S6_SIGNING_KEY" -target="$PACK"
+          test -s "$PACK.asc"
+          echo "[OK] Signed: $PACK.asc"
 
       # Verification (Unified)
       - name: Verify Evidence Pack
