@@ -9,7 +9,7 @@ AI must **NEVER** generate text that completes the following patterns in **any**
 
 ### 1.1 File URL Format
 *   **Forbidden**: `file` + `://` followed by any path.
-*   **Detection**: `rg "file[:]"` (and check for adjacent `//`).
+*   **Detection**: `bash ops/finalize_clean.sh --check`
 *   **Why**: It leaks local environment paths and breaks portability.
 
 ### 1.2 Absolute Paths
@@ -49,7 +49,8 @@ C1. 代替（必須）
 
 C2. 最終提出前セルフチェック（必須）
 - 提出直前に以下を実行し、ヒットしたら該当箇所を分割表記/プレースホルダへ置換し、再チェックする
-  - `rg -n "file:" docs .github README.md ops scripts prompts || true`
+  - `bash ops/finalize_clean.sh --check`
+  - 自動修正には `bash ops/finalize_clean.sh --fix` を使用可能（※差分を必ず確認すること）
   - 近接する `//` との組み合わせが “成立していないか” を目視確認する（成立する書き方は禁止）
 ```
 
@@ -59,7 +60,14 @@ Before submitting any changes, run the following check locally:
 
 ```bash
 # Check for "file:" occurrences in key directories
-rg -n "file[:]" docs .github README.md ops scripts prompts || true
+bash ops/finalize_clean.sh --check
+```
+
+If detection fails:
+
+```bash
+# Auto-fix text files
+bash ops/finalize_clean.sh --fix
 ```
 
 If any hits form a valid file URL, **fix them immediately** by using backticks or breaking the string.

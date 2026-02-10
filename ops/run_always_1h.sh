@@ -206,17 +206,7 @@ cleanup_local_runs() {
 cleanup_local_runs || echo "[WARN] Cleanup failed"
 
 # 3.7 Local Death Scan (Repo Text Guard)
-run_step "repo_guard" bash -c '
-    echo "Scanning repo for forbidden file[:]// patterns..."
-    # The pattern is "file" + ":" + "//" but written as "file[:]//" to avoid self-detection
-    # We only ban file[:]// URLs, not "file:" (e.g. go-version-file)
-    if rg -n "file[:]//" docs .github README.md ops scripts prompts; then
-       echo "[FAIL] Forbidden file[:]// patterns found in repo!"
-       exit 1
-    else
-       echo "[PASS] No forbidden file[:]// patterns found."
-    fi
-'
+run_step "repo_guard" bash ops/finalize_clean.sh --check
 
 # 4. Summary (Normalization)
 echo "== Summary =="
