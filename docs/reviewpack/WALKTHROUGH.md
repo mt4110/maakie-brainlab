@@ -41,9 +41,10 @@ Gate-1 verify-only が PASSED する
 Target result: eval/results/latest.jsonl
 
 === Gate-1 PASSED: System is Truthful & Verified ===
+```
 
 ## Pack内容チェック（symlink無し + latest.jsonl あり）
 ```bash
-tar -tf review_pack_*.tar.gz | rg 'src_snapshot/eval/results/latest\.jsonl'
-tar -tvf review_pack_*.tar.gz | rg ' -> ' || echo "OK: no symlinks"
+tar -tf review_pack_*.tar.gz | grep 'src_snapshot/eval/results/latest\.jsonl'
+tar -tvf review_pack_*.tar.gz | grep ' -> ' || echo "OK: no symlinks"
 ```

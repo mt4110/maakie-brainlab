@@ -26,7 +26,7 @@ This document describes the **Run Always 1h** automated workflow, designed to pr
     ```text
     .local/run-always/
     ├── <TIMESTAMP_UTC>_<SHORT_SHA>/  (Run ID)
-    │   ├── logs/
+    │   ├── 00_meta.txt
     │   ├── summary.md
     │   ├── summary.jsonl
     │   └── ...
