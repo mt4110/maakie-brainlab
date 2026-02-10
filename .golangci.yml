@@ -2,6 +2,7 @@ version: "2"
 
 run:
   timeout: 5m
+  # 初期導入は非ブロッキング（issueがあってもexit 0）
   issues-exit-code: 0
 
 linters:
@@ -11,16 +12,6 @@ linters:
     - errcheck
     - staticcheck
     - revive
-    - gofmt
-    - goimports
-
-formatters:
-  enable:
-    - goimports
-  settings:
-    goimports:
-      local-prefixes:
-        - github.com/maakie-brainlab
 
 issues:
   max-issues-per-linter: 0

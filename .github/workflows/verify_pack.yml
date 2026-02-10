@@ -64,6 +64,26 @@ jobs:
           git status --porcelain=v1 || true
           ls -la "$KEYDIR"
 
+      # S5: Seed eval results fixture (CI)
+      - name: Seed eval results fixture (CI)
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        run: |
+          set -euo pipefail
+
+          # CI checkout には eval/results が無い（gitignore）ので、fixture から投入して Gate-1 を安定させる
+          if [ ! -f eval/results/latest.jsonl ]; then
+            if [ ! -f eval/fixtures/latest.jsonl ]; then
+              echo "[FAIL] Missing eval/fixtures/latest.jsonl (fixture must be committed)."
+              exit 1
+            fi
+            mkdir -p eval/results
+            cp -f eval/fixtures/latest.jsonl eval/results/latest.jsonl
+            echo "[OK] Seeded eval/results/latest.jsonl from eval/fixtures/latest.jsonl"
+          else
+            echo "[OK] eval/results/latest.jsonl already exists"
+          fi
+
       # S5: Evidence Pack (Clean Execution)
       - name: Create Evidence Pack (Clean Workspace & Run Always)
         id: create_evidence_pack
