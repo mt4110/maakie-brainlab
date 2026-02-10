@@ -5,6 +5,12 @@ on:
     branches: ["main", "s7-*"]
   pull_request:
     branches: ["main"]
+  workflow_dispatch:
+    inputs:
+      inject_failure:
+        description: "Inject failure (none|doclinks|seed-missing)"
+        required: false
+        default: "none"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -20,6 +26,24 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Init CI (Run Always)
+        run: |
+          mkdir -p .local/ci
+          date -u +"%Y%m%dT%H%M%SZ" > .local/ci/00_utc.txt
+          echo "sha=$(git rev-parse HEAD)" > .local/ci/00_meta.txt
+          echo "run_id=${{ github.run_id }}" >> .local/ci/00_meta.txt
+          
+          # Failure Injection: doclinks (v3 Robust)
+          if [ "${{ inputs.inject_failure }}" == "doclinks" ]; then
+             echo "[INJECT] doclinks: patching README.md (tracked) for scan..."
+             # Inject multiple forbidden patterns to ensure detection (Obfuscated from linter)
+             PROTO="file"
+             PROTO="${PROTO}://"
+             printf "\n<!-- INJECT_DOC_LINKS_BEGIN -->\n[file-url](${PROTO}/INJECT_DO_NOT_OPEN)\n${PROTO}/INJECT_DO_NOT_OPEN\n${PROTO}localhost/INJECT_DO_NOT_OPEN\n${PROTO}/INJECT_DO_NOT_OPEN\n<!-- INJECT_DOC_LINKS_END -->\n" >> README.md
+             # Check if injection worked
+             grep -n "INJECT_DO_NOT_OPEN" README.md || true
+          fi
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -71,36 +95,47 @@ jobs:
 
       # S5: Seed eval results fixture (CI)
       # S5: Seed eval results fixture (CI)
+      # S5: Seed eval results fixture (CI)
       - name: Seed eval results fixture (CI)
         shell: bash
         working-directory: ${{ github.workspace }}
         run: |
-          set -euo pipefail
+          set +e
+          {
+            set -euo pipefail
+            
+            # Failure Injection: seed-missing
+            if [ "${{ inputs.inject_failure }}" == "seed-missing" ]; then
+              echo "[INJECT] Simulating missing seed by skipping seed logic or corrupting it"
+              # Just intentionally fail the seed check later or rename if exists
+              find eval/results -name "*.jsonl" -delete || true
+            fi
+            
+            # CI checkout には eval/results が無い（gitignore）ので、fixture から投入して verify-only を安定させる
+            FIX="eval/fixtures/latest.jsonl"
+            test -s "$FIX" || { echo "[FAIL] Missing fixture: $FIX (must be committed)"; exit 1; }
 
-          # CI checkout には eval/results が無い（gitignore）ので、fixture から投入して verify-only を安定させる
-          FIX="eval/fixtures/latest.jsonl"
-          test -s "$FIX" || { echo "[FAIL] Missing fixture: $FIX (must be committed)"; exit 1; }
+            mkdir -p eval/results
 
-          mkdir -p eval/results
+            # verify-only が要求する「latest 以外の .jsonl」を用意（名前固定で決定論）
+            if [ ! -f eval/results/ci.jsonl ]; then
+              cp -f "$FIX" eval/results/ci.jsonl
+              echo "[OK] Seeded eval/results/ci.jsonl from $FIX"
+            else
+              echo "[OK] eval/results/ci.jsonl already exists"
+            fi
+            
+            # Use 'seed-eval' logic if available (future proofing)
+            # make seed-eval || true
 
-          # verify-only が要求する「latest 以外の .jsonl」を用意（名前固定で決定論）
-          if [ ! -f eval/results/ci.jsonl ]; then
-            cp -f "$FIX" eval/results/ci.jsonl
-            echo "[OK] Seeded eval/results/ci.jsonl from $FIX"
-          else
-            echo "[OK] eval/results/ci.jsonl already exists"
-          fi
-
-          # ついでに latest も無ければ入れる（pack-contained の都合で役立つ）
-          if [ ! -f eval/results/latest.jsonl ]; then
-            cp -f "$FIX" eval/results/latest.jsonl
-            echo "[OK] Seeded eval/results/latest.jsonl from $FIX"
-          else
-            echo "[OK] eval/results/latest.jsonl already exists"
-          fi
-
-          # sanity
-          ls -la eval/results
+            # Sanity
+            ls -la eval/results
+          } 2>&1 | tee .local/ci/seed_eval.log
+          
+          # Capture status
+          ec=${PIPESTATUS[0]}
+          echo -e "seed_eval\t$ec" >> .local/ci/10_status.tsv
+          exit 0
 
       # S5: Evidence Pack (Clean Execution)
       - name: Create Evidence Pack (Clean Workspace & Run Always)
@@ -151,46 +186,135 @@ jobs:
           
           cp ci_out/artifact_upload.log ci_out/diagnostics.txt
 
-          exit "$EXIT_CODE"
+          # Capture status (Run Always)
+          echo -e "s5_evidence_pack\t$EXIT_CODE" >> .local/ci/10_status.tsv
+          cp "$TMPDIR/verify_pack.log" .local/ci/s5_evidence_pack.log || true
+          exit 0
 
 
-      # Review Bundle
+      # Review Bundle (Run Always Wrap)
       - name: Create Review Bundle
         run: |
-          set -euo pipefail
+          set +e
+          {
+            set -euo pipefail
+            go run ./cmd/reviewpack/main.go submit --mode verify-only
+            PACK=$(ls -t review_bundle_*.tar.gz | head -n 1)
+            test -s "$PACK"
+            echo "[OK] Created: $PACK"
+            go run ./cmd/gopsign/main.go -mode=sign -key="$S6_SIGNING_KEY" -target="$PACK"
+            test -s "$PACK.asc"
+            echo "[OK] Signed: $PACK.asc"
+          } 2>&1 | tee .local/ci/review_bundle.log
+          ec=${PIPESTATUS[0]}
+          echo -e "review_bundle\t$ec" >> .local/ci/10_status.tsv
+          exit 0
 
-          # Review bundle を生成（CIでも動く確実なコマンド）
-          go run ./cmd/reviewpack/main.go submit --mode verify-only
-
-          # 生成物の存在確認
-          PACK=$(ls -t review_bundle_*.tar.gz | head -n 1)
-          test -s "$PACK"
-          echo "[OK] Created: $PACK"
-
-          # 署名（任意だが、CIキーを使う設計ならここでやる）
-          go run ./cmd/gopsign/main.go -mode=sign -key="$S6_SIGNING_KEY" -target="$PACK"
-          test -s "$PACK.asc"
-          echo "[OK] Signed: $PACK.asc"
-
-      # Verification (Unified)
+      # Verification (Unified) (Run Always Wrap)
       - name: Verify Evidence Pack
         run: |
-          PACK=$(ls -t .local/reviewpack_artifacts/evidence_pack_*.tar.gz | head -n 1)
-          make verify-pack PACK="$PACK"
+          set +e
+          {
+             PACK=$(ls -t .local/reviewpack_artifacts/evidence_pack_*.tar.gz | head -n 1)
+             make verify-pack PACK="$PACK"
+          } 2>&1 | tee .local/ci/verify_evidence.log
+          ec=${PIPESTATUS[0]}
+          echo -e "verify_evidence\t$ec" >> .local/ci/10_status.tsv
+          exit 0
 
       - name: Verify Review Bundle
         run: |
-          PACK=$(ls -t review_bundle_*.tar.gz | head -n 1)
-          make verify-pack PACK="$PACK"
+          set +e
+          {
+             PACK=$(ls -t review_bundle_*.tar.gz | head -n 1)
+             make verify-pack PACK="$PACK"
+          } 2>&1 | tee .local/ci/verify_bundle.log
+          ec=${PIPESTATUS[0]}
+          echo -e "verify_bundle\t$ec" >> .local/ci/10_status.tsv
+          exit 0
 
-      - name: Upload Verify Pack Artifacts
+      - name: Check Doc Links
+        run: |
+          set +e
+          # Debug recipe (v3)
+          make -n check-doc-links > .local/ci/21_doclinks_recipe.txt 2>&1 || true
+          
+          make check-doc-links 2>&1 | tee .local/ci/doc_links.log
+          ec=${PIPESTATUS[0]}
+          
+          # Fail Safe for Injection (v3)
+          if [ "${{ inputs.inject_failure }}" == "doclinks" ] && [ "$ec" -eq 0 ]; then
+             echo "[INJECT][ERROR] doclinks injection did NOT trigger failure; marking doc_links as invalid test (ec=99)" | tee -a .local/ci/doc_links.log
+             ec=99
+          fi
+
+          echo -e "doc_links\t$ec" >> .local/ci/10_status.tsv
+          
+          # Restore README if injected (Best effort cleanup in CI, though runner cleans workspace)
+          if [ "${{ inputs.inject_failure }}" == "doclinks" ]; then
+             git restore -- README.md || true
+          fi
+          
+          exit 0
+
+      # Summary & Upload (Run Always)
+      - name: CI Summary
+        if: always()
+        run: |
+           echo "## Run Always Summary" >> $GITHUB_STEP_SUMMARY
+           echo "" >> $GITHUB_STEP_SUMMARY
+           echo "| Step | Exit Code |" >> $GITHUB_STEP_SUMMARY
+           echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+           if [ -f .local/ci/10_status.tsv ]; then
+             cat .local/ci/10_status.tsv | while read -r name code; do
+               echo "| $name | $code |" >> $GITHUB_STEP_SUMMARY
+             done
+           else
+             echo "| (No status file) | - |" >> $GITHUB_STEP_SUMMARY
+           fi
+           
+           # Show tail of failed logs
+           echo "" >> $GITHUB_STEP_SUMMARY
+           echo "### Failure Logs (Tail)" >> $GITHUB_STEP_SUMMARY
+           if [ -f .local/ci/10_status.tsv ]; then
+             cat .local/ci/10_status.tsv | awk '$2 != 0 {print $1}' | while read -r name; do
+               logfile=".local/ci/${name}.log"
+               if [ -f "$logfile" ]; then
+                 echo "<details><summary>Log: $name</summary>" >> $GITHUB_STEP_SUMMARY
+                 echo "" >> $GITHUB_STEP_SUMMARY
+                 echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+                 tail -n 80 "$logfile" >> $GITHUB_STEP_SUMMARY
+                 echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+                 echo "" >> $GITHUB_STEP_SUMMARY
+                 echo "</details>" >> $GITHUB_STEP_SUMMARY
+               fi
+             done
+           fi
+
+      - name: Upload Artifacts (Run Always)
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          if-no-files-found: warn
-          name: verify-pack-logs-${{ github.run_id }}-${{ github.sha }}
+          if-no-files-found: error
+          name: run-always-logs-${{ github.run_id }}
           path: |
+            .local/ci/
             ci_out/
-            .local/reviewpack_artifacts/
-            gate1*.log
             review_bundle_*.tar.gz
+
+      - name: Final Aggregation
+        if: always()
+        run: |
+          if [ -f .local/ci/10_status.tsv ]; then
+             # If any exit code is not 0, fail the job
+             if awk '$2 != 0 {exit 1}' .local/ci/10_status.tsv; then
+                echo "[PASS] All steps passed"
+                exit 0
+             else
+                echo "[FAIL] Failures detected in Run Always steps"
+                exit 1
+             fi
+          else
+             echo "[FAIL] No status file found!"
+             exit 1
+          fi
