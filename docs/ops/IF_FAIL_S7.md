@@ -62,3 +62,10 @@ This document outlines how to diagnose and resolve failures in the S7 Continuous
 1.  Did the job cancel early? ensure `if: always()` is used for upload steps.
 2.  Is the `out/` directory empty?
 3.  Check retention policy settings.
+
+## IF-08: verify-only Exit 5 (Missing eval/results)
+**Symptom**: `submit --mode verify-only` fails with `[FATAL] verify-only mode requires valid eval/results/*.jsonl`.
+**Context**: `verify-only` mode assumes there is a previous evaluation result. In clean envs, `eval/results/` is empty.
+**Resolution**:
+1.  **Seed from fixture**: `make seed-eval` (copies committed fixture).
+2.  **Run strict**: `go run cmd/reviewpack/main.go submit --mode strict` (real eval).

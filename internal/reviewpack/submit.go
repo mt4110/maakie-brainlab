@@ -135,6 +135,7 @@ func packToTarForSubmit(args []string, timebox int, mode string) string {
 			log.Printf("[FATAL] verify-only mode requires valid eval/results/*.jsonl (excluding latest.jsonl): %v", err)
 			log.Printf("[HINT] run strict once to generate result: go run cmd/reviewpack/main.go submit")
 			log.Printf("[HINT] or run self-hosted eval workflow (eval_strict.yml)")
+			log.Printf("[HINT] or run local seed (fastest): make seed-eval")
 			os.Exit(5)
 		}
 		selectedEvalAbs, selectedEvalRel = abs, rel
