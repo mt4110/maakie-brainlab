@@ -118,9 +118,17 @@ PACK_NAME="evidence_pack_$TS.tar.gz"
 PACK_PATH="$PACK_DIR/$PACK_NAME"
 
 if [ -f "$PACK_PATH" ]; then
-    echo "[FAIL] Pack file already exists: $PACK_PATH"
-    echo "       Log: $GATE1_LOG"
-    exit 1
+    # Collision: append random suffix (Method A)
+    RAND=$(openssl rand -hex 4 2>/dev/null || date +%s)
+    echo "[WARN] Pack file exists: $PACK_PATH. Appending suffix: $RAND"
+    PACK_NAME="evidence_pack_${TS}_${RAND}.tar.gz"
+    PACK_PATH="$PACK_DIR/$PACK_NAME"
+
+    if [ -f "$PACK_PATH" ]; then
+        echo "[FAIL] Pack file STILL exists after suffix (extremely unlikely): $PACK_PATH"
+        echo "       Log: $GATE1_LOG"
+        exit 1
+    fi
 fi
 
 (cd "$STAGE_DIR" && COPYFILE_DISABLE=1 tar -czf - .) > "$PACK_PATH"
