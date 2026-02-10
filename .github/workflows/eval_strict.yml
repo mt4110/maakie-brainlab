@@ -1,0 +1,58 @@
+name: Eval Strict (Self-Hosted)
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 19 * * *' # Nightly (JST 04:00)
+
+jobs:
+  eval-strict:
+    runs-on: [self-hosted, eval]
+    timeout-minutes: 60
+    env:
+      GATE1_VERIFY_ONLY: "0" # Strict enforcement
+      S5_MODE: "strict"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Create venv & Install Deps
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install -r requirements.txt
+          # Diagnostics
+          .venv/bin/python -c "import feedparser; print('feedparser ok')"
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Check LLM Server Status
+        run: |
+          if [ -f "infra/llama-server.status.sh" ]; then
+             bash infra/llama-server.status.sh
+          else
+             echo "WARN: No server check script found, assuming running"
+          fi
+
+      - name: Run Strict Eval
+        run: |
+          make run-eval
+
+      - name: Upload Logs (Always)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-strict-logs-${{ github.run_id }}
+          if-no-files-found: warn
+          path: |
+            eval/results/*.jsonl
+            logs/

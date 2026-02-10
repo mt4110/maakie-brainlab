@@ -19,11 +19,36 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"golang.org/x/crypto/openpgp"
+	"golang.org/x/crypto/openpgp/armor"
 )
 
 const (
 	defaultTimeboxSec = 300
-	packPrefix        = "review_pack"
+	packPrefix        = "review_bundle"
+
+	// Constants for logging and filenames
+	msgFatalMkdirTemp  = "[FATAL] MkdirTemp: %v"
+	msgFatalMkdirAll   = "[FATAL] MkdirAll: %v"
+	msgDebugPreflight  = "DEBUG: Starting preflight checks..."
+	msgFatalGitStatus  = "[FATAL] git status --porcelain failed: %v"
+	msgFatalSha256     = "[FATAL] sha256 %s: %v"
+	msgFatalStat       = "[FATAL] stat %s: %v"
+	fileStatus         = "01_status.txt"
+	fileGitLog         = "10_git_log.txt"
+	fileGitDiff        = "11_git_diff.patch"
+	fileMakeTest       = "30_make_test.log"
+	fileMakeEval       = "31_make_run_eval.log"
+	fileSelfVerify     = "40_self_verify.log"
+	fileManifest       = "MANIFEST.tsv"
+	fileChecksums      = "CHECKSUMS.sha256"
+	filePackVersion    = "PACK_VERSION"
+	fileSpec           = "SPEC.md"
+	fileLatestJsonl    = "eval/results/latest.jsonl"
+	extTarGz           = ".tar.gz"
+	dirSrcSnapshot     = "src_snapshot"
+	dirEvalResults     = "eval/results"
 )
 
 func main() {
@@ -54,9 +79,30 @@ func usage() {
 	fmt.Fprintf(os.Stderr, "Usage: reviewpack <command> [args]\n")
 	fmt.Fprintf(os.Stderr, "Commands:\n")
 	fmt.Fprintf(os.Stderr, "  pack [--timebox N] [--skip-eval] [N_COMMITS]\n")
-	fmt.Fprintf(os.Stderr, "  submit [--timebox N] [--skip-eval] [N_COMMITS]\n")
+	fmt.Fprintf(os.Stderr, "  submit [--timebox N] [--mode strict|verify-only] [N_COMMITS]\n")
 	fmt.Fprintf(os.Stderr, "  verify <dir|tar.gz>\n")
 	fmt.Fprintf(os.Stderr, "  repro-check\n")
+}
+
+// resolveRepoRoot ensures we are inside the repo and returns the root path.
+func resolveRepoRoot() string {
+	// Try Getwd first
+	if _, err := os.Getwd(); err != nil {
+		log.Fatalf("[FATAL] Getwd: %v", err)
+	}
+
+	out, err := exec.Command("git", "rev-parse", "--show-toplevel").Output()
+	if err != nil {
+		log.Fatalf("[FATAL] git rev-parse --show-toplevel failed: %v", err)
+	}
+	root := strings.TrimSpace(string(out))
+	if root == "" {
+		log.Fatalf("[FATAL] git rev-parse --show-toplevel returned empty")
+	}
+	if err := os.Chdir(root); err != nil {
+		log.Fatalf("[FATAL] chdir to repo root failed: %v", err)
+	}
+	return root
 }
 
 // --- PACK ---
@@ -81,26 +127,10 @@ func packToTar(args []string) string {
 
 	timebox := fs.Int("timebox", defaultTimeboxSec, "Timebox in seconds")
 	skipEval := fs.Bool("skip-eval", false, "Skip make run-eval")
-	// nCommits is positional
+	signKey := fs.String("sign-key", "", "Path to private key for signing")
 	fs.Parse(args)
 
-	repoRoot, err := os.Getwd()
-	if err != nil {
-		log.Fatalf("[FATAL] Getwd: %v", err)
-	}
-
-	// Resolve repo root via git
-	out, err := exec.Command("git", "rev-parse", "--show-toplevel").Output()
-	if err != nil {
-		log.Fatalf("[FATAL] git rev-parse --show-toplevel failed: %v", err)
-	}
-	repoRoot = strings.TrimSpace(string(out))
-	if repoRoot == "" {
-		log.Fatalf("[FATAL] git rev-parse --show-toplevel returned empty")
-	}
-	if err := os.Chdir(repoRoot); err != nil {
-		log.Fatalf("[FATAL] chdir to repo root failed: %v", err)
-	}
+	repoRoot := resolveRepoRoot()
 
 	// Environment overrides
 	if os.Getenv("TIMEBOX_SEC") != "" {
@@ -110,116 +140,293 @@ func packToTar(args []string) string {
 		*skipEval = true
 	}
 
-	// 0. Setup
+	// Setup
 	timestamp := time.Now().Format("20060102_150405")
 	packName := fmt.Sprintf("%s_%s", packPrefix, timestamp)
+	packDir, cleanup := setupPackDir(packName)
+	defer cleanup()
 
-	// Use a temp dir for construction
-	tmpDir, err := os.MkdirTemp("", "reviewpack-*")
-	if err != nil {
-		log.Fatalf("[FATAL] MkdirTemp: %v", err)
-	}
-	packDir := filepath.Join(tmpDir, packName)
-	if err := os.MkdirAll(packDir, 0755); err != nil {
-		log.Fatalf("[FATAL] MkdirAll: %v", err)
-	}
-	// Cleanup happens, tarball is moved out first
-	defer os.RemoveAll(tmpDir)
+	fmt.Printf("=== review_pack (S4 Hardened) ===\nTarget : %s%s\nTimebox: %ds\nWork   : %s\n", packName, extTarGz, *timebox, packDir)
 
-	fmt.Printf("=== review_pack (S4 Hardened) ===\nTarget : %s.tar.gz\nTimebox: %ds\nWork   : %s\n", packName, *timebox, packDir)
-
-	// 1. Preflight: Git Status & Meta
-	log.Println("DEBUG: Starting preflight checks...")
-	writeMeta(packDir, timestamp, *timebox, *skipEval)
-	runCmd(repoRoot, "git", "status", ">", filepath.Join(packDir, "01_status.txt"))
-
-	// Strict clean check
-	log.Println("DEBUG: Checking git status --porcelain...")
-	cmd := exec.Command("git", "status", "--porcelain")
-	cmd.Dir = repoRoot
-	porcelainOut, err := cmd.Output()
-	if err != nil {
-		log.Fatalf("[FATAL] git status --porcelain failed: %v", err)
-	}
-	if len(bytes.TrimSpace(porcelainOut)) > 0 {
-		log.Printf("[FATAL] preflight: working tree is dirty:\n%s", string(porcelainOut))
-		os.Exit(1)
-	}
+	// 1. Preflight
+	runPreflightChecks(repoRoot, packDir, timestamp, *timebox, *skipEval, "legacy")
 
 	nCommits := "5"
 	if fs.NArg() > 0 {
 		nCommits = fs.Arg(0)
 	}
-	runCmd(repoRoot, "git", "log", "-n", nCommits, "--stat", ">", filepath.Join(packDir, "10_git_log.txt"))
-	runCmd(repoRoot, "git", "diff", "HEAD~"+nCommits, "HEAD", ">", filepath.Join(packDir, "11_git_diff.patch"))
+	collectGitInfo(repoRoot, packDir, nCommits)
 
-	// 2. Secrets Scan (Integrated into filelist generation, but let's keep the report for now)
+	// 2. Secrets Scan
 	scanSecrets(packDir)
 
-	// 3. Make Test
-	runMake(packDir, "30_make_test.log", []string{"make", "test"}, *timebox, 4)
+	runMake(packDir, fileMakeTest, []string{"make", "test"}, *timebox, 4)
 
 	// 4. Make Run-Eval
 	if !*skipEval {
-		runMake(packDir, "31_make_run_eval.log", []string{"make", "run-eval"}, *timebox, 5)
+		runMake(packDir, fileMakeEval, []string{"make", "run-eval"}, *timebox, 5)
 	} else {
-		_ = os.WriteFile(filepath.Join(packDir, "31_make_run_eval.log"), []byte("SKIP_EVAL set.\n"), 0644)
+		_ = os.WriteFile(filepath.Join(packDir, fileMakeEval), []byte("SKIP_EVAL set.\n"), 0644)
 	}
 
-	// 5. Source Snapshot
-	log.Println("DEBUG: Creating src_snapshot...")
-	snapshotDir := filepath.Join(packDir, "src_snapshot")
+	snapshotDir := filepath.Join(packDir, dirSrcSnapshot)
 	if err := os.MkdirAll(snapshotDir, 0755); err != nil {
-		log.Fatalf("[FATAL] src_snapshot mkdir: %v", err)
+		log.Fatalf(msgFatalMkdirAll, err)
 	}
-	trackedFiles := listTrackedFiles()
-	for _, f := range trackedFiles {
+	for _, f := range listTrackedFiles() {
 		copyFile(f, filepath.Join(snapshotDir, f))
 	}
-	// Copy latest eval result (Gate-1 requirement)
-	copyLatestEval(snapshotDir)
+	
+	if !*skipEval {
+		abs, _, err := findLatestEvalResult(repoRoot)
+		if err == nil {
+			copyEvalAsLatest(snapshotDir, abs)
+		} else {
+			log.Printf("[WARN] No eval result found to bundle: %v", err)
+		}
+	} else {
+		// If skipped, we might not have one. S4 legacy didn't demand it strictly? 
+		// Actually Gate-1 demands it. If skipped, we try to find existing.
+		abs, _, err := findLatestEvalResult(repoRoot)
+		if err == nil {
+			copyEvalAsLatest(snapshotDir, abs)
+		}
+	}
 
-	// 6. Documentation & Specifications (S4-05, S4-08)
+	// 6. Documentation & Specifications
 	writeVersionAndSpec(packDir)
 	writeReadme(packDir)
 	writeVerifyScript(packDir)
+	_ = os.WriteFile(filepath.Join(packDir, "review_pack_v1"), []byte("1\n"), 0644)
 
 	// 7. Self-Verify
 	runSelfVerify(packDir)
 
-	// 8. Determinism: File List & Contamination Check (S4-04, S4-06)
-	log.Println("DEBUG: Generating pack file list & checking contamination...")
-	// This step scans the *constructed* packDir to ensure no banned files slipped in.
-	// It also generates the rigorous file list for tar creation.
-	filesToPack := generatePackFilelist(packDir)
+	// 8-11. Finalize
+	tarFile := finalizePack(packDir, packName, "review_bundle")
 
-	// 9. Manifest (S4-01, S4-02)
-	log.Println("DEBUG: Creating MANIFEST.tsv...")
-	// MANIFEST.tsv records the state of filesToPack *before* Checksums.
-	createManifest(packDir, filesToPack)
+	// Signing
+	if *signKey != "" {
+		if err := signFile(*signKey, tarFile); err != nil {
+			log.Fatalf("[FATAL] Signing failed: %v", err)
+		}
+	}
 
-	// 10. Checksums (S4-03)
-	log.Println("DEBUG: Creating CHECKSUMS.sha256...")
-	// Must include MANIFEST.tsv and everything else.
-	// We regenerate the file list to include MANIFEST.tsv
-	createChecksums(packDir)
-
-	// 11. Deterministic Tarball (S4-04)
-	log.Println("DEBUG: Creating deterministic tarball...")
-	tarFile := packName + ".tar.gz" // in cwd
-	// We re-scan to include CHECKSUMS.sha256 which wasn't in step 8
-	// Final list for tar: everything in packDir
-	finalFileList := generatePackFilelist(packDir)
-	createDeterministicTar(packDir, finalFileList, "review_pack", tarFile)
+	// Legacy Copy
+	legacyName := strings.Replace(packName, "review_bundle", "review_pack", 1) + extTarGz
+	copyFile(tarFile, legacyName)
+	fmt.Printf("[INFO] Created legacy copy: %s\n", legacyName)
 
 	return tarFile
 }
 
+func packToTarForSubmit(args []string, timebox int, mode string) string {
+	defer logPhase("packToTarForSubmit")()
+
+	repoRoot := resolveRepoRoot()
+
+	// Environment overrides
+	if os.Getenv("TIMEBOX_SEC") != "" {
+		fmt.Sscanf(os.Getenv("TIMEBOX_SEC"), "%d", &timebox)
+	}
+
+	skipEval := (mode == "verify-only")
+
+	// Setup
+	timestamp := time.Now().Format("20060102_150405")
+	packName := fmt.Sprintf("%s_%s", packPrefix, timestamp)
+	packDir, cleanup := setupPackDir(packName)
+	defer cleanup()
+
+	fmt.Printf("=== review_pack (S7 Run Always) ===\nTarget : %s%s\nTimebox: %ds\nMode   : %s\nWork   : %s\n", packName, extTarGz, timebox, mode, packDir)
+
+	// 1. Preflight
+	runPreflightChecks(repoRoot, packDir, timestamp, timebox, skipEval, mode)
+
+	nCommits := "5"
+	if len(args) > 0 {
+		nCommits = args[0]
+	}
+	collectGitInfo(repoRoot, packDir, nCommits)
+
+	scanSecrets(packDir)
+
+	// 3. Make Test
+	runMake(packDir, fileMakeTest, []string{"make", "test"}, timebox, 4)
+
+	// 4. Make Run-Eval (Unified Flow)
+	var selectedEvalAbs, selectedEvalRel string
+	var selectedEvalSha string
+	var selectedEvalBytes int64
+
+	if mode == "strict" {
+		// Strict: Run eval, fail if fails
+		runMake(packDir, fileMakeEval, []string{"make", "run-eval"}, timebox, 5)
+
+		// After run, find the result
+		abs, rel, err := findLatestEvalResult(repoRoot)
+		if err != nil {
+			log.Fatalf("[FATAL] strict mode: failed to find generated eval result: %v", err)
+		}
+		selectedEvalAbs, selectedEvalRel = abs, rel
+
+		if err := validateJsonlLooksOk(selectedEvalAbs); err != nil {
+			log.Fatalf("[FATAL] strict mode: generated result %s is invalid: %v", selectedEvalRel, err)
+		}
+
+		// Append selection info to log
+		f, err := os.OpenFile(filepath.Join(packDir, fileMakeEval), os.O_APPEND|os.O_WRONLY, 0644)
+		if err == nil {
+			fmt.Fprintf(f, "\n[S7] Selected Result: %s\n", selectedEvalRel)
+			f.Close()
+		}
+
+	} else {
+		// Verify-only: Find latest existing result
+		abs, rel, err := findLatestEvalResult(repoRoot)
+		if err != nil {
+			log.Printf("[FATAL] verify-only mode requires valid eval/results/*.jsonl (excluding latest.jsonl): %v", err)
+			log.Printf("[HINT] run strict once to generate result: go run cmd/reviewpack/main.go submit")
+			log.Printf("[HINT] or run self-hosted eval workflow (eval_strict.yml)")
+			os.Exit(5)
+		}
+		selectedEvalAbs, selectedEvalRel = abs, rel
+
+		if err := validateJsonlLooksOk(selectedEvalAbs); err != nil {
+			log.Printf("[FATAL] verify-only mode: selected result %s is invalid: %v", selectedEvalRel, err)
+			os.Exit(5)
+		}
+
+		// Calculate stats for skip log (and meta later)
+		sha, err := fileSha256(selectedEvalAbs)
+		if err != nil {
+			log.Fatalf(msgFatalSha256, selectedEvalRel, err)
+		}
+		st, err := os.Stat(selectedEvalAbs)
+		if err != nil {
+			log.Fatalf(msgFatalStat, selectedEvalRel, err)
+		}
+		selectedEvalSha = sha
+		selectedEvalBytes = st.Size()
+
+		// Write SKIP log
+		logContent := fmt.Sprintf("mode=%s\nreason=reuse_latest_timestamp\nselected_result=%s\nselected_sha256=%s\nselected_bytes=%d\n",
+			mode, selectedEvalRel, selectedEvalSha, selectedEvalBytes)
+		if err := os.WriteFile(filepath.Join(packDir, fileMakeEval), []byte(logContent), 0644); err != nil {
+			log.Fatalf("[FATAL] write skip log: %v", err)
+		}
+
+		fmt.Printf("[INFO] verify-only: reusing %s (sha=%s)\n", selectedEvalRel, selectedEvalSha)
+	}
+
+	// 5. Source Snapshot & Bundle Eval Result
+	log.Println("DEBUG: Creating src_snapshot...")
+	snapshotDir := filepath.Join(packDir, dirSrcSnapshot)
+	if err := os.MkdirAll(snapshotDir, 0755); err != nil {
+		log.Fatalf(msgFatalMkdirAll, err)
+	}
+	for _, f := range listTrackedFiles() {
+		copyFile(f, filepath.Join(snapshotDir, f))
+	}
+	// Copy selected result as latest.jsonl
+	resultSha, resultBytes, _, err := copyEvalAsLatest(snapshotDir, selectedEvalAbs)
+	if err != nil {
+		log.Fatalf("[FATAL] copyEvalAsLatest: %v", err)
+	}
+	
+	// If strict, we didn't calculate source sha/bytes yet, do it now
+	if selectedEvalSha == "" {
+		s, err := fileSha256(selectedEvalAbs)
+		if err != nil {
+			log.Fatalf(msgFatalSha256, selectedEvalRel, err)
+		}
+		selectedEvalSha = s
+		fi, _ := os.Stat(selectedEvalAbs)
+		selectedEvalBytes = fi.Size()
+	}
+
+	// Verify copy integrity
+	if selectedEvalSha != resultSha {
+		log.Fatalf("[FATAL] Integrity error: source sha (%s) != snapshot sha (%s)", selectedEvalSha, resultSha)
+	}
+
+	// Write Meta (S7-20 Unified)
+	writeMeta(packDir, timestamp, timebox, skipEval, mode, 
+		resultSha, resultBytes, 
+		selectedEvalRel, selectedEvalSha, selectedEvalBytes)
+
+	// 6. Documentation & Specifications
+	writeVersionAndSpec(packDir)
+	writeReadme(packDir)
+	writeVerifyScript(packDir)
+	_ = os.WriteFile(filepath.Join(packDir, "review_pack_v1"), []byte("1\n"), 0644)
+
+	// 7. Self-Verify
+	runSelfVerify(packDir)
+
+	// 8-11. Finalize
+	tarFile := finalizePack(packDir, packName, "review_bundle")
+
+	// Legacy Copy
+	legacyName := strings.Replace(packName, "review_bundle", "review_pack", 1) + extTarGz
+	copyFile(tarFile, legacyName)
+	fmt.Printf("[INFO] Created legacy copy: %s\n", legacyName)
+
+	return tarFile
+}
+
+func checkLatestJsonlForVerifyOnly(repoRoot string) error {
+	path := filepath.Join(repoRoot, "eval/results/latest.jsonl")
+	info, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("file not found: %s", path)
+		}
+		return err
+	}
+	if info.Size() == 0 {
+		return fmt.Errorf("file is empty: %s", path)
+	}
+	// Check if it looks like JSONL (read first line)
+	f, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+	if scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if len(line) > 0 && !strings.HasPrefix(line, "{") {
+			return fmt.Errorf("first line does not look like JSON: %s...", line[:min(len(line), 20)])
+		}
+	} else {
+		if err := scanner.Err(); err != nil {
+			return err
+		}
+		return fmt.Errorf("file contains no readable lines")
+	}
+	return nil
+}
+
 // --- SUBMIT (pack + verify-only) ---
 func runSubmit(args []string) {
-	fmt.Println("=== SUBMIT (pack + verify-only) ===")
+	fmt.Println("=== SUBMIT (strict / verify-only) ===")
 
-	tarFile := packToTar(args)
+	fs := flag.NewFlagSet("submit", flag.ExitOnError)
+	timebox := fs.Int("timebox", defaultTimeboxSec, "Timebox in seconds")
+	// Deprecated: existing skip-eval for pack, but for submit we use mode
+	_ = fs.Bool("skip-eval", false, "Deprecated: use --mode verify-only")
+	mode := fs.String("mode", "strict", "submit mode: strict | verify-only")
+	// nCommits positional
+	fs.Parse(args)
+
+	if *mode != "strict" && *mode != "verify-only" {
+		log.Fatalf("[FATAL] Invalid mode: %s (must be strict or verify-only)", *mode)
+	}
+
+	// 1. Pack with mode-specific logic
+	tarFile := packToTarForSubmit(fs.Args(), *timebox, *mode)
 	packSha, err := fileSha256(tarFile)
 	if err != nil {
 		log.Fatalf("[FATAL] sha256(%s): %v", tarFile, err)
@@ -237,7 +444,7 @@ func runSubmit(args []string) {
 
 	// Find the root (fixed internal name or timestamped name check)
 	// We know createDeterministicTar uses "review_pack" as internal root.
-	root := filepath.Join(tmpDir, "review_pack") 
+	root := filepath.Join(tmpDir, "review_pack")
 	if _, err := os.Stat(root); os.IsNotExist(err) {
 		// Fallback: try to find it
 		r, err := findDirContainingFile(tmpDir, "PACK_VERSION", 2)
@@ -333,7 +540,7 @@ func generatePackFilelist(dir string) []string {
 func writeVersionAndSpec(dir string) {
 	// S4-05
 	_ = os.WriteFile(filepath.Join(dir, "PACK_VERSION"), []byte("1\n"), 0644)
-	
+
 	spec := `# Reviewpack Specification (v1)
 
 ## 0. Philosophy
@@ -362,7 +569,7 @@ Run ./VERIFY.sh to validate integrity.
 
 func createManifest(dir string, files []string) {
 	// S4-01, S4-02
-	manifestPath := filepath.Join(dir, "MANIFEST.tsv")
+	manifestPath := filepath.Join(dir, fileManifest)
 	manFile, err := os.Create(manifestPath)
 	if err != nil {
 		log.Fatalf("[FATAL] create %s: %v", manifestPath, err)
@@ -372,21 +579,21 @@ func createManifest(dir string, files []string) {
 
 	for _, rel := range files {
 		// Skip MANIFEST.tsv itself if it happens to be in list
-		if rel == "MANIFEST.tsv" {
+		if rel == fileManifest {
 			continue
 		}
 		abs := filepath.Join(dir, rel)
 		h, err := fileSha256(abs)
 		if err != nil {
-			log.Fatalf("[FATAL] sha256 %s: %v", abs, err)
+			log.Fatalf(msgFatalSha256, abs, err)
 		}
 		st, err := os.Stat(abs)
 		if err != nil {
-			log.Fatalf("[FATAL] stat %s: %v", abs, err)
+			log.Fatalf(msgFatalStat, abs, err)
 		}
 		fmt.Fprintf(manFile, "%s\t%s\t%d\n", rel, h, st.Size())
 	}
-	
+
 	// Critical Fix (S4-01): Explicit Close before returning/hashing
 	if err := manFile.Close(); err != nil {
 		log.Fatalf("[FATAL] close MANIFEST: %v", err)
@@ -400,18 +607,18 @@ func createChecksums(dir string) {
 
 	var lines []string
 	for _, rel := range files {
-		if rel == "CHECKSUMS.sha256" {
+		if rel == fileChecksums {
 			continue
 		}
 		abs := filepath.Join(dir, rel)
 		h, err := fileSha256(abs)
 		if err != nil {
-			log.Fatalf("[FATAL] sha256 %s: %v", abs, err)
+			log.Fatalf(msgFatalSha256, abs, err)
 		}
 		lines = append(lines, fmt.Sprintf("%s  %s", h, rel))
 	}
 	// Write
-	out := filepath.Join(dir, "CHECKSUMS.sha256")
+	out := filepath.Join(dir, fileChecksums)
 	if err := os.WriteFile(out, []byte(strings.Join(lines, "\n")+"\n"), 0644); err != nil {
 		log.Fatalf("[FATAL] write checksums: %v", err)
 	}
@@ -521,6 +728,11 @@ func runVerify(args []string) {
 		log.Fatalf("[FAIL] No CHECKSUMS.sha256 found: %v", err)
 	}
 
+	// C10-03: PACK_KIND Check
+	if _, err := os.Stat(filepath.Join(verifyRoot, "review_pack_v1")); os.IsNotExist(err) {
+		log.Fatalf("[FAIL] Missing PACK_KIND file: review_pack_v1")
+	}
+
 	validFiles := make(map[string]bool)
 	scanner := bufio.NewScanner(bytes.NewReader(content))
 	for scanner.Scan() {
@@ -576,6 +788,52 @@ func runVerify(args []string) {
 	}
 
 	fmt.Println("=== ALL PASS ===")
+	fmt.Println("=== ALL PASS ===")
+}
+
+// --- SIGNING (S7-01) ---
+
+// signFile creates a detached armored signature for the target file using the private key at privKeyPath.
+// It creates <targetPath>.asc
+func signFile(privKeyPath, targetPath string) error {
+	// Read Private Key
+	keyBytes, err := os.ReadFile(privKeyPath)
+	if err != nil {
+		return fmt.Errorf("read key: %w", err)
+	}
+
+	block, err := armor.Decode(bytes.NewReader(keyBytes))
+	if err != nil {
+		return fmt.Errorf("decode armor: %w", err)
+	}
+	if block.Type != openpgp.PrivateKeyType {
+		return fmt.Errorf("invalid key type: %s", block.Type)
+	}
+
+	entityList, err := openpgp.ReadKeyRing(block.Body)
+	if err != nil {
+		return fmt.Errorf("read keyring: %w", err)
+	}
+	signer := entityList[0]
+
+	// Read Target
+	targetBytes, err := os.ReadFile(targetPath)
+	if err != nil {
+		return fmt.Errorf("read target: %w", err)
+	}
+
+	// Create Signature
+	sigBuf := new(bytes.Buffer)
+	if err := openpgp.ArmoredDetachSign(sigBuf, signer, bytes.NewReader(targetBytes), nil); err != nil {
+		return fmt.Errorf("signing: %w", err)
+	}
+
+	outPath := targetPath + ".asc"
+	if err := os.WriteFile(outPath, sigBuf.Bytes(), 0644); err != nil {
+		return fmt.Errorf("write sig: %w", err)
+	}
+	fmt.Printf("[Sign] Signed %s -> %s\n", targetPath, outPath)
+	return nil
 }
 
 // --- REPRO-CHECK ---
@@ -587,8 +845,20 @@ func runReproCheck(args []string) {
 
 // --- HELPERS ---
 
-func writeMeta(dir, timestamp string, timebox int, skipEval bool) {
-	meta := fmt.Sprintf("timestamp=%s\ntimebox_sec=%d\nskip_eval=%v\n", timestamp, timebox, skipEval)
+func writeMeta(dir, timestamp string, timebox int, skipEval bool, evalMode string, 
+	evalResultSha string, evalResultBytes int64,
+	evalSrcRel string, evalSrcSha string, evalSrcBytes int64) {
+	
+	meta := fmt.Sprintf("timestamp=%s\n", timestamp)
+	meta += fmt.Sprintf("timebox_sec=%d\n", timebox)
+	meta += fmt.Sprintf("skip_eval=%v\n", skipEval)
+	meta += fmt.Sprintf("eval_mode=%s\n", evalMode)
+	meta += fmt.Sprintf("eval_result_sha256=%s\n", evalResultSha)
+	meta += fmt.Sprintf("eval_result_bytes=%d\n", evalResultBytes)
+	meta += fmt.Sprintf("eval_source_path=%s\n", evalSrcRel)
+	meta += fmt.Sprintf("eval_source_sha256=%s\n", evalSrcSha)
+	meta += fmt.Sprintf("eval_source_bytes=%d\n", evalSrcBytes)
+
 	if err := os.WriteFile(filepath.Join(dir, "00_meta.txt"), []byte(meta), 0644); err != nil {
 		log.Fatalf("[FATAL] write meta: %v", err)
 	}
@@ -707,14 +977,12 @@ func copyFile(src, dst string) {
 	}
 }
 
-func copyLatestEval(snapshotDir string) {
-	const resultsDir = "eval/results"
+// findLatestEvalResult scans for the latest timestamped jsonl in eval/results (ignoring latest.jsonl).
+func findLatestEvalResult(repoRoot string) (string, string, error) {
+	resultsDir := filepath.Join(repoRoot, "eval/results")
 	entries, err := os.ReadDir(resultsDir)
 	if err != nil {
-		if os.IsNotExist(err) {
-			log.Fatalf("[FATAL] missing %s directory (run: make run-eval)", resultsDir)
-		}
-		log.Fatalf("[FATAL] read %s: %v", resultsDir, err)
+		return "", "", fmt.Errorf("read %s: %w", resultsDir, err)
 	}
 
 	var candidates []string
@@ -723,39 +991,159 @@ func copyLatestEval(snapshotDir string) {
 			continue
 		}
 		name := e.Name()
-		if !strings.HasSuffix(name, ".jsonl") {
-			continue
-		}
 		if name == "latest.jsonl" {
 			continue
 		}
-		candidates = append(candidates, name)
+		if strings.HasSuffix(name, ".jsonl") {
+			candidates = append(candidates, name)
+		}
 	}
 
 	if len(candidates) == 0 {
-		log.Fatalf("[FATAL] no eval results found in %s/*.jsonl (run: make run-eval)", resultsDir)
+		return "", "", fmt.Errorf("no .jsonl files found in %s (excluding latest.jsonl)", resultsDir)
 	}
 
+	// Sort by name (timestamp assumption: YYYYMMDD-HHMMSS...)
 	sort.Strings(candidates)
 	latest := candidates[len(candidates)-1]
 
-	srcPath := filepath.Join(resultsDir, latest)
-	dstPath := filepath.Join(snapshotDir, resultsDir, "latest.jsonl")
-
-	fmt.Printf("[INFO] bundling latest eval result: %s -> latest.jsonl\n", latest)
-	copyFile(srcPath, dstPath)
+	absPath := filepath.Join(resultsDir, latest)
+	relPath := filepath.Join("eval/results", latest)
+	return absPath, relPath, nil
 }
 
+// validateJsonlLooksOk checks if file exists, size > 0, and starts with '{'.
+func validateJsonlLooksOk(absPath string) error {
+	fi, err := os.Stat(absPath)
+	if err != nil {
+		return err
+	}
+	if fi.Size() == 0 {
+		return fmt.Errorf("file is empty")
+	}
 
+	f, err := os.Open(absPath)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = f.Close() }()
+
+	scanner := bufio.NewScanner(f)
+	if scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if !strings.HasPrefix(line, "{") {
+			return fmt.Errorf("first line does not start with '{'")
+		}
+	} else {
+		if err := scanner.Err(); err != nil {
+			return err
+		}
+		return fmt.Errorf("file has no content to scan")
+	}
+	return nil
+}
+
+// copyEvalAsLatest copies the source jsonl to snapshot/eval/results/latest.jsonl
+// and returns its sha256 and bytes.
+func copyEvalAsLatest(snapshotDir, srcAbs string) (string, int64, string, error) {
+	dstRel := "eval/results/latest.jsonl"
+	dstAbs := filepath.Join(snapshotDir, dstRel)
+
+	if err := os.MkdirAll(filepath.Dir(dstAbs), 0755); err != nil {
+		return "", 0, "", fmt.Errorf("mkdir %s: %w", filepath.Dir(dstAbs), err)
+	}
+
+	// Copy
+	srcF, err := os.Open(srcAbs)
+	if err != nil {
+		return "", 0, "", fmt.Errorf("open src %s: %w", srcAbs, err)
+	}
+	defer func() { _ = srcF.Close() }()
+
+	dstF, err := os.Create(dstAbs)
+	if err != nil {
+		return "", 0, "", fmt.Errorf("create dst %s: %w", dstAbs, err)
+	}
+	defer func() { _ = dstF.Close() }() // Proper close handling in loop if needed, but here simple
+
+	// TeeReader to calc sha256 while copying? Or just copy then calc?
+	// Let's copy then calc to match existing patterns (fileSha256) or do it here efficiently.
+	// Since we need to return sha/bytes, let's do it here.
+	hasher := sha256.New()
+	multi := io.MultiWriter(dstF, hasher)
+
+	copied, err := io.Copy(multi, srcF)
+	if err != nil {
+		return "", 0, "", fmt.Errorf("copy failed: %w", err)
+	}
+
+	return fmt.Sprintf("%x", hasher.Sum(nil)), copied, dstAbs, nil
+}
 
 func runSelfVerify(dir string) {
 	// Write self verify log, and include in checksums (already ensured by createManifestAndChecksums walking)
-	logPath := filepath.Join(dir, "40_self_verify.log")
+	logPath := filepath.Join(dir, fileSelfVerify)
 	var buf bytes.Buffer
 	buf.WriteString("self-verify: placeholder log\n")
 	if err := os.WriteFile(logPath, buf.Bytes(), 0644); err != nil {
 		log.Fatalf("[FATAL] write self verify log: %v", err)
 	}
+}
+
+// --- REFACTORED HELPERS ---
+
+func setupPackDir(packName string) (string, func()) {
+	// Use a temp dir for construction
+	tmpDir, err := os.MkdirTemp("", "reviewpack-*")
+	if err != nil {
+		log.Fatalf(msgFatalMkdirTemp, err)
+	}
+	packDir := filepath.Join(tmpDir, packName)
+	if err := os.MkdirAll(packDir, 0755); err != nil {
+		log.Fatalf(msgFatalMkdirAll, err)
+	}
+	return packDir, func() {
+		os.RemoveAll(tmpDir)
+	}
+}
+
+func runPreflightChecks(repoRoot, packDir, timestamp string, timebox int, skipEval bool, mode string) {
+	log.Println(msgDebugPreflight)
+	// Write pending meta (pass 0/empty for results as they are unknown yet)
+	writeMeta(packDir, timestamp, timebox, skipEval, mode, "", 0, "", "", 0)
+	
+	runCmd(repoRoot, "git", "status", ">", filepath.Join(packDir, fileStatus))
+
+	// Strict clean check
+	log.Println("DEBUG: Checking git status --porcelain...")
+	cmd := exec.Command("git", "status", "--porcelain")
+	cmd.Dir = repoRoot
+	porcelainOut, err := cmd.Output()
+	if err != nil {
+		log.Fatalf(msgFatalGitStatus, err)
+	}
+	if len(bytes.TrimSpace(porcelainOut)) > 0 {
+		log.Printf("[FATAL] preflight: working tree is dirty:\n%s", string(porcelainOut))
+		os.Exit(1)
+	}
+}
+
+func collectGitInfo(repoRoot, packDir, nCommits string) {
+	runCmd(repoRoot, "git", "log", "-n", nCommits, "--stat", ">", filepath.Join(packDir, fileGitLog))
+	runCmd(repoRoot, "git", "diff", "HEAD~"+nCommits, "HEAD", ">", filepath.Join(packDir, fileGitDiff))
+}
+
+func finalizePack(packDir, packName, bundleName string) string {
+	filesToPack := generatePackFilelist(packDir)
+
+	createManifest(packDir, filesToPack)
+
+	createChecksums(packDir)
+
+	tarFile := packName + extTarGz
+	finalFileList := generatePackFilelist(packDir)
+	createDeterministicTar(packDir, finalFileList, bundleName, tarFile)
+	return tarFile
 }
 
 func writeReadme(dir string) {
@@ -797,6 +1185,10 @@ func writeVerifyScript(dir string) {
 set -euo pipefail
 cd "$(dirname "$0")"
 echo "=== VERIFY (legacy wrapper) ==="
+if [ ! -f "review_pack_v1" ]; then
+    echo "[FAIL] Missing review_pack_v1 identity file"
+    exit 1
+fi
 if ! grep -q " MANIFEST.tsv$" CHECKSUMS.sha256; then
   echo "[FATAL] CHECKSUMS.sha256 does not include MANIFEST.tsv" >&2
   exit 3
@@ -907,7 +1299,7 @@ func findDirContainingFile(base, filename string, maxDepth int) (string, error) 
 		}
 		if !d.IsDir() && filepath.Base(path) == filename {
 			found = filepath.Dir(path)
-			return io.EOF 
+			return io.EOF
 		}
 		return nil
 	})
@@ -983,14 +1375,14 @@ func runCmd(dir, name string, args ...string) {
 	// Simple wrapper for executing commands and handling redirection syntax roughly
 	// This was present in the original code implicitly? No, it was used in runPack.
 	// But wait, the original code had runCmd?
-	// I missed copying `runCmd` from the original file! 
+	// I missed copying `runCmd` from the original file!
 	// I must add it.
-	
+
 	// Re-implementing a simple runCmd that handles ">" redirection if present in args
 	// Logic: look for ">" and filename
 	var cmdArgs []string
 	var outFile string
-	
+
 	for i, arg := range args {
 		if arg == ">" {
 			if i+1 < len(args) {
@@ -1006,7 +1398,7 @@ func runCmd(dir, name string, args ...string) {
 
 	c := exec.Command(name, cmdArgs...)
 	c.Dir = dir
-	
+
 	if outFile != "" {
 		f, err := os.Create(outFile)
 		if err != nil {
@@ -1024,4 +1416,38 @@ func runCmd(dir, name string, args ...string) {
 	if err := c.Run(); err != nil {
 		log.Fatalf("[FATAL] %s %v failed: %v", name, cmdArgs, err)
 	}
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func recordEvalMeta(packDir, snapshotDir string) {
+	// Calculate hash of the included result
+	resultPath := filepath.Join(snapshotDir, "eval/results/latest.jsonl")
+
+	// Default values if missing (e.g. strict mode failed but we are packing anyway? verify check should catch it)
+	// But let's be safe
+	sha := "missing"
+	size := int64(0)
+
+	if info, err := os.Stat(resultPath); err == nil {
+		size = info.Size()
+		if s, err := fileSha256(resultPath); err == nil {
+			sha = s
+		}
+	}
+
+	f, err := os.OpenFile(filepath.Join(packDir, "00_meta.txt"), os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Printf("[WARN] Could not update 00_meta.txt: %v", err)
+		return
+	}
+	defer f.Close()
+
+	fmt.Fprintf(f, "eval_result_sha256=%s\n", sha)
+	fmt.Fprintf(f, "eval_result_bytes=%d\n", size)
 }

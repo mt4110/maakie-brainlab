@@ -19,6 +19,7 @@ logs
 models
 eval/results/
 .local/
+out/
 
 # editors / tools
 .vscode/
@@ -47,6 +48,7 @@ s3_review_pack_*
 review_bundle_*.txt
 review_pack_*
 review_pack_*.tar.gz
+review_bundle_*.tar.gz
 debug_finalize.log
 verify_test_*.log
 verify_manual_*.log
@@ -59,3 +61,10 @@ verify_manual/
 verify_test/
 debug_*.log
 SUBMIT_HISTORY.sha256
+
+# GPG Keys & Signatures
+*.asc
+*.key
+*.gpg
+privkey.asc
+pubkey.asc

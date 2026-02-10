@@ -1,0 +1,40 @@
+name: Test
+
+on:
+  push:
+    branches: [ "main", "s7-*" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
+    - name: Create venv
+      run: |
+        python -m venv .venv
+        .venv/bin/pip install -r requirements.txt
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version-file: go.mod
+        cache: true
+        cache-dependency-path: go.sum
+    
+    - name: Verify dependencies
+      run: go mod verify
+
+    - name: Run Unit Tests
+      run: make test
+
+    # Linting could be added here (e.g. golangci-lint)
+    - name: Vet
+      run: go vet ./...

@@ -1,0 +1,142 @@
+name: Verify Pack
+
+on:
+  push:
+    branches: ["main", "s7-*"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  verify-pack:
+    runs-on: ubuntu-latest
+    env:
+      GATE1_VERIFY_ONLY: "1"
+      S5_MODE: "verify-only"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Create venv & Install Deps
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install -r requirements.txt
+          # Diagnostics
+          .venv/bin/python -c "import feedparser; print('feedparser ok')"
+          echo "pip freeze (head):"
+          .venv/bin/pip freeze | head -n 40
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version-file: go.mod
+          cache: true
+          cache-dependency-path: go.sum
+
+      # S7-01: GPG Key Generation (Ephemeral for CI)
+      # S7-01: GPG Key Generation (Ephemeral for CI)
+      - name: Generate Ephemeral Keys
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        run: |
+          set -euo pipefail
+
+          KEYDIR="$(mktemp -d)"
+          echo "KEYDIR=$KEYDIR" >> "$GITHUB_ENV"
+
+          # Run from module root so go.mod is found
+          # Keys output to /tmp (clean workspace)
+          go run ./cmd/gopsign/main.go -mode=keygen -id="CI Builder" -out-dir "$KEYDIR"
+
+          test -s "$KEYDIR/privkey.asc"
+          test -s "$KEYDIR/pubkey.asc"
+
+          echo "S6_SIGNING_KEY=$KEYDIR/privkey.asc" >> "$GITHUB_ENV"
+          echo "S6_VERIFY_KEY=$KEYDIR/pubkey.asc" >> "$GITHUB_ENV"
+
+          # Diagnostics
+          echo "pwd=$(pwd)"
+          echo "go env GOMOD=$(go env GOMOD)"
+          git status --porcelain=v1 || true
+          ls -la "$KEYDIR"
+
+      # S5: Evidence Pack (Clean Execution)
+      - name: Create Evidence Pack (Clean Workspace & Run Always)
+        id: create_evidence_pack
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        run: |
+          set +e
+          TMPDIR="$(mktemp -d)"
+
+          # Run make s5 without polluting repo with ci_out yet
+          # Redirect standard error to stdout to capture everything in the log
+          make s5 2>&1 | tee "$TMPDIR/verify_pack.log"
+          EXIT_CODE=${PIPESTATUS[0]}
+
+          set -e
+          mkdir -p ci_out
+          cp "$TMPDIR/verify_pack.log" ci_out/verify_pack.log || true
+
+          # Save Gate-1 log if exists (copy latest)
+          ls -1t .local/reviewpack_artifacts/gate1.*.log 2>/dev/null | head -n 1 \
+            | xargs -I {} cp {} ci_out/gate1.log || echo "No gate1 log found" > ci_out/gate1.log
+
+          # Observability (S7-20)
+          echo "== verify_pack.log (tail 120) =="
+          tail -n 120 ci_out/verify_pack.log || true
+
+          # Create artifact upload manifest & Diagnostics
+          {
+            echo "== preflight =="
+            echo "date=$(date -u)"
+            echo "pwd=$(pwd)"
+            echo "git_root=$(git rev-parse --show-toplevel 2>/dev/null || echo '-')"
+            echo "git_status:"
+            git status --porcelain=v1 || true
+            echo "go env GOMOD=$(go env GOMOD 2>/dev/null || echo '-')"
+            echo "python=$(python -V 2>&1 || true)"
+            echo "venv_python=$(.venv/bin/python -V 2>&1 || echo 'missing')"
+            echo "pip freeze:"
+            .venv/bin/pip freeze | head -n 20
+            echo
+            echo "== ci_out tree =="
+            ls -R ci_out || true
+            echo
+            echo "== .local/reviewpack_artifacts tree =="
+            ls -R .local/reviewpack_artifacts 2>/dev/null || true
+          } > ci_out/artifact_upload.log
+          
+          cp ci_out/artifact_upload.log ci_out/diagnostics.txt
+
+          exit "$EXIT_CODE"
+
+      - name: Upload Verify Pack Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          if-no-files-found: warn
+          name: verify-pack-logs-${{ github.run_id }}-${{ github.sha }}
+          path: |
+            ci_out/
+            .local/reviewpack_artifacts/
+
+      # Review Bundle
+      - name: Create Review Bundle
+        run: |
+          go run cmd/reviewpack/main.go cmd/reviewpack/sign.go pack -sign-key="$S6_SIGNING_KEY"
+
+      # Verification (Unified)
+      - name: Verify Evidence Pack
+        run: |
+          PACK=$(ls -t .local/reviewpack_artifacts/evidence_pack_*.tar.gz | head -n 1)
+          make verify-pack PACK="$PACK"
+
+      - name: Verify Review Bundle
+        run: |
+          PACK=$(ls -t review_bundle_*.tar.gz | head -n 1)
+          make verify-pack PACK="$PACK"
