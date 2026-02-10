@@ -1,9 +1,11 @@
+version: "2"
+
 run:
   timeout: 5m
-  issues-exit-code: 0 # Initial non-blocking
+  issues-exit-code: 0
 
 linters:
-  disable-all: true
+  default: none
   enable:
     - govet
     - errcheck
@@ -12,11 +14,14 @@ linters:
     - gofmt
     - goimports
 
-linters-settings:
-  goimports:
-    local-prefixes: github.com/maakie-brainlab
+formatters:
+  enable:
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/maakie-brainlab
 
 issues:
-  exclude-use-default: false
   max-issues-per-linter: 0
   max-same-issues: 0
