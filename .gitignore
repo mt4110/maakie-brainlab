@@ -79,3 +79,6 @@ ci_out/
 ops/run_always_1h.sh
 ops/extract_steps.py
 docs/_tmp_local_inject/
+
+# PR body drafts (local only)
+.local/pr-templates/
