@@ -149,15 +149,6 @@ jobs:
 
           exit "$EXIT_CODE"
 
-      - name: Upload Verify Pack Artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          if-no-files-found: warn
-          name: verify-pack-logs-${{ github.run_id }}-${{ github.sha }}
-          path: |
-            ci_out/
-            .local/reviewpack_artifacts/
 
       # Review Bundle
       - name: Create Review Bundle
@@ -187,3 +178,15 @@ jobs:
         run: |
           PACK=$(ls -t review_bundle_*.tar.gz | head -n 1)
           make verify-pack PACK="$PACK"
+
+      - name: Upload Verify Pack Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          if-no-files-found: warn
+          name: verify-pack-logs-${{ github.run_id }}-${{ github.sha }}
+          path: |
+            ci_out/
+            .local/reviewpack_artifacts/
+            gate1*.log
+            review_bundle_*.tar.gz
