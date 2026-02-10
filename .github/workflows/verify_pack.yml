@@ -11,14 +11,20 @@ on:
         description: "Inject failure (none|doclinks|seed-missing)"
         required: false
         default: "none"
+  schedule:
+    - cron: '0 * * * *' # Hourly
+
+permissions:
+  contents: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   verify-pack:
     runs-on: ubuntu-latest
+    timeout-minutes: 50
     env:
       GATE1_VERIFY_ONLY: "1"
       S5_MODE: "verify-only"
@@ -261,24 +267,85 @@ jobs:
       - name: CI Summary
         if: always()
         run: |
-           echo "## Run Always Summary" >> $GITHUB_STEP_SUMMARY
-           echo "" >> $GITHUB_STEP_SUMMARY
-           echo "| Step | Exit Code |" >> $GITHUB_STEP_SUMMARY
-           echo "|---|---|" >> $GITHUB_STEP_SUMMARY
-           if [ -f .local/ci/10_status.tsv ]; then
-             cat .local/ci/10_status.tsv | while read -r name code; do
-               echo "| $name | $code |" >> $GITHUB_STEP_SUMMARY
-             done
+           CI_DIR=".local/ci"
+           SUMMARY_MD="${CI_DIR}/summary.md"
+           SUMMARY_JSONL="${CI_DIR}/summary.jsonl"
+           STATUS_FILE="${CI_DIR}/10_status.tsv"
+           
+           # 1. Generate summary.md (Human)
+           echo "## Run Always Summary: ${{ github.run_number }}-${{ github.sha }}" > "$SUMMARY_MD"
+           echo "" >> "$SUMMARY_MD"
+           echo "- **Time (UTC)**: $(cat ${CI_DIR}/00_utc.txt 2>/dev/null || date -u)" >> "$SUMMARY_MD"
+           echo "- **Git SHA**: ${{ github.sha }}" >> "$SUMMARY_MD"
+           
+           STATUS="FAIL"
+           if [ -f "$STATUS_FILE" ] && awk '$2 != 0 {exit 1}' "$STATUS_FILE"; then
+               STATUS="PASS"
+           fi
+           echo "- **Result**: ${STATUS}" >> "$SUMMARY_MD"
+           echo "" >> "$SUMMARY_MD"
+           
+           echo "### Checks" >> "$SUMMARY_MD"
+           echo "| Step | Status |" >> "$SUMMARY_MD"
+           echo "|---|---|" >> "$SUMMARY_MD"
+           if [ -f "$STATUS_FILE" ]; then
+               while read -r name code; do
+                   verdict="PASS"
+                   if [ "$code" != "0" ]; then verdict="FAIL ($code)"; fi
+                   echo "| $name | $verdict |" >> "$SUMMARY_MD"
+               done < "$STATUS_FILE"
            else
-             echo "| (No status file) | - |" >> $GITHUB_STEP_SUMMARY
+               echo "| (No status file) | - |" >> "$SUMMARY_MD"
            fi
            
-           # Show tail of failed logs
+           echo "" >> "$SUMMARY_MD"
+           echo "### Artifacts" >> "$SUMMARY_MD"
+           echo "- [Log Directory](.)" >> "$SUMMARY_MD"
+           ls -1 "${CI_DIR}" | grep "\.log$" | sed 's/^/- /' >> "$SUMMARY_MD"
+           
+           echo "" >> "$SUMMARY_MD"
+           echo "### Next Action" >> "$SUMMARY_MD"
+           if [ "$STATUS" == "PASS" ]; then
+               echo "No action required." >> "$SUMMARY_MD"
+           else
+               echo "Investigate failures in logs." >> "$SUMMARY_MD"
+           fi
+           
+           # 2. Output to Job Summary (Append)
+           cat "$SUMMARY_MD" >> $GITHUB_STEP_SUMMARY
+           
+           # 3. Generate summary.jsonl (Machine)
+           python3 -c "
+           import json
+           import os
+           try:
+               checks = []
+               status_file = '${STATUS_FILE}'
+               if os.path.exists(status_file):
+                   with open(status_file) as f:
+                       for line in f:
+                           parts = line.strip().split('\t')
+                           if len(parts) >= 2:
+                               checks.append({'name': parts[0], 'code': int(parts[1])})
+               data = {
+                   'timestamp_utc': '$(cat ${CI_DIR}/00_utc.txt 2>/dev/null || date -u)',
+                   'run_id': '${{ github.run_id }}',
+                   'git_sha': '${{ github.sha }}',
+                   'status': '${STATUS}',
+                   'checks': checks,
+                   'artifacts': [f for f in os.listdir('${CI_DIR}') if f.endswith('.log') or f.endswith('.md')]
+               }
+               print(json.dumps(data))
+           except Exception as e:
+               print(json.dumps({'error': str(e)}))
+           " > "$SUMMARY_JSONL"
+           
+           # Show failures in Job Summary
            echo "" >> $GITHUB_STEP_SUMMARY
            echo "### Failure Logs (Tail)" >> $GITHUB_STEP_SUMMARY
-           if [ -f .local/ci/10_status.tsv ]; then
-             cat .local/ci/10_status.tsv | awk '$2 != 0 {print $1}' | while read -r name; do
-               logfile=".local/ci/${name}.log"
+           if [ -f "$STATUS_FILE" ]; then
+             cat "$STATUS_FILE" | awk '$2 != 0 {print $1}' | while read -r name; do
+               logfile="${CI_DIR}/${name}.log"
                if [ -f "$logfile" ]; then
                  echo "<details><summary>Log: $name</summary>" >> $GITHUB_STEP_SUMMARY
                  echo "" >> $GITHUB_STEP_SUMMARY
@@ -296,11 +363,48 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           if-no-files-found: error
-          name: run-always-logs-${{ github.run_id }}
+          name: run-always-${{ github.run_number }}-${{ github.sha }}
           path: |
             .local/ci/
             ci_out/
             review_bundle_*.tar.gz
+          retention-days: 14
+
+      - name: Check Workspace Dirtiness
+        if: always()
+        run: |
+          echo "Checking for unexpected workspace mutations..."
+          # Fail if tracked files are modified (Mode M, A, D, etc. in first column area)
+          # Porcelain v1: XY Path. X=Index, Y=Worktree.
+          # If Y is not space? Or just grep anything that isn't "??"
+          
+          # Allow untracked in .local/
+          # Fail everything else.
+          
+          STATUS=$(git status --porcelain=v1)
+          if [ -z "$STATUS" ]; then
+            echo "[PASS] Workspace clean"
+            exit 0
+          fi
+          
+          # Check for non-untracked (modified/added/deleted in index or worktree)
+          # grep -v "^??" checks if there are lines NOT starting with ??
+          if echo "$STATUS" | grep -v "^??"; then
+             echo "[FAIL] Tracked files modified or staged:"
+             echo "$STATUS" | grep -v "^??"
+             exit 1
+          fi
+          
+          # Check for untracked outside .local/
+          # Filter out lines starting with "?? .local/"
+          UNKNOWN=$(echo "$STATUS" | grep "^??" | grep -v "^?? .local/") || true
+          if [ -n "$UNKNOWN" ]; then
+             echo "[FAIL] Untracked files detected outside .local/:"
+             echo "$UNKNOWN"
+             exit 1
+          fi
+          
+          echo "[PASS] Workspace clean (ignoring .local/)"
 
       - name: Final Aggregation
         if: always()
