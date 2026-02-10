@@ -1,0 +1,58 @@
+name: CI (Lint & Verify)
+
+on:
+  push:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  # only-new-issues を PR で使うので推奨
+  pull-requests: read
+
+jobs:
+  lint_go:
+    name: Lint Go
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache: false
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: v2.8.0
+          args: --config=.golangci.yml
+          only-new-issues: ${{ github.event_name == 'pull_request' }}
+
+  lint_md:
+    name: Lint Markdown
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Markdown Lint
+        uses: DavidAnson/markdownlint-cli2-action@v22
+        continue-on-error: true
+        with:
+          config: '.markdownlint-cli2.jsonc'
+          globs: '**/*.md'
+
+  summary:
+    needs: [lint_go, lint_md]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: CI Summary
+        run: |
+          echo "### CI Summary" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "| --- | --- |" >> $GITHUB_STEP_SUMMARY
+          echo "| Lint Go | ${{ needs.lint_go.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Lint Markdown | ${{ needs.lint_md.result }} |" >> $GITHUB_STEP_SUMMARY

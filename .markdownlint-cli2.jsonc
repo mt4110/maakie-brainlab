@@ -1,0 +1,20 @@
+{
+  "config": {
+    "default": true,
+
+    // 行長は現実に合わせて緩め（コードブロック/表は除外）
+    "MD013": { "line_length": 120, "code_blocks": false, "tables": false },
+
+    // インラインHTMLは許可（必要な場面が多い）
+    "MD033": false,
+
+    // 最初の見出し強制は無効（README等の運用に合わせる）
+    "MD041": false
+  },
+  "ignores": [
+    "**/.local/**",
+    "**/node_modules/**",
+    "**/review_pack/**",
+    "**/src_snapshot/**"
+  ]
+}

@@ -68,3 +68,5 @@ SUBMIT_HISTORY.sha256
 *.gpg
 privkey.asc
 pubkey.asc
+
+ci_out/

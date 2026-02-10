@@ -14,7 +14,8 @@ jobs:
       S5_MODE: "verify-only"
     steps:
       - uses: actions/checkout@v4
-
+        with:
+          fetch-depth: 0
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -63,6 +64,39 @@ jobs:
           echo "go env GOMOD=$(go env GOMOD)"
           git status --porcelain=v1 || true
           ls -la "$KEYDIR"
+
+      # S5: Seed eval results fixture (CI)
+      # S5: Seed eval results fixture (CI)
+      - name: Seed eval results fixture (CI)
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        run: |
+          set -euo pipefail
+
+          # CI checkout には eval/results が無い（gitignore）ので、fixture から投入して verify-only を安定させる
+          FIX="eval/fixtures/latest.jsonl"
+          test -s "$FIX" || { echo "[FAIL] Missing fixture: $FIX (must be committed)"; exit 1; }
+
+          mkdir -p eval/results
+
+          # verify-only が要求する「latest 以外の .jsonl」を用意（名前固定で決定論）
+          if [ ! -f eval/results/ci.jsonl ]; then
+            cp -f "$FIX" eval/results/ci.jsonl
+            echo "[OK] Seeded eval/results/ci.jsonl from $FIX"
+          else
+            echo "[OK] eval/results/ci.jsonl already exists"
+          fi
+
+          # ついでに latest も無ければ入れる（pack-contained の都合で役立つ）
+          if [ ! -f eval/results/latest.jsonl ]; then
+            cp -f "$FIX" eval/results/latest.jsonl
+            echo "[OK] Seeded eval/results/latest.jsonl from $FIX"
+          else
+            echo "[OK] eval/results/latest.jsonl already exists"
+          fi
+
+          # sanity
+          ls -la eval/results
 
       # S5: Evidence Pack (Clean Execution)
       - name: Create Evidence Pack (Clean Workspace & Run Always)
@@ -128,7 +162,20 @@ jobs:
       # Review Bundle
       - name: Create Review Bundle
         run: |
-          go run cmd/reviewpack/main.go cmd/reviewpack/sign.go pack -sign-key="$S6_SIGNING_KEY"
+          set -euo pipefail
+
+          # Review bundle を生成（CIでも動く確実なコマンド）
+          go run ./cmd/reviewpack/main.go submit --mode verify-only
+
+          # 生成物の存在確認
+          PACK=$(ls -t review_bundle_*.tar.gz | head -n 1)
+          test -s "$PACK"
+          echo "[OK] Created: $PACK"
+
+          # 署名（任意だが、CIキーを使う設計ならここでやる）
+          go run ./cmd/gopsign/main.go -mode=sign -key="$S6_SIGNING_KEY" -target="$PACK"
+          test -s "$PACK.asc"
+          echo "[OK] Signed: $PACK.asc"
 
       # Verification (Unified)
       - name: Verify Evidence Pack

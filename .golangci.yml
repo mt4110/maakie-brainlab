@@ -1,0 +1,18 @@
+version: "2"
+
+run:
+  timeout: 5m
+  # 初期導入は非ブロッキング（issueがあってもexit 0）
+  issues-exit-code: 0
+
+linters:
+  default: none
+  enable:
+    - govet
+    - errcheck
+    - staticcheck
+    - revive
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
