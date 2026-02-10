@@ -22,7 +22,7 @@ git rev-parse --short HEAD
 期待挙動：
 
 * `[INFO] targets:` が必ず出る
-* `file:` と `//` が連続する “リンク形式” が1件でもあれば **必ずFAIL**
+* `file[:]` と `//` が連続する “リンク形式” が1件でもあれば **必ずFAIL**
 * `task.md / implementation_plan.md missing` のような **存在しない required 警告は出ない**
 
 復帰手順：
@@ -40,9 +40,9 @@ sed -n '1,200p' ops/check_no_file_url.sh
 
 ---
 
-### S2: `[FAIL] Forbidden file: // link(s) found:` が出て止まる（正常）
+### S2: `[FAIL] Forbidden file[:]// link(s) found:` が出て止まる（正常）
 
-これは **正しい停止**。直すのは “file: と // が連続するリンク形式” だけ。
+これは **正しい停止**。直すのは “file[:] と // が連続するリンク形式” だけ。
 
 ```bash
 make check-doc-links || true
@@ -50,8 +50,8 @@ make check-doc-links || true
 
 表示された `path:line:` の箇所を修正。原則：
 
-* `[...] (file: と // が連続する形 ...)` → **repo相対パス**にする（例：`docs/ops/xxx.md`）
-* `<file: と // が連続する形 ...>` → **repo相対パス**にする
+* `[...] (file[:] と // が連続する形 ...)` → **repo相対パス**にする（例：`docs/ops/xxx.md`）
+* `<file[:] と // が連続する形 ...>` → **repo相対パス**にする
 
 修正後：
 
@@ -101,10 +101,10 @@ echo "[OK] wrote diff"
 
 ## 2) “確実に効いてる”証拠（ネガティブテスト）
 
-このドキュメント内に生の file:+// 連続を置かないため、シェル連結で実行時に禁止パターンを生成する。
+このドキュメント内に生の file[:] + // 連続を置かないため、シェル連結で実行時に禁止パターンを生成する。
 
 ```bash
-printf '%s\n' '[x](file:'"///tmp/evil"')' > docs/.tmp_file_url_check.md
+printf '%s\n' '[x]('"file"":"//"/${PWD}/tmp/evil"')' > docs/.tmp_file_url_check.md
 make check-doc-links && { echo "BUG: should have failed"; exit 1; } || true
 rm -f docs/.tmp_file_url_check.md
 git status --porcelain

@@ -6,6 +6,14 @@ Do not push commits directly to main.
 
 Always create a branch first, then open a PR.
 
+## AI Requests (Strict Guard)
+When asking AI to write code or docs:
+1.  **Copy & Paste**: The "AI Constitution Block" from `docs/rules/AI_TEXT_GUARD.md` must be at the top of your prompt.
+2.  **Self-Check**: Before copying AI output to files, run the death scan:
+    `rg -n "file[:]" docs .github README.md ops scripts prompts || true`
+3.  **Guard-Safe**: Ensure no forbidden patterns (file URLs) exist in the output.
+4.  **Verify**: Always run `nix run .#prverify` before pushing.
+
 Standard flow
 git switch main
 git pull --ff-only

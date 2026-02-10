@@ -5,7 +5,8 @@ This document describes the **Run Always 1h** automated workflow, designed to pr
 ## 1. Overview
 
 - **Frequency**: Every hour (`0 * * * *`)
-- **Workflow**: `.github/workflows/verify_pack.yml`
+- **Workflow**: `.github/workflows/run_always_1h.yml` (Scheduled)
+  - *Note*: `.github/workflows/verify_pack.yml` is for verification/pack only (PR/Push).
 - **Script (Local)**: `ops/run_always_1h.sh`
 - **Purpose**: Detect flakey tests, environment drift, and establish a reliable dataset for future analysis (S6).
 

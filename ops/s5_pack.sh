@@ -14,7 +14,7 @@ if [ -n "$(git status --porcelain)" ]; then
     exit 1
 fi
 
-# 0.1 Check for forbidden file:// links
+# 0.1 Check for forbidden file[:]// links
 bash ops/check_no_file_url.sh
 
 # Check for required files

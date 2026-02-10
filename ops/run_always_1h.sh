@@ -1,6 +1,6 @@
 #!/bin/bash
 # ops/run_always_1h.sh
-# mimic CI "Run Always" workflow locally
+# mimic CI "Run Always" workflow locally (and enforce AI Guards)
 
 set -u
 
@@ -133,7 +133,7 @@ inject_doclinks_begin() {
   PROTO="${PROTO}://"
   printf "\n<!-- INJECT_DOC_LINKS_BEGIN -->\n[file-url](${PROTO}/INJECT_DO_NOT_OPEN)\n${PROTO}/INJECT_DO_NOT_OPEN\n${PROTO}localhost/INJECT_DO_NOT_OPEN\n${PROTO}/INJECT_DO_NOT_OPEN\n<!-- INJECT_DOC_LINKS_END -->\n" >> README.md
   # Check if injection worked
-  rg -n "INJECT_DO_NOT_OPEN|file://" README.md | tee -a "${CI_DIR}/20_inject.log" || true
+  rg -n "INJECT_DO_NOT_OPEN|file[:]//" README.md | tee -a "${CI_DIR}/20_inject.log" || true
 }
 
 if [ "${INJECT_FAILURE:-}" = "doclinks" ]; then
@@ -204,6 +204,19 @@ cleanup_local_runs() {
 
 # Run cleanup
 cleanup_local_runs || echo "[WARN] Cleanup failed"
+
+# 3.7 Local Death Scan (Repo Text Guard)
+run_step "repo_guard" bash -c '
+    echo "Scanning repo for forbidden file[:]// patterns..."
+    # The pattern is "file" + ":" + "//" but written as "file[:]//" to avoid self-detection
+    # We only ban file:// URLs, not "file:" (e.g. go-version-file)
+    if rg -n "file[:]//" docs .github README.md ops scripts prompts; then
+       echo "[FAIL] Forbidden file[:]// patterns found in repo!"
+       exit 1
+    else
+       echo "[PASS] No forbidden file:// patterns found."
+    fi
+'
 
 # 4. Summary (Normalization)
 echo "== Summary =="

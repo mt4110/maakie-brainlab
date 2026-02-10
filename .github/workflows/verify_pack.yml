@@ -11,8 +11,6 @@ on:
         description: "Inject failure (none|doclinks|seed-missing)"
         required: false
         default: "none"
-  schedule:
-    - cron: '0 * * * *' # Hourly
 
 permissions:
   contents: read
