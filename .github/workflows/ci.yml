@@ -27,7 +27,7 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
-          version: v2.8.0
+          version: v1.64.5
           args: --config=.golangci.yml
           only-new-issues: ${{ github.event_name == 'pull_request' }}
 
