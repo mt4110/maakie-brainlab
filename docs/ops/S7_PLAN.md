@@ -7,3 +7,9 @@
 
 ## Triage
 See `docs/ops/IF_FAIL_S7.md`.
+## Triage
+See `docs/ops/IF_FAIL_S7.md`.
+
+## Verify-Only Seeding
+- **CI**: Uses `make seed-eval` (copies `eval/fixtures/latest.jsonl` -> `eval/results/ci.jsonl`) to simulate a previous result.
+- **Local Dev**: Use `make seed-eval` to simulate CI state for fast iteration.
