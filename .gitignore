@@ -26,6 +26,10 @@ out/
 .direnv/
 .trunk/
 
+# AI tools / generated drafts
+.gemini/
+*.resolved
+
 # macOS junk
 .DS_Store
 ._*
