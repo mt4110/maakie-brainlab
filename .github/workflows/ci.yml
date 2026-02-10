@@ -1,0 +1,58 @@
+name: CI (Lint & Verify)
+
+on:
+  push:
+    branches: [ "main", "develop" ]
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  # Reuse existing prverify if needed, but here we focus on lint
+  # Assuming prverify is in another workflow or can be triggered here. 
+  # Detailed requirements asked for parallel execution with prverify.
+  # If prverify is in verify_pack.yml, this ci.yml runs in parallel by default.
+
+  lint_go:
+    name: Lint Go
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache: false
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.63.4
+          args: --config=.golangci.yml --issues-exit-code=0
+          only-new-issues: ${{ github.event_name == 'pull_request' }}
+
+  lint_md:
+    name: Lint Markdown
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Markdown Lint
+        uses: DavidAnson/markdownlint-cli2-action@v16
+        with:
+          config: '.markdownlint-cli2.jsonc'
+          globs: '**/*.md'
+
+  summary:
+    needs: [lint_go, lint_md]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: CI Summary
+        run: |
+          echo "### CI Summary" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "| --- | --- |" >> $GITHUB_STEP_SUMMARY
+          echo "| Lint Go | ${{ needs.lint_go.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Lint Markdown | ${{ needs.lint_md.result }} |" >> $GITHUB_STEP_SUMMARY
