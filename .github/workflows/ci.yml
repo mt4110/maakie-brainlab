@@ -2,51 +2,51 @@ name: CI (Lint & Verify)
 
 on:
   push:
-    branches: [ "main", "develop" ]
   pull_request:
     types: [opened, synchronize, reopened]
+  workflow_dispatch:
 
 permissions:
   contents: read
+  # only-new-issues を PR で使うので推奨
+  pull-requests: read
 
 jobs:
-  # Reuse existing prverify if needed, but here we focus on lint
-  # Assuming prverify is in another workflow or can be triggered here. 
-  # Detailed requirements asked for parallel execution with prverify.
-  # If prverify is in verify_pack.yml, this ci.yml runs in parallel by default.
-
   lint_go:
     name: Lint Go
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
           go-version-file: 'go.mod'
           cache: false
+
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
-          version: v2.8.0
-          args: --config=.golangci.yml --issues-exit-code=0
+          version-file: .golangci-lint-version
+          args: --config=.golangci.yml
           only-new-issues: ${{ github.event_name == 'pull_request' }}
 
   lint_md:
     name: Lint Markdown
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
+
       - name: Markdown Lint
         uses: DavidAnson/markdownlint-cli2-action@v16
+        continue-on-error: true
         with:
           config: '.markdownlint-cli2.jsonc'
           globs: '**/*.md'
 
   summary:
     needs: [lint_go, lint_md]
-    if: always()
+    if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:
       - name: CI Summary

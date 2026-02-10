@@ -2,6 +2,7 @@ version: "2"
 
 run:
   timeout: 5m
+  # 初期は “警告” として扱う（CIを落とさない）
   issues-exit-code: 0
 
 linters:
@@ -20,7 +21,8 @@ formatters:
   settings:
     goimports:
       local-prefixes:
-        - github.com/maakie-brainlab
+        # go.mod が `module reviewpack` なので合わせる
+        - reviewpack
 
 issues:
   max-issues-per-linter: 0
