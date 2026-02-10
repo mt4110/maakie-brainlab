@@ -86,3 +86,8 @@ check-doc-links:
 # C10 Unified Verification
 verify-pack:
 	bash ops/verify_pack.sh "$(PACK)"
+
+# S7 / Local Eval Seed
+seed-eval:
+	bash ops/seed_eval_results.sh
+
