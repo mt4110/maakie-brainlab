@@ -15,7 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 10
+          fetch-depth: 0
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -66,24 +66,37 @@ jobs:
           ls -la "$KEYDIR"
 
       # S5: Seed eval results fixture (CI)
+      # S5: Seed eval results fixture (CI)
       - name: Seed eval results fixture (CI)
         shell: bash
         working-directory: ${{ github.workspace }}
         run: |
           set -euo pipefail
 
-          # CI checkout には eval/results が無い（gitignore）ので、fixture から投入して Gate-1 を安定させる
+          # CI checkout には eval/results が無い（gitignore）ので、fixture から投入して verify-only を安定させる
+          FIX="eval/fixtures/latest.jsonl"
+          test -s "$FIX" || { echo "[FAIL] Missing fixture: $FIX (must be committed)"; exit 1; }
+
+          mkdir -p eval/results
+
+          # verify-only が要求する「latest 以外の .jsonl」を用意（名前固定で決定論）
+          if [ ! -f eval/results/ci.jsonl ]; then
+            cp -f "$FIX" eval/results/ci.jsonl
+            echo "[OK] Seeded eval/results/ci.jsonl from $FIX"
+          else
+            echo "[OK] eval/results/ci.jsonl already exists"
+          fi
+
+          # ついでに latest も無ければ入れる（pack-contained の都合で役立つ）
           if [ ! -f eval/results/latest.jsonl ]; then
-            if [ ! -f eval/fixtures/latest.jsonl ]; then
-              echo "[FAIL] Missing eval/fixtures/latest.jsonl (fixture must be committed)."
-              exit 1
-            fi
-            mkdir -p eval/results
-            cp -f eval/fixtures/latest.jsonl eval/results/latest.jsonl
-            echo "[OK] Seeded eval/results/latest.jsonl from eval/fixtures/latest.jsonl"
+            cp -f "$FIX" eval/results/latest.jsonl
+            echo "[OK] Seeded eval/results/latest.jsonl from $FIX"
           else
             echo "[OK] eval/results/latest.jsonl already exists"
           fi
+
+          # sanity
+          ls -la eval/results
 
       # S5: Evidence Pack (Clean Execution)
       - name: Create Evidence Pack (Clean Workspace & Run Always)
