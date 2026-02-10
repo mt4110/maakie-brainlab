@@ -89,6 +89,9 @@ func runVerify(args []string) {
 		if err != nil {
 			return err
 		}
+		if relPath == fileChecksums {
+			return nil
+		}
 		if _, ok := validFiles[relPath]; !ok {
 			extraFiles = append(extraFiles, relPath)
 		}
