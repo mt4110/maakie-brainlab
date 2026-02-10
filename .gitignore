@@ -78,3 +78,4 @@ ci_out/
 # S5-05 Local Runner
 ops/run_always_1h.sh
 ops/extract_steps.py
+docs/_tmp_local_inject/
