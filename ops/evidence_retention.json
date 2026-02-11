@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "store_dir": ".local/evidence_store",
+  "max_total_bytes": 21474836480,
+  "default_keep_last": 30,
+  "default_max_age_days": 180,
+  "kinds": {
+    "prverify": {
+      "keep_last": 60,
+      "max_age_days": 365
+    },
+    "review_bundle": {
+      "keep_last": 30,
+      "max_age_days": 365
+    }
+  }
+}
