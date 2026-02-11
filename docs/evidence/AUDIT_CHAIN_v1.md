@@ -6,72 +6,55 @@ The audit chain provides an append-only, tamper-evident log of all evidence
 pipeline events. Each entry is linked to its predecessor via a hash chain,
 enabling deterministic verification of log integrity.
 
-## File Location
+## Core Properties
 
-- Working log: `.local/reviewpack_audit/audit.log.jsonl`
-- Bundle snapshot: `audit/audit.log.jsonl` (inside provenance bundles)
+- **Path**: `.local/reviewpack_artifacts/AUDIT_CHAIN_v1.tsv`
+- **Format**: Tab-Separated Values (TSV)
+- **Hashing**: `sha256(tab_join(cols_1_to_9))` (UTF-8, no trailing newline)
+- **Columns**:
+  1. `v`: Version (currently "1")
+  2. `ts_utc`: ISO8601-like timestamp
+  3. `pack_name`: Filename of the evidence pack
+  4. `pack_sha256`: SHA256 of the `.tar.gz`
+  5. `manifest_sha256`: SHA256 of `MANIFEST.tsv` inside the pack
+  6. `checksums_sha256`: SHA256 of `CHECKSUMS.sha256` inside the pack
+  7. `git_head`: Git HEAD (first 12 chars)
+  8. `tool_ver`: Version of `evidencepack`
+  9. `prev_entry_sha256`: Value of previous line's col 10 (Genesis: 64 zeros)
+  10. `entry_sha256`: The hash of columns 1-9
 
-## Entry Format (JSONL)
+## Genesis Hash
 
-Each line is a JSON object with these fields (canonical order):
-
-| Field            | Type   | Required | Description                           |
-|------------------|--------|----------|---------------------------------------|
-| `event_type`     | string | yes      | Event identifier (e.g., `sign`, `pack`) |
-| `result`         | string | yes      | Outcome (`ok`, `fail`)               |
-| `artifact_path`  | string | no       | Path to the artifact                  |
-| `artifact_sha256`| string | no       | SHA-256 of the artifact               |
-| `sig_path`       | string | no       | Path to signature sidecar             |
-| `key_id`         | string | no       | Signing key identifier                |
-| `git_sha`        | string | no       | Git commit SHA at event time          |
-| `tool_version`   | string | no       | Tool version string                   |
-| `utc_ts`         | string | yes      | ISO 8601 UTC timestamp                |
-| `prev_hash`      | string | yes      | Hash of the previous entry            |
-| `entry_hash`     | string | yes      | Hash of **this** entry                |
-
-## Hash Computation
-
-```
-entry_hash = sha256(prev_hash + "\n" + canonical_json)
-```
-
-Where:
-
-1. **`prev_hash`** is the `entry_hash` of the previous entry, or the genesis
-   hash for the first entry.
-2. **`canonical_json`** is `json.Marshal()` of the entry with `entry_hash`
-   set to `""` (empty string). Field order follows Go struct tag order.
-
-### Genesis Hash
-
-The `prev_hash` for the very first entry is 64 zero characters:
+The `prev_entry_sha256` for the very first entry is 64 zero characters:
 
 ```
 0000000000000000000000000000000000000000000000000000000000000000
 ```
 
-## Verification Algorithm
-
-```
-prevHash = GENESIS_HASH
-for each line in audit_log.jsonl:
-    entry = JSON.parse(line)
-    assert entry.prev_hash == prevHash
-    canonical = canonical_json(entry, entry_hash="")
-    expected = sha256(prevHash + "\n" + canonical)
-    assert entry.entry_hash == expected
-    prevHash = entry.entry_hash
-```
-
 ## CLI Usage
 
 ```bash
-# Standalone verification
-evidencepack audit verify path/to/audit.log.jsonl
+# Register health-check
+evidencepack health
 
 # Automatic in bundle verification
 evidencepack verify path/to/bundle.tar.gz
 # → if audit/ directory exists in bundle, chain is verified automatically
+```
+
+## Smoke Test (S10-00A)
+
+```bash
+# 1. Create a pack (automatically appends to local chain)
+KIND="s10test"
+go run ./cmd/evidencepack pack --kind "$KIND" README.md
+LATEST="$(ls -1t .local/evidence_store/packs/"$KIND"/evidence_"$KIND"_*.tar.gz | head -n 1)"
+
+# 2. Verify health of the local chain
+go run ./cmd/evidencepack health
+
+# 3. Verify the pack (checks bundle chain if present)
+go run ./cmd/evidencepack verify "$LATEST"
 ```
 
 ## Bundle Integration
@@ -79,10 +62,4 @@ evidencepack verify path/to/bundle.tar.gz
 - `evidencepack bundle --audit-dir <dir>` embeds the audit log snapshot.
 - `evidencepack verify` on a bundle checks the embedded audit chain.
 - **Policy**: If audit log is present and corrupt → verification fails.
-  If audit log is absent → verification passes (future: `--require-audit` flag).
-
-## Breaking Changes from Pre-v1
-
-- Genesis hash changed from `"GENESIS"` to 64-char zero hash.
-- Entry hash now uses canonical JSON (deterministic field order).
-- Existing logs written before v1 are incompatible and must be regenerated.
+  If audit log is absent → verification passes.
