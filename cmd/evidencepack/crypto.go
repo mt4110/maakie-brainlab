@@ -60,42 +60,12 @@ func CalculateSHA256(path string) (string, error) {
 
 // LoadPrivateKey loads Ed25519 private key from file or env
 // Returns key, keyID (if available/derived), error
+// LoadPrivateKey loads Ed25519 private key from file or env
+// Returns key, keyID (if available/derived), error
 func LoadPrivateKey(file string) (ed25519.PrivateKey, error) {
-	var keyBytes []byte
-	var err error
-
-	// 1. Try file
-	if file != "" {
-		content, err := os.ReadFile(file)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read key file: %w", err)
-		}
-		trimmed := strings.TrimSpace(string(content))
-		// Try raw bytes or base64
-		keyBytes, err = base64.StdEncoding.DecodeString(trimmed)
-		if err != nil {
-			// If not base64, assume raw bytes? No, contract says base64 or raw.
-			// Actually file input can be raw 32/64 bytes or base64.
-			// Let's try to interpret `content` as raw if base64 fails?
-			// But `trimmed` might corrupt raw bytes if they happen to end in newline.
-			// Re-read strictly.
-			if len(content) == 32 || len(content) == 64 {
-				keyBytes = content
-			} else {
-				// Retry base64 on trimmed string
-				return nil, fmt.Errorf("invalid key file format (not base64 or raw 32/64 bytes)")
-			}
-		}
-	} else {
-		// 2. Try Env
-		envVal := os.Getenv("REVIEWPACK_PRIVATE_KEY_B64")
-		if envVal == "" {
-			return nil, nil // No key supplied
-		}
-		keyBytes, err = base64.StdEncoding.DecodeString(strings.TrimSpace(envVal))
-		if err != nil {
-			return nil, fmt.Errorf("invalid REVIEWPACK_PRIVATE_KEY_B64: %w", err)
-		}
+	keyBytes, err := loadKeyBytes(file)
+	if err != nil {
+		return nil, err
 	}
 
 	if len(keyBytes) == 32 {
@@ -107,9 +77,40 @@ func LoadPrivateKey(file string) (ed25519.PrivateKey, error) {
 	return nil, fmt.Errorf("invalid key length: %d (want 32 seed or 64 private)", len(keyBytes))
 }
 
-// LoadPublicKey loads a specific public key from ops/keys/reviewpack
-func LoadPublicKey(repoRoot, keyID string) (ed25519.PublicKey, error) {
-	path := filepath.Join(repoRoot, "ops", "keys", "reviewpack", keyID+".pub")
+func loadKeyBytes(file string) ([]byte, error) {
+	if file != "" {
+		content, err := os.ReadFile(file)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read key file: %w", err)
+		}
+		trimmed := strings.TrimSpace(string(content))
+		// Try raw bytes or base64
+		keyBytes, err := base64.StdEncoding.DecodeString(trimmed)
+		if err == nil {
+			return keyBytes, nil
+		}
+		// If base64 fails, check if raw
+		if len(content) == 32 || len(content) == 64 {
+			return content, nil
+		}
+		return nil, fmt.Errorf("invalid key file format (not base64 or raw 32/64 bytes)")
+	}
+
+	// Try Env
+	envVal := os.Getenv("REVIEWPACK_PRIVATE_KEY_B64")
+	if envVal == "" {
+		return nil, nil // No key supplied
+	}
+	keyBytes, err := base64.StdEncoding.DecodeString(strings.TrimSpace(envVal))
+	if err != nil {
+		return nil, fmt.Errorf("invalid REVIEWPACK_PRIVATE_KEY_B64: %w", err)
+	}
+	return keyBytes, nil
+}
+
+// LoadPublicKey loads a specific public key from keysDir
+func LoadPublicKey(keysDir, keyID string) (ed25519.PublicKey, error) {
+	path := filepath.Join(keysDir, keyID+".pub")
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("public key not found for %s: %w", keyID, err)
@@ -137,9 +138,9 @@ func LoadPublicKey(repoRoot, keyID string) (ed25519.PublicKey, error) {
 	return ed25519.PublicKey(pubBytes), nil
 }
 
-// findKeyID scans ops/keys/reviewpack/*.pub to find the KeyID for a given public key
-func findKeyID(pub ed25519.PublicKey, repoRoot string) (string, error) {
-	pattern := filepath.Join(repoRoot, "ops", "keys", "reviewpack", "*.pub")
+// findKeyID scans keysDir/*.pub to find the KeyID for a given public key
+func findKeyID(pub ed25519.PublicKey, keysDir string) (string, error) {
+	pattern := filepath.Join(keysDir, "*.pub")
 	matches, err := filepath.Glob(pattern)
 	if err != nil {
 		return "", fmt.Errorf("glob failed: %w", err)
@@ -165,7 +166,7 @@ func findKeyID(pub ed25519.PublicKey, repoRoot string) (string, error) {
 // Verification Logic
 
 // verifySignature checks the sidecar against the pack
-func verifySignature(packPath, sigPath string) error {
+func verifySignature(packPath, sigPath, keysDir string) error {
 	// 1. Read Sidecar
 	data, err := os.ReadFile(sigPath)
 	if err != nil {
@@ -186,13 +187,7 @@ func verifySignature(packPath, sigPath string) error {
 	}
 
 	// 3. Load Public Key
-	// Need repo root. Assuming we run from root or can find it?
-	// RunAlways runs from repo root.
-	repoRoot := "."
-	// If we are in a subdir, this might fail.
-	// We can try to find .git or just assume "." for S7 RunAlways context.
-
-	pubKey, err := LoadPublicKey(repoRoot, sc.KeyID)
+	pubKey, err := LoadPublicKey(keysDir, sc.KeyID)
 	if err != nil {
 		return fmt.Errorf("failed to load public key %s: %w", sc.KeyID, err)
 	}

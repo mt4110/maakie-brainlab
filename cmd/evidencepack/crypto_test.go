@@ -59,8 +59,8 @@ func TestKeyUtils(t *testing.T) {
 
 	keyID := "test-key-01"
 	pubMeta := CryptoKey{
-		KeyID: keyID,
-		Alg: AlgEd25519,
+		KeyID:  keyID,
+		Alg:    AlgEd25519,
 		PubB64: base64.StdEncoding.EncodeToString(pub),
 	}
 	// Write JSON
@@ -80,8 +80,19 @@ func TestKeyUtils(t *testing.T) {
 	importJSON, _ := json.Marshal(pubMeta)
 	os.WriteFile(filepath.Join(keysDir, keyID+".pub"), importJSON, 0644)
 
+	// Test	// Find Key ID
 	// Test findKeyID
-	foundID, err := findKeyID(pub, repoRoot)
+	// It normally looks for *.pub in keysDir.
+	// We wrote keys to tmpDir.
+	// Matches `*.pub`.
+	// findKeyID now takes keysDir
+	// The function expects keysDir.
+	// In my refactor: func findKeyID(pub ed25519.PublicKey, keysDir string) (string, error)
+	// I need to ensure the test creates keys in the directory `findKeyID` expects.
+	// Test creates `filepath.Join(keysDir, keyID+".pub")`.
+	// So keysDir should be `keysDir`.
+
+	foundID, err := findKeyID(pub, keysDir)
 	if err != nil {
 		t.Fatalf("findKeyID failed: %v", err)
 	}

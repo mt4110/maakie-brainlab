@@ -57,7 +57,7 @@ func TestRoundTrip_OK(t *testing.T) {
 	packPath := filepath.Join(packsDir, entries[0].Name())
 
 	// Verify
-	if err := verifyPack(packPath, ".", nil, ""); err != nil {
+	if err := verifyPack(VerifyConfig{Path: packPath, RepoRoot: ".", PolicyMode: ""}); err != nil {
 		t.Fatalf("Verify failed: %v", err)
 	}
 }
@@ -74,7 +74,9 @@ func TestVerify_FailsOnCorruptDataFile(t *testing.T) {
 	executePack(cfg)
 
 	entries, _ := os.ReadDir(filepath.Join(storeDir, "packs", "test"))
-	if len(entries) == 0 { t.Fatal("Pack not created") }
+	if len(entries) == 0 {
+		t.Fatal("Pack not created")
+	}
 	packPath := filepath.Join(storeDir, "packs", "test", entries[0].Name())
 
 	// Integration test style:
@@ -90,7 +92,7 @@ func TestVerify_FailsOnCorruptDataFile(t *testing.T) {
 		return content
 	}, nil)
 
-	if err := verifyPack(packPath, ".", nil, ""); err == nil {
+	if err := verifyPack(VerifyConfig{Path: packPath, RepoRoot: ".", PolicyMode: ""}); err == nil {
 		t.Fatal("Expected verify to fail on corrupted data, but it passed")
 	} else if !strings.Contains(err.Error(), "mismatch") { // hash mismatch
 		t.Logf("Got expected error: %v", err)
@@ -112,7 +114,7 @@ func TestVerify_FailsOnSymlink(t *testing.T) {
 		tw.WriteHeader(hdr)
 	})
 
-	if err := verifyPack(packPath, ".", nil, ""); err == nil {
+	if err := verifyPack(VerifyConfig{Path: packPath, RepoRoot: "."}); err == nil {
 		t.Fatal("Expected verify failure on symlink, passed")
 	} else {
 		t.Logf("Got expected error: %v", err)
@@ -125,15 +127,15 @@ func TestVerify_FailsOnPathTraversal(t *testing.T) {
 	createManualTar(t, packPath, func(tw *tar.Writer) {
 		writeTarFile(t, tw, "EVIDENCE_VERSION", "v1\n")
 		hdr := &tar.Header{
-			Name:     "../escape.txt",
-			Mode:     0644,
-			Size:     4,
+			Name: "../escape.txt",
+			Mode: 0644,
+			Size: 4,
 		}
 		tw.WriteHeader(hdr)
 		tw.Write([]byte("test"))
 	})
 
-	if err := verifyPack(packPath, ".", nil, ""); err == nil {
+	if err := verifyPack(VerifyConfig{Path: packPath, RepoRoot: "."}); err == nil {
 		t.Fatal("Expected verify failure on path traversal, passed")
 	} else {
 		t.Logf("Got expected error: %v", err)
@@ -161,7 +163,7 @@ func TestVerify_FailsOnExtraFile(t *testing.T) {
 		writeTarFile(t, tw, "data/extra.txt", "I am extra")
 	})
 
-	if err := verifyPack(packPath, ".", nil, ""); err == nil {
+	if err := verifyPack(VerifyConfig{Path: packPath, RepoRoot: "."}); err == nil {
 		t.Fatal("Expected verify failure on extra file, passed")
 	} else {
 		t.Logf("Got expected error: %v", err)
@@ -189,7 +191,7 @@ func TestVerify_FailsOnExtraRootEntry(t *testing.T) {
 		writeTarFile(t, tw, "ROOT_EXTRA.txt", "I am forbidden in root")
 	})
 
-	if err := verifyPack(packPath, ".", nil, ""); err == nil {
+	if err := verifyPack(VerifyConfig{Path: packPath, RepoRoot: "."}); err == nil {
 		t.Fatal("Expected verify failure on extra root file, passed")
 	} else if !strings.Contains(err.Error(), "forbidden root entry") {
 		t.Fatalf("Got unexpected error: %v", err)
@@ -345,7 +347,7 @@ func modifyTar(t *testing.T, path string, modifier func(name string, content []b
 	}
 
 	var items []struct {
-		Header *tar.Header
+		Header  *tar.Header
 		Content []byte
 	}
 
@@ -366,7 +368,10 @@ func modifyTar(t *testing.T, path string, modifier func(name string, content []b
 		if err != nil {
 			t.Fatal(err)
 		}
-		items = append(items, struct{Header *tar.Header; Content []byte}{hdr, content})
+		items = append(items, struct {
+			Header  *tar.Header
+			Content []byte
+		}{hdr, content})
 	}
 	gzr.Close()
 	f.Close()

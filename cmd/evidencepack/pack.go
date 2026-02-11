@@ -102,7 +102,13 @@ func runPack(args []string) error {
 	}
 
 	// Verify (Mandatory if sig exists)
-	if err := verifyPack(packPath, repoRoot, logger, ""); err != nil {
+	vCfg := VerifyConfig{
+		Path:       packPath,
+		RepoRoot:   repoRoot,
+		Logger:     logger,
+		PolicyMode: "", // default
+	}
+	if err := verifyPack(vCfg); err != nil {
 		return fmt.Errorf("post-pack verification failed: %w", err)
 	}
 
@@ -116,7 +122,8 @@ func performSigning(packPath string, keyFile string, repoRoot string, logger *Au
 	}
 
 	pub := privKey.Public().(ed25519.PublicKey)
-	keyID, err := findKeyID(pub, repoRoot)
+	keysDir := filepath.Join(repoRoot, "ops", "keys", "reviewpack")
+	keyID, err := findKeyID(pub, keysDir)
 	if err != nil {
 		return fmt.Errorf("key_id lookup failed (ensure public key is in ops/keys/reviewpack): %w", err)
 	}
@@ -143,10 +150,14 @@ func performSigning(packPath string, keyFile string, repoRoot string, logger *Au
 
 func signArtifact(packPath string, priv ed25519.PrivateKey, keyID string) error {
 	artSHA, err := CalculateSHA256(packPath)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 
 	chkSHA, err := extractAndHashChecksums(packPath)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 
 	msg := CanonicalMessage(artSHA, chkSHA)
 	sig := ed25519.Sign(priv, msg)
@@ -166,18 +177,26 @@ func signArtifact(packPath string, priv ed25519.PrivateKey, keyID string) error 
 
 func extractAndHashChecksums(tarPath string) (string, error) {
 	f, err := os.Open(tarPath)
-	if err != nil { return "", err }
+	if err != nil {
+		return "", err
+	}
 	defer f.Close()
 
 	gz, err := gzip.NewReader(f)
-	if err != nil { return "", err }
+	if err != nil {
+		return "", err
+	}
 	defer gz.Close()
 
 	tr := tar.NewReader(gz)
 	for {
 		header, err := tr.Next()
-		if err == io.EOF { break }
-		if err != nil { return "", err }
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return "", err
+		}
 
 		if header.Name == "CHECKSUMS.sha256" {
 			h := sha256.New()
