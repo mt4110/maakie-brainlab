@@ -9,9 +9,7 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false
+
 
 permissions:
   contents: read
@@ -61,12 +59,12 @@ jobs:
         run: |
           bash ops/run_always_1h.sh
 
-      - name: Upload Artifacts
+      - name: Upload Artifacts (Run Always)
         if: always()
         uses: actions/upload-artifact@v4
         with:
           if-no-files-found: error
           name: run-always-${{ github.run_number }}-${{ github.sha }}
           path: |
-            .local/run-always/latest/
+            .local/run-always/
           retention-days: 14
