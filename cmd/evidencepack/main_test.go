@@ -57,7 +57,7 @@ func TestRoundTrip_OK(t *testing.T) {
 	packPath := filepath.Join(packsDir, entries[0].Name())
 
 	// Verify
-	if err := verifyPack(packPath, ".", nil); err != nil {
+	if err := verifyPack(packPath, ".", nil, ""); err != nil {
 		t.Fatalf("Verify failed: %v", err)
 	}
 }
@@ -90,7 +90,7 @@ func TestVerify_FailsOnCorruptDataFile(t *testing.T) {
 		return content
 	}, nil)
 
-	if err := verifyPack(packPath, ".", nil); err == nil {
+	if err := verifyPack(packPath, ".", nil, ""); err == nil {
 		t.Fatal("Expected verify to fail on corrupted data, but it passed")
 	} else if !strings.Contains(err.Error(), "mismatch") { // hash mismatch
 		t.Logf("Got expected error: %v", err)
@@ -112,7 +112,7 @@ func TestVerify_FailsOnSymlink(t *testing.T) {
 		tw.WriteHeader(hdr)
 	})
 
-	if err := verifyPack(packPath, ".", nil); err == nil {
+	if err := verifyPack(packPath, ".", nil, ""); err == nil {
 		t.Fatal("Expected verify failure on symlink, passed")
 	} else {
 		t.Logf("Got expected error: %v", err)
@@ -133,7 +133,7 @@ func TestVerify_FailsOnPathTraversal(t *testing.T) {
 		tw.Write([]byte("test"))
 	})
 
-	if err := verifyPack(packPath, ".", nil); err == nil {
+	if err := verifyPack(packPath, ".", nil, ""); err == nil {
 		t.Fatal("Expected verify failure on path traversal, passed")
 	} else {
 		t.Logf("Got expected error: %v", err)
@@ -161,7 +161,7 @@ func TestVerify_FailsOnExtraFile(t *testing.T) {
 		writeTarFile(t, tw, "data/extra.txt", "I am extra")
 	})
 
-	if err := verifyPack(packPath, ".", nil); err == nil {
+	if err := verifyPack(packPath, ".", nil, ""); err == nil {
 		t.Fatal("Expected verify failure on extra file, passed")
 	} else {
 		t.Logf("Got expected error: %v", err)
@@ -189,7 +189,7 @@ func TestVerify_FailsOnExtraRootEntry(t *testing.T) {
 		writeTarFile(t, tw, "ROOT_EXTRA.txt", "I am forbidden in root")
 	})
 
-	if err := verifyPack(packPath, ".", nil); err == nil {
+	if err := verifyPack(packPath, ".", nil, ""); err == nil {
 		t.Fatal("Expected verify failure on extra root file, passed")
 	} else if !strings.Contains(err.Error(), "forbidden root entry") {
 		t.Fatalf("Got unexpected error: %v", err)

@@ -13,7 +13,7 @@ import (
 func TestCanonicalMessage(t *testing.T) {
 	artSHA := "abc"
 	chkSHA := "def"
-	expected := "reviewpack.sig.v1\nartifact_sha256=abc\nchecksums_sha256=def"
+	expected := "reviewpack.sig.v1\nartifact_sha256=abc\nchecksums_sha256=def\n"
 
 	msg := CanonicalMessage(artSHA, chkSHA)
 	if string(msg) != expected {

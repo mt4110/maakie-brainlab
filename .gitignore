@@ -87,3 +87,6 @@ docs/_tmp_local_inject/
 .local/evidence_store/
 .local/evidence_tmp/
 .DS_Store
+
+# local scratch
+test_output.txt
