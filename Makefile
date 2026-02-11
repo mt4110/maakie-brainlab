@@ -1,4 +1,4 @@
-        sat-collect sat-normalize sat-gate sat-store sat-digest sat-index sat-run smoke
+.PHONY: sat-collect sat-normalize sat-gate sat-store sat-digest sat-index sat-run smoke
 
 PY?=.venv/bin/python
 PYENV=PYTHONPATH=.
