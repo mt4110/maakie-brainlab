@@ -82,3 +82,7 @@ docs/_tmp_local_inject/
 
 # PR body drafts (local only)
 .local/pr-templates/
+
+# Evidence Pipeline (S6-00)
+.local/evidence_store/
+.local/evidence_tmp/
