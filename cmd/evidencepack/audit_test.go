@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestAuditLog_HashChain(t *testing.T) {
+func TestAuditLogHashChain(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Initialize Logger

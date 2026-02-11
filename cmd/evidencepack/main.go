@@ -12,6 +12,9 @@ const (
 	CmdVerify = "verify"
 	CmdLs     = "ls"
 	CmdGc     = "gc"
+	CmdBundle = "bundle"
+
+	errorFormat = "Error: %v\n"
 )
 
 var kindRegex = regexp.MustCompile(`^[a-z][a-z0-9_]{0,31}$`)
@@ -35,22 +38,27 @@ func main() {
 	switch cmd {
 	case CmdPack:
 		if err := runPack(args); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			fmt.Fprintf(os.Stderr, errorFormat, err)
 			os.Exit(1)
 		}
 	case CmdVerify:
 		if err := runVerify(args); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			fmt.Fprintf(os.Stderr, errorFormat, err)
 			os.Exit(1)
 		}
 	case CmdLs:
 		if err := runLs(args); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			fmt.Fprintf(os.Stderr, errorFormat, err)
 			os.Exit(1)
 		}
 	case CmdGc:
 		if err := runGc(args); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			fmt.Fprintf(os.Stderr, errorFormat, err)
+			os.Exit(1)
+		}
+	case CmdBundle:
+		if err := runBundle(args); err != nil {
+			fmt.Fprintf(os.Stderr, errorFormat, err)
 			os.Exit(1)
 		}
 	default:

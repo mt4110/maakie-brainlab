@@ -15,7 +15,66 @@ import (
 	"time"
 )
 
-func TestRoundTrip_OK(t *testing.T) {
+const logExpectedErr = "Got expected error: %v"
+
+const (
+	flagKind     = "--kind"
+	testDataFile = "data.txt"
+)
+
+func TestVerifyAcceptsArtifactOrBundle(t *testing.T) {
+	// 1. Create Artifact
+	tmp := t.TempDir()
+	storeDir := filepath.Join(tmp, "store")
+	payload := filepath.Join(tmp, "payload.txt")
+	os.WriteFile(payload, []byte("content"), 0644)
+
+	// Pack (Standard Artifact)
+	runPack([]string{flagKind, "compat", "--store", storeDir, payload})
+
+	entries, _ := os.ReadDir(filepath.Join(storeDir, "packs", "compat"))
+	artifactPath := filepath.Join(storeDir, "packs", "compat", entries[0].Name())
+
+	// Verify Artifact (Regression)
+	if err := verifyPack(VerifyConfig{Path: artifactPath, RepoRoot: ".", PolicyMode: "local"}); err != nil {
+		t.Fatalf("Failed to verify standard artifact: %v", err)
+	}
+
+	// 2. Create Bundle
+	// We need a dummy policy/key setup for bundle creation?
+	// runBundle requires flags.
+	// We'll skip signing for this test to keep it simple, or use dummy key?
+	// If we skip signing, bundle verification will pass if policy allows.
+	// Default permissive policy allows unsigned in local.
+	bundlePath := filepath.Join(tmp, "bundle.tar.gz")
+
+	// We need keys dir for runBundle even if empty?
+	// "keys-dir" default is ops/keys/reviewpack.
+	// runBundle logic: "Find key used in signature".
+	// If no signature, keys copying is skipped.
+	// Policy is copied.
+
+	// Create dummy policy
+	policyFile := filepath.Join(tmp, "policy.toml")
+	os.WriteFile(policyFile, []byte("version=1\n[enforcement]\nlocal='permissive'\n"), 0644)
+
+	err := runBundle([]string{
+		"--artifact", artifactPath,
+		"--policy", policyFile,
+		"--out", bundlePath,
+		// keys-dir defaults to non-existent, should be fine if no sig
+	})
+	if err != nil {
+		t.Fatalf("Failed to create bundle: %v", err)
+	}
+
+	// Verify Bundle (New Feature)
+	if err := verifyPack(VerifyConfig{Path: bundlePath, RepoRoot: ".", PolicyMode: "local"}); err != nil {
+		t.Fatalf("Failed to verify bundle: %v", err)
+	}
+}
+
+func TestRoundTripOK(t *testing.T) {
 	tmpDir := t.TempDir()
 	storeDir := filepath.Join(tmpDir, "store")
 	payloadDir := filepath.Join(tmpDir, "payload")
@@ -57,24 +116,26 @@ func TestRoundTrip_OK(t *testing.T) {
 	packPath := filepath.Join(packsDir, entries[0].Name())
 
 	// Verify
-	if err := verifyPack(packPath, ".", nil, ""); err != nil {
+	if err := verifyPack(VerifyConfig{Path: packPath, RepoRoot: ".", PolicyMode: ""}); err != nil {
 		t.Fatalf("Verify failed: %v", err)
 	}
 }
 
-func TestVerify_FailsOnCorruptDataFile(t *testing.T) {
+func TestVerifyFailsOnCorruptDataFile(t *testing.T) {
 	// 1. Create valid pack
 	tmpDir := t.TempDir()
 	storeDir := filepath.Join(tmpDir, "store")
 	payloadDir := filepath.Join(tmpDir, "payload")
 	os.MkdirAll(payloadDir, 0755)
-	os.WriteFile(filepath.Join(payloadDir, "data.txt"), []byte("original"), 0644)
+	os.WriteFile(filepath.Join(payloadDir, testDataFile), []byte("original"), 0644)
 
 	cfg := PackConfig{Kind: "test", StoreDir: storeDir, Payloads: []string{payloadDir}, Timestamp: time.Now()}
 	executePack(cfg)
 
 	entries, _ := os.ReadDir(filepath.Join(storeDir, "packs", "test"))
-	if len(entries) == 0 { t.Fatal("Pack not created") }
+	if len(entries) == 0 {
+		t.Fatal("Pack not created")
+	}
 	packPath := filepath.Join(storeDir, "packs", "test", entries[0].Name())
 
 	// Integration test style:
@@ -84,20 +145,20 @@ func TestVerify_FailsOnCorruptDataFile(t *testing.T) {
 	// 4. Verify -> FAIL.
 
 	modifyTar(t, packPath, func(name string, content []byte) []byte {
-		if strings.Contains(name, "data.txt") {
+		if strings.Contains(name, testDataFile) {
 			return []byte("corrupted")
 		}
 		return content
 	}, nil)
 
-	if err := verifyPack(packPath, ".", nil, ""); err == nil {
+	if err := verifyPack(VerifyConfig{Path: packPath, RepoRoot: ".", PolicyMode: ""}); err == nil {
 		t.Fatal("Expected verify to fail on corrupted data, but it passed")
 	} else if !strings.Contains(err.Error(), "mismatch") { // hash mismatch
-		t.Logf("Got expected error: %v", err)
+		t.Logf(logExpectedErr, err)
 	}
 }
 
-func TestVerify_FailsOnSymlink(t *testing.T) {
+func TestVerifyFailsOnSymlink(t *testing.T) {
 	packPath := filepath.Join(t.TempDir(), "symlink.tar.gz")
 
 	createManualTar(t, packPath, func(tw *tar.Writer) {
@@ -112,35 +173,35 @@ func TestVerify_FailsOnSymlink(t *testing.T) {
 		tw.WriteHeader(hdr)
 	})
 
-	if err := verifyPack(packPath, ".", nil, ""); err == nil {
+	if err := verifyPack(VerifyConfig{Path: packPath, RepoRoot: "."}); err == nil {
 		t.Fatal("Expected verify failure on symlink, passed")
 	} else {
-		t.Logf("Got expected error: %v", err)
+		t.Logf(logExpectedErr, err)
 	}
 }
 
-func TestVerify_FailsOnPathTraversal(t *testing.T) {
+func TestVerifyFailsOnPathTraversal(t *testing.T) {
 	packPath := filepath.Join(t.TempDir(), "traversal.tar.gz")
 
 	createManualTar(t, packPath, func(tw *tar.Writer) {
 		writeTarFile(t, tw, "EVIDENCE_VERSION", "v1\n")
 		hdr := &tar.Header{
-			Name:     "../escape.txt",
-			Mode:     0644,
-			Size:     4,
+			Name: "../escape.txt",
+			Mode: 0644,
+			Size: 4,
 		}
 		tw.WriteHeader(hdr)
 		tw.Write([]byte("test"))
 	})
 
-	if err := verifyPack(packPath, ".", nil, ""); err == nil {
+	if err := verifyPack(VerifyConfig{Path: packPath, RepoRoot: ".", PolicyMode: "local"}); err == nil {
 		t.Fatal("Expected verify failure on path traversal, passed")
 	} else {
-		t.Logf("Got expected error: %v", err)
+		t.Logf(logExpectedErr, err)
 	}
 }
 
-func TestVerify_FailsOnExtraFile(t *testing.T) {
+func TestVerifyFailsOnExtraFile(t *testing.T) {
 	// Case: File in data/ but not in MANIFEST
 	tmpDir := t.TempDir()
 	storeDir := filepath.Join(tmpDir, "store")
@@ -161,14 +222,14 @@ func TestVerify_FailsOnExtraFile(t *testing.T) {
 		writeTarFile(t, tw, "data/extra.txt", "I am extra")
 	})
 
-	if err := verifyPack(packPath, ".", nil, ""); err == nil {
+	if err := verifyPack(VerifyConfig{Path: packPath, RepoRoot: "."}); err == nil {
 		t.Fatal("Expected verify failure on extra file, passed")
 	} else {
-		t.Logf("Got expected error: %v", err)
+		t.Logf(logExpectedErr, err)
 	}
 }
 
-func TestVerify_FailsOnExtraRootEntry(t *testing.T) {
+func TestVerifyFailsOnExtraRootEntry(t *testing.T) {
 	// Case: Extra file in ROOT (forbidden by strict contract)
 	tmpDir := t.TempDir()
 	storeDir := filepath.Join(tmpDir, "store")
@@ -189,20 +250,20 @@ func TestVerify_FailsOnExtraRootEntry(t *testing.T) {
 		writeTarFile(t, tw, "ROOT_EXTRA.txt", "I am forbidden in root")
 	})
 
-	if err := verifyPack(packPath, ".", nil, ""); err == nil {
+	if err := verifyPack(VerifyConfig{Path: packPath, RepoRoot: "."}); err == nil {
 		t.Fatal("Expected verify failure on extra root file, passed")
 	} else if !strings.Contains(err.Error(), "forbidden root entry") {
 		t.Fatalf("Got unexpected error: %v", err)
 	} else {
-		t.Logf("Got expected error: %v", err)
+		t.Logf(logExpectedErr, err)
 	}
 }
 
-func TestPack_RejectsInvalidKind(t *testing.T) {
+func TestPackRejectsInvalidKind(t *testing.T) {
 	// Test runPack entry point kind validation
 
 	// We run runPack with invalid arg
-	err := runPack([]string{"--kind", "invalid-kind!", "."})
+	err := runPack([]string{flagKind, "invalid-kind!", "."})
 	if err == nil {
 		t.Fatal("Expected runPack to fail on invalid kind")
 	} else if !strings.Contains(err.Error(), "invalid kind") {
@@ -211,7 +272,7 @@ func TestPack_RejectsInvalidKind(t *testing.T) {
 		t.Logf("Got expected kind error: %v", err)
 	}
 
-	err = runPack([]string{"--kind", "../../traversal", "."})
+	err = runPack([]string{flagKind, "../../traversal", "."})
 	if err == nil {
 		t.Fatal("Expected runPack to fail on traversal kind")
 	} else {
@@ -219,13 +280,13 @@ func TestPack_RejectsInvalidKind(t *testing.T) {
 	}
 }
 
-func TestS7_SigningRoundTrip(t *testing.T) {
+func TestS7SigningRoundTrip(t *testing.T) {
 	// Setup
 	tmpDir := t.TempDir()
 	storeDir := filepath.Join(tmpDir, "store")
 	payloadDir := filepath.Join(tmpDir, "payload")
 	os.MkdirAll(payloadDir, 0755)
-	os.WriteFile(filepath.Join(payloadDir, "data.txt"), []byte("signed data"), 0644)
+	os.WriteFile(filepath.Join(payloadDir, testDataFile), []byte("signed data"), 0644)
 
 	// User Payload
 	// We need to simulate running pack with signing.
@@ -259,7 +320,7 @@ func TestS7_SigningRoundTrip(t *testing.T) {
 	// That's fine.
 
 	err := runPack([]string{
-		"--kind", "s7test",
+		flagKind, "s7test",
 		"--store", storeDir,
 		"--sign",
 		"--key-file", privPath,
@@ -290,7 +351,7 @@ func TestS7_SigningRoundTrip(t *testing.T) {
 	if err := runVerify([]string{"--pack", packPath}); err == nil {
 		t.Fatal("Expected verify to fail on tampered artifact, passed")
 	} else if !strings.Contains(err.Error(), "artifact mismatch") {
-		t.Logf("Got expected error: %v", err)
+		t.Logf(logExpectedErr, err)
 	}
 
 	// Restore Artifact
@@ -336,23 +397,27 @@ func writeTarFile(t *testing.T, tw *tar.Writer, name, content string) {
 	}
 }
 
-// modifyTar reads a tar, allows modifying content of existing files, or injecting new ones.
-func modifyTar(t *testing.T, path string, modifier func(name string, content []byte) []byte, injectors func(*tar.Writer)) {
-	// Read old
+// tarItem holds a single tar entry for modification.
+type tarItem struct {
+	Header  *tar.Header
+	Content []byte
+}
+
+// readTarItems reads all entries from a gzipped tar file.
+func readTarItems(t *testing.T, path string) []tarItem {
 	f, err := os.Open(path)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	var items []struct {
-		Header *tar.Header
-		Content []byte
-	}
+	defer f.Close()
 
 	gzr, err := gzip.NewReader(f)
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer gzr.Close()
+
+	var items []tarItem
 	tr := tar.NewReader(gzr)
 	for {
 		hdr, err := tr.Next()
@@ -366,13 +431,16 @@ func modifyTar(t *testing.T, path string, modifier func(name string, content []b
 		if err != nil {
 			t.Fatal(err)
 		}
-		items = append(items, struct{Header *tar.Header; Content []byte}{hdr, content})
+		items = append(items, tarItem{hdr, content})
 	}
-	gzr.Close()
-	f.Close()
+	return items
+}
 
-	// Rewrite
-	f, err = os.Create(path)
+// modifyTar reads a tar, allows modifying content of existing files, or injecting new ones.
+func modifyTar(t *testing.T, path string, modifier func(name string, content []byte) []byte, injectors func(*tar.Writer)) {
+	items := readTarItems(t, path)
+
+	f, err := os.Create(path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -383,11 +451,9 @@ func modifyTar(t *testing.T, path string, modifier func(name string, content []b
 	defer tw.Close()
 
 	for _, it := range items {
-		var newContent []byte
+		newContent := it.Content
 		if modifier != nil {
 			newContent = modifier(it.Header.Name, it.Content)
-		} else {
-			newContent = it.Content
 		}
 		it.Header.Size = int64(len(newContent))
 		if err := tw.WriteHeader(it.Header); err != nil {

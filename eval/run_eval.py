@@ -74,6 +74,19 @@ def parse_sources(answer: str) -> list[str]:
     return sources
 
 
+def _find_first_list_item(lines: list[str], start: int) -> Optional[str]:
+    """Scan lines from start, return the first '- ...' item or None if a new section header is hit."""
+    for j in range(start, len(lines)):
+        after = lines[j].strip()
+        if not after:
+            continue
+        if after.startswith("-"):
+            return after.lstrip("- ").strip()
+        if re.match(r"^[^:\-]*:$", after):
+            return None
+    return None
+
+
 def extract_conclusion_line(answer: str) -> Optional[str]:
     """
     結論: 直下の最初のリスト項目（- ...）を抽出する
@@ -81,17 +94,7 @@ def extract_conclusion_line(answer: str) -> Optional[str]:
     lines = answer.splitlines()
     for i, line in enumerate(lines):
         if line.strip() == "結論:":
-            # 次の行以降を探す
-            for j in range(i + 1, len(lines)):
-                after = lines[j].strip()
-                if not after:
-                    continue
-                if after.startswith("-"):
-                    return after.lstrip("- ").strip()
-                # 結論ブロックが終わってしまった場合
-                if re.match(r"^[^:\-]*:$", after):
-                    return None
-            return None
+            return _find_first_list_item(lines, i + 1)
     return None
 
 

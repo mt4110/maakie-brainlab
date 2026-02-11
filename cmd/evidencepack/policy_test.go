@@ -59,11 +59,11 @@ func TestEvaluatePolicy(t *testing.T) {
 	}
 
 	tests := []struct {
-		name         string
-		env          string
-		hasSig       bool
-		keyID        string
-		expectError  bool
+		name        string
+		env         string
+		hasSig      bool
+		keyID       string
+		expectError bool
 	}{
 		// Local (Permissive) - Violations should pass
 		{"Local: No Signature", EnvLocal, false, "", false},
