@@ -127,7 +127,9 @@ func (l *AuditLogger) getLastHash() (string, error) {
 	// Optimization: valid JSONL, so we can seek backwards for last newline.
 
 	stat, err := f.Stat()
-	if err != nil { return "", err }
+	if err != nil {
+		return "", err
+	}
 	if stat.Size() == 0 {
 		return GenesisHash, nil
 	}
@@ -143,7 +145,9 @@ func (l *AuditLogger) getLastHash() (string, error) {
 		}
 
 		_, err := f.ReadAt(buf[:start-offset], offset)
-		if err != nil { return "", err }
+		if err != nil {
+			return "", err
+		}
 
 		// Look for last newline
 		// Caution: file ends with newline. We need the line BEFORE that.

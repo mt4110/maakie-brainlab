@@ -14,11 +14,22 @@ import (
 	"testing"
 )
 
-func TestBundleRoundTrip_OK(t *testing.T) {
+const (
+	testPolicyFile = "policy.toml"
+	testBundleFile = "bundle.tar.gz"
+	flagArtifact   = "--artifact"
+	flagStore      = "--store"
+	flagBundleKind = "--kind"
+	flagPolicy     = "--policy"
+	flagKeysDir    = "--keys-dir"
+	flagPack       = "--pack"
+)
+
+func TestBundleRoundTripOK(t *testing.T) {
 	tmp := t.TempDir()
 	storeDir := filepath.Join(tmp, "store")
 	keysDir := filepath.Join(tmp, "keys")
-	policyFile := filepath.Join(tmp, "policy.toml")
+	policyFile := filepath.Join(tmp, testPolicyFile)
 
 	// Setup Environment
 	setupTestEnv(t, tmp, storeDir, keysDir, policyFile)
@@ -27,7 +38,7 @@ func TestBundleRoundTrip_OK(t *testing.T) {
 	payload := filepath.Join(tmp, "payload.txt")
 	os.WriteFile(payload, []byte("some payload"), 0644)
 
-	packArgs := []string{"--kind", "testbundle", "--store", storeDir, payload}
+	packArgs := []string{flagBundleKind, "testbundle", flagStore, storeDir, payload}
 	if err := runPack(packArgs); err != nil {
 		t.Fatalf("pack failed: %v", err)
 	}
@@ -68,11 +79,11 @@ func TestBundleRoundTrip_OK(t *testing.T) {
 	}
 
 	// 3. Create Bundle
-	bundlePath := filepath.Join(tmp, "bundle.tar.gz")
+	bundlePath := filepath.Join(tmp, testBundleFile)
 	bundleArgs := []string{
-		"--artifact", artifactPath,
-		"--policy", policyFile,
-		"--keys-dir", opsKeysDir,
+		flagArtifact, artifactPath,
+		flagPolicy, policyFile,
+		flagKeysDir, opsKeysDir,
 		"--out", bundlePath,
 	}
 	if err := runBundle(bundleArgs); err != nil {
@@ -81,7 +92,7 @@ func TestBundleRoundTrip_OK(t *testing.T) {
 
 	// 4. Verify Bundle
 	verifyArgs := []string{
-		"--pack", bundlePath,
+		flagPack, bundlePath,
 		"--policy-mode", "local", // or auto
 	}
 	// We need to capture verify output? Or just ensure no error.
@@ -108,7 +119,7 @@ func TestBundleFailsOnTamperedArtifact(t *testing.T) {
 	metaBytes, _ := json.Marshal(meta)
 	os.WriteFile(filepath.Join(opsKeysDir, "tamperkey.pub"), metaBytes, 0644)
 
-	policyFile := filepath.Join(tmp, "policy.toml")
+	policyFile := filepath.Join(tmp, testPolicyFile)
 	os.WriteFile(policyFile, []byte(`
 version = 1
 [enforcement]
@@ -120,7 +131,7 @@ tamperkey = "owner"
 	// 1. Create Artifact
 	payload := filepath.Join(tmp, "payload.txt")
 	os.WriteFile(payload, []byte("valid payload"), 0644)
-	packArgs := []string{"--kind", "tampertest", "--store", storeDir, payload}
+	packArgs := []string{flagBundleKind, "tampertest", flagStore, storeDir, payload}
 	runPack(packArgs)
 
 	packDir := filepath.Join(storeDir, "packs", "tampertest")
@@ -132,8 +143,8 @@ tamperkey = "owner"
 	performSigning(artifactPath, filepath.Join(tmp, "privkey"), tmp, logger)
 
 	// 3. Create Valid Bundle
-	bundlePath := filepath.Join(tmp, "bundle.tar.gz")
-	runBundle([]string{"--artifact", artifactPath, "--policy", policyFile, "--keys-dir", opsKeysDir, "--out", bundlePath})
+	bundlePath := filepath.Join(tmp, testBundleFile)
+	runBundle([]string{flagArtifact, artifactPath, flagPolicy, policyFile, flagKeysDir, opsKeysDir, "--out", bundlePath})
 
 	// 4. Tamper Bundle
 	// extracting bundle, modifying artifact, repacking?
@@ -156,7 +167,7 @@ tamperkey = "owner"
 	createDeterministicTar(explodeDir, badBundlePath)
 
 	// 5. Verify -> Should Fail (Signature Mismatch)
-	if err := runVerify([]string{"--pack", badBundlePath, "--policy-mode", "local"}); err == nil {
+	if err := runVerify([]string{flagPack, badBundlePath, "--policy-mode", "local"}); err == nil {
 		t.Fatal("Verify should have failed on tampered artifact")
 	} else {
 		if !strings.Contains(err.Error(), "cryptographic verification failed") && !strings.Contains(err.Error(), "artifact mismatch") {
@@ -183,13 +194,13 @@ func TestBundleFailsOnWrongKey(t *testing.T) {
 	pubB, _, _ := ed25519.GenerateKey(rand.Reader)
 	writeKey(t, opsKeysDir, "keyB", pubB)
 
-	policyFile := filepath.Join(tmp, "policy.toml")
+	policyFile := filepath.Join(tmp, testPolicyFile)
 	os.WriteFile(policyFile, []byte("version=1\n[enforcement]\nlocal='strict'\n"), 0644)
 
 	// Artifact signed by A
 	payload := filepath.Join(tmp, "p.txt")
 	os.WriteFile(payload, []byte("data"), 0644)
-	runPack([]string{"--kind", "wrongkey", "--store", storeDir, payload})
+	runPack([]string{flagBundleKind, "wrongkey", flagStore, storeDir, payload})
 
 	packDir := filepath.Join(storeDir, "packs", "wrongkey")
 	entries, _ := os.ReadDir(packDir)
@@ -199,8 +210,8 @@ func TestBundleFailsOnWrongKey(t *testing.T) {
 	performSigning(artifactPath, filepath.Join(tmp, "keyA.priv"), tmp, logger)
 
 	// Create Bundle
-	bundlePath := filepath.Join(tmp, "bundle.tar.gz")
-	runBundle([]string{"--artifact", artifactPath, "--policy", policyFile, "--keys-dir", opsKeysDir, "--out", bundlePath})
+	bundlePath := filepath.Join(tmp, testBundleFile)
+	runBundle([]string{flagArtifact, artifactPath, flagPolicy, policyFile, flagKeysDir, opsKeysDir, "--out", bundlePath})
 
 	// Tamper Bundle keys: Replace keyA.pub with keyB.pub content but keep name keyA.pub?
 	// This simulates "fake key" attack where bundled key is not the one that signed it?
@@ -219,7 +230,7 @@ func TestBundleFailsOnWrongKey(t *testing.T) {
 	badBundlePath := filepath.Join(tmp, "badkey_bundle.tar.gz")
 	createDeterministicTar(explodeDir, badBundlePath)
 
-	if err := runVerify([]string{"--pack", badBundlePath}); err == nil {
+	if err := runVerify([]string{flagPack, badBundlePath}); err == nil {
 		t.Fatal("Verify should have failed on wrong key")
 	} else {
 		t.Logf("Correctly failed: %v", err)

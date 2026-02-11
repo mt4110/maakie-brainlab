@@ -84,52 +84,38 @@ func DeterminePolicyEnv(cliEnv string) string {
 // env should be "local" or "ci" (resolved by DeterminePolicyEnv).
 // returns error ONLY if violation found in a STRICT context.
 func EvaluatePolicy(p *ReviewPackPolicy, env string, hasSignature bool, keyID string) error {
-	// 1. Determine enforcement application (strict vs permissive)
-	applicationMode := ModePermissive
-	if env == EnvCI {
-		applicationMode = p.Enforcement.ModeCI
-	} else {
-		applicationMode = p.Enforcement.ModeLocal
-	}
+	applicationMode := resolveApplicationMode(p, env)
 
-	// If permissive, we do not return verification errors for policy violations.
 	if applicationMode == ModePermissive {
 		return nil
 	}
 
 	// Strict Enforcement Logic
-
-	// 2. Check Signature Requirement
 	if !hasSignature {
 		if env == EnvCI && p.Signing.RequireSignatureInCI {
 			return fmt.Errorf("policy violation: signature required in CI but not found")
 		}
-		// If signature not required, allow it.
 		return nil
 	}
 
-	// 3. Check Allowlist (if signature present)
-	if hasSignature {
-		// Only enforce allowlist if configured for this environment (CI)
-		// Logic: if env is CI, check EnforceAllowlistInCI
-		shouldEnforce := false
-		if env == EnvCI {
-			shouldEnforce = p.Signing.EnforceAllowlistInCI
-		}
+	return checkKeyAllowlist(p, env, keyID)
+}
 
-		if shouldEnforce {
-			allowed := false
-			for _, allowedID := range p.Keys.AllowedKeyIDs {
-				if allowedID == keyID {
-					allowed = true
-					break
-				}
-			}
-			if !allowed {
-				return fmt.Errorf("policy violation: key %s is not in allowed_key_ids (see ops/reviewpack_policy.toml)", keyID)
-			}
+func resolveApplicationMode(p *ReviewPackPolicy, env string) string {
+	if env == EnvCI {
+		return p.Enforcement.ModeCI
+	}
+	return p.Enforcement.ModeLocal
+}
+
+func checkKeyAllowlist(p *ReviewPackPolicy, env string, keyID string) error {
+	if env != EnvCI || !p.Signing.EnforceAllowlistInCI {
+		return nil
+	}
+	for _, allowedID := range p.Keys.AllowedKeyIDs {
+		if allowedID == keyID {
+			return nil
 		}
 	}
-
-	return nil
+	return fmt.Errorf("policy violation: key %s is not in allowed_key_ids (see ops/reviewpack_policy.toml)", keyID)
 }

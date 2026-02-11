@@ -217,52 +217,63 @@ func executePack(cfg PackConfig) (string, error) {
 	}
 	defer os.RemoveAll(stagingDir) // Cleanup on exit
 
-	// 2. Create Directory Structure
+	// 2. Create data/ and copy payloads
 	dataDir := filepath.Join(stagingDir, "data")
 	if err := os.MkdirAll(dataDir, 0755); err != nil {
 		return "", fmt.Errorf("failed to create data dir: %w", err)
 	}
+	if err := stagePayloads(cfg.Payloads, dataDir); err != nil {
+		return "", err
+	}
 
-	// 3. Copy Payloads to data/
-	// We flat copy payloads into data/. If collision, we might need a strategy, but for now assume distinct.
-	// If payload is a file -> copy to data/basename
-	// If payload is a dir -> copy content to data/basename (or recursive)
-	for _, p := range cfg.Payloads {
+	// 3. Write metadata files
+	gitInfo := getGitInfo()
+	if err := writePackMetadata(stagingDir, dataDir, cfg, gitInfo); err != nil {
+		return "", err
+	}
+
+	// 4. Create tarball and update index
+	return finalizePackTarball(stagingDir, cfg, gitInfo)
+}
+
+func stagePayloads(payloads []string, dataDir string) error {
+	for _, p := range payloads {
 		info, err := os.Stat(p)
 		if err != nil {
-			return "", fmt.Errorf("failed to stat payload %s: %w", p, err)
+			return fmt.Errorf("failed to stat payload %s: %w", p, err)
 		}
-		destName := filepath.Base(p)
-		destPath := filepath.Join(dataDir, destName)
+		destPath := filepath.Join(dataDir, filepath.Base(p))
 
 		if info.IsDir() {
 			if err := copyDir(p, destPath); err != nil {
-				return "", fmt.Errorf("failed to copy dir %s: %w", p, err)
+				return fmt.Errorf("failed to copy dir %s: %w", p, err)
 			}
 		} else {
 			if err := copyFile(p, destPath); err != nil {
-				return "", fmt.Errorf("failed to copy file %s: %w", p, err)
+				return fmt.Errorf("failed to copy file %s: %w", p, err)
 			}
 		}
 	}
+	return nil
+}
 
-	// 4. Generate EVIDENCE_VERSION
+func writePackMetadata(stagingDir, dataDir string, cfg PackConfig, gitInfo GitInfo) error {
+	// EVIDENCE_VERSION
 	if err := os.WriteFile(filepath.Join(stagingDir, "EVIDENCE_VERSION"), []byte("v1\n"), 0644); err != nil {
-		return "", fmt.Errorf("failed to write EVIDENCE_VERSION: %w", err)
+		return fmt.Errorf("failed to write EVIDENCE_VERSION: %w", err)
 	}
 
-	// 5. Generate MANIFEST.tsv
+	// MANIFEST.tsv
 	manifestLines, err := generateManifest(dataDir)
 	if err != nil {
-		return "", fmt.Errorf("failed to generate manifest: %w", err)
+		return fmt.Errorf("failed to generate manifest: %w", err)
 	}
 	manifestPath := filepath.Join(stagingDir, "MANIFEST.tsv")
 	if err := os.WriteFile(manifestPath, []byte(strings.Join(manifestLines, "\n")+"\n"), 0644); err != nil {
-		return "", fmt.Errorf("failed to write MANIFEST.tsv: %w", err)
+		return fmt.Errorf("failed to write MANIFEST.tsv: %w", err)
 	}
 
-	// 6. Generate METADATA.json
-	gitInfo := getGitInfo()
+	// METADATA.json
 	meta := Metadata{
 		Contract:        "evidence-pack-v1",
 		ContractVersion: 1,
@@ -274,25 +285,25 @@ func executePack(cfg PackConfig) (string, error) {
 	}
 	metaBytes, err := json.MarshalIndent(meta, "", "  ")
 	if err != nil {
-		return "", fmt.Errorf("failed to marshal metadata: %w", err)
+		return fmt.Errorf("failed to marshal metadata: %w", err)
 	}
-	// Append newline for POSIX niceness
 	metaBytes = append(metaBytes, '\n')
 	if err := os.WriteFile(filepath.Join(stagingDir, "METADATA.json"), metaBytes, 0644); err != nil {
-		return "", fmt.Errorf("failed to write METADATA.json: %w", err)
+		return fmt.Errorf("failed to write METADATA.json: %w", err)
 	}
 
-	// 7. Generate CHECKSUMS.sha256
+	// CHECKSUMS.sha256
 	checksums, err := calculateRootChecksums(stagingDir)
 	if err != nil {
-		return "", fmt.Errorf("failed to calculate checksums: %w", err)
+		return fmt.Errorf("failed to calculate checksums: %w", err)
 	}
 	if err := os.WriteFile(filepath.Join(stagingDir, "CHECKSUMS.sha256"), []byte(checksums), 0644); err != nil {
-		return "", fmt.Errorf("failed to write CHECKSUMS.sha256: %w", err)
+		return fmt.Errorf("failed to write CHECKSUMS.sha256: %w", err)
 	}
+	return nil
+}
 
-	// 8. Create Tarball (Deterministic)
-	// Output filename: evidence_<kind>_<UTC>_<gitsha7>.tar.gz
+func finalizePackTarball(stagingDir string, cfg PackConfig, gitInfo GitInfo) (string, error) {
 	shortSha := gitInfo.SHA
 	if len(shortSha) > 7 {
 		shortSha = shortSha[:7]
@@ -303,41 +314,42 @@ func executePack(cfg PackConfig) (string, error) {
 	tsStr := cfg.Timestamp.Format("20060102T150405.000000000Z")
 	tarName := fmt.Sprintf("evidence_%s_%s_%s.tar.gz", cfg.Kind, tsStr, shortSha)
 
-	// Ensure store packs dir exists
 	packsDir := filepath.Join(cfg.StoreDir, "packs", cfg.Kind)
 	if err := os.MkdirAll(packsDir, 0755); err != nil {
 		return "", fmt.Errorf("failed to create packs dir: %w", err)
 	}
 
 	tarPath := filepath.Join(packsDir, tarName)
-	// We write to a tmp file specific to the target first, then rename?
-	// Or write directly since we are creating a new file.
-	// Safer to write to tmp then move.
 	tmpTarPath := filepath.Join(filepath.Join(cfg.StoreDir, "tmp"), tarName)
 
 	if err := createDeterministicTar(stagingDir, tmpTarPath); err != nil {
 		return "", fmt.Errorf("failed to create tar: %w", err)
 	}
 
-	// 9. Atomic Move
 	if err := os.Rename(tmpTarPath, tarPath); err != nil {
 		return "", fmt.Errorf("failed to move tar to store: %w", err)
 	}
 
-	// 10. Update Index
+	if err := updatePackIndex(cfg, tarName, tarPath, gitInfo); err != nil {
+		return "", err
+	}
+
+	fmt.Printf("Created evidence pack: %s\n", tarPath)
+	return tarPath, nil
+}
+
+func updatePackIndex(cfg PackConfig, tarName, tarPath string, gitInfo GitInfo) error {
 	indexDir := filepath.Join(cfg.StoreDir, "index")
 	if err := os.MkdirAll(indexDir, 0755); err != nil {
-		return "", fmt.Errorf("failed to create index dir: %w", err)
+		return fmt.Errorf("failed to create index dir: %w", err)
 	}
 	indexPath := filepath.Join(indexDir, "packs.tsv")
 
-	// Calculate final tar hash and size for index
 	tarHash, tarSize, err := fileSha256AndSize(tarPath)
 	if err != nil {
-		return "", fmt.Errorf("failed to hash tar: %w", err)
+		return fmt.Errorf("failed to hash tar: %w", err)
 	}
 
-	// Columns: created_at_utc, kind, filename, git_sha, sha256, size
 	entry := fmt.Sprintf("%s\t%s\t%s\t%s\t%s\t%d\n",
 		cfg.Timestamp.Format(time.RFC3339),
 		cfg.Kind,
@@ -349,15 +361,13 @@ func executePack(cfg PackConfig) (string, error) {
 
 	f, err := os.OpenFile(indexPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		return "", fmt.Errorf("failed to open index: %w", err)
+		return fmt.Errorf("failed to open index: %w", err)
 	}
 	defer f.Close()
 	if _, err := f.WriteString(entry); err != nil {
-		return "", fmt.Errorf("failed to write index: %w", err)
+		return fmt.Errorf("failed to write index: %w", err)
 	}
-
-	fmt.Printf("Created evidence pack: %s\n", tarPath)
-	return tarPath, nil
+	return nil
 }
 
 // Helpers
@@ -494,6 +504,72 @@ func getGitInfo() GitInfo {
 	return GitInfo{SHA: sha, Dirty: dirty}
 }
 
+type walkItem struct {
+	path string
+	info os.FileInfo
+}
+
+func collectSortedItems(srcDir string) ([]walkItem, error) {
+	var items []walkItem
+	err := filepath.Walk(srcDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if path == srcDir {
+			return nil
+		}
+		items = append(items, walkItem{path: path, info: info})
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	sort.Slice(items, func(i, j int) bool {
+		relI, _ := filepath.Rel(srcDir, items[i].path)
+		relJ, _ := filepath.Rel(srcDir, items[j].path)
+		return relI < relJ
+	})
+	return items, nil
+}
+
+func writeTarEntry(tw *tar.Writer, srcDir string, it walkItem) error {
+	relPath, err := filepath.Rel(srcDir, it.path)
+	if err != nil {
+		return err
+	}
+
+	header, err := tar.FileInfoHeader(it.info, "")
+	if err != nil {
+		return err
+	}
+
+	header.Name = filepath.ToSlash(relPath)
+	header.ModTime = time.Unix(0, 0)
+	header.Uid = 0
+	header.Gid = 0
+	header.Uname = ""
+	header.Gname = ""
+	header.AccessTime = time.Unix(0, 0)
+	header.ChangeTime = time.Unix(0, 0)
+
+	if err := tw.WriteHeader(header); err != nil {
+		return err
+	}
+
+	if !it.info.IsDir() {
+		f, err := os.Open(it.path)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		if _, err := io.Copy(tw, f); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func createDeterministicTar(srcDir, tarPath string) error {
 	tf, err := os.Create(tarPath)
 	if err != nil {
@@ -507,70 +583,14 @@ func createDeterministicTar(srcDir, tarPath string) error {
 	tw := tar.NewWriter(gw)
 	defer tw.Close()
 
-	// Walk and Collect all files to sort them
-	type item struct {
-		path string
-		info os.FileInfo
-	}
-	var items []item
-
-	err = filepath.Walk(srcDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		// Don't include the root dir itself in the list if it matches srcDir
-		if path == srcDir {
-			return nil
-		}
-		items = append(items, item{path: path, info: info})
-		return nil
-	})
+	items, err := collectSortedItems(srcDir)
 	if err != nil {
 		return err
 	}
 
-	// Sort lexicographically by relative path
-	sort.Slice(items, func(i, j int) bool {
-		relI, _ := filepath.Rel(srcDir, items[i].path)
-		relJ, _ := filepath.Rel(srcDir, items[j].path)
-		return relI < relJ
-	})
-
 	for _, it := range items {
-		relPath, err := filepath.Rel(srcDir, it.path)
-		if err != nil {
+		if err := writeTarEntry(tw, srcDir, it); err != nil {
 			return err
-		}
-
-		header, err := tar.FileInfoHeader(it.info, "")
-		if err != nil {
-			return err
-		}
-
-		// Determinism overrides
-		header.Name = filepath.ToSlash(relPath)
-		header.ModTime = time.Unix(0, 0) // Epoch 0
-		header.Uid = 0
-		header.Gid = 0
-		header.Uname = ""
-		header.Gname = ""
-		header.AccessTime = time.Unix(0, 0)
-		header.ChangeTime = time.Unix(0, 0)
-
-		if err := tw.WriteHeader(header); err != nil {
-			return err
-		}
-
-		if !it.info.IsDir() {
-			f, err := os.Open(it.path)
-			if err != nil {
-				return err
-			}
-			if _, err := io.Copy(tw, f); err != nil {
-				f.Close()
-				return err
-			}
-			f.Close()
 		}
 	}
 	return nil

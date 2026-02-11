@@ -115,7 +115,7 @@ func prepareVerificationContext(cfg VerifyConfig) (*verContext, error) {
 		TargetArtifact: cfg.Path,
 		PolicyPath:     filepath.Join(cfg.RepoRoot, "ops", policyFile),
 		KeysDir:        filepath.Join(cfg.RepoRoot, keysDirName),
-		Cleanup:        func() {}, // Empty cleanup by default
+		Cleanup:        func() { /* no-op: overridden by prepareBundleContext when needed */ },
 	}
 
 	// Override defaults with user flags if provided
@@ -416,12 +416,15 @@ func checkRootEntries(dir string) error {
 	}
 
 	for _, entry := range entries {
-		name := entry.Name()
-		if !allowed[name] {
-			return fmt.Errorf("forbidden root entry: %s", name)
+		if !allowed[entry.Name()] {
+			return fmt.Errorf("forbidden root entry: %s", entry.Name())
 		}
 	}
 
+	return verifyRequiredEntries(dir)
+}
+
+func verifyRequiredEntries(dir string) error {
 	required := []string{fileEvidenceVersion, fileMetadata, fileManifest, fileChecksums, dirData}
 	for _, req := range required {
 		info, err := os.Stat(filepath.Join(dir, req))
@@ -483,22 +486,9 @@ func extractAndVerifySafety(tarPath, destDir string) error {
 }
 
 func safeExtractHeader(tr *tar.Reader, header *tar.Header, destDir string) error {
-	// Safety Checks
-	if filepath.IsAbs(header.Name) || strings.HasPrefix(header.Name, "/") {
-		return fmt.Errorf("absolute path prohibited: %s", header.Name)
-	}
-	clean := filepath.Clean(header.Name)
-	if strings.HasPrefix(clean, "..") || strings.Contains(clean, "/../") || strings.HasSuffix(clean, "/..") {
-		return fmt.Errorf("path traversal prohibited: %s", header.Name)
-	}
-	if header.Typeflag == tar.TypeSymlink || header.Typeflag == tar.TypeLink {
-		return fmt.Errorf("symlinks/hardlinks prohibited: %s", header.Name)
-	}
-
-	target := filepath.Join(destDir, header.Name)
-	// Defense in depth
-	if !strings.HasPrefix(target, filepath.Clean(destDir)+string(os.PathSeparator)) && target != destDir {
-		// potential escape
+	target, err := validateExtractPath(header, destDir)
+	if err != nil {
+		return err
 	}
 
 	if header.Typeflag == tar.TypeDir {
@@ -506,17 +496,46 @@ func safeExtractHeader(tr *tar.Reader, header *tar.Header, destDir string) error
 	}
 
 	if header.Typeflag == tar.TypeReg {
-		if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
-			return err
-		}
-		wf, err := os.Create(target)
-		if err != nil {
-			return err
-		}
-		defer wf.Close()
-		if _, err := io.Copy(wf, tr); err != nil {
-			return err
-		}
+		return extractRegularFile(tr, target)
+	}
+	return nil
+}
+
+func validateExtractPath(header *tar.Header, destDir string) (string, error) {
+	// Safety Checks
+	if filepath.IsAbs(header.Name) || strings.HasPrefix(header.Name, "/") {
+		return "", fmt.Errorf("absolute path prohibited: %s", header.Name)
+	}
+	clean := filepath.Clean(header.Name)
+	if strings.HasPrefix(clean, "..") || strings.Contains(clean, "/../") || strings.HasSuffix(clean, "/..") {
+		return "", fmt.Errorf("path traversal prohibited: %s", header.Name)
+	}
+	if header.Typeflag == tar.TypeSymlink || header.Typeflag == tar.TypeLink {
+		return "", fmt.Errorf("symlinks/hardlinks prohibited: %s", header.Name)
+	}
+
+	target := filepath.Join(destDir, clean)
+	// Defense in depth: ensure target stays within destDir after cleaning
+	destClean := filepath.Clean(destDir)
+	targetClean := filepath.Clean(target)
+
+	if targetClean != destClean && !strings.HasPrefix(targetClean, destClean+string(os.PathSeparator)) {
+		return "", fmt.Errorf("bundle extract escape detected: name=%q target=%q dest=%q", header.Name, targetClean, destClean)
+	}
+	return target, nil
+}
+
+func extractRegularFile(tr *tar.Reader, target string) error {
+	if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
+		return err
+	}
+	wf, err := os.Create(target)
+	if err != nil {
+		return err
+	}
+	defer wf.Close()
+	if _, err := io.Copy(wf, tr); err != nil {
+		return err
 	}
 	return nil
 }
@@ -570,7 +589,6 @@ func verifyManifest(dir string) error {
 
 	scanner := bufio.NewScanner(f)
 	manifestFiles := make(map[string]bool)
-
 	dataDir := filepath.Join(dir, dirData)
 
 	for scanner.Scan() {
@@ -578,40 +596,51 @@ func verifyManifest(dir string) error {
 		if line == "" {
 			continue
 		}
-		parts := strings.Split(line, "\t")
-		if len(parts) != 3 {
-			return fmt.Errorf("invalid manifest line: %q", line)
+		relPath, err := verifyManifestEntry(line, dataDir)
+		if err != nil {
+			return err
 		}
-		relPath := parts[0]
-		expectedHash := parts[1]
-		var expectedSize int64
-		fmt.Sscanf(parts[2], "%d", &expectedSize)
-
 		manifestFiles[relPath] = true
-		fullPath := filepath.Join(dataDir, relPath)
-
-		info, err := os.Stat(fullPath)
-		if err != nil {
-			if os.IsNotExist(err) {
-				return fmt.Errorf("file in manifest missing from data: %s", relPath)
-			}
-			return err
-		}
-		if info.Size() != expectedSize {
-			return fmt.Errorf("size mismatch for %s: expected %d, got %d", relPath, expectedSize, info.Size())
-		}
-
-		actualHash, _, err := fileSha256AndSize(fullPath)
-		if err != nil {
-			return err
-		}
-		if actualHash != expectedHash {
-			return fmt.Errorf("content hash mismatch for %s", relPath)
-		}
 	}
 
-	// Reverse check: Walk data/ and ensure every file is in manifestFiles
-	err = filepath.Walk(dataDir, func(path string, info os.FileInfo, err error) error {
+	return checkDataFilesInManifest(dataDir, manifestFiles)
+}
+
+func verifyManifestEntry(line, dataDir string) (string, error) {
+	parts := strings.Split(line, "\t")
+	if len(parts) != 3 {
+		return "", fmt.Errorf("invalid manifest line: %q", line)
+	}
+	relPath := parts[0]
+	expectedHash := parts[1]
+	var expectedSize int64
+	fmt.Sscanf(parts[2], "%d", &expectedSize)
+
+	fullPath := filepath.Join(dataDir, relPath)
+
+	info, err := os.Stat(fullPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", fmt.Errorf("file in manifest missing from data: %s", relPath)
+		}
+		return "", err
+	}
+	if info.Size() != expectedSize {
+		return "", fmt.Errorf("size mismatch for %s: expected %d, got %d", relPath, expectedSize, info.Size())
+	}
+
+	actualHash, _, err := fileSha256AndSize(fullPath)
+	if err != nil {
+		return "", err
+	}
+	if actualHash != expectedHash {
+		return "", fmt.Errorf("content hash mismatch for %s", relPath)
+	}
+	return relPath, nil
+}
+
+func checkDataFilesInManifest(dataDir string, manifestFiles map[string]bool) error {
+	return filepath.Walk(dataDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -629,6 +658,4 @@ func verifyManifest(dir string) error {
 		}
 		return nil
 	})
-
-	return err
 }
