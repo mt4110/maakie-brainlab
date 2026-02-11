@@ -112,7 +112,92 @@ func runPack(args []string) error {
 		return fmt.Errorf("post-pack verification failed: %w", err)
 	}
 
+	// Append to audit chain (only on success)
+	if err := appendPackToChain(repoRoot, packPath); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: chain append failed: %v\n", err)
+		// Non-fatal: pack succeeded, chain is supplementary
+	}
+
 	return nil
+}
+
+func appendPackToChain(repoRoot, packPath string) error {
+	cw, err := NewChainWriter(repoRoot)
+	if err != nil {
+		return err
+	}
+
+	packSHA, _, err := fileSha256AndSize(packPath)
+	if err != nil {
+		return fmt.Errorf("failed to hash pack: %w", err)
+	}
+
+	manifestSHA, err := extractAndHashTarEntry(packPath, fileManifest)
+	if err != nil {
+		manifestSHA = "" // optional: may not exist in all packs
+	}
+
+	checksumsSHA, err := extractAndHashTarEntry(packPath, fileChecksums)
+	if err != nil {
+		checksumsSHA = ""
+	}
+
+	gitInfo := getGitInfo()
+	gitHead := gitInfo.SHA
+	if len(gitHead) > 12 {
+		gitHead = gitHead[:12]
+	}
+	if gitHead == "" {
+		gitHead = "nogit"
+	}
+
+	toolVer := "dev" // v1: hardcoded
+
+	entry := &ChainEntry{
+		TimestampUTC:    time.Now().UTC().Format("20060102T150405Z"),
+		PackName:        filepath.Base(packPath),
+		PackSHA256:      packSHA,
+		ManifestSHA256:  manifestSHA,
+		ChecksumsSHA256: checksumsSHA,
+		GitHead:         gitHead,
+		ToolVersion:     toolVer,
+	}
+
+	return cw.Append(entry)
+}
+
+// extractAndHashTarEntry extracts a named file from a tar.gz and returns its sha256.
+func extractAndHashTarEntry(tarPath, entryName string) (string, error) {
+	f, err := os.Open(tarPath)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	gz, err := gzip.NewReader(f)
+	if err != nil {
+		return "", err
+	}
+	defer gz.Close()
+
+	tr := tar.NewReader(gz)
+	for {
+		header, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return "", err
+		}
+		if header.Name == entryName {
+			h := sha256.New()
+			if _, err := io.Copy(h, tr); err != nil {
+				return "", err
+			}
+			return hex.EncodeToString(h.Sum(nil)), nil
+		}
+	}
+	return "", fmt.Errorf("%s not found in pack", entryName)
 }
 
 func performSigning(packPath string, keyFile string, repoRoot string, logger *AuditLogger) error {

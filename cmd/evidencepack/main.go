@@ -13,6 +13,7 @@ const (
 	CmdLs     = "ls"
 	CmdGc     = "gc"
 	CmdBundle = "bundle"
+	CmdAudit  = "audit"
 
 	errorFormat = "Error: %v\n"
 )
@@ -35,37 +36,39 @@ func main() {
 	cmd := os.Args[1]
 	args := os.Args[2:]
 
-	switch cmd {
-	case CmdPack:
-		if err := runPack(args); err != nil {
-			fmt.Fprintf(os.Stderr, errorFormat, err)
-			os.Exit(1)
+	if err := dispatch(cmd, args); err != nil {
+		fmt.Fprintf(os.Stderr, errorFormat, err)
+		exitCode := 1
+		if he, ok := err.(*HealthError); ok {
+			exitCode = he.Code
 		}
-	case CmdVerify:
-		if err := runVerify(args); err != nil {
-			fmt.Fprintf(os.Stderr, errorFormat, err)
-			os.Exit(1)
+		if ve, ok := err.(*VerifyError); ok {
+			exitCode = ve.Code
 		}
-	case CmdLs:
-		if err := runLs(args); err != nil {
-			fmt.Fprintf(os.Stderr, errorFormat, err)
-			os.Exit(1)
-		}
-	case CmdGc:
-		if err := runGc(args); err != nil {
-			fmt.Fprintf(os.Stderr, errorFormat, err)
-			os.Exit(1)
-		}
-	case CmdBundle:
-		if err := runBundle(args); err != nil {
-			fmt.Fprintf(os.Stderr, errorFormat, err)
-			os.Exit(1)
-		}
-	default:
-		usage()
-		os.Exit(1)
+		os.Exit(exitCode)
 	}
 }
+
+// commands maps subcommand names to their handler functions.
+var commands = map[string]func([]string) error{
+	CmdPack:   runPack,
+	CmdVerify: runVerify,
+	CmdLs:     runLs,
+	CmdGc:     runGc,
+	CmdBundle: runBundle,
+	CmdAudit:  runAudit,
+	CmdHealth: runHealth,
+}
+
+func dispatch(cmd string, args []string) error {
+	handler, ok := commands[cmd]
+	if !ok {
+		usage()
+		return fmt.Errorf("unknown command: %s", cmd)
+	}
+	return handler(args)
+}
+
 
 func usage() {
 	fmt.Fprintf(os.Stderr, "Usage: evidencepack <subcommand> [args]\n")
@@ -74,6 +77,8 @@ func usage() {
 	fmt.Fprintf(os.Stderr, "  verify  Verify an evidence pack contract\n")
 	fmt.Fprintf(os.Stderr, "  ls      List evidence packs in store\n")
 	fmt.Fprintf(os.Stderr, "  gc      Garbage collect old evidence packs\n")
+	fmt.Fprintf(os.Stderr, "  audit   Audit chain operations (verify)\n")
+	fmt.Fprintf(os.Stderr, "  health  Diagnose audit chain and local state\n")
 }
 
 // Stubs removed. Implementations are in separate files.

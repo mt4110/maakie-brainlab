@@ -17,6 +17,7 @@ func runBundle(args []string) error {
 	policyPath := fs.String("policy", "ops/reviewpack_policy.toml", "Path to policy file")
 	keysDir := fs.String("keys-dir", "ops/keys/reviewpack", "Path to keys directory")
 	outPath := fs.String("out", "", "Output bundle path (optional, auto-generated if empty)")
+	auditDir := fs.String("audit-dir", "", "Path to audit log directory (optional, embeds audit snapshot)")
 
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -40,6 +41,10 @@ func runBundle(args []string) error {
 	}
 
 	if err := copyPolicy(stagingDir, *policyPath); err != nil {
+		return err
+	}
+
+	if err := copyAuditIfPresent(stagingDir, *auditDir); err != nil {
 		return err
 	}
 
@@ -132,6 +137,33 @@ func copyPolicy(stagingDir, policyPath string) error {
 	return nil
 }
 
+// copyAuditIfPresent embeds an audit log snapshot into the bundle if auditDir is provided.
+func copyAuditIfPresent(stagingDir, auditDir string) error {
+	if auditDir == "" {
+		return nil
+	}
+
+	// S10-00: Copy TSV audit chain
+	srcPath := filepath.Join(auditDir, ChainFile)
+	if _, err := os.Stat(srcPath); err != nil {
+		if os.IsNotExist(err) {
+			fmt.Println("No audit chain found; skipping audit embed.")
+			return nil
+		}
+		return fmt.Errorf("failed to check audit chain: %w", err)
+	}
+
+	auditDst := filepath.Join(stagingDir, "audit")
+	if err := os.MkdirAll(auditDst, 0755); err != nil {
+		return fmt.Errorf("failed to create audit dir in bundle: %w", err)
+	}
+	if err := copyFile(srcPath, filepath.Join(auditDst, ChainFile)); err != nil {
+		return fmt.Errorf("failed to copy audit chain: %w", err)
+	}
+	fmt.Println("Embedded audit chain snapshot in bundle.")
+	return nil
+}
+
 func createReadme(stagingDir string) error {
 	readmeContent := `
 # Provenance Bundle v1
@@ -144,6 +176,7 @@ Contents:
 - signature/: Detached signature for the artifact.
 - policy/: Snapshot of policy used at bundle time.
 - keys/: Public keys needed for verification.
+- audit/: (Optional) Audit chain snapshot for provenance verification.
 
 NOTE: The signature protects the *artifact only*.
 The policy and keys are provided for self-contained verification, but their
