@@ -41,3 +41,11 @@ If verification fails due to policy:
    - See `ops/keys/reviewpack/README.md`.
 3. **Key Rejected**: The signer's KeyID is not in `allowed_key_ids`.
    - Update `ops/reviewpack_policy.toml` to include the KeyID.
+
+## IF_FAIL: Bundle Verification
+If `evidencepack verify` fails on a bundle input:
+1. **Bad Bundle Version**: `BUNDLE_VERSION` file is missing or invalid.
+2. **Manifest Checksum**: The bundle contents (artifact/signature/policy/keys) have been modified.
+   - The bundle is tamper-evident. Any change to internal files invalidates the manifest.
+3. **Inner Verification**: If the bundle structure is valid, the failure might be in the inner artifact verification (Signature/Policy).
+   - Use `--policy` or `--keys-dir` to override the bundled context if you suspect the bundled policy/keys are outdated or malicious.
