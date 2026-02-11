@@ -51,7 +51,7 @@ type ToolInfo struct {
 
 func runPack(args []string) error {
 	fs := flag.NewFlagSet("pack", flag.ExitOnError)
-	kind := fs.String("kind", "", "Kind of evidence")
+	kind := fs.String("kind", "", "Operator-defined label; used as packs/<kind>/... directory name. Examples: s10test, provenance")
 	store := fs.String("store", ".local/evidence_store", "Store directory")
 	sign := fs.Bool("sign", false, "Sign the artifact (requires key)")
 	keyFile := fs.String("key-file", "", "Path to private key file")
@@ -65,7 +65,16 @@ func runPack(args []string) error {
 	}
 
 	if *kind == "" {
-		return fmt.Errorf("--kind is required")
+		fmt.Fprintf(os.Stderr, "Error: --kind is required.\n")
+		fmt.Fprintf(os.Stderr, "Hint: --kind is an operator-defined label (dir name under <store>/packs/<kind>/).\n")
+		kinds, _ := listKinds(*store)
+		if len(kinds) > 0 {
+			fmt.Fprintf(os.Stderr, "Existing kinds in store: %s\n", strings.Join(kinds, ", "))
+		} else {
+			fmt.Fprintf(os.Stderr, "No existing kinds found. Example: evidencepack pack --kind s10test\n")
+		}
+		fmt.Fprintf(os.Stderr, "Output path: <store>/packs/<kind>/evidence_<kind>_<ts>_<sha>.tar.gz\n")
+		os.Exit(1)
 	}
 	if err := validateKind(*kind); err != nil {
 		return err

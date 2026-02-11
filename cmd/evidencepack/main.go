@@ -13,7 +13,6 @@ const (
 	CmdLs     = "ls"
 	CmdGc     = "gc"
 	CmdBundle = "bundle"
-	CmdAudit  = "audit"
 
 	errorFormat = "Error: %v\n"
 )
@@ -56,8 +55,8 @@ var commands = map[string]func([]string) error{
 	CmdLs:     runLs,
 	CmdGc:     runGc,
 	CmdBundle: runBundle,
-	CmdAudit:  runAudit,
 	CmdHealth: runHealth,
+	CmdKinds:  runKinds,
 }
 
 func dispatch(cmd string, args []string) error {
@@ -69,7 +68,6 @@ func dispatch(cmd string, args []string) error {
 	return handler(args)
 }
 
-
 func usage() {
 	fmt.Fprintf(os.Stderr, "Usage: evidencepack <subcommand> [args]\n")
 	fmt.Fprintf(os.Stderr, "Subcommands:\n")
@@ -77,8 +75,8 @@ func usage() {
 	fmt.Fprintf(os.Stderr, "  verify  Verify an evidence pack contract\n")
 	fmt.Fprintf(os.Stderr, "  ls      List evidence packs in store\n")
 	fmt.Fprintf(os.Stderr, "  gc      Garbage collect old evidence packs\n")
-	fmt.Fprintf(os.Stderr, "  audit   Audit chain operations (verify)\n")
 	fmt.Fprintf(os.Stderr, "  health  Diagnose audit chain and local state\n")
+	fmt.Fprintf(os.Stderr, "  kinds   List known evidence kinds in store\n")
 }
 
 // Stubs removed. Implementations are in separate files.
