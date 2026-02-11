@@ -3,7 +3,9 @@ package main
 import (
 	"archive/tar"
 	"compress/gzip"
+	"crypto/ed25519"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"flag"
@@ -51,8 +53,15 @@ func runPack(args []string) error {
 	fs := flag.NewFlagSet("pack", flag.ExitOnError)
 	kind := fs.String("kind", "", "Kind of evidence")
 	store := fs.String("store", ".local/evidence_store", "Store directory")
+	sign := fs.Bool("sign", false, "Sign the artifact (requires key)")
+	keyFile := fs.String("key-file", "", "Path to private key file")
 	if err := fs.Parse(args); err != nil {
 		return err
+	}
+
+	// Env Override for Sign
+	if os.Getenv("REVIEWPACK_SIGN") == "1" {
+		*sign = true
 	}
 
 	if *kind == "" {
@@ -73,21 +82,126 @@ func runPack(args []string) error {
 		Timestamp: time.Now().UTC(),
 	}
 
-	return executePack(config)
+	packPath, err := executePack(config)
+	if err != nil {
+		return err
+	}
+
+	// Init Audit Logger
+	repoRoot := "."
+	logger, err := NewAuditLogger(repoRoot)
+	if err != nil {
+		return fmt.Errorf("audit init failed: %w", err)
+	}
+
+	// Sign (Optional)
+	if *sign {
+		if err := performSigning(packPath, *keyFile, repoRoot, logger); err != nil {
+			return fmt.Errorf("signing failed: %w", err)
+		}
+	}
+
+	// Verify (Mandatory if sig exists)
+	if err := verifyPack(packPath, repoRoot, logger); err != nil {
+		return fmt.Errorf("post-pack verification failed: %w", err)
+	}
+
+	return nil
 }
 
-func executePack(cfg PackConfig) error {
+func performSigning(packPath string, keyFile string, repoRoot string, logger *AuditLogger) error {
+	privKey, err := LoadPrivateKey(keyFile)
+	if err != nil {
+		return fmt.Errorf("failed to load private key: %w", err)
+	}
+
+	pub := privKey.Public().(ed25519.PublicKey)
+	keyID, err := findKeyID(pub, repoRoot)
+	if err != nil {
+		return fmt.Errorf("key_id lookup failed (ensure public key is in ops/keys/reviewpack): %w", err)
+	}
+
+	// Sign
+	if err := signArtifact(packPath, privKey, keyID); err != nil {
+		logger.LogEvent(&AuditEntry{
+			EventType: "sign", Result: "fail", ArtifactPath: packPath, KeyID: keyID, UTCTimestamp: time.Now().UTC().Format(time.RFC3339),
+		})
+		return err
+	}
+
+	artSHA, _ := CalculateSHA256(packPath)
+	logger.LogEvent(&AuditEntry{
+		EventType: "sign", Result: "ok",
+		ArtifactPath: packPath, ArtifactSHA256: artSHA,
+		SigPath: packPath + ".sig.json", KeyID: keyID,
+		UTCTimestamp: time.Now().UTC().Format(time.RFC3339),
+	})
+
+	fmt.Printf("Signed artifact: %s (KeyID: %s)\n", packPath, keyID)
+	return nil
+}
+
+func signArtifact(packPath string, priv ed25519.PrivateKey, keyID string) error {
+	artSHA, err := CalculateSHA256(packPath)
+	if err != nil { return err }
+
+	chkSHA, err := extractAndHashChecksums(packPath)
+	if err != nil { return err }
+
+	msg := CanonicalMessage(artSHA, chkSHA)
+	sig := ed25519.Sign(priv, msg)
+
+	sidecar := SignatureSidecar{
+		Contract:        SigContractV1,
+		Alg:             AlgEd25519,
+		KeyID:           keyID,
+		ArtifactSHA256:  artSHA,
+		ChecksumsSHA256: chkSHA,
+		SignatureB64:    base64.StdEncoding.EncodeToString(sig),
+	}
+
+	bytes, _ := json.MarshalIndent(sidecar, "", "  ")
+	return os.WriteFile(packPath+".sig.json", bytes, 0644)
+}
+
+func extractAndHashChecksums(tarPath string) (string, error) {
+	f, err := os.Open(tarPath)
+	if err != nil { return "", err }
+	defer f.Close()
+
+	gz, err := gzip.NewReader(f)
+	if err != nil { return "", err }
+	defer gz.Close()
+
+	tr := tar.NewReader(gz)
+	for {
+		header, err := tr.Next()
+		if err == io.EOF { break }
+		if err != nil { return "", err }
+
+		if header.Name == "CHECKSUMS.sha256" {
+			h := sha256.New()
+			if _, err := io.Copy(h, tr); err != nil {
+				return "", err
+			}
+			return hex.EncodeToString(h.Sum(nil)), nil
+		}
+	}
+	return "", fmt.Errorf("CHECKSUMS.sha256 not found in pack")
+}
+
+func executePack(cfg PackConfig) (string, error) {
 	// 1. Prepare Staging Directory
 	stagingDir := filepath.Join(cfg.StoreDir, "tmp", fmt.Sprintf("pack_%d", time.Now().UnixNano()))
 	if err := os.MkdirAll(stagingDir, 0755); err != nil {
-		return fmt.Errorf("failed to create staging dir: %w", err)
+		return "", fmt.Errorf("failed to create staging dir: %w", err)
 	}
 	defer os.RemoveAll(stagingDir) // Cleanup on exit
 
 	// 2. Create Directory Structure
 	dataDir := filepath.Join(stagingDir, "data")
 	if err := os.MkdirAll(dataDir, 0755); err != nil {
-		return fmt.Errorf("failed to create data dir: %w", err)
+		return "", fmt.Errorf("failed to create data dir: %w", err)
 	}
 
 	// 3. Copy Payloads to data/
@@ -97,35 +211,35 @@ func executePack(cfg PackConfig) error {
 	for _, p := range cfg.Payloads {
 		info, err := os.Stat(p)
 		if err != nil {
-			return fmt.Errorf("failed to stat payload %s: %w", p, err)
+			return "", fmt.Errorf("failed to stat payload %s: %w", p, err)
 		}
 		destName := filepath.Base(p)
 		destPath := filepath.Join(dataDir, destName)
 
 		if info.IsDir() {
 			if err := copyDir(p, destPath); err != nil {
-				return fmt.Errorf("failed to copy dir %s: %w", p, err)
+				return "", fmt.Errorf("failed to copy dir %s: %w", p, err)
 			}
 		} else {
 			if err := copyFile(p, destPath); err != nil {
-				return fmt.Errorf("failed to copy file %s: %w", p, err)
+				return "", fmt.Errorf("failed to copy file %s: %w", p, err)
 			}
 		}
 	}
 
 	// 4. Generate EVIDENCE_VERSION
 	if err := os.WriteFile(filepath.Join(stagingDir, "EVIDENCE_VERSION"), []byte("v1\n"), 0644); err != nil {
-		return fmt.Errorf("failed to write EVIDENCE_VERSION: %w", err)
+		return "", fmt.Errorf("failed to write EVIDENCE_VERSION: %w", err)
 	}
 
 	// 5. Generate MANIFEST.tsv
 	manifestLines, err := generateManifest(dataDir)
 	if err != nil {
-		return fmt.Errorf("failed to generate manifest: %w", err)
+		return "", fmt.Errorf("failed to generate manifest: %w", err)
 	}
 	manifestPath := filepath.Join(stagingDir, "MANIFEST.tsv")
 	if err := os.WriteFile(manifestPath, []byte(strings.Join(manifestLines, "\n")+"\n"), 0644); err != nil {
-		return fmt.Errorf("failed to write MANIFEST.tsv: %w", err)
+		return "", fmt.Errorf("failed to write MANIFEST.tsv: %w", err)
 	}
 
 	// 6. Generate METADATA.json
@@ -141,21 +255,21 @@ func executePack(cfg PackConfig) error {
 	}
 	metaBytes, err := json.MarshalIndent(meta, "", "  ")
 	if err != nil {
-		return fmt.Errorf("failed to marshal metadata: %w", err)
+		return "", fmt.Errorf("failed to marshal metadata: %w", err)
 	}
 	// Append newline for POSIX niceness
 	metaBytes = append(metaBytes, '\n')
 	if err := os.WriteFile(filepath.Join(stagingDir, "METADATA.json"), metaBytes, 0644); err != nil {
-		return fmt.Errorf("failed to write METADATA.json: %w", err)
+		return "", fmt.Errorf("failed to write METADATA.json: %w", err)
 	}
 
 	// 7. Generate CHECKSUMS.sha256
 	checksums, err := calculateRootChecksums(stagingDir)
 	if err != nil {
-		return fmt.Errorf("failed to calculate checksums: %w", err)
+		return "", fmt.Errorf("failed to calculate checksums: %w", err)
 	}
 	if err := os.WriteFile(filepath.Join(stagingDir, "CHECKSUMS.sha256"), []byte(checksums), 0644); err != nil {
-		return fmt.Errorf("failed to write CHECKSUMS.sha256: %w", err)
+		return "", fmt.Errorf("failed to write CHECKSUMS.sha256: %w", err)
 	}
 
 	// 8. Create Tarball (Deterministic)
@@ -169,39 +283,39 @@ func executePack(cfg PackConfig) error {
 	}
 	tsStr := cfg.Timestamp.Format("20060102T150405.000000000Z")
 	tarName := fmt.Sprintf("evidence_%s_%s_%s.tar.gz", cfg.Kind, tsStr, shortSha)
-	
+
 	// Ensure store packs dir exists
 	packsDir := filepath.Join(cfg.StoreDir, "packs", cfg.Kind)
 	if err := os.MkdirAll(packsDir, 0755); err != nil {
-		return fmt.Errorf("failed to create packs dir: %w", err)
+		return "", fmt.Errorf("failed to create packs dir: %w", err)
 	}
-	
+
 	tarPath := filepath.Join(packsDir, tarName)
-	// We write to a tmp file specific to the target first, then rename? 
-	// Or write directly since we are creating a new file. 
+	// We write to a tmp file specific to the target first, then rename?
+	// Or write directly since we are creating a new file.
 	// Safer to write to tmp then move.
 	tmpTarPath := filepath.Join(filepath.Join(cfg.StoreDir, "tmp"), tarName)
-	
+
 	if err := createDeterministicTar(stagingDir, tmpTarPath); err != nil {
-		return fmt.Errorf("failed to create tar: %w", err)
+		return "", fmt.Errorf("failed to create tar: %w", err)
 	}
 
 	// 9. Atomic Move
 	if err := os.Rename(tmpTarPath, tarPath); err != nil {
-		return fmt.Errorf("failed to move tar to store: %w", err)
+		return "", fmt.Errorf("failed to move tar to store: %w", err)
 	}
 
 	// 10. Update Index
 	indexDir := filepath.Join(cfg.StoreDir, "index")
 	if err := os.MkdirAll(indexDir, 0755); err != nil {
-		return fmt.Errorf("failed to create index dir: %w", err)
+		return "", fmt.Errorf("failed to create index dir: %w", err)
 	}
 	indexPath := filepath.Join(indexDir, "packs.tsv")
-	
+
 	// Calculate final tar hash and size for index
 	tarHash, tarSize, err := fileSha256AndSize(tarPath)
 	if err != nil {
-		return fmt.Errorf("failed to hash tar: %w", err)
+		return "", fmt.Errorf("failed to hash tar: %w", err)
 	}
 
 	// Columns: created_at_utc, kind, filename, git_sha, sha256, size
@@ -213,18 +327,18 @@ func executePack(cfg PackConfig) error {
 		tarHash,
 		tarSize,
 	)
-	
+
 	f, err := os.OpenFile(indexPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		return fmt.Errorf("failed to open index: %w", err)
+		return "", fmt.Errorf("failed to open index: %w", err)
 	}
 	defer f.Close()
 	if _, err := f.WriteString(entry); err != nil {
-		return fmt.Errorf("failed to write index: %w", err)
+		return "", fmt.Errorf("failed to write index: %w", err)
 	}
 
 	fmt.Printf("Created evidence pack: %s\n", tarPath)
-	return nil
+	return tarPath, nil
 }
 
 // Helpers
@@ -304,7 +418,7 @@ func generateManifest(dataDir string) ([]string, error) {
 		// Assuming data/ is root for manifest paths.
 		// Normalized path separator
 		relPath = filepath.ToSlash(relPath)
-		
+
 		hash, size, err := fileSha256AndSize(path)
 		if err != nil {
 			return err
@@ -408,7 +522,7 @@ func createDeterministicTar(srcDir, tarPath string) error {
 		if err != nil {
 			return err
 		}
-		
+
 		header, err := tar.FileInfoHeader(it.info, "")
 		if err != nil {
 			return err

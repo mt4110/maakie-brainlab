@@ -147,7 +147,7 @@ func scanPacks(root string) ([]PackFile, error) {
 		}
 		kind := kindEntry.Name()
 		kindDir := filepath.Join(root, kind)
-		
+
 		packEntries, err := os.ReadDir(kindDir)
 		if err != nil {
 			return nil, err
@@ -163,7 +163,7 @@ func scanPacks(root string) ([]PackFile, error) {
 			if len(parts) < 3 {
 				continue
 			}
-			
+
 			// Find the timestamp part. It's usually parts[len-2] if we assume fixed suffix
 			// But kind can have underscores? The contract says kind: [a-z][a-z0-9_]*
 			// So parsing is tricky.
@@ -172,11 +172,11 @@ func scanPacks(root string) ([]PackFile, error) {
 			// last: <gitsha>.tar.gz
 			// 2nd last: <UTC>
 			// rest: evidence_<kind>
-			
+
 			if len(parts) < 4 { // evidence, kind..., utc, sha.tar.gz
-				continue 
+				continue
 			}
-			
+
 			tsStr := parts[len(parts)-2]
 			ts, err := time.Parse("20060102T150405Z", tsStr)
 			if err != nil {
@@ -221,14 +221,14 @@ func applyRetentionRules(files []PackFile, cfg RetentionConfig) ([]PackFile, []P
 		policy, ok := cfg.Kinds[kind]
 		keepLast := cfg.DefaultKeepLast
 		maxAge := cfg.DefaultMaxAgeDays
-		
+
 		if ok {
 			if policy.KeepLast > 0 { keepLast = policy.KeepLast }
 			if policy.MaxAgeDays > 0 { maxAge = policy.MaxAgeDays }
 		}
 
 		now := time.Now().UTC()
-		
+
 		for i, f := range kindFiles {
 			// Rule 1: Keep Last N
 			if i < keepLast {
@@ -237,10 +237,10 @@ func applyRetentionRules(files []PackFile, cfg RetentionConfig) ([]PackFile, []P
 				// But user prompt says "kind ごとに keep_last 超過分を “古い順” で候補化, max_age_days 超過分を候補化"
 				// Usually this means: "If older than X days AND index >= keepLast"
 				// Let's assume keepLast protects files even if old.
-				
+
 				// Wait, "defaults: keep_last=30". If I have 1 file 2 years old, do I keep it?
 				// Usually yes, to have *some* history.
-				
+
 				kept = append(kept, f)
 			} else {
 				// Candidate for deletion?
@@ -273,10 +273,10 @@ func applyRetentionRules(files []PackFile, cfg RetentionConfig) ([]PackFile, []P
 		var newKept []PackFile
 		// We remove from 'kept' and move to 'candidates'
 		// Iterate and drop until size matches
-		
+
 		// Actually, simpler to rebuild 'newKept' from end (newest)
 		// But we need to drop oldest.
-		
+
 		for _, f := range kept {
 			if totalSize > cfg.MaxTotalBytes {
 				f.Reason = fmt.Sprintf("MaxTotalBytes(%d) exceeded", cfg.MaxTotalBytes)
