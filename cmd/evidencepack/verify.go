@@ -148,11 +148,23 @@ func prepareBundleContext(ctx *verContext, cfg VerifyConfig) (*verContext, error
 	// Redirect to bundle contents
 	artDir := filepath.Join(tmpDir, "artifact")
 	entries, err := os.ReadDir(artDir)
-	if err != nil || len(entries) == 0 {
+	if err != nil {
 		cleanup()
-		return nil, fmt.Errorf("bundle artifact dir empty or unreadable")
+		return nil, fmt.Errorf("failed to read artifact dir: %w", err)
 	}
-	ctx.TargetArtifact = filepath.Join(artDir, entries[0].Name())
+
+	var artifacts []string
+	for _, e := range entries {
+		if e.Type().IsRegular() {
+			artifacts = append(artifacts, e.Name())
+		}
+	}
+
+	if len(artifacts) != 1 {
+		cleanup()
+		return nil, fmt.Errorf("bundle must contain exactly one artifact file, found %d", len(artifacts))
+	}
+	ctx.TargetArtifact = filepath.Join(artDir, artifacts[0])
 
 	// Only override if NOT set by user flags
 	if cfg.KeysDir == "" {
@@ -316,11 +328,13 @@ func unpackBundle(path string) (string, func(), error) {
 
 	// Verify Manifest
 	manPath := filepath.Join(tmpDir, "manifest", "BUNDLE_MANIFEST.tsv")
-	if _, err := os.Stat(manPath); err == nil {
-		if err := verifyBundleManifest(tmpDir, manPath); err != nil {
-			cleanup()
-			return "", nil, fmt.Errorf("bundle manifest verification failed: %w", err)
-		}
+	if _, err := os.Stat(manPath); err != nil {
+		cleanup()
+		return "", nil, fmt.Errorf("mandatory bundle manifest missing: %w", err)
+	}
+	if err := verifyBundleManifest(tmpDir, manPath); err != nil {
+		cleanup()
+		return "", nil, fmt.Errorf("bundle manifest verification failed: %w", err)
 	}
 	return tmpDir, cleanup, nil
 }

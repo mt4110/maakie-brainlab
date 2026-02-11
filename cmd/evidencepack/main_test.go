@@ -15,6 +15,59 @@ import (
 	"time"
 )
 
+func TestVerifyAcceptsArtifactOrBundle(t *testing.T) {
+	// 1. Create Artifact
+	tmp := t.TempDir()
+	storeDir := filepath.Join(tmp, "store")
+	payload := filepath.Join(tmp, "payload.txt")
+	os.WriteFile(payload, []byte("content"), 0644)
+
+	// Pack (Standard Artifact)
+	runPack([]string{"--kind", "compat", "--store", storeDir, payload})
+
+	entries, _ := os.ReadDir(filepath.Join(storeDir, "packs", "compat"))
+	artifactPath := filepath.Join(storeDir, "packs", "compat", entries[0].Name())
+
+	// Verify Artifact (Regression)
+	if err := verifyPack(VerifyConfig{Path: artifactPath, RepoRoot: ".", PolicyMode: "local"}); err != nil {
+		t.Fatalf("Failed to verify standard artifact: %v", err)
+	}
+
+	// 2. Create Bundle
+	// We need a dummy policy/key setup for bundle creation?
+	// runBundle requires flags.
+	// We'll skip signing for this test to keep it simple, or use dummy key?
+	// If we skip signing, bundle verification will pass if policy allows.
+	// Default permissive policy allows unsigned in local.
+	
+	bundlePath := filepath.Join(tmp, "bundle.tar.gz")
+	
+	// We need keys dir for runBundle even if empty?
+	// "keys-dir" default is ops/keys/reviewpack.
+	// runBundle logic: "Find key used in signature".
+	// If no signature, keys copying is skipped.
+	// Policy is copied.
+	
+	// Create dummy policy
+	policyFile := filepath.Join(tmp, "policy.toml")
+	os.WriteFile(policyFile, []byte("version=1\n[enforcement]\nlocal='permissive'\n"), 0644)
+
+	err := runBundle([]string{
+		"--artifact", artifactPath,
+		"--policy", policyFile,
+		"--out", bundlePath,
+		// keys-dir defaults to non-existent, should be fine if no sig
+	})
+	if err != nil {
+		t.Fatalf("Failed to create bundle: %v", err)
+	}
+
+	// Verify Bundle (New Feature)
+	if err := verifyPack(VerifyConfig{Path: bundlePath, RepoRoot: ".", PolicyMode: "local"}); err != nil {
+		t.Fatalf("Failed to verify bundle: %v", err)
+	}
+}
+
 func TestRoundTrip_OK(t *testing.T) {
 	tmpDir := t.TempDir()
 	storeDir := filepath.Join(tmpDir, "store")
@@ -135,7 +188,7 @@ func TestVerify_FailsOnPathTraversal(t *testing.T) {
 		tw.Write([]byte("test"))
 	})
 
-	if err := verifyPack(VerifyConfig{Path: packPath, RepoRoot: "."}); err == nil {
+	if err := verifyPack(VerifyConfig{Path: packPath, RepoRoot: ".", PolicyMode: "local"}); err == nil {
 		t.Fatal("Expected verify failure on path traversal, passed")
 	} else {
 		t.Logf("Got expected error: %v", err)

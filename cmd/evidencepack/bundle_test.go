@@ -156,7 +156,7 @@ tamperkey = "owner"
 	createDeterministicTar(explodeDir, badBundlePath)
 
 	// 5. Verify -> Should Fail (Signature Mismatch)
-	if err := runVerify([]string{"--pack", badBundlePath}); err == nil {
+	if err := runVerify([]string{"--pack", badBundlePath, "--policy-mode", "local"}); err == nil {
 		t.Fatal("Verify should have failed on tampered artifact")
 	} else {
 		if !strings.Contains(err.Error(), "cryptographic verification failed") && !strings.Contains(err.Error(), "artifact mismatch") {
