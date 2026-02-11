@@ -52,6 +52,27 @@ func verifyPack(path string) error {
 	}
 
 	// 2. Structure Check
+	// Strict check: Only ALLOWED entries in root
+	allowed := map[string]bool{
+		"EVIDENCE_VERSION": true,
+		"METADATA.json":    true,
+		"MANIFEST.tsv":     true,
+		"CHECKSUMS.sha256": true,
+		"data":             true,
+	}
+
+	entries, err := os.ReadDir(tempDir)
+	if err != nil {
+		return fmt.Errorf("failed to read extracted root: %w", err)
+	}
+
+	for _, entry := range entries {
+		name := entry.Name()
+		if !allowed[name] {
+			return fmt.Errorf("forbidden root entry: %s", name)
+		}
+	}
+
 	required := []string{"EVIDENCE_VERSION", "METADATA.json", "MANIFEST.tsv", "CHECKSUMS.sha256", "data"}
 	for _, req := range required {
 		info, err := os.Stat(filepath.Join(tempDir, req))

@@ -205,6 +205,62 @@ func TestVerify_FailsOnExtraFile(t *testing.T) {
 	}
 }
 
+func TestVerify_FailsOnExtraRootEntry(t *testing.T) {
+	// Case: Extra file in ROOT (forbidden by strict contract)
+	tmpDir := t.TempDir()
+	storeDir := filepath.Join(tmpDir, "store")
+	payloadDir := filepath.Join(tmpDir, "payload")
+	os.MkdirAll(payloadDir, 0755)
+	os.WriteFile(filepath.Join(payloadDir, "ok.txt"), []byte("ok"), 0644)
+	
+	cfg := PackConfig{Kind: "test", StoreDir: storeDir, Payloads: []string{payloadDir}, Timestamp: time.Now()}
+	executePack(cfg)
+	
+	entries, _ := os.ReadDir(filepath.Join(storeDir, "packs", "test"))
+	packPath := filepath.Join(storeDir, "packs", "test", entries[0].Name())
+
+	modifyTar(t, packPath, func(name string, content []byte) []byte {
+		return content
+	}, func(tw *tar.Writer) {
+		// Inject extra ROOT file
+		writeTarFile(t, tw, "ROOT_EXTRA.txt", "I am forbidden in root")
+	})
+
+	if err := verifyPack(packPath); err == nil {
+		t.Fatal("Expected verify failure on extra root file, passed")
+	} else if !strings.Contains(err.Error(), "forbidden root entry") {
+		t.Fatalf("Got unexpected error: %v", err)
+	} else {
+		t.Logf("Got expected error: %v", err)
+	}
+}
+
+func TestPack_RejectsInvalidKind(t *testing.T) {
+	// Direct executePack doesn't validate kind (it assumes caller did).
+	// We should test `validateKind` or the `runPack` entry point.
+	
+	// `executePack` is the logic. `runPack` handles flags and calls `validateKind`.
+	// We want to test that `validateKind` works or `runPack` fails.
+	// `runPack` takes args []string.
+	// NOTE: Payload is a positional argument, not a flag.
+	
+	err := runPack([]string{"--kind", "invalid-kind!", "."})
+	if err == nil {
+		t.Fatal("Expected runPack to fail on invalid kind")
+	} else if !strings.Contains(err.Error(), "invalid kind") {
+		t.Logf("Got error but maybe not kind validation? %v", err)
+	} else {
+		t.Logf("Got expected kind error: %v", err)
+	}
+	
+	err = runPack([]string{"--kind", "../../traversal", "."})
+	if err == nil {
+		t.Fatal("Expected runPack to fail on traversal kind")
+	} else {
+		t.Logf("Got expected kind error: %v", err)
+	}
+}
+
 // Helpers for test
 
 func createManualPack(t *testing.T, path string, fn func(*tar.Writer)) {

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"regexp"
 )
 
 // Subcommands
@@ -12,6 +13,15 @@ const (
 	CmdLs     = "ls"
 	CmdGc     = "gc"
 )
+
+var kindRegex = regexp.MustCompile(`^[a-z][a-z0-9_]{0,31}$`)
+
+func validateKind(k string) error {
+	if !kindRegex.MatchString(k) {
+		return fmt.Errorf("invalid kind %q: must match %s", k, kindRegex.String())
+	}
+	return nil
+}
 
 func main() {
 	if len(os.Args) < 2 {

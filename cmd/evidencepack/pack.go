@@ -58,6 +58,9 @@ func runPack(args []string) error {
 	if *kind == "" {
 		return fmt.Errorf("--kind is required")
 	}
+	if err := validateKind(*kind); err != nil {
+		return err
+	}
 	payloads := fs.Args()
 	if len(payloads) == 0 {
 		return fmt.Errorf("at least one payload path is required")
@@ -164,7 +167,7 @@ func executePack(cfg PackConfig) error {
 	if shortSha == "" {
 		shortSha = "nosha"
 	}
-	tsStr := cfg.Timestamp.Format("20060102T150405Z")
+	tsStr := cfg.Timestamp.Format("20060102T150405.000000000Z")
 	tarName := fmt.Sprintf("evidence_%s_%s_%s.tar.gz", cfg.Kind, tsStr, shortSha)
 	
 	// Ensure store packs dir exists
