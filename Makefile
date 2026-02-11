@@ -91,3 +91,17 @@ verify-pack:
 seed-eval:
 	bash ops/seed_eval_results.sh
 
+
+# S6 Evidence Pipeline (v1)
+evidence-pack-demo:
+	go run ./cmd/evidencepack pack --kind demo --store .local/evidence_store cmd/evidencepack/main.go
+
+evidence-verify-demo:
+	@echo "Verifying latest demo pack..."
+	@LATEST=$$(ls -t .local/evidence_store/packs/demo/*.tar.gz | head -n1); \
+	go run ./cmd/evidencepack verify --pack "$$LATEST"
+
+evidence-gc:
+	go run ./cmd/evidencepack gc --store .local/evidence_store
+
+
