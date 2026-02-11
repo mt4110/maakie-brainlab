@@ -87,6 +87,7 @@ rm -f "${CI_DIR}/10_status.tsv"
 # Mimic CI Env (verify-only)
 export S5_MODE="verify-only"
 export GATE1_VERIFY_ONLY="1"
+export REVIEWPACK_POLICY_MODE="ci"
 export S6_SIGNING_KEY="${S6_SIGNING_KEY:-}"
 export S6_VERIFY_KEY="${S6_VERIFY_KEY:-}"
 

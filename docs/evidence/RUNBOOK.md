@@ -33,3 +33,11 @@ If `index/packs.tsv` is corrupted or missing:
 ## GC Safety
 - Always run `evidencepack gc` (dry-run) first to check what will be deleted.
 - Only run with `--apply` when confident.
+
+## IF_FAIL: Policy Violation (S8)
+If verification fails due to policy:
+1. **Check the Mode**: Output shows `Mode: strict (Environment: ci)`.
+2. **Missing Signature**: If policy requires it (`require_signature_in_ci`), you must sign the artifact.
+   - See `ops/keys/reviewpack/README.md`.
+3. **Key Rejected**: The signer's KeyID is not in `allowed_key_ids`.
+   - Update `ops/reviewpack_policy.toml` to include the KeyID.

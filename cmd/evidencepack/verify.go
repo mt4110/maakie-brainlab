@@ -17,6 +17,7 @@ import (
 func runVerify(args []string) error {
 	fs := flag.NewFlagSet("verify", flag.ExitOnError)
 	packPath := fs.String("pack", "", "Path to evidence pack file")
+	policyMode := fs.String("policy-mode", "", "Policy mode (auto, local, ci)")
 
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -35,72 +36,113 @@ func runVerify(args []string) error {
 	repoRoot := "."
 	logger, err := NewAuditLogger(repoRoot)
 	if err != nil {
-		// In verify-only mode, maybe we warn but proceed?
-		// S7: "audit log... verify... S7では書く"
-		// If we can't write audit log, should we fail?
-		// User said "Audit log created... hash chain not broken".
-		// Fail safe: warning.
 		fmt.Fprintf(os.Stderr, "Warning: Audit logger init failed: %v\n", err)
 	}
 
-	return verifyPack(*packPath, repoRoot, logger)
+	return verifyPack(*packPath, repoRoot, logger, *policyMode)
 }
 
-// verifyPack enforces the full contract: Structure + Signature (if present)
-func verifyPack(path string, repoRoot string, logger *AuditLogger) error {
+// verifyPack enforces the full contract: Structure + Signature (if present) + Policy
+func verifyPack(path string, repoRoot string, logger *AuditLogger, cliPolicyMode string) error {
 	// 1. Structural Verify (v1)
 	if err := verifyStructure(path); err != nil {
 		return err
 	}
 
-	// 2. Signature Check (S7)
-	sigPath := path + ".sig.json"
+	// 2. Policy Setup
+	env := DeterminePolicyEnv(cliPolicyMode)
+	policy, err := loadPolicySafe(repoRoot, env)
+	if err != nil {
+		return err
+	}
 
-	// Check if sig exists
-	if _, err := os.Stat(sigPath); err == nil {
-		// SIG EXISTS -> MANDATORY VERIFY
-		fmt.Printf("Signature found: %s. Verifying...\n", sigPath)
+	// 3. Signature Check (S7)
+	hasSignature, keyID, err := verifySignatureWithAudit(path, repoRoot, logger)
+	if err != nil {
+		return err
+	}
 
-		verifyErr := verifySignature(path, sigPath)
-		res := "ok"
-		if verifyErr != nil {
-			res = "fail"
-		}
-
-		// Log to Audit
-		if logger != nil {
-			// Extract KeyID from sidecar for logging
-			var keyID string
-			if data, err := os.ReadFile(sigPath); err == nil {
-				var sc SignatureSidecar
-				if json.Unmarshal(data, &sc) == nil {
-					keyID = sc.KeyID
-				}
-			}
-
-			artSHA, _ := CalculateSHA256(path)
-
-			logger.LogEvent(&AuditEntry{
-				EventType: "verify",
-				Result:    res,
-				ArtifactPath: path,
-				ArtifactSHA256: artSHA,
-				SigPath: sigPath,
-				KeyID: keyID,
-				UTCTimestamp: time.Now().UTC().Format(time.RFC3339),
-			})
-		}
-
-		if verifyErr != nil {
-			return fmt.Errorf("cryptographic verification failed: %w", verifyErr)
-		}
-		fmt.Println("Signature VERIFIED.")
-	} else {
-		// No signature. S7: Pass. (S8 may enforce)
-		fmt.Println("No signature found (skipped).")
+	// 4. Policy Evaluation (S8)
+	if err := EvaluatePolicy(policy, env, hasSignature, keyID); err != nil {
+		return formatPolicyError(err, policy, env, keyID, filepath.Join(repoRoot, "ops", "reviewpack_policy.toml"))
 	}
 
 	return nil
+}
+
+func loadPolicySafe(repoRoot, env string) (*ReviewPackPolicy, error) {
+	policyPath := filepath.Join(repoRoot, "ops", "reviewpack_policy.toml")
+	policy, err := LoadPolicy(policyPath)
+	if err != nil {
+		if env == EnvCI {
+			return nil, fmt.Errorf("FATAL: Failed to load policy in CI environment (%s): %w\nSee docs/evidence/RUNBOOK.md for policy recovery.", policyPath, err)
+		}
+		fmt.Fprintf(os.Stderr, "Warning: Failed to load policy (%v). Proceeding with permissive default.\n", err)
+		return &ReviewPackPolicy{
+			Version:     1,
+			Enforcement: EnforcementConfig{ModeLocal: ModePermissive, ModeCI: ModeStrict},
+		}, nil
+	}
+	return policy, nil
+}
+
+func verifySignatureWithAudit(path, repoRoot string, logger *AuditLogger) (bool, string, error) {
+	sigPath := path + ".sig.json"
+	if _, err := os.Stat(sigPath); err != nil {
+		fmt.Println("No signature found (skipped).")
+		return false, "", nil
+	}
+
+	fmt.Printf("Signature found: %s. Verifying...\n", sigPath)
+	verifyErr := verifySignature(path, sigPath)
+	res := "ok"
+	if verifyErr != nil {
+		res = "fail"
+	}
+
+	var keyID string
+	if data, err := os.ReadFile(sigPath); err == nil {
+		var sc SignatureSidecar
+		if json.Unmarshal(data, &sc) == nil {
+			keyID = sc.KeyID
+		}
+	}
+
+	if logger != nil {
+		artSHA, _ := CalculateSHA256(path)
+		logger.LogEvent(&AuditEntry{
+			EventType:      "verify",
+			Result:         res,
+			ArtifactPath:   path,
+			ArtifactSHA256: artSHA,
+			SigPath:        sigPath,
+			KeyID:          keyID,
+			UTCTimestamp:   time.Now().UTC().Format(time.RFC3339),
+		})
+	}
+
+	if verifyErr != nil {
+		return true, keyID, fmt.Errorf("cryptographic verification failed: %w", verifyErr)
+	}
+
+	fmt.Println("Signature VERIFIED.")
+	return true, keyID, nil
+}
+
+func formatPolicyError(err error, policy *ReviewPackPolicy, env, keyID, policyPath string) error {
+	return fmt.Errorf(`
+================================================================================
+POLICY VIOLATION (%s defined in %s)
+Mode: %s (Environment: %s)
+
+Error: %v
+
+ACTION REQUIRED:
+1. Check ops/reviewpack_policy.toml
+2. If signature required: Sign the artifact (see ops/keys/reviewpack/README.md)
+3. If key rejected: Add KeyID %s to 'allowed_key_ids' in policy
+================================================================================
+`, "v1", policyPath, policy.Enforcement.ModeCI, env, err, keyID)
 }
 
 // verifyStructure checks the inner contents of the pack

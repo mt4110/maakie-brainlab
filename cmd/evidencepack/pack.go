@@ -102,7 +102,7 @@ func runPack(args []string) error {
 	}
 
 	// Verify (Mandatory if sig exists)
-	if err := verifyPack(packPath, repoRoot, logger); err != nil {
+	if err := verifyPack(packPath, repoRoot, logger, ""); err != nil {
 		return fmt.Errorf("post-pack verification failed: %w", err)
 	}
 

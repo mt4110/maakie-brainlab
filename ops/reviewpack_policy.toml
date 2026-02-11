@@ -1,0 +1,20 @@
+version = 1
+
+[keys]
+allowed_key_ids = ["example-key-id"]  # CIで署名を検証するならここに登録
+
+[enforcement]
+# local は壊さない
+mode_local = "permissive"
+# CI は統治する（ただし v1 では “署名必須化” は policy によってオンにできるが、デフォルトはfalseで維持）
+mode_ci = "strict"
+
+[signing]
+# v1 デフォルトは false（段階的に強くするため）
+require_signature_in_ci = false
+# 署名がある場合、CI(strict)では allowlist を必ず強制
+enforce_allowlist_in_ci = true
+
+[audit]
+# v1 デフォルト false（S10で health 化する前段）
+require_audit_in_ci = false

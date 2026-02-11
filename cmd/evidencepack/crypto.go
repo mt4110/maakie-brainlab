@@ -42,7 +42,7 @@ func CanonicalMessage(artifactSHA, checksumsSHA string) []byte {
 	// reviewpack.sig.v1\n
 	// artifact_sha256=<hex>\n
 	// checksums_sha256=<hex>
-	return []byte(fmt.Sprintf("%s\nartifact_sha256=%s\nchecksums_sha256=%s",
+	return []byte(fmt.Sprintf("%s\nartifact_sha256=%s\nchecksums_sha256=%s\n",
 		SigContractV1, artifactSHA, checksumsSHA))
 }
 

@@ -28,6 +28,7 @@ jobs:
     env:
       GATE1_VERIFY_ONLY: "1"
       S5_MODE: "verify-only"
+      REVIEWPACK_POLICY_MODE: "ci"
     steps:
       - uses: actions/checkout@v4
         with:
