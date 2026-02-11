@@ -1,0 +1,6 @@
+#!/bin/bash
+# .githooks/pre-commit
+# Enforce AI Text Guard
+
+echo "== Pre-commit: AI Text Guard =="
+bash ops/finalize_clean.sh --check

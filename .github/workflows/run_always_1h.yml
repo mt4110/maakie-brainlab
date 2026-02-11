@@ -1,0 +1,70 @@
+name: Run Always 1h
+
+on:
+  schedule:
+    - cron: '0 * * * *' # Hourly
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+
+
+permissions:
+  contents: read
+
+jobs:
+  run-always-1h:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Sanity Check (Finalize Clean)
+        run: bash ops/finalize_clean.sh --check
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Create venv & Install Deps
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install -r requirements.txt
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version-file: go.mod
+          cache: true
+          cache-dependency-path: go.sum
+
+      # Ephemeral Keys for potential signing (if script supports it)
+      - name: Generate Ephemeral Keys
+        shell: bash
+        run: |
+          set -euo pipefail
+          KEYDIR="$(mktemp -d)"
+          echo "KEYDIR=$KEYDIR" >> "$GITHUB_ENV"
+          go run ./cmd/gopsign/main.go -mode=keygen -id="CI Builder" -out-dir "$KEYDIR"
+          echo "S6_SIGNING_KEY=$KEYDIR/privkey.asc" >> "$GITHUB_ENV"
+          echo "S6_VERIFY_KEY=$KEYDIR/pubkey.asc" >> "$GITHUB_ENV"
+
+      - name: Run Always 1h (Script)
+        run: |
+          bash ops/run_always_1h.sh
+
+      - name: Upload Artifacts (Run Always)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          if-no-files-found: error
+          name: run-always-${{ github.run_number }}-${{ github.sha }}
+          path: |
+            .local/run-always/
+          retention-days: 14

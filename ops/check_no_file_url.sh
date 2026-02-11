@@ -8,7 +8,7 @@ if [[ -z "${ROOT}" ]]; then
 fi
 cd "$ROOT"
 
-echo "[CHECK] Scanning for forbidden file:// links..."
+echo "[CHECK] Scanning for forbidden file[:]// links..."
 
 targets=()
 [[ -d docs ]] && targets+=("docs")
@@ -30,7 +30,7 @@ for t in "${targets[@]}"; do
 done
 
 # Deny: link-style or raw file URLs (to prevent accidental clickables)
-pattern='\]\(file://|<file://|file:///'
+pattern='\]\(file[:]//|<file[:]//|file[:]///'
 
 matches=()
 for t in "${targets[@]}"; do
@@ -42,10 +42,10 @@ for t in "${targets[@]}"; do
 done
 
 if (( ${#matches[@]} > 0 )); then
-  echo "[FAIL] Forbidden file:// link(s) found:" >&2
+  echo "[FAIL] Forbidden file[:]// link(s) found:" >&2
   printf '%s\n' "${matches[@]}" >&2
-  echo "next: remove link-style file:// and use repo-relative paths. See docs/ops/IF_FAIL_C10FIX04.md" >&2
+  echo "next: remove link-style file[:]// and use repo-relative paths. See docs/ops/IF_FAIL_C10FIX04.md" >&2
   exit 1
 fi
 
-echo "[OK] No forbidden file:// links found."
+echo "[OK] No forbidden file[:]// links found."
