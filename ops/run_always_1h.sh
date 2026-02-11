@@ -13,6 +13,8 @@ SHORT_SHA="$(git rev-parse --short HEAD)"
 RUN_ID="${TIMESTAMP_UTC}_${SHORT_SHA}"
 RUN_VAR_DIR=".local/run-always"
 RUN_DIR="${RUN_VAR_DIR}/${RUN_ID}"
+# Save RUN_DIR for CI to easy pickup
+echo "${RUN_DIR}" > "${RUN_VAR_DIR}/.last_run_dir"
 
 # Safety: Ensure we are in the repo root
 REPO_ROOT="$(git rev-parse --show-toplevel)"
@@ -122,6 +124,16 @@ run_step "verify_evidence" bash -c 'PACK=$(ls -t .local/reviewpack_artifacts/evi
 
 # 3.5 Verify Bundle
 run_step "verify_bundle" bash -c 'PACK=$(ls -t review_bundle_*.tar.gz | head -n 1); make verify-pack PACK="$PACK"'
+
+# 3.5b Move Artifacts to RUN_DIR (Consolidation)
+echo "== Artifact Consolidation ==" | tee -a "${CI_DIR}/logs.txt"
+mv review_bundle_*.tar.gz "${RUN_DIR}/" 2>/dev/null || true
+if ls review_pack_*.tar.gz >/dev/null 2>&1; then
+    mv review_pack_*.tar.gz "${RUN_DIR}/"
+fi
+# Copy logs/summary from .local/ci/ if they exist elsewhere (current script matches RUN_DIR=CI_DIR so checking)
+# In this script, CI_DIR = RUN_DIR, so logs are already there.
+
 
 # 3.6 Doc Links
 

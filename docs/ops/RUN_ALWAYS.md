@@ -27,6 +27,7 @@ This document describes the **Run Always 1h** automated workflow, designed to pr
     .local/run-always/
     ├── <TIMESTAMP_UTC>_<SHORT_SHA>/  (Run ID)
     │   ├── 00_meta.txt
+    │   ├── review_bundle_*.tar.gz  (Consolidated artifact)
     │   ├── summary.md
     │   ├── summary.jsonl
     │   └── ...
