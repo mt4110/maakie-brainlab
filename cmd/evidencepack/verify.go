@@ -4,40 +4,117 @@ import (
 	"archive/tar"
 	"bufio"
 	"compress/gzip"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 func runVerify(args []string) error {
 	fs := flag.NewFlagSet("verify", flag.ExitOnError)
 	packPath := fs.String("pack", "", "Path to evidence pack file")
-	// For now, we focus on verifying a specific file. 
-	// Store/latest logic can be added later or via shell wrapper.
+
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 
 	if *packPath == "" {
-		return fmt.Errorf("--pack is required")
+		// Try positional arg
+		if fs.NArg() > 0 {
+			*packPath = fs.Arg(0)
+		} else {
+			return fmt.Errorf("--pack or positional argument is required")
+		}
 	}
 
-	return verifyPack(*packPath)
+	// Init Logger
+	repoRoot := "."
+	logger, err := NewAuditLogger(repoRoot)
+	if err != nil {
+		// In verify-only mode, maybe we warn but proceed?
+		// S7: "audit log... verify... S7では書く"
+		// If we can't write audit log, should we fail?
+		// User said "Audit log created... hash chain not broken".
+		// Fail safe: warning.
+		fmt.Fprintf(os.Stderr, "Warning: Audit logger init failed: %v\n", err)
+	}
+
+	return verifyPack(*packPath, repoRoot, logger)
 }
 
-func verifyPack(path string) error {
+// verifyPack enforces the full contract: Structure + Signature (if present)
+func verifyPack(path string, repoRoot string, logger *AuditLogger) error {
+	// 1. Structural Verify (v1)
+	if err := verifyStructure(path); err != nil {
+		return err
+	}
+
+	// 2. Signature Check (S7)
+	sigPath := path + ".sig.json"
+
+	// Check if sig exists
+	if _, err := os.Stat(sigPath); err == nil {
+		// SIG EXISTS -> MANDATORY VERIFY
+		fmt.Printf("Signature found: %s. Verifying...\n", sigPath)
+
+		verifyErr := verifySignature(path, sigPath)
+		res := "ok"
+		if verifyErr != nil {
+			res = "fail"
+		}
+
+		// Log to Audit
+		if logger != nil {
+			// Extract KeyID from sidecar for logging
+			var keyID string
+			if data, err := os.ReadFile(sigPath); err == nil {
+				var sc SignatureSidecar
+				if json.Unmarshal(data, &sc) == nil {
+					keyID = sc.KeyID
+				}
+			}
+
+			artSHA, _ := CalculateSHA256(path)
+
+			logger.LogEvent(&AuditEntry{
+				EventType: "verify",
+				Result:    res,
+				ArtifactPath: path,
+				ArtifactSHA256: artSHA,
+				SigPath: sigPath,
+				KeyID: keyID,
+				UTCTimestamp: time.Now().UTC().Format(time.RFC3339),
+			})
+		}
+
+		if verifyErr != nil {
+			return fmt.Errorf("cryptographic verification failed: %w", verifyErr)
+		}
+		fmt.Println("Signature VERIFIED.")
+	} else {
+		// No signature. S7: Pass. (S8 may enforce)
+		fmt.Println("No signature found (skipped).")
+	}
+
+	return nil
+}
+
+// verifyStructure checks the inner contents of the pack
+func verifyStructure(path string) error {
 	f, err := os.Open(path)
 	if err != nil {
 		return fmt.Errorf("failed to open pack: %w", err)
 	}
 	defer f.Close()
+    // ... rest of original verifyPack logic ...
 
 	// 1. Safety Scan (Tar Headers)
 	// We scan the tar stream to ensure no unsafe entries exist BEFORE extracting.
-	// Actually, we need to extract to verify matching content. 
+	// Actually, we need to extract to verify matching content.
 	// But we must fail FAST if unsafe.
 	// We can unzip to a temp dir, enforcing checks during extraction.
 
@@ -154,7 +231,7 @@ func extractAndVerifySafety(tarPath, destDir string) error {
 		}
 
 		target := filepath.Join(destDir, header.Name)
-		
+
 		// Defense in depth: check if target is inside destDir
 		if !strings.HasPrefix(target, filepath.Clean(destDir)+string(os.PathSeparator)) && target != destDir {
 			// This might trigger on the root folder if tar has "./" or something, but usually safe.
@@ -174,12 +251,12 @@ func extractAndVerifySafety(tarPath, destDir string) error {
 			if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
 				return err
 			}
-			
+
 			wf, err := os.Create(target)
 			if err != nil {
 				return err
 			}
-			
+
 			// Copy limiting size? No, we trust local disk space for now.
 			if _, err := io.Copy(wf, tr); err != nil {
 				wf.Close()
@@ -211,7 +288,7 @@ func verifyRootChecksums(dir string) error {
 
 		// Only check the expected root files
 		if fname != "EVIDENCE_VERSION" && fname != "METADATA.json" && fname != "MANIFEST.tsv" {
-			continue 
+			continue
 		}
 
 		actualHash, _, err := fileSha256AndSize(filepath.Join(dir, fname))
@@ -293,12 +370,12 @@ func verifyManifest(dir string) error {
 			return err
 		}
 		relPath = filepath.ToSlash(relPath)
-		
+
 		if !manifestFiles[relPath] {
 			return fmt.Errorf("file in data/ not listed in manifest: %s", relPath)
 		}
 		return nil
 	})
-	
+
 	return err
 }

@@ -3,6 +3,10 @@ package main
 import (
 	"archive/tar"
 	"compress/gzip"
+	"crypto/ed25519"
+	"crypto/rand"
+	"encoding/base64"
+	"encoding/json"
 	"io"
 	"os"
 	"path/filepath"
@@ -37,7 +41,7 @@ func TestRoundTrip_OK(t *testing.T) {
 		Payloads:  []string{payloadDir},
 		Timestamp: time.Now().UTC(),
 	}
-	if err := executePack(cfg); err != nil {
+	if _, err := executePack(cfg); err != nil {
 		t.Fatalf("Pack failed: %v", err)
 	}
 
@@ -53,7 +57,7 @@ func TestRoundTrip_OK(t *testing.T) {
 	packPath := filepath.Join(packsDir, entries[0].Name())
 
 	// Verify
-	if err := verifyPack(packPath); err != nil {
+	if err := verifyPack(packPath, ".", nil); err != nil {
 		t.Fatalf("Verify failed: %v", err)
 	}
 }
@@ -70,64 +74,23 @@ func TestVerify_FailsOnCorruptDataFile(t *testing.T) {
 	executePack(cfg)
 
 	entries, _ := os.ReadDir(filepath.Join(storeDir, "packs", "test"))
+	if len(entries) == 0 { t.Fatal("Pack not created") }
 	packPath := filepath.Join(storeDir, "packs", "test", entries[0].Name())
 
-	// 2. Unpack, Corrupt, Repack (Manually to simulate corruption)
-	// Actually easier: just create a corrupted tar.
-	// Or use executePack, then gunzip, modify tar, gzip.
-	// But modifying tar is hard without untarring.
-	
-	// Let's create a manual invalid pack structure to test Verify logic.
-	// We reuse `extractAndVerifySafety` logic implicitly by verifyPack calling it.
-	// But to corrupt content vs manifest, we need to construct a tar where they differ.
-	
-	badPackPath := filepath.Join(tmpDir, "bad.tar.gz")
-	createManualPack(t, badPackPath, func(tw *tar.Writer) {
-		// Write correct root files
-		writeTarFile(t, tw, "EVIDENCE_VERSION", "v1\n")
-		// Write data
-		writeTarFile(t, tw, "data/foo.txt", "corrupted info")
-		
-		// Write MANIFEST that expects "original info" sha
-		// "corrupted info" sha256 = ...
-		// We'll just write a manifest that mismatches.
-		// "data/foo.txt" <tab> "badhash" <tab> 14
-		writeTarFile(t, tw, "MANIFEST.tsv", "data/foo.txt\tba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad\t14\n")
-		
-		// Write checksums (doesn't matter if we fail manifest check first or checksum check first, 
-		// but verify checks checksums first. So we must make checksums valid for the manifest/metadata we wrote!)
-		// This is getting complicated to forge perfectly.
-	})
-
-	// Wait, `verifyPack` checks checksums of root files first.
-	// So to test data corruption, I must have valid root files (including CHECKSUMS matching MANIFEST), 
-	// but MANIFEST content mismatching DATA content.
-	
-	// Let's do the "Pack -> Untar -> Modify Data -> Tar -> Verify" approach.
-	// But `verifyPack` doesn't verify signature, just hash.
-	// If I modify data but NOT manifest, Verify should fail.
-	
-	// Better approach for test: Use internal functions if possible?
-	// `verifyManifest` checks data vs manifest.
-	
 	// Integration test style:
 	// 1. Pack normally.
 	// 2. Open the tar, read all headers/files.
 	// 3. Rewrite tar, but change content of one data file without updating manifest.
 	// 4. Verify -> FAIL.
-	
-	// Implementation:
+
 	modifyTar(t, packPath, func(name string, content []byte) []byte {
 		if strings.Contains(name, "data.txt") {
 			return []byte("corrupted")
 		}
 		return content
-	}) // This invalidates manifest check (size/sha mismatch) AND checksums check? 
-	   // No, checksums only checks root files. Manifest is a root file. 
-	   // Manifest inside tar is NOT changed. Data IS changed.
-	   // So Checksums OK. Manifest vs Data -> FAIL.
-	
-	if err := verifyPack(packPath); err == nil {
+	}, nil)
+
+	if err := verifyPack(packPath, ".", nil); err == nil {
 		t.Fatal("Expected verify to fail on corrupted data, but it passed")
 	} else if !strings.Contains(err.Error(), "mismatch") { // hash mismatch
 		t.Logf("Got expected error: %v", err)
@@ -136,7 +99,7 @@ func TestVerify_FailsOnCorruptDataFile(t *testing.T) {
 
 func TestVerify_FailsOnSymlink(t *testing.T) {
 	packPath := filepath.Join(t.TempDir(), "symlink.tar.gz")
-	
+
 	createManualTar(t, packPath, func(tw *tar.Writer) {
 		writeTarFile(t, tw, "EVIDENCE_VERSION", "v1\n")
 		// Add symlink
@@ -149,7 +112,7 @@ func TestVerify_FailsOnSymlink(t *testing.T) {
 		tw.WriteHeader(hdr)
 	})
 
-	if err := verifyPack(packPath); err == nil {
+	if err := verifyPack(packPath, ".", nil); err == nil {
 		t.Fatal("Expected verify failure on symlink, passed")
 	} else {
 		t.Logf("Got expected error: %v", err)
@@ -158,7 +121,7 @@ func TestVerify_FailsOnSymlink(t *testing.T) {
 
 func TestVerify_FailsOnPathTraversal(t *testing.T) {
 	packPath := filepath.Join(t.TempDir(), "traversal.tar.gz")
-	
+
 	createManualTar(t, packPath, func(tw *tar.Writer) {
 		writeTarFile(t, tw, "EVIDENCE_VERSION", "v1\n")
 		hdr := &tar.Header{
@@ -170,7 +133,7 @@ func TestVerify_FailsOnPathTraversal(t *testing.T) {
 		tw.Write([]byte("test"))
 	})
 
-	if err := verifyPack(packPath); err == nil {
+	if err := verifyPack(packPath, ".", nil); err == nil {
 		t.Fatal("Expected verify failure on path traversal, passed")
 	} else {
 		t.Logf("Got expected error: %v", err)
@@ -184,10 +147,10 @@ func TestVerify_FailsOnExtraFile(t *testing.T) {
 	payloadDir := filepath.Join(tmpDir, "payload")
 	os.MkdirAll(payloadDir, 0755)
 	os.WriteFile(filepath.Join(payloadDir, "ok.txt"), []byte("ok"), 0644)
-	
+
 	cfg := PackConfig{Kind: "test", StoreDir: storeDir, Payloads: []string{payloadDir}, Timestamp: time.Now()}
 	executePack(cfg)
-	
+
 	entries, _ := os.ReadDir(filepath.Join(storeDir, "packs", "test"))
 	packPath := filepath.Join(storeDir, "packs", "test", entries[0].Name())
 
@@ -198,7 +161,7 @@ func TestVerify_FailsOnExtraFile(t *testing.T) {
 		writeTarFile(t, tw, "data/extra.txt", "I am extra")
 	})
 
-	if err := verifyPack(packPath); err == nil {
+	if err := verifyPack(packPath, ".", nil); err == nil {
 		t.Fatal("Expected verify failure on extra file, passed")
 	} else {
 		t.Logf("Got expected error: %v", err)
@@ -212,10 +175,10 @@ func TestVerify_FailsOnExtraRootEntry(t *testing.T) {
 	payloadDir := filepath.Join(tmpDir, "payload")
 	os.MkdirAll(payloadDir, 0755)
 	os.WriteFile(filepath.Join(payloadDir, "ok.txt"), []byte("ok"), 0644)
-	
+
 	cfg := PackConfig{Kind: "test", StoreDir: storeDir, Payloads: []string{payloadDir}, Timestamp: time.Now()}
 	executePack(cfg)
-	
+
 	entries, _ := os.ReadDir(filepath.Join(storeDir, "packs", "test"))
 	packPath := filepath.Join(storeDir, "packs", "test", entries[0].Name())
 
@@ -226,7 +189,7 @@ func TestVerify_FailsOnExtraRootEntry(t *testing.T) {
 		writeTarFile(t, tw, "ROOT_EXTRA.txt", "I am forbidden in root")
 	})
 
-	if err := verifyPack(packPath); err == nil {
+	if err := verifyPack(packPath, ".", nil); err == nil {
 		t.Fatal("Expected verify failure on extra root file, passed")
 	} else if !strings.Contains(err.Error(), "forbidden root entry") {
 		t.Fatalf("Got unexpected error: %v", err)
@@ -236,14 +199,9 @@ func TestVerify_FailsOnExtraRootEntry(t *testing.T) {
 }
 
 func TestPack_RejectsInvalidKind(t *testing.T) {
-	// Direct executePack doesn't validate kind (it assumes caller did).
-	// We should test `validateKind` or the `runPack` entry point.
-	
-	// `executePack` is the logic. `runPack` handles flags and calls `validateKind`.
-	// We want to test that `validateKind` works or `runPack` fails.
-	// `runPack` takes args []string.
-	// NOTE: Payload is a positional argument, not a flag.
-	
+	// Test runPack entry point kind validation
+
+	// We run runPack with invalid arg
 	err := runPack([]string{"--kind", "invalid-kind!", "."})
 	if err == nil {
 		t.Fatal("Expected runPack to fail on invalid kind")
@@ -252,7 +210,7 @@ func TestPack_RejectsInvalidKind(t *testing.T) {
 	} else {
 		t.Logf("Got expected kind error: %v", err)
 	}
-	
+
 	err = runPack([]string{"--kind", "../../traversal", "."})
 	if err == nil {
 		t.Fatal("Expected runPack to fail on traversal kind")
@@ -261,11 +219,95 @@ func TestPack_RejectsInvalidKind(t *testing.T) {
 	}
 }
 
-// Helpers for test
+func TestS7_SigningRoundTrip(t *testing.T) {
+	// Setup
+	tmpDir := t.TempDir()
+	storeDir := filepath.Join(tmpDir, "store")
+	payloadDir := filepath.Join(tmpDir, "payload")
+	os.MkdirAll(payloadDir, 0755)
+	os.WriteFile(filepath.Join(payloadDir, "data.txt"), []byte("signed data"), 0644)
 
-func createManualPack(t *testing.T, path string, fn func(*tar.Writer)) {
-	createManualTar(t, path, fn)
+	// User Payload
+	// We need to simulate running pack with signing.
+	// 1. Generate Key
+	pub, priv, _ := ed25519.GenerateKey(rand.Reader)
+	privPath := filepath.Join(tmpDir, "priv.key")
+	os.WriteFile(privPath, []byte(base64.StdEncoding.EncodeToString(priv)), 0600)
+
+	// 2. Setup Repo Root for Public Key
+	// runPack looks in ./ops/keys/reviewpack
+	// We must change Cwd or pass repoRoot logic.
+	// runPack uses "." as repoRoot internally (hardcoded in my implementation).
+	// So we must run test in a dir that has ops/keys/reviewpack.
+
+	wd, _ := os.Getwd()
+	defer os.Chdir(wd)
+	os.Chdir(tmpDir)
+
+	os.MkdirAll(filepath.Join("ops", "keys", "reviewpack"), 0755)
+
+	keyID := "s7-test-key"
+	pubMeta := CryptoKey{
+		KeyID: keyID, Alg: AlgEd25519, PubB64: base64.StdEncoding.EncodeToString(pub),
+	}
+	pubJSON, _ := json.Marshal(pubMeta)
+	os.WriteFile(filepath.Join("ops", "keys", "reviewpack", keyID+".pub"), pubJSON, 0644)
+
+	// 3. Run Pack with Sign
+
+	// Note: NewAuditLogger will try to create directory in Cwd (tmpDir).
+	// That's fine.
+
+	err := runPack([]string{
+		"--kind", "s7test",
+		"--store", storeDir,
+		"--sign",
+		"--key-file", privPath,
+		payloadDir,
+	})
+	if err != nil {
+		t.Fatalf("runPack with sign failed: %v", err)
+	}
+
+	// 4. Verify Sidecar Exists
+	matches, _ := filepath.Glob(filepath.Join(storeDir, "packs/s7test/*.tar.gz.sig.json"))
+	if len(matches) != 1 {
+		t.Fatalf("Expected 1 sig file, got %d", len(matches))
+	}
+	sigPath := matches[0]
+	packPath := strings.TrimSuffix(sigPath, ".sig.json")
+	// 5. Verify Command (should pass)
+	if err := runVerify([]string{"--pack", packPath}); err != nil {
+		t.Fatalf("runVerify failed: %v", err)
+	}
+
+	// 6. Tampering Test: Modify Artifact
+	// Append byte to tar
+	f, _ := os.OpenFile(packPath, os.O_APPEND|os.O_WRONLY, 0644)
+	f.Write([]byte{0x00})
+	f.Close()
+
+	if err := runVerify([]string{"--pack", packPath}); err == nil {
+		t.Fatal("Expected verify to fail on tampered artifact, passed")
+	} else if !strings.Contains(err.Error(), "artifact mismatch") {
+		t.Logf("Got expected error: %v", err)
+	}
+
+	// Restore Artifact
+	// (Too hard to restore easily without backup, let's repack for next test or make new)
+
+	// 7. Test Audit Log
+	auditPath := ".local/reviewpack_audit/audit.log.jsonl"
+	content, err := os.ReadFile(auditPath)
+	if err != nil {
+		t.Fatal("Audit log not found")
+	}
+	if !strings.Contains(string(content), "sign") || !strings.Contains(string(content), "verify") {
+		t.Errorf("Audit log missing events. Content:\n%s", string(content))
+	}
 }
+
+// Helpers for test
 
 func createManualTar(t *testing.T, path string, fn func(*tar.Writer)) {
 	f, err := os.Create(path)
@@ -295,18 +337,18 @@ func writeTarFile(t *testing.T, tw *tar.Writer, name, content string) {
 }
 
 // modifyTar reads a tar, allows modifying content of existing files, or injecting new ones.
-func modifyTar(t *testing.T, path string, modifier func(name string, content []byte) []byte, injectors ...func(*tar.Writer)) {
+func modifyTar(t *testing.T, path string, modifier func(name string, content []byte) []byte, injectors func(*tar.Writer)) {
 	// Read old
 	f, err := os.Open(path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	
+
 	var items []struct {
 		Header *tar.Header
 		Content []byte
 	}
-	
+
 	gzr, err := gzip.NewReader(f)
 	if err != nil {
 		t.Fatal(err)
@@ -341,15 +383,20 @@ func modifyTar(t *testing.T, path string, modifier func(name string, content []b
 	defer tw.Close()
 
 	for _, it := range items {
-		newContent := modifier(it.Header.Name, it.Content)
+		var newContent []byte
+		if modifier != nil {
+			newContent = modifier(it.Header.Name, it.Content)
+		} else {
+			newContent = it.Content
+		}
 		it.Header.Size = int64(len(newContent))
 		if err := tw.WriteHeader(it.Header); err != nil {
 			t.Fatal(err)
 		}
 		tw.Write(newContent)
 	}
-	
-	for _, inj := range injectors {
-		inj(tw)
+
+	if injectors != nil {
+		injectors(tw)
 	}
 }

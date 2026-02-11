@@ -125,6 +125,14 @@ run_step "verify_evidence" bash -c 'PACK=$(ls -t .local/reviewpack_artifacts/evi
 # 3.5 Verify Bundle
 run_step "verify_bundle" bash -c 'PACK=$(ls -t review_bundle_*.tar.gz | head -n 1); make verify-pack PACK="$PACK"'
 
+# 3.6 S7 Evidence Pack (Crypto Layer v1)
+# Runs pack and verify (unsigned) to ensure tool integrity
+run_step "s7_evidence" bash -c "
+    go run ./cmd/evidencepack pack --kind s7demo --store '${RUN_DIR}/evidence_store' cmd/evidencepack/main.go
+    LATEST=\$(ls -t '${RUN_DIR}/evidence_store/packs/s7demo/'*.tar.gz | head -n1)
+    go run ./cmd/evidencepack verify --pack \"\$LATEST\"
+"
+
 # 3.5b Move Artifacts to RUN_DIR (Consolidation)
 echo "== Artifact Consolidation ==" | tee -a "${CI_DIR}/logs.txt"
 mv review_bundle_*.tar.gz "${RUN_DIR}/" 2>/dev/null || true
