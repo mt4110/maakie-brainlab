@@ -100,6 +100,11 @@ func verifyPack(cfg VerifyConfig) error {
 		return formatPolicyError(err, policy, env, keyID, ctx.PolicyPath)
 	}
 
+	// 5. Audit Chain Verification (S10) — if present in bundle
+	if err := verifyBundleAudit(ctx); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -107,6 +112,7 @@ type verContext struct {
 	TargetArtifact string
 	PolicyPath     string
 	KeysDir        string
+	BundleDir      string // root of unpacked bundle (empty if not a bundle)
 	Cleanup        func()
 }
 
@@ -144,6 +150,7 @@ func prepareBundleContext(ctx *verContext, cfg VerifyConfig) (*verContext, error
 		return nil, fmt.Errorf("failed to unpack bundle: %w", err)
 	}
 	ctx.Cleanup = cleanup
+	ctx.BundleDir = tmpDir
 
 	// Redirect to bundle contents
 	artDir := filepath.Join(tmpDir, "artifact")
@@ -175,6 +182,61 @@ func prepareBundleContext(ctx *verContext, cfg VerifyConfig) (*verContext, error
 	}
 	return ctx, nil
 }
+
+// VerifyError wraps an error with a specific exit code.
+type VerifyError struct {
+	Code    int
+	Message string
+}
+
+func (e *VerifyError) Error() string { return e.Message }
+
+// verifyBundleAudit checks for an embedded audit log in the bundle and verifies it.
+// If no audit log exists, it returns nil (pass).
+// Uses the new TSV-based ValidateChain.
+func verifyBundleAudit(ctx *verContext) error {
+	if ctx.BundleDir == "" {
+		// Not a bundle — skip
+		return nil
+	}
+
+	// S10-00: Check for TSV chain first (v1 spec)
+	chainPath := filepath.Join(ctx.BundleDir, "audit", ChainFile)
+	if _, err := os.Stat(chainPath); err != nil {
+		if os.IsNotExist(err) {
+			// Optional: Fallback to checking legacy jsonl if we wanted backward compat,
+			// but for v1 strictness we just say "no chain found" and pass.
+			fmt.Println("No audit chain in bundle (skipped).")
+			return nil
+		}
+		return &VerifyError{Code: ExitIOError, Message: fmt.Sprintf("failed to check audit chain in bundle: %v", err)}
+	}
+
+	fmt.Println("Audit chain found in bundle. Verifying...")
+	diags, err := ValidateChain(chainPath)
+	if err != nil {
+		return &VerifyError{Code: ExitIOError, Message: fmt.Sprintf("chain read error: %v", err)}
+	}
+
+	if len(diags) > 0 {
+		fails := 0
+		for _, d := range diags {
+			if d.Severity == "FAIL" {
+				fails++
+				fmt.Printf("[FAIL] Line %d: %s\n", d.Line, d.Message)
+			} else {
+				fmt.Printf("[WARN] Line %d: %s\n", d.Line, d.Message)
+			}
+		}
+		if fails > 0 {
+			return &VerifyError{Code: ExitTamper, Message: fmt.Sprintf("bundle audit chain verification failed (%d errors)", fails)}
+		}
+	}
+
+	fmt.Println("Audit chain VERIFIED.")
+	return nil
+}
+
 
 func loadPolicySafe(path, env string) (*ReviewPackPolicy, error) {
 	policy, err := LoadPolicy(path)

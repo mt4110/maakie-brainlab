@@ -51,7 +51,7 @@ type ToolInfo struct {
 
 func runPack(args []string) error {
 	fs := flag.NewFlagSet("pack", flag.ExitOnError)
-	kind := fs.String("kind", "", "Kind of evidence")
+	kind := fs.String("kind", "", "Operator-defined label; used as packs/<kind>/... directory name. Examples: s10test, provenance")
 	store := fs.String("store", ".local/evidence_store", "Store directory")
 	sign := fs.Bool("sign", false, "Sign the artifact (requires key)")
 	keyFile := fs.String("key-file", "", "Path to private key file")
@@ -65,7 +65,16 @@ func runPack(args []string) error {
 	}
 
 	if *kind == "" {
-		return fmt.Errorf("--kind is required")
+		fmt.Fprintf(os.Stderr, "Error: --kind is required.\n")
+		fmt.Fprintf(os.Stderr, "Hint: --kind is an operator-defined label (dir name under <store>/packs/<kind>/).\n")
+		kinds, _ := listKinds(*store)
+		if len(kinds) > 0 {
+			fmt.Fprintf(os.Stderr, "Existing kinds in store: %s\n", strings.Join(kinds, ", "))
+		} else {
+			fmt.Fprintf(os.Stderr, "No existing kinds found. Example: evidencepack pack --kind s10test\n")
+		}
+		fmt.Fprintf(os.Stderr, "Output path: <store>/packs/<kind>/evidence_<kind>_<ts>_<sha>.tar.gz\n")
+		os.Exit(1)
 	}
 	if err := validateKind(*kind); err != nil {
 		return err
@@ -112,7 +121,92 @@ func runPack(args []string) error {
 		return fmt.Errorf("post-pack verification failed: %w", err)
 	}
 
+	// Append to audit chain (only on success)
+	if err := appendPackToChain(repoRoot, packPath); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: chain append failed: %v\n", err)
+		// Non-fatal: pack succeeded, chain is supplementary
+	}
+
 	return nil
+}
+
+func appendPackToChain(repoRoot, packPath string) error {
+	cw, err := NewChainWriter(repoRoot)
+	if err != nil {
+		return err
+	}
+
+	packSHA, _, err := fileSha256AndSize(packPath)
+	if err != nil {
+		return fmt.Errorf("failed to hash pack: %w", err)
+	}
+
+	manifestSHA, err := extractAndHashTarEntry(packPath, fileManifest)
+	if err != nil {
+		manifestSHA = "" // optional: may not exist in all packs
+	}
+
+	checksumsSHA, err := extractAndHashTarEntry(packPath, fileChecksums)
+	if err != nil {
+		checksumsSHA = ""
+	}
+
+	gitInfo := getGitInfo()
+	gitHead := gitInfo.SHA
+	if len(gitHead) > 12 {
+		gitHead = gitHead[:12]
+	}
+	if gitHead == "" {
+		gitHead = "nogit"
+	}
+
+	toolVer := "dev" // v1: hardcoded
+
+	entry := &ChainEntry{
+		TimestampUTC:    time.Now().UTC().Format("20060102T150405Z"),
+		PackName:        filepath.Base(packPath),
+		PackSHA256:      packSHA,
+		ManifestSHA256:  manifestSHA,
+		ChecksumsSHA256: checksumsSHA,
+		GitHead:         gitHead,
+		ToolVersion:     toolVer,
+	}
+
+	return cw.Append(entry)
+}
+
+// extractAndHashTarEntry extracts a named file from a tar.gz and returns its sha256.
+func extractAndHashTarEntry(tarPath, entryName string) (string, error) {
+	f, err := os.Open(tarPath)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	gz, err := gzip.NewReader(f)
+	if err != nil {
+		return "", err
+	}
+	defer gz.Close()
+
+	tr := tar.NewReader(gz)
+	for {
+		header, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return "", err
+		}
+		if header.Name == entryName {
+			h := sha256.New()
+			if _, err := io.Copy(h, tr); err != nil {
+				return "", err
+			}
+			return hex.EncodeToString(h.Sum(nil)), nil
+		}
+	}
+	return "", fmt.Errorf("%s not found in pack", entryName)
 }
 
 func performSigning(packPath string, keyFile string, repoRoot string, logger *AuditLogger) error {

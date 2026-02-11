@@ -10,17 +10,20 @@ import (
 	"sync"
 )
 
-// Audit Constants
+// Audit Chain v1 Constants
 const (
+	AuditVersion = "1"
 	AuditLogDir  = ".local/reviewpack_audit"
 	AuditLogFile = "audit.log.jsonl"
-	GenesisHash  = "GENESIS"
+	// GenesisHash is the prev_hash for the first entry (64 zero chars).
+	GenesisHash = "0000000000000000000000000000000000000000000000000000000000000000"
 )
 
-// AuditEntry represents a single log entry
+// AuditEntry represents a single audit log entry.
+// Field order is canonical: hash computation depends on this order.
 type AuditEntry struct {
-	EventType      string `json:"event_type"` // "sign", "verify"
-	Result         string `json:"result"`     // "ok", "fail"
+	EventType      string `json:"event_type"`
+	Result         string `json:"result"`
 	ArtifactPath   string `json:"artifact_path"`
 	ArtifactSHA256 string `json:"artifact_sha256"`
 	SigPath        string `json:"sig_path,omitempty"`
@@ -32,13 +35,59 @@ type AuditEntry struct {
 	EntryHash      string `json:"entry_hash"`
 }
 
-// AuditLogger handles secure logging
+// auditCanonical is a shadow struct with identical fields and tags,
+// but entry_hash is always emitted (never omitted) and set to "" for hashing.
+type auditCanonical struct {
+	EventType      string `json:"event_type"`
+	Result         string `json:"result"`
+	ArtifactPath   string `json:"artifact_path"`
+	ArtifactSHA256 string `json:"artifact_sha256"`
+	SigPath        string `json:"sig_path,omitempty"`
+	KeyID          string `json:"key_id,omitempty"`
+	GitSHA         string `json:"git_sha,omitempty"`
+	ToolVersion    string `json:"tool_version,omitempty"`
+	UTCTimestamp   string `json:"utc_ts"`
+	PrevHash       string `json:"prev_hash"`
+	EntryHash      string `json:"entry_hash"`
+}
+
+// CanonicalAuditJSON returns deterministic JSON for hash computation.
+// entry_hash is set to "" so it is excluded from the hash input.
+func CanonicalAuditJSON(e *AuditEntry) ([]byte, error) {
+	c := auditCanonical{
+		EventType:      e.EventType,
+		Result:         e.Result,
+		ArtifactPath:   e.ArtifactPath,
+		ArtifactSHA256: e.ArtifactSHA256,
+		SigPath:        e.SigPath,
+		KeyID:          e.KeyID,
+		GitSHA:         e.GitSHA,
+		ToolVersion:    e.ToolVersion,
+		UTCTimestamp:   e.UTCTimestamp,
+		PrevHash:       e.PrevHash,
+		EntryHash:      "", // always empty for hashing
+	}
+	return json.Marshal(c)
+}
+
+// ComputeAuditEntryHash computes sha256(prevHash + "\n" + canonicalJSON).
+func ComputeAuditEntryHash(prevHash string, canonicalJSON []byte) string {
+	input := prevHash + "\n" + string(canonicalJSON)
+	sum := sha256.Sum256([]byte(input))
+	return hex.EncodeToString(sum[:])
+}
+
+// ---------------------------------------------------------------------------
+// Logger (write side)
+// ---------------------------------------------------------------------------
+
+// AuditLogger handles append-only audit logging with hash chain.
 type AuditLogger struct {
 	path string
 	mu   sync.Mutex
 }
 
-// NewAuditLogger initializes the logger
+// NewAuditLogger initializes the logger.
 func NewAuditLogger(repoRoot string) (*AuditLogger, error) {
 	dir := filepath.Join(repoRoot, AuditLogDir)
 	if err := os.MkdirAll(dir, 0755); err != nil {
@@ -49,49 +98,29 @@ func NewAuditLogger(repoRoot string) (*AuditLogger, error) {
 	}, nil
 }
 
-// LogEvent writes a new entry with hash chain
+// LogEvent writes a new entry with hash chain.
 func (l *AuditLogger) LogEvent(event *AuditEntry) error {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	// 1. Read last line to get PrevHash
+	// 1. Get prev hash
 	prevHash, err := l.getLastHash()
 	if err != nil {
 		return err
 	}
 	event.PrevHash = prevHash
 
-	// 2. Compute EntryHash
-	// entry_hash = sha256(prev_hash + "\n" + json_without_entry_hash)
-	// We construct a temporary struct or just marshal without EntryHash?
-	// Struct has EntryHash field. If we leave it empty, it marshals to ""?
-	// The requirement is "json_bytes_without_entry_hash".
-	// Let's marshal with EntryHash="" first.
-	event.EntryHash = ""
-
-	// Canonical JSON? "structで順序固定" (Go default for struct is fixed field order?)
-	// Go's json.Marshal sorts map keys, but struct fields are serialized in definition order?
-	// Actually struct fields are usually serialized in definition order in standard encoding/json?
-	// No, checking... "The default encoding for struct fields is the order they are defined".
-	// Yes. But let's verify if we need strict canonicalization (e.g. JCS).
-	// Requirement say "Canonical JSON はキー順固定（実装側で固定順序で出力）".
-	// Since we use a struct, and standard Go `json` package emits fields in order of definition (mostly),
-	// we should be okay as long as we don't change the struct.
-
-	jsonBytes, err := json.Marshal(event)
+	// 2. Compute entry hash using canonical JSON
+	canonical, err := CanonicalAuditJSON(event)
 	if err != nil {
-		return fmt.Errorf("failed to marshal audit entry: %w", err)
+		return fmt.Errorf("failed to compute canonical JSON: %w", err)
 	}
+	event.EntryHash = ComputeAuditEntryHash(prevHash, canonical)
 
-	// Calculate Hash
-	hashInput := prevHash + "\n" + string(jsonBytes)
-	sum := sha256.Sum256([]byte(hashInput))
-	event.EntryHash = hex.EncodeToString(sum[:])
-
-	// 3. Write strict JSON line
+	// 3. Write final JSON line
 	finalBytes, err := json.Marshal(event)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal audit entry: %w", err)
 	}
 
 	f, err := os.OpenFile(l.path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
@@ -110,8 +139,6 @@ func (l *AuditLogger) LogEvent(event *AuditEntry) error {
 }
 
 func (l *AuditLogger) getLastHash() (string, error) {
-	// Read file to find last line.
-	// Efficiently read from end? For now, just read all is safest simple impl, or seek end.
 	f, err := os.Open(l.path)
 	if os.IsNotExist(err) {
 		return GenesisHash, nil
@@ -121,11 +148,6 @@ func (l *AuditLogger) getLastHash() (string, error) {
 	}
 	defer f.Close()
 
-	// Seek to end and scan backwards? Or just read strict lines.
-	// Since we need to be robust, let's read the file.
-	// If file is huge, this is slow. But for S7 it's fine.
-	// Optimization: valid JSONL, so we can seek backwards for last newline.
-
 	stat, err := f.Stat()
 	if err != nil {
 		return "", err
@@ -134,38 +156,12 @@ func (l *AuditLogger) getLastHash() (string, error) {
 		return GenesisHash, nil
 	}
 
-	// Simple backward scanning
-	buf := make([]byte, 1024)
-	start := stat.Size()
-
-	for {
-		offset := int64(0)
-		if start > 1024 {
-			offset = start - 1024
-		}
-
-		_, err := f.ReadAt(buf[:start-offset], offset)
-		if err != nil {
-			return "", err
-		}
-
-		// Look for last newline
-		// Caution: file ends with newline. We need the line BEFORE that.
-		// If we read the last block, it likely ends with \n.
-
-		// Let's just use a scanner for simplicity in V1 for now creates cleaner code
-		// if performance hits, we optimize.
-		break
-	}
-
-	// Re-open for scanner
-	f.Seek(0, 0)
+	// Scan all entries to find the last entry_hash
 	var lastEntry AuditEntry
 	decoder := json.NewDecoder(f)
 	found := false
 	for decoder.More() {
 		if err := decoder.Decode(&lastEntry); err != nil {
-			// If we encounter garbage, what to do? Fail safe.
 			return "", fmt.Errorf("corrupt audit log: %w", err)
 		}
 		found = true
@@ -175,4 +171,10 @@ func (l *AuditLogger) getLastHash() (string, error) {
 		return GenesisHash, nil
 	}
 	return lastEntry.EntryHash, nil
+}
+
+// runAudit is kept for backward compatibility.
+// v1: audit is an alias of health.
+func runAudit(args []string) error {
+	return runHealth(args)
 }
