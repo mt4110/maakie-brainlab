@@ -280,6 +280,16 @@ func TestPolicyValidation(t *testing.T) {
 			&ReviewPackPolicy{Version: 1, Keys: KeysConfig{PrimaryPubkeySHA256: "C70af1649edfc2fa4607922370f1fcce494c1bf1c14bb82e54f66fdf48dca00a"}},
 			true,
 		},
+		{
+			"Invalid Allowed DB",
+			&ReviewPackPolicy{Version: 1, Keys: KeysConfig{AllowedPubkeySHA256: []string{"abc"}}},
+			true,
+		},
+		{
+			"Invalid Revoked DB",
+			&ReviewPackPolicy{Version: 1, Keys: KeysConfig{RevokedPubkeySHA256: []string{"invalid"}}},
+			true,
+		},
 	}
 
 	for _, tt := range tests {
