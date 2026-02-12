@@ -100,7 +100,11 @@ func packToTarForSubmit(args []string, timebox int, mode string) string {
 	scanSecrets(packDir)
 
 	// 3. Make Test
-	runMake(packDir, fileMakeTest, []string{"make", "test"}, timebox, 4)
+	testCmd := []string{"make", "test"}
+	if mode == "strict" {
+		testCmd = []string{"make", "ci-test"}
+	}
+	runMake(packDir, fileMakeTest, testCmd, timebox, 4)
 
 	// 4. Make Run-Eval (Unified Flow)
 	var selectedEvalAbs, selectedEvalRel string

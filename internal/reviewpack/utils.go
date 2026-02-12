@@ -49,16 +49,25 @@ func runCmd(dir, name string, args ...string) {
 }
 
 func runMake(dir, logName string, cmdArgs []string, timeoutSec int, failCode int) {
-	logPath := filepath.Join(dir, logName)
-	logFile, err := os.Create(logPath)
+	rawDir := filepath.Join(dir, dirLogsRaw)
+	portDir := filepath.Join(dir, dirLogsPortable)
+	if err := os.MkdirAll(rawDir, 0755); err != nil {
+		log.Fatalf(msgFatalMkdir, rawDir, err)
+	}
+	if err := os.MkdirAll(portDir, 0755); err != nil {
+		log.Fatalf(msgFatalMkdir, portDir, err)
+	}
+
+	rawLogPath := filepath.Join(rawDir, logName)
+	rawLogFile, err := os.Create(rawLogPath)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer logFile.Close()
+	defer rawLogFile.Close()
 
 	ctxCmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
-	ctxCmd.Stdout = logFile
-	ctxCmd.Stderr = logFile
+	ctxCmd.Stdout = rawLogFile
+	ctxCmd.Stderr = rawLogFile
 	ctxCmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
 	if err := ctxCmd.Start(); err != nil {
@@ -70,42 +79,81 @@ func runMake(dir, logName string, cmdArgs []string, timeoutSec int, failCode int
 		done <- ctxCmd.Wait()
 	}()
 
+	var finalErr error
+	var timeout bool
+
 	select {
 	case <-time.After(time.Duration(timeoutSec) * time.Second):
+		timeout = true
 		pgid, _ := syscall.Getpgid(ctxCmd.Process.Pid)
 		_ = syscall.Kill(-pgid, syscall.SIGTERM)
 		time.Sleep(2 * time.Second)
 		_ = syscall.Kill(-pgid, syscall.SIGKILL)
-
-		fmt.Fprintf(logFile, "\n[TIMEOUT] exceeded %ds\n", timeoutSec)
-		_ = logFile.Close() // Close before sanitizing
-		sanitizeLogToFile(logPath)
-		fmt.Printf("[FAIL] timeout %v. See %s\n", cmdArgs, logName)
-		os.Exit(124)
+		fmt.Fprintf(rawLogFile, "\n[TIMEOUT] exceeded %ds\n", timeoutSec)
 	case err := <-done:
-		_ = logFile.Close() // Close before sanitizing
-		sanitizeLogToFile(logPath)
-		if err != nil {
-			if _, ok := err.(*exec.ExitError); ok {
-				fmt.Printf("[FAIL] %v failed. See %s\n", cmdArgs, logName)
-				os.Exit(failCode)
+		finalErr = err
+	}
+
+	_ = rawLogFile.Close()
+
+	// Post-processing: Portable Log and SHA256
+	createPortableLog(rawLogPath, filepath.Join(portDir, logName))
+	sha, _ := fileSha256(rawLogPath)
+	_ = os.WriteFile(rawLogPath+".sha256", []byte(sha+"\n"), 0644)
+	writePortableRules(portDir)
+
+	if timeout {
+		fmt.Printf("[FAIL] timeout %v. See %s/%s\n", cmdArgs, dirLogsRaw, logName)
+		os.Exit(124)
+	}
+
+	if finalErr != nil {
+		if _, ok := finalErr.(*exec.ExitError); ok {
+			// S8-3.3: UX Polish for -mod=readonly
+			if strings.Contains(cmdArgs[len(cmdArgs)-1], "-mod=readonly") || strings.Contains(cmdArgs[len(cmdArgs)-1], "ci") {
+				rawBytes, _ := os.ReadFile(rawLogPath)
+				if bytes.Contains(rawBytes, []byte("updates to go.mod needed")) || bytes.Contains(rawBytes, []byte("go.sum updates needed")) {
+					fmt.Println("[HINT] S8 Audit Fail: go.mod/go.sum updates needed in -mod=readonly mode.")
+					fmt.Println("[HINT] Run 'go mod tidy' and 'make test' locally, then commit changes.")
+				}
 			}
+			fmt.Printf("[FAIL] %v failed. See %s/%s\n", cmdArgs, dirLogsRaw, logName)
+			os.Exit(failCode)
 		}
 	}
 }
 
-func sanitizeLogToFile(path string) {
-	root := resolveRepoRoot()
-	if root == "" {
-		return
-	}
-	content, err := os.ReadFile(path)
+func createPortableLog(src, dst string) {
+	content, err := os.ReadFile(src)
 	if err != nil {
 		return
 	}
-	newContent := strings.ReplaceAll(string(content), root, "<REPO_ROOT>")
-	_ = os.WriteFile(path, []byte(newContent), 0644)
+	root := resolveRepoRoot()
+	// S8-4.3: Portable view (Suppress absolute paths)
+	s := string(content)
+	if root != "" {
+		s = strings.ReplaceAll(s, root, "<REPO_ROOT>")
+	}
+	// Suppress timings (e.g., "0.005s", "123ms") - simple regex placeholder if needed,
+	// but for now we follow the "Suppress" policy for absolute paths as primary goal.
+	_ = os.WriteFile(dst, []byte(s), 0644)
 }
+
+func writePortableRules(dir string) {
+	rules := `{
+  "version": "v1",
+  "rules": [
+    {
+      "type": "replace",
+      "pattern": "<REPO_ROOT>",
+      "description": "Redact absolute repository root path for portability"
+    }
+  ]
+}
+`
+	_ = os.WriteFile(filepath.Join(dir, "rules-v1.json"), []byte(rules), 0644)
+}
+
 
 func min(a, b int) int {
 	if a < b {

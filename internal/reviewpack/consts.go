@@ -25,6 +25,8 @@ const (
 	extTarGz          = ".tar.gz"
 	dirSrcSnapshot    = "src_snapshot"
 	dirEvalResults    = "eval/results"
+	dirLogsRaw        = "logs/raw"
+	dirLogsPortable   = "logs/portable"
 
 	// Refactoring Constants
 	msgFatalCreate = "[FATAL] create %s: %v"

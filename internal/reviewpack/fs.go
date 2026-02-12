@@ -222,11 +222,16 @@ func checkProhibitedFile(base, rel string) string {
 	if base == ".DS_Store" || base == ".env" || strings.HasSuffix(base, ".pem") || strings.HasPrefix(base, "id_rsa") || strings.HasSuffix(base, ".swp") || strings.HasSuffix(base, "~") {
 		return fmt.Sprintf("Prohibited file: %s", rel)
 	}
-	if strings.HasSuffix(base, ".log") {
-		// Whitelist generated evidence logs
-		if base != "30_make_test.log" && base != "31_make_run_eval.log" && base != "40_self_verify.log" {
-			return fmt.Sprintf("Prohibited file: %s", rel)
+	if strings.HasSuffix(base, ".log") || strings.HasSuffix(base, ".log.sha256") || base == "rules-v1.json" {
+		// Whitelist generated evidence logs and their structured counterparts
+		if strings.HasPrefix(rel, "logs/") {
+			return ""
 		}
+		// Legacy support for root logs
+		if base == fileMakeTest || base == fileMakeEval || base == fileSelfVerify {
+			return ""
+		}
+		return fmt.Sprintf("Prohibited file: %s", rel)
 	}
 	return ""
 }

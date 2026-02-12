@@ -110,11 +110,11 @@ func runVerify(args []string) {
 		os.Exit(1)
 	}
 
-	// 4. Evidence Marker Check (30_make_test.log)
-	testLogPath := filepath.Join(verifyRoot, fileMakeTest)
+	// 4. Evidence Marker Check (logs/raw/30_make_test.log)
+	testLogPath := filepath.Join(verifyRoot, dirLogsRaw, fileMakeTest)
 	logBytes, err := os.ReadFile(testLogPath)
 	if err != nil {
-		log.Fatalf("[FAIL] Missing test evidence log: %s", fileMakeTest)
+		log.Fatalf("[FAIL] Missing test evidence log: %s/%s", dirLogsRaw, fileMakeTest)
 	}
 	if !bytes.Contains(logBytes, []byte("go test ./...")) {
 		log.Fatalf("[FAIL] Evidence missing in %s: 'go test ./...'", fileMakeTest)
