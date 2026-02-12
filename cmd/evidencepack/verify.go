@@ -389,8 +389,9 @@ ACTION REQUIRED:
 1. Check ops/reviewpack_policy.toml
 2. If signature required: Sign the artifact (see ops/keys/reviewpack/)
 3. If key rejected: Add PubKeySHA256 to 'allowed_pubkey_sha256' in policy
-4. Regen (smoke): evidencepack keygen --id <id> --seed "reviewpack-smoke-v1"
-5. Note: KeyID is a label; allowlist is enforced by PubKeySHA256
+4. Regen (binary): evidencepack keygen --id <id> --seed "reviewpack-smoke-v1"
+5. Regen (go run): go run ./cmd/evidencepack keygen --id <id> --seed "reviewpack-smoke-v1"
+6. Note: KeyID is a label; allowlist is enforced by PubKeySHA256
 ================================================================================
 `, policyPath, policy.Enforcement.ModeCI, env, err, keyID, pubKeySHA256)
 }

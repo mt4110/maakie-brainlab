@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/ed25519"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"flag"
@@ -37,7 +38,7 @@ func runKeygen(args []string) error {
 	} else {
 		// Random
 		var err error
-		pub, priv, err = ed25519.GenerateKey(nil)
+		pub, priv, err = ed25519.GenerateKey(rand.Reader)
 		if err != nil {
 			return fmt.Errorf("keygen failed: %w", err)
 		}
