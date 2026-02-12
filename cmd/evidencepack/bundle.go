@@ -14,8 +14,8 @@ import (
 func runBundle(args []string) error {
 	fs := flag.NewFlagSet("bundle", flag.ExitOnError)
 	artifactPath := fs.String("artifact", "", "Path to the input artifact (tar.gz)")
-	policyPath := fs.String("policy", "ops/reviewpack_policy.toml", "Path to policy file")
-	keysDir := fs.String("keys-dir", "ops/keys/reviewpack", "Path to keys directory")
+	policyPath := fs.String("policy", resolvePathUpward("ops/reviewpack_policy.toml"), "Path to policy file")
+	keysDir := fs.String("keys-dir", resolvePathUpward("ops/keys/reviewpack"), "Path to keys directory")
 	outPath := fs.String("out", "", "Output bundle path (optional, auto-generated if empty)")
 	auditDir := fs.String("audit-dir", "", "Path to audit log directory (optional, embeds audit snapshot)")
 
