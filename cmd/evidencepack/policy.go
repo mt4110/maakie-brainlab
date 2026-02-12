@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/BurntSushi/toml"
 )
@@ -29,7 +30,8 @@ type ReviewPackPolicy struct {
 }
 
 type KeysConfig struct {
-	AllowedKeyIDs []string `toml:"allowed_key_ids"`
+	AllowedKeyIDs       []string `toml:"allowed_key_ids"`
+	AllowedPubkeySHA256 []string `toml:"allowed_pubkey_sha256"`
 }
 
 type EnforcementConfig struct {
@@ -59,38 +61,29 @@ func LoadPolicy(path string) (*ReviewPackPolicy, error) {
 }
 
 // DeterminePolicyEnv resolves the active environment (cli > env > auto -> local/ci)
-// This strictly returns "local" or "ci", which then maps to strict/permissive via policy.
 func DeterminePolicyEnv(cliEnv string) string {
-	// 1. CLI explicit
 	if cliEnv != "" && cliEnv != "auto" {
 		return cliEnv
 	}
-
-	// 2. Env explicit
 	envVal := os.Getenv(EnvPolicyMode)
 	if envVal != "" && envVal != "auto" {
 		return envVal
 	}
-
-	// 3. Auto detection
-	// If CI=true or GITHUB_ACTIONS=true -> ci
 	if os.Getenv("CI") == "true" || os.Getenv("GITHUB_ACTIONS") == "true" {
 		return EnvCI
 	}
 	return EnvLocal
 }
 
-// EvaluatePolicy checks if the current state satisfies the policy for the given environment.
-// env should be "local" or "ci" (resolved by DeterminePolicyEnv).
-// returns error ONLY if violation found in a STRICT context.
-func EvaluatePolicy(p *ReviewPackPolicy, env string, hasSignature bool, keyID string) error {
+// EvaluatePolicy checks if the current state satisfies the policy.
+// pubKeySHA256 is the SHA256 fingerprint of the signer's public key (Trust Anchor v1).
+func EvaluatePolicy(p *ReviewPackPolicy, env string, hasSignature bool, keyID string, pubKeySHA256 string) error {
 	applicationMode := resolveApplicationMode(p, env)
-
 	if applicationMode == ModePermissive {
 		return nil
 	}
 
-	// Strict Enforcement Logic
+	// Strict Enforcement
 	if !hasSignature {
 		if env == EnvCI && p.Signing.RequireSignatureInCI {
 			return fmt.Errorf("policy violation: signature required in CI but not found")
@@ -98,7 +91,7 @@ func EvaluatePolicy(p *ReviewPackPolicy, env string, hasSignature bool, keyID st
 		return nil
 	}
 
-	return checkKeyAllowlist(p, env, keyID)
+	return checkKeyAllowlist(p, env, keyID, pubKeySHA256)
 }
 
 func resolveApplicationMode(p *ReviewPackPolicy, env string) string {
@@ -108,14 +101,44 @@ func resolveApplicationMode(p *ReviewPackPolicy, env string) string {
 	return p.Enforcement.ModeLocal
 }
 
-func checkKeyAllowlist(p *ReviewPackPolicy, env string, keyID string) error {
+// checkKeyAllowlist enforces Trust Anchor v1 priority:
+// 1. allowed_pubkey_sha256 non-empty → fingerprint enforce (priority)
+// 2. allowed_pubkey_sha256 empty → allowed_key_ids fallback (compat)
+// 3. Both empty → FAIL (misconfiguration)
+func checkKeyAllowlist(p *ReviewPackPolicy, env string, keyID string, pubKeySHA256 string) error {
 	if env != EnvCI || !p.Signing.EnforceAllowlistInCI {
 		return nil
 	}
-	for _, allowedID := range p.Keys.AllowedKeyIDs {
-		if allowedID == keyID {
-			return nil
+
+	hasFP := len(p.Keys.AllowedPubkeySHA256) > 0
+	hasKID := len(p.Keys.AllowedKeyIDs) > 0
+
+	// Priority 1: fingerprint allowlist
+	if hasFP {
+		for _, allowed := range p.Keys.AllowedPubkeySHA256 {
+			if strings.EqualFold(allowed, pubKeySHA256) {
+				return nil
+			}
 		}
+		return fmt.Errorf("policy violation: signer pubkey is not allowed (Trust Anchor v1)\n"+
+			"  Expected PubKeySHA256: %v\n"+
+			"  Got PubKeySHA256:      %s\n"+
+			"  Policy: ops/reviewpack_policy.toml (keys.allowed_pubkey_sha256)\n"+
+			"  Regen (smoke): evidencepack keygen --id <id> --seed \"reviewpack-smoke-v1\"\n"+
+			"  Note: KeyID is a label; allowlist is enforced by PubKeySHA256",
+			p.Keys.AllowedPubkeySHA256, pubKeySHA256)
 	}
-	return fmt.Errorf("policy violation: key %s is not in allowed_key_ids (see ops/reviewpack_policy.toml)", keyID)
+
+	// Priority 2: keyid fallback
+	if hasKID {
+		for _, allowedID := range p.Keys.AllowedKeyIDs {
+			if allowedID == keyID {
+				return nil
+			}
+		}
+		return fmt.Errorf("policy violation: key %s is not in allowed_key_ids (see ops/reviewpack_policy.toml)", keyID)
+	}
+
+	// Priority 3: both empty → FAIL
+	return fmt.Errorf("policy violation: no allowlist configured (both allowed_pubkey_sha256 and allowed_key_ids are empty)")
 }

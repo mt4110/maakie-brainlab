@@ -251,3 +251,10 @@ func ExportPublicKeyJSON(pub ed25519.PublicKey, keyID string) ([]byte, error) {
 	}
 	return json.MarshalIndent(k, "", "  ")
 }
+
+// PubKeyFingerprint computes SHA256(pubkey_bytes) hex lower.
+// This is the Trust Anchor v1 fingerprint for allowlist enforcement.
+func PubKeyFingerprint(pub ed25519.PublicKey) string {
+	h := sha256.Sum256(pub)
+	return hex.EncodeToString(h[:])
+}
