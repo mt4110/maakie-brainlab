@@ -110,17 +110,43 @@ func runVerify(args []string) {
 		os.Exit(1)
 	}
 
-	// 4. Evidence Marker Check (30_make_test.log)
-	testLogPath := filepath.Join(verifyRoot, fileMakeTest)
+	// 4. Evidence Marker Check (logs/raw/30_make_test.log)
+	testLogPath := filepath.Join(verifyRoot, dirLogsRaw, fileMakeTest)
 	logBytes, err := os.ReadFile(testLogPath)
 	if err != nil {
-		log.Fatalf("[FAIL] Missing test evidence log: %s", fileMakeTest)
+		log.Fatalf("[FAIL] Missing test evidence log: %s/%s", dirLogsRaw, fileMakeTest)
 	}
-	if !bytes.Contains(logBytes, []byte("go test ./...")) {
-		log.Fatalf("[FAIL] Evidence missing in %s: 'go test ./...'", fileMakeTest)
+
+	hasGoTest := false
+	hasUnittest := false
+
+	evScanner := bufio.NewScanner(bytes.NewReader(logBytes))
+	// S8 Hotfix: Handle long lines (e.g. 1MB buffer) and check for errors
+	buf := make([]byte, 1024*1024)
+	evScanner.Buffer(buf, 1024*1024)
+
+	for evScanner.Scan() {
+		line := strings.TrimSpace(evScanner.Text())
+		// Strip shell execution markers if present
+		line = strings.TrimPrefix(line, "+ ")
+
+		if strings.HasPrefix(line, "go test") && strings.Contains(line, "./...") {
+			hasGoTest = true
+		}
+		if strings.HasPrefix(line, "unittest discover") || strings.Contains(line, "python -m unittest discover") {
+			hasUnittest = true
+		}
 	}
-	if !bytes.Contains(logBytes, []byte("unittest discover")) {
-		log.Fatalf("[FAIL] Evidence missing in %s: 'unittest discover'", fileMakeTest)
+
+	if err := evScanner.Err(); err != nil {
+		log.Fatalf("[FATAL] Error scanning evidence log %s/%s: %v", dirLogsRaw, fileMakeTest, err)
+	}
+
+	if !hasGoTest {
+		log.Fatalf("[FAIL] Evidence missing in %s/%s: 'go test ./...' (required for Audit Tightening/Strict mode)", dirLogsRaw, fileMakeTest)
+	}
+	if !hasUnittest {
+		log.Fatalf("[FAIL] Evidence missing in %s/%s: 'unittest discover'", dirLogsRaw, fileMakeTest)
 	}
 
 	fmt.Println("PASS: Verify OK")

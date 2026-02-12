@@ -41,9 +41,14 @@ It guarantees that "Same Input -> Same Output" (Checksums match).
 	## 3. Verification
 	Run ./VERIFY.sh to validate integrity.
 
-	## 4. Test Evidence Markers (Pack-Contained)
-	In pack-contained verification, Gate-1 (verify-only) and strict verification require 30_make_test.log to include evidence markers.
-	Evidence markers include:
+	## 4. Test Evidence Markers (Structured Logs)
+	In pack-contained verification, Gate-1 (verify-only) and strict verification require logs to include evidence markers.
+	- logs/raw/<step>.log: Raw execution log (Audit truth).
+	- logs/raw/<step>.log.sha256: Hash for raw log integrity.
+	- logs/portable/<step>.log: Sanitized view for portability.
+	- logs/portable/rules-v1.json: Sanitization rules definition.
+
+	Evidence markers in logs include:
 	~~~
 	go test ./...
 	unittest discover
