@@ -32,6 +32,8 @@ type ReviewPackPolicy struct {
 type KeysConfig struct {
 	AllowedKeyIDs       []string `toml:"allowed_key_ids"`
 	AllowedPubkeySHA256 []string `toml:"allowed_pubkey_sha256"`
+	PrimaryPubkeySHA256 string   `toml:"primary_pubkey_sha256"`
+	RevokedPubkeySHA256 []string `toml:"revoked_pubkey_sha256"`
 }
 
 type EnforcementConfig struct {
@@ -57,7 +59,41 @@ func LoadPolicy(path string) (*ReviewPackPolicy, error) {
 	if p.Version != 1 {
 		return nil, fmt.Errorf("unsupported policy version %d (expected 1)", p.Version)
 	}
+
+	if err := p.Validate(); err != nil {
+		return nil, err
+	}
+
 	return &p, nil
+}
+
+func (p *ReviewPackPolicy) Validate() error {
+	if p.Keys.PrimaryPubkeySHA256 != "" && !isValidHex64(p.Keys.PrimaryPubkeySHA256) {
+		return fmt.Errorf("invalid primary_pubkey_sha256: must be 64-char lower-hex")
+	}
+	for _, f := range p.Keys.AllowedPubkeySHA256 {
+		if !isValidHex64(f) {
+			return fmt.Errorf("invalid allowed_pubkey_sha256 entry %q: must be 64-char lower-hex", f)
+		}
+	}
+	for _, f := range p.Keys.RevokedPubkeySHA256 {
+		if !isValidHex64(f) {
+			return fmt.Errorf("invalid revoked_pubkey_sha256 entry %q: must be 64-char lower-hex", f)
+		}
+	}
+	return nil
+}
+
+func isValidHex64(s string) bool {
+	if len(s) != 64 {
+		return false
+	}
+	for _, r := range s {
+		if !((r >= '0' && r <= '9') || (r >= 'a' && r <= 'f')) {
+			return false
+		}
+	}
+	return true
 }
 
 // DeterminePolicyEnv resolves the active environment (cli > env > auto -> local/ci)
@@ -78,6 +114,15 @@ func DeterminePolicyEnv(cliEnv string) string {
 // EvaluatePolicy checks if the current state satisfies the policy.
 // pubKeySHA256 is the SHA256 fingerprint of the signer's public key (Trust Anchor v1).
 func EvaluatePolicy(p *ReviewPackPolicy, env string, hasSignature bool, keyID string, pubKeySHA256 string) error {
+	// 1. Revocation Check (Absolute Priority, even in permissive mode)
+	if hasSignature {
+		for _, revoked := range p.Keys.RevokedPubkeySHA256 {
+			if strings.EqualFold(revoked, pubKeySHA256) {
+				return fmt.Errorf("FAIL: signer key is revoked")
+			}
+		}
+	}
+
 	applicationMode := resolveApplicationMode(p, env)
 	if applicationMode == ModePermissive {
 		return nil
@@ -120,14 +165,7 @@ func checkKeyAllowlist(p *ReviewPackPolicy, env string, keyID string, pubKeySHA2
 				return nil
 			}
 		}
-		return fmt.Errorf("policy violation: signer pubkey is not allowed (Trust Anchor v1)\n"+
-			"  Expected PubKeySHA256: %v\n"+
-			"  Got PubKeySHA256:      %s\n"+
-			"  Policy: ops/reviewpack_policy.toml (keys.allowed_pubkey_sha256)\n"+
-			"  Regen (binary): evidencepack keygen --id <id> --seed \"reviewpack-smoke-v1\"\n"+
-			"  Regen (go run): go run ./cmd/evidencepack keygen --id <id> --seed \"reviewpack-smoke-v1\"\n"+
-			"  Note: KeyID is a label; allowlist is enforced by PubKeySHA256",
-			p.Keys.AllowedPubkeySHA256, pubKeySHA256)
+		return fmt.Errorf("FAIL: signer key is not in allowlist")
 	}
 
 	// Priority 2: keyid fallback

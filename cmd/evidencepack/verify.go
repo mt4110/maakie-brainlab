@@ -127,6 +127,15 @@ func verifyPack(cfg VerifyConfig) error {
 		fmt.Printf("  KeyID:        %s\n", keyID)
 		fmt.Printf("  PubKeySHA256: %s\n", pubKeySHA256)
 		fmt.Printf("  PubKeySource: %s\n", pubKeySource)
+
+		if policy.Keys.PrimaryPubkeySHA256 != "" {
+			isPrimary := strings.EqualFold(pubKeySHA256, policy.Keys.PrimaryPubkeySHA256)
+			fmt.Printf("  PrimaryPubKeySHA256: %s\n", policy.Keys.PrimaryPubkeySHA256)
+			fmt.Printf("  SignerIsPrimary:     %v\n", isPrimary)
+			if !isPrimary {
+				fmt.Printf("  [WARN] signer is not primary (rotation state)\n")
+			}
+		}
 	}
 
 	// 4. Policy Evaluation (S8 + Trust Anchor v1)
@@ -375,25 +384,32 @@ func locateSignature(path string) (string, error) {
 }
 
 func formatPolicyError(err error, policy *ReviewPackPolicy, env, keyID, pubKeySHA256, policyPath string) error {
+	errMsg := err.Error()
+	howToFix := "See docs/evidence/SIGNING_CONTRACT_v1.md for policy recovery."
+
+	if strings.Contains(errMsg, "is revoked") {
+		howToFix = "remove key from signer / rotate key, update policy revoked/allowed"
+	} else if strings.Contains(errMsg, "not in allowlist") {
+		howToFix = "add fingerprint to allowed_pubkey_sha256 (and optionally set primary)"
+	}
+
 	return fmt.Errorf(`
 ================================================================================
-POLICY VIOLATION (Trust Anchor v1, defined in %s)
-Mode: %s (Environment: %s)
+POLICY VIOLATION (Trust Anchor v1)
+Policy Path: %s
+Mode:        %s (Environment: %s)
 
 Error: %v
 
 KeyID:        %s
 PubKeySHA256: %s
 
-ACTION REQUIRED:
-1. Check ops/reviewpack_policy.toml
-2. If signature required: Sign the artifact (see ops/keys/reviewpack/)
-3. If key rejected: Add PubKeySHA256 to 'allowed_pubkey_sha256' in policy
-4. Regen (binary): evidencepack keygen --id <id> --seed "reviewpack-smoke-v1"
-5. Regen (go run): go run ./cmd/evidencepack keygen --id <id> --seed "reviewpack-smoke-v1"
-6. Note: KeyID is a label; allowlist is enforced by PubKeySHA256
+HOW-TO-FIX:
+%s
+
+Note: KeyID is a label; allowlist is enforced by PubKeySHA256
 ================================================================================
-`, policyPath, policy.Enforcement.ModeCI, env, err, keyID, pubKeySHA256)
+`, policyPath, policy.Enforcement.ModeCI, env, err, keyID, pubKeySHA256, howToFix)
 }
 
 func isBundle(path string) (bool, error) {

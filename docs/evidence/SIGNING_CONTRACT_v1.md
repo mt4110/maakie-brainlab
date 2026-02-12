@@ -44,6 +44,7 @@ payload data. Signing its hash transitively covers the entire pack content.
 **Determinism**: Same CHECKSUMS.sha256 + same key = same signature (Ed25519 is deterministic).
 
 ### Algorithm
+
 - **Ed25519** (pure Go implementation).
 
 ## 2. Signature Sidecar (`*.sig.json`) — Legacy
@@ -168,12 +169,43 @@ ERROR: signer pubkey is not allowed (Trust Anchor v1)
   Note: KeyID is a label; allowlist is enforced by PubKeySHA256
 ```
 
-## 7. Audit Log (S7)
+## 7. Audit Log (S7) — TSV Chain
 
-- **File**: `.local/reviewpack_audit/audit.log.jsonl`.
-- **Append-only**.
-- **Hash Chain**: `entry_hash` links to `prev_hash`.
+Every `verify` operation that changes the state (or as an audit record) MUST append to the local audit chain.
 
-**Entries**:
-- `sign` event.
-- `verify` event.
+- **File**: `.local/reviewpack_artifacts/AUDIT_CHAIN_v1.tsv`.
+- **Format**: TSV (Tab Separated Values).
+- **Append-only**: New entries are always added to the end.
+- **Hash Chain**: Each entry contains `entry_sha256` which is computed over columns 1-9, and `prev_entry_sha256` which links to the previous line's hash.
+
+### 7.1 Column Schema (Fixed Order)
+
+| Col | Name | Description |
+|---|---|---|
+| 1 | `version` | Contract version (e.g., `v1`) |
+| 2 | `timestamp_utc` | ISO8601 UTC timestamp |
+| 3 | `pack_name` | Name of the verified pack |
+| 4 | `pack_sha256` | SHA-256 of the tarball |
+| 5 | `manifest_sha256` | SHA-256 of `MANIFEST.tsv` |
+| 6 | `checksums_sha256`| SHA-256 of `CHECKSUMS.sha256` |
+| 7 | `git_head` | Current git commit hash |
+| 8 | `tool_version` | Version of the `evidencepack` tool |
+| 9 | `prev_entry_sha256`| `entry_sha256` of the previous line (or 64 zeros for genesis) |
+| 10| `entry_sha256` | SHA-256 of columns 1-9 (tab-joined) |
+
+## 8. Key Rotation v1
+
+Trust Anchor v1 では、運用中の鍵ローテーションを安全に行うために以下のフィールドを使用します。
+
+### 8.1 Rotation Fields (`ops/reviewpack_policy.toml`)
+- `primary_pubkey_sha256`: 現在推奨されるメインの鍵（SignerIsPrimary 判定に使用）。
+- `revoked_pubkey_sha256`: 明示的に失効させた鍵のリスト。`allowed` に残っていても拒否されます。
+
+### 8.2 Rotation Procedure
+1. **新鍵生成**: `keygen` を実行。秘密鍵は `tmp` 等の安全な場所にのみ置き、リポジトリに含めない。
+2. **許可登録**: 新鍵の `PubKeySHA256` を `allowed_pubkey_sha256` に追加。
+3. **主鍵切替**: `primary_pubkey_sha256` を新鍵の `PubKeySHA256` に更新。
+4. **旧鍵失効**: 旧鍵の `PubKeySHA256` を `revoked_pubkey_sha256` に追加。
+
+> [!IMPORTANT]
+> `revoked_pubkey_sha256` は `allowed_pubkey_sha256` よりも優先されます。失効リストに含まれている鍵による署名は、運用モード（strict/permissive）に関わらず拒否されます。
