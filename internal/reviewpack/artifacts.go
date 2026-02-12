@@ -40,6 +40,11 @@ It guarantees that "Same Input -> Same Output" (Checksums match).
 
 ## 3. Verification
 Run ./VERIFY.sh to validate integrity.
+
+## 4. Test Evidence Markers (Pack-Contained)
+In pack-contained verification, Gate-1 (verify-only) and strict verification require 30_make_test.log to include evidence markers:
+- "go test ./..."
+- "unittest discover"
 `
 	_ = os.WriteFile(filepath.Join(dir, "SPEC.md"), []byte(spec), 0644)
 }
