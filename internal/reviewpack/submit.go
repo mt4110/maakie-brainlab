@@ -88,6 +88,7 @@ func packToTarForSubmit(args []string, timebox int, mode string) string {
 	fmt.Printf("=== review_pack (S7 Run Always) ===\nTarget : %s%s\nTimebox: %ds\nMode   : %s\nWork   : %s\n", packName, extTarGz, timebox, mode, packDir)
 
 	// 1. Preflight
+	os.Setenv("PYTHONWARNINGS", "ignore::DeprecationWarning")
 	runPreflightChecks(repoRoot, packDir, timestamp, timebox, skipEval, mode)
 
 	nCommits := "5"
