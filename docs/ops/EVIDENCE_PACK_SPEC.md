@@ -10,3 +10,10 @@ In addition to basic pack info, specific evaluation metadata is recorded:
 - `eval_source_path`: Relative path of source eval result in repo (e.g. `eval/results/2026...jsonl`)
 - `eval_source_sha256`: SHA256 of source file
 - `eval_source_bytes`: Size of source file
+
+## Evidence Verification (`30_make_test.log`)
+The evidence log must be present and contain the following execution markers:
+- `go test ./...`
+- `unittest discover`
+
+Failure to find these markers in the log will cause Gate-1 or `reviewpack verify` to fail.
