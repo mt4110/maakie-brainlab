@@ -2,7 +2,7 @@ package main
 
 import (
 	"crypto/ed25519"
-	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
 	"flag"
 	"fmt"
@@ -16,6 +16,7 @@ func runKeygen(args []string) error {
 	fs := flag.NewFlagSet("keygen", flag.ExitOnError)
 	keyID := fs.String("id", "", "Key identifier (required)")
 	outDir := fs.String("out-dir", ".", "Output directory for key files")
+	seed := fs.String("seed", "", "Deterministic seed string (same seed = same key)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -24,10 +25,22 @@ func runKeygen(args []string) error {
 		return fmt.Errorf("--id is required")
 	}
 
-	// Generate Ed25519 keypair
-	pub, priv, err := ed25519.GenerateKey(rand.Reader)
-	if err != nil {
-		return fmt.Errorf("keygen failed: %w", err)
+	var pub ed25519.PublicKey
+	var priv ed25519.PrivateKey
+
+	if *seed != "" {
+		// Deterministic: sha256("reviewpack:keygen:v1:" + seed) → 32-byte Ed25519 seed
+		domain := "reviewpack:keygen:v1:"
+		h := sha256.Sum256([]byte(domain + *seed))
+		priv = ed25519.NewKeyFromSeed(h[:])
+		pub = priv.Public().(ed25519.PublicKey)
+	} else {
+		// Random
+		var err error
+		pub, priv, err = ed25519.GenerateKey(nil)
+		if err != nil {
+			return fmt.Errorf("keygen failed: %w", err)
+		}
 	}
 
 	if err := os.MkdirAll(*outDir, 0755); err != nil {
@@ -52,6 +65,7 @@ func runKeygen(args []string) error {
 		return fmt.Errorf("failed to write public key: %w", err)
 	}
 
-	fmt.Printf("Generated keypair:\n  Private: %s\n  Public:  %s\n", privPath, pubPath)
+	fingerprint := PubKeyFingerprint(pub)
+	fmt.Printf("Generated keypair:\n  Private: %s\n  Public:  %s\n  PubKeySHA256: %s\n", privPath, pubPath, fingerprint)
 	return nil
 }

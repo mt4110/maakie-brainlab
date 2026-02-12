@@ -97,26 +97,41 @@ func verifyPack(cfg VerifyConfig) error {
 	// 3. Signature Check — try embedded first, then sidecar
 	hasSignature := false
 	var keyID string
+	var pubKeySHA256 string
+	var pubKeySource string
 
 	// 3a. Embedded signatures (SIGNATURES/ inside tar)
-	embedded, embedKeyID, embedErr := verifyEmbeddedSignature(ctx.TargetArtifact)
+	embedded, embedKeyID, embedFP, embedErr := verifyEmbeddedSignature(ctx.TargetArtifact)
 	if embedErr != nil {
 		return embedErr
 	}
 	if embedded {
 		hasSignature = true
 		keyID = embedKeyID
+		pubKeySHA256 = embedFP
+		pubKeySource = "embedded"
 	} else {
 		// 3b. Legacy sidecar signatures
 		hasSignature, keyID, err = verifySignatureWithAudit(ctx.TargetArtifact, ctx.KeysDir, cfg.Logger)
 		if err != nil {
 			return err
 		}
+		if hasSignature {
+			pubKeySource = "file:" + ctx.KeysDir
+			pubKeySHA256 = computeSidecarFingerprint(ctx.TargetArtifact, ctx.KeysDir, keyID)
+		}
 	}
 
-	// 4. Policy Evaluation (S8)
-	if err := EvaluatePolicy(policy, env, hasSignature, keyID); err != nil {
-		return formatPolicyError(err, policy, env, keyID, ctx.PolicyPath)
+	// Always log signer identity
+	if hasSignature {
+		fmt.Printf("  KeyID:        %s\n", keyID)
+		fmt.Printf("  PubKeySHA256: %s\n", pubKeySHA256)
+		fmt.Printf("  PubKeySource: %s\n", pubKeySource)
+	}
+
+	// 4. Policy Evaluation (S8 + Trust Anchor v1)
+	if err := EvaluatePolicy(policy, env, hasSignature, keyID, pubKeySHA256); err != nil {
+		return formatPolicyError(err, policy, env, keyID, pubKeySHA256, ctx.PolicyPath)
 	}
 
 	// 5. Audit Chain Verification (S10) — if present in bundle
@@ -318,6 +333,28 @@ func verifySignatureWithAudit(path, keysDir string, logger *AuditLogger) (bool, 
 	return true, keyID, nil
 }
 
+// computeSidecarFingerprint loads the public key for a sidecar-signed pack and returns its fingerprint.
+// Returns empty string on any error (best-effort for legacy path).
+func computeSidecarFingerprint(tarPath, keysDir, keyID string) string {
+	if keysDir == "" || keyID == "" {
+		return ""
+	}
+	pubPath := filepath.Join(keysDir, keyID+".pub")
+	data, err := os.ReadFile(pubPath)
+	if err != nil {
+		return ""
+	}
+	var ck CryptoKey
+	if err := json.Unmarshal(data, &ck); err != nil {
+		return ""
+	}
+	pub, err := decodePublicKey(ck.PubB64)
+	if err != nil {
+		return ""
+	}
+	return PubKeyFingerprint(pub)
+}
+
 func locateSignature(path string) (string, error) {
 	sigPath := path + ".sig.json"
 	if _, err := os.Stat(sigPath); err == nil {
@@ -337,20 +374,25 @@ func locateSignature(path string) (string, error) {
 	return "", os.ErrNotExist
 }
 
-func formatPolicyError(err error, policy *ReviewPackPolicy, env, keyID, policyPath string) error {
+func formatPolicyError(err error, policy *ReviewPackPolicy, env, keyID, pubKeySHA256, policyPath string) error {
 	return fmt.Errorf(`
 ================================================================================
-POLICY VIOLATION (%s defined in %s)
+POLICY VIOLATION (Trust Anchor v1, defined in %s)
 Mode: %s (Environment: %s)
 
 Error: %v
 
+KeyID:        %s
+PubKeySHA256: %s
+
 ACTION REQUIRED:
 1. Check ops/reviewpack_policy.toml
-2. If signature required: Sign the artifact (see ops/keys/reviewpack/README.md)
-3. If key rejected: Add KeyID %s to 'allowed_key_ids' in policy
+2. If signature required: Sign the artifact (see ops/keys/reviewpack/)
+3. If key rejected: Add PubKeySHA256 to 'allowed_pubkey_sha256' in policy
+4. Regen (smoke): evidencepack keygen --id <id> --seed "reviewpack-smoke-v1"
+5. Note: KeyID is a label; allowlist is enforced by PubKeySHA256
 ================================================================================
-`, "v1", policyPath, policy.Enforcement.ModeCI, env, err, keyID)
+`, policyPath, policy.Enforcement.ModeCI, env, err, keyID, pubKeySHA256)
 }
 
 func isBundle(path string) (bool, error) {
@@ -506,12 +548,12 @@ func checkRootEntries(dir string) error {
 }
 
 // verifyEmbeddedSignature checks for SIGNATURES/ inside the tar and verifies.
-// Returns (found, keyID, error).
-func verifyEmbeddedSignature(tarPath string) (bool, string, error) {
+// Returns (found, keyID, pubKeySHA256, error).
+func verifyEmbeddedSignature(tarPath string) (bool, string, string, error) {
 	// Extract SIGNATURES/ files from tar
 	sigFiles, err := extractSignatureFiles(tarPath)
 	if err != nil {
-		return false, "", err
+		return false, "", "", err
 	}
 
 	// Check if SIGNATURES/ exists
@@ -520,49 +562,51 @@ func verifyEmbeddedSignature(tarPath string) (bool, string, error) {
 	pubJSON, hasPub := sigFiles["SIGNATURES/pack.pub"]
 
 	if !hasSHA && !hasSig && !hasPub {
-		// No embedded signatures
-		return false, "", nil
+		return false, "", "", nil
 	}
 	if !hasSHA || !hasSig || !hasPub {
-		return false, "", fmt.Errorf("incomplete SIGNATURES/: need pack.sha256, pack.sha256.sig, pack.pub")
+		return false, "", "", fmt.Errorf("incomplete SIGNATURES/: need pack.sha256, pack.sha256.sig, pack.pub")
 	}
 
 	// Parse claimed digest from pack.sha256
 	claimedDigest, err := parsePackSHA256(sha256Content)
 	if err != nil {
-		return false, "", fmt.Errorf("invalid SIGNATURES/pack.sha256: %w", err)
+		return false, "", "", fmt.Errorf("invalid SIGNATURES/pack.sha256: %w", err)
 	}
 
 	// Parse public key
 	var pubKey CryptoKey
 	if err := json.Unmarshal(pubJSON, &pubKey); err != nil {
-		return false, "", fmt.Errorf("invalid SIGNATURES/pack.pub: %w", err)
+		return false, "", "", fmt.Errorf("invalid SIGNATURES/pack.pub: %w", err)
 	}
 	if pubKey.Alg != AlgEd25519 {
-		return false, "", fmt.Errorf("unsupported alg in pack.pub: %s", pubKey.Alg)
+		return false, "", "", fmt.Errorf("unsupported alg in pack.pub: %s", pubKey.Alg)
 	}
 	pub, err := decodePublicKey(pubKey.PubB64)
 	if err != nil {
-		return false, "", err
+		return false, "", "", err
 	}
+
+	// Compute fingerprint (Trust Anchor v1)
+	fingerprint := PubKeyFingerprint(pub)
 
 	// Verify signature over digest
 	if !VerifyDigest(claimedDigest, sigBytes, pub) {
-		return true, pubKey.KeyID, fmt.Errorf("embedded signature verification FAILED")
+		return true, pubKey.KeyID, fingerprint, fmt.Errorf("embedded signature verification FAILED")
 	}
 
 	// Verify integrity: recompute SHA256 of CHECKSUMS.sha256 from tar
 	actualChkDigest, err := extractAndHashChecksums(tarPath)
 	if err != nil {
-		return true, pubKey.KeyID, fmt.Errorf("failed to verify CHECKSUMS.sha256 integrity: %w", err)
+		return true, pubKey.KeyID, fingerprint, fmt.Errorf("failed to verify CHECKSUMS.sha256 integrity: %w", err)
 	}
 	if actualChkDigest != claimedDigest {
-		return true, pubKey.KeyID, fmt.Errorf(
+		return true, pubKey.KeyID, fingerprint, fmt.Errorf(
 			"CHECKSUMS.sha256 digest mismatch: claimed %s, actual %s", claimedDigest, actualChkDigest)
 	}
 
 	fmt.Printf("Embedded signature VERIFIED (KeyID: %s)\n", pubKey.KeyID)
-	return true, pubKey.KeyID, nil
+	return true, pubKey.KeyID, fingerprint, nil
 }
 
 // extractSignatureFiles reads SIGNATURES/* entries from a tar.gz.
