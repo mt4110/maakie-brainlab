@@ -121,6 +121,10 @@ func runVerify(args []string) {
 	hasUnittest := false
 
 	evScanner := bufio.NewScanner(bytes.NewReader(logBytes))
+	// S8 Hotfix: Handle long lines (e.g. 1MB buffer) and check for errors
+	buf := make([]byte, 1024*1024)
+	evScanner.Buffer(buf, 1024*1024)
+
 	for evScanner.Scan() {
 		line := strings.TrimSpace(evScanner.Text())
 		// Strip shell execution markers if present
@@ -132,6 +136,10 @@ func runVerify(args []string) {
 		if strings.HasPrefix(line, "unittest discover") || strings.Contains(line, "python -m unittest discover") {
 			hasUnittest = true
 		}
+	}
+
+	if err := evScanner.Err(); err != nil {
+		log.Fatalf("[FATAL] Error scanning evidence log %s/%s: %v", dirLogsRaw, fileMakeTest, err)
 	}
 
 	if !hasGoTest {
