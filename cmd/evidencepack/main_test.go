@@ -30,6 +30,7 @@ func TestVerifyAcceptsArtifactOrBundle(t *testing.T) {
 	os.WriteFile(payload, []byte("content"), 0644)
 
 	// Pack (Standard Artifact)
+	t.Setenv(EnvPolicyMode, "local")
 	runPack([]string{flagKind, "compat", "--store", storeDir, payload})
 
 	entries, _ := os.ReadDir(filepath.Join(storeDir, "packs", "compat"))
@@ -116,7 +117,7 @@ func TestRoundTripOK(t *testing.T) {
 	packPath := filepath.Join(packsDir, entries[0].Name())
 
 	// Verify
-	if err := verifyPack(VerifyConfig{Path: packPath, RepoRoot: ".", PolicyMode: ""}); err != nil {
+	if err := verifyPack(VerifyConfig{Path: packPath, RepoRoot: ".", PolicyMode: "local"}); err != nil {
 		t.Fatalf("Verify failed: %v", err)
 	}
 }
@@ -151,7 +152,7 @@ func TestVerifyFailsOnCorruptDataFile(t *testing.T) {
 		return content
 	}, nil)
 
-	if err := verifyPack(VerifyConfig{Path: packPath, RepoRoot: ".", PolicyMode: ""}); err == nil {
+	if err := verifyPack(VerifyConfig{Path: packPath, RepoRoot: ".", PolicyMode: "local"}); err == nil {
 		t.Fatal("Expected verify to fail on corrupted data, but it passed")
 	} else if !strings.Contains(err.Error(), "mismatch") { // hash mismatch
 		t.Logf(logExpectedErr, err)
@@ -173,7 +174,7 @@ func TestVerifyFailsOnSymlink(t *testing.T) {
 		tw.WriteHeader(hdr)
 	})
 
-	if err := verifyPack(VerifyConfig{Path: packPath, RepoRoot: "."}); err == nil {
+	if err := verifyPack(VerifyConfig{Path: packPath, RepoRoot: ".", PolicyMode: "local"}); err == nil {
 		t.Fatal("Expected verify failure on symlink, passed")
 	} else {
 		t.Logf(logExpectedErr, err)
@@ -222,7 +223,7 @@ func TestVerifyFailsOnExtraFile(t *testing.T) {
 		writeTarFile(t, tw, "data/extra.txt", "I am extra")
 	})
 
-	if err := verifyPack(VerifyConfig{Path: packPath, RepoRoot: "."}); err == nil {
+	if err := verifyPack(VerifyConfig{Path: packPath, RepoRoot: ".", PolicyMode: "local"}); err == nil {
 		t.Fatal("Expected verify failure on extra file, passed")
 	} else {
 		t.Logf(logExpectedErr, err)
@@ -250,7 +251,7 @@ func TestVerifyFailsOnExtraRootEntry(t *testing.T) {
 		writeTarFile(t, tw, "ROOT_EXTRA.txt", "I am forbidden in root")
 	})
 
-	if err := verifyPack(VerifyConfig{Path: packPath, RepoRoot: "."}); err == nil {
+	if err := verifyPack(VerifyConfig{Path: packPath, RepoRoot: ".", PolicyMode: "local"}); err == nil {
 		t.Fatal("Expected verify failure on extra root file, passed")
 	} else if !strings.Contains(err.Error(), "forbidden root entry") {
 		t.Fatalf("Got unexpected error: %v", err)
@@ -263,6 +264,7 @@ func TestPackRejectsInvalidKind(t *testing.T) {
 	// Test runPack entry point kind validation
 
 	// We run runPack with invalid arg
+	t.Setenv(EnvPolicyMode, "local")
 	err := runPack([]string{flagKind, "invalid-kind!", "."})
 	if err == nil {
 		t.Fatal("Expected runPack to fail on invalid kind")
@@ -314,11 +316,20 @@ func TestS7SigningRoundTrip(t *testing.T) {
 	pubJSON, _ := json.Marshal(pubMeta)
 	os.WriteFile(filepath.Join("ops", "keys", "reviewpack", keyID+".pub"), pubJSON, 0644)
 
+	// S14-11: Provide dummy policy for post-pack verify (CI mode requirement)
+	policyContent := `version=1
+[enforcement]
+mode_local='permissive'
+mode_ci='strict'
+`
+	os.WriteFile(filepath.Join("ops", "reviewpack_policy.toml"), []byte(policyContent), 0644)
+
 	// 3. Run Pack with Sign
 
 	// Note: NewAuditLogger will try to create directory in Cwd (tmpDir).
 	// That's fine.
 
+	t.Setenv(EnvPolicyMode, "local")
 	err := runPack([]string{
 		flagKind, "s7test",
 		"--store", storeDir,
