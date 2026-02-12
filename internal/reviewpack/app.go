@@ -19,6 +19,8 @@ func Run(args []string) int {
 		runSubmit(cmdArgs)
 	case "repro-check":
 		runReproCheck(cmdArgs)
+	case "diff":
+		runDiff(cmdArgs)
 	default:
 		usage()
 		return 1
