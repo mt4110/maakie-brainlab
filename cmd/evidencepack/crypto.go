@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 // Contract Constants
@@ -223,4 +224,30 @@ func verifySignature(packPath, sigPath, keysDir string) error {
 	}
 
 	return nil
+}
+
+// ---------------------------------------------------------------------------
+// Embedded Signature Helpers (v1)
+// ---------------------------------------------------------------------------
+
+// SignDigest signs a SHA256 hex digest string with Ed25519.
+// Deterministic: same digest + same key → same signature.
+func SignDigest(digest string, priv ed25519.PrivateKey) []byte {
+	return ed25519.Sign(priv, []byte(digest))
+}
+
+// VerifyDigest verifies an Ed25519 signature over a SHA256 hex digest string.
+func VerifyDigest(digest string, sig []byte, pub ed25519.PublicKey) bool {
+	return ed25519.Verify(pub, []byte(digest), sig)
+}
+
+// ExportPublicKeyJSON serializes a public key to JSON CryptoKey format.
+func ExportPublicKeyJSON(pub ed25519.PublicKey, keyID string) ([]byte, error) {
+	k := CryptoKey{
+		KeyID:        keyID,
+		Alg:          AlgEd25519,
+		PubB64:       base64.StdEncoding.EncodeToString(pub),
+		CreatedAtUTC: time.Now().UTC().Format(time.RFC3339),
+	}
+	return json.MarshalIndent(k, "", "  ")
 }

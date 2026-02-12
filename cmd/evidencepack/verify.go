@@ -4,6 +4,9 @@ import (
 	"archive/tar"
 	"bufio"
 	"compress/gzip"
+	"crypto/ed25519"
+	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -22,6 +25,7 @@ const (
 	fileManifest        = "MANIFEST.tsv"
 	fileChecksums       = "CHECKSUMS.sha256"
 	dirData             = "data"
+	dirSignatures       = "SIGNATURES"
 )
 
 func runVerify(args []string) error {
@@ -90,10 +94,24 @@ func verifyPack(cfg VerifyConfig) error {
 		return err
 	}
 
-	// 3. Signature Check (S7)
-	hasSignature, keyID, err := verifySignatureWithAudit(ctx.TargetArtifact, ctx.KeysDir, cfg.Logger)
-	if err != nil {
-		return err
+	// 3. Signature Check — try embedded first, then sidecar
+	hasSignature := false
+	var keyID string
+
+	// 3a. Embedded signatures (SIGNATURES/ inside tar)
+	embedded, embedKeyID, embedErr := verifyEmbeddedSignature(ctx.TargetArtifact)
+	if embedErr != nil {
+		return embedErr
+	}
+	if embedded {
+		hasSignature = true
+		keyID = embedKeyID
+	} else {
+		// 3b. Legacy sidecar signatures
+		hasSignature, keyID, err = verifySignatureWithAudit(ctx.TargetArtifact, ctx.KeysDir, cfg.Logger)
+		if err != nil {
+			return err
+		}
 	}
 
 	// 4. Policy Evaluation (S8)
@@ -237,7 +255,6 @@ func verifyBundleAudit(ctx *verContext) error {
 	fmt.Println("Audit chain VERIFIED.")
 	return nil
 }
-
 
 func loadPolicySafe(path, env string) (*ReviewPackPolicy, error) {
 	policy, err := LoadPolicy(path)
@@ -471,6 +488,7 @@ func checkRootEntries(dir string) error {
 		fileManifest:        true,
 		fileChecksums:       true,
 		dirData:             true,
+		dirSignatures:       true,
 	}
 
 	entries, err := os.ReadDir(dir)
@@ -485,6 +503,130 @@ func checkRootEntries(dir string) error {
 	}
 
 	return verifyRequiredEntries(dir)
+}
+
+// verifyEmbeddedSignature checks for SIGNATURES/ inside the tar and verifies.
+// Returns (found, keyID, error).
+func verifyEmbeddedSignature(tarPath string) (bool, string, error) {
+	// Extract SIGNATURES/ files from tar
+	sigFiles, err := extractSignatureFiles(tarPath)
+	if err != nil {
+		return false, "", err
+	}
+
+	// Check if SIGNATURES/ exists
+	sha256Content, hasSHA := sigFiles["SIGNATURES/pack.sha256"]
+	sigBytes, hasSig := sigFiles["SIGNATURES/pack.sha256.sig"]
+	pubJSON, hasPub := sigFiles["SIGNATURES/pack.pub"]
+
+	if !hasSHA && !hasSig && !hasPub {
+		// No embedded signatures
+		return false, "", nil
+	}
+	if !hasSHA || !hasSig || !hasPub {
+		return false, "", fmt.Errorf("incomplete SIGNATURES/: need pack.sha256, pack.sha256.sig, pack.pub")
+	}
+
+	// Parse claimed digest from pack.sha256
+	claimedDigest, err := parsePackSHA256(sha256Content)
+	if err != nil {
+		return false, "", fmt.Errorf("invalid SIGNATURES/pack.sha256: %w", err)
+	}
+
+	// Parse public key
+	var pubKey CryptoKey
+	if err := json.Unmarshal(pubJSON, &pubKey); err != nil {
+		return false, "", fmt.Errorf("invalid SIGNATURES/pack.pub: %w", err)
+	}
+	if pubKey.Alg != AlgEd25519 {
+		return false, "", fmt.Errorf("unsupported alg in pack.pub: %s", pubKey.Alg)
+	}
+	pub, err := decodePublicKey(pubKey.PubB64)
+	if err != nil {
+		return false, "", err
+	}
+
+	// Verify signature over digest
+	if !VerifyDigest(claimedDigest, sigBytes, pub) {
+		return true, pubKey.KeyID, fmt.Errorf("embedded signature verification FAILED")
+	}
+
+	// Verify integrity: recompute SHA256 of CHECKSUMS.sha256 from tar
+	actualChkDigest, err := extractAndHashChecksums(tarPath)
+	if err != nil {
+		return true, pubKey.KeyID, fmt.Errorf("failed to verify CHECKSUMS.sha256 integrity: %w", err)
+	}
+	if actualChkDigest != claimedDigest {
+		return true, pubKey.KeyID, fmt.Errorf(
+			"CHECKSUMS.sha256 digest mismatch: claimed %s, actual %s", claimedDigest, actualChkDigest)
+	}
+
+	fmt.Printf("Embedded signature VERIFIED (KeyID: %s)\n", pubKey.KeyID)
+	return true, pubKey.KeyID, nil
+}
+
+// extractSignatureFiles reads SIGNATURES/* entries from a tar.gz.
+func extractSignatureFiles(tarPath string) (map[string][]byte, error) {
+	f, err := os.Open(tarPath)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	gzr, err := gzip.NewReader(f)
+	if err != nil {
+		return nil, err
+	}
+	defer gzr.Close()
+
+	result := make(map[string][]byte)
+	tr := tar.NewReader(gzr)
+	for {
+		header, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		if strings.HasPrefix(header.Name, "SIGNATURES/") && header.Typeflag == tar.TypeReg {
+			data, err := io.ReadAll(tr)
+			if err != nil {
+				return nil, err
+			}
+			result[header.Name] = data
+		}
+	}
+	return result, nil
+}
+
+// parsePackSHA256 extracts the hex digest from "<hex>  CHECKSUMS.sha256\n" format.
+func parsePackSHA256(content []byte) (string, error) {
+	line := strings.TrimSpace(string(content))
+	parts := strings.Fields(line)
+	if len(parts) != 2 || parts[1] != "CHECKSUMS.sha256" {
+		return "", fmt.Errorf("unexpected format: %q", line)
+	}
+	// Validate hex
+	if len(parts[0]) != 64 {
+		return "", fmt.Errorf("invalid SHA256 hex length: %d", len(parts[0]))
+	}
+	if _, err := hex.DecodeString(parts[0]); err != nil {
+		return "", fmt.Errorf("invalid hex: %w", err)
+	}
+	return parts[0], nil
+}
+
+// decodePublicKey decodes a base64-encoded Ed25519 public key.
+func decodePublicKey(b64 string) (ed25519.PublicKey, error) {
+	pubBytes, err := base64.StdEncoding.DecodeString(b64)
+	if err != nil {
+		return nil, fmt.Errorf("invalid base64 in public key: %w", err)
+	}
+	if len(pubBytes) != ed25519.PublicKeySize {
+		return nil, fmt.Errorf("invalid Ed25519 public key length: %d", len(pubBytes))
+	}
+	return ed25519.PublicKey(pubBytes), nil
 }
 
 func verifyRequiredEntries(dir string) error {

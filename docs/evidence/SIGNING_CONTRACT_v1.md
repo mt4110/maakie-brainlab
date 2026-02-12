@@ -5,6 +5,8 @@ It ensures that artifacts are cryptographically bound to a specific key, and tha
 
 ## 1. Signing Target (Canonical Input)
 
+### External Sidecar (legacy)
+
 The signature is generated over a **canonical UTF-8 message**.
 The format is **strictly fixed** (order, newlines, no trailing newline at EOF).
 
@@ -21,10 +23,30 @@ checksums_sha256=<hex>
 
 **Note**: Timestamp is **NOT** included in the signed message. This ensures deterministic signatures for the same artifact and key.
 
+### Embedded Signatures (v1 primary)
+
+When `--sign-key <path>` is used, the pack tar includes a `SIGNATURES/` directory:
+
+```text
+SIGNATURES/
+  pack.sha256          # text: "<sha256hex>  CHECKSUMS.sha256\n"
+  pack.sha256.sig      # raw Ed25519 signature (64 bytes) over the hex digest string
+  pack.pub             # JSON public key (CryptoKey format)
+```
+
+**Signing target**: The SHA-256 hex digest of `CHECKSUMS.sha256` (the file's content hash).
+The signature is `Ed25519.Sign(priv, []byte("<sha256hex>"))`.
+
+**Why CHECKSUMS.sha256?** This file already contains hashes of all root files
+(`EVIDENCE_VERSION`, `METADATA.json`, `MANIFEST.tsv`), which in turn bind to all
+payload data. Signing its hash transitively covers the entire pack content.
+
+**Determinism**: Same CHECKSUMS.sha256 + same key = same signature (Ed25519 is deterministic).
+
 ### Algorithm
 - **Ed25519** (pure Go implementation).
 
-## 2. Signature Sidecar (`*.sig.json`)
+## 2. Signature Sidecar (`*.sig.json`) — Legacy
 
 The signature is stored in a JSON file adjacent to the artifact.
 **Format**: `JSON` (Strict structure).
@@ -48,7 +70,16 @@ The signature is stored in a JSON file adjacent to the artifact.
 - `checksums_sha256`: Must match the checksums file's digest.
 - `signature_b64`: Ed25519 signature of the **Canonical Input** (see above), encoded in Base64 (Standard).
 
-## 3. Key Management
+## 3. Embedded Signature Verification (v1)
+
+1. **Extract** `SIGNATURES/pack.sha256`, `SIGNATURES/pack.sha256.sig`, `SIGNATURES/pack.pub` from the tar.
+2. **Parse digest**: Read the hex digest from `pack.sha256` (format: `<hex>  CHECKSUMS.sha256\n`).
+3. **Load public key**: Parse `pack.pub` as JSON (`CryptoKey` format).
+4. **Verify signature**: `Ed25519.Verify(pub, []byte(hexDigest), sigBytes)`.
+5. **Verify integrity**: Recompute SHA-256 of `CHECKSUMS.sha256` from the tar. Must match claimed digest.
+6. **CI enforcement**: If `SIGNATURES/` is absent and `CI=true` → **FAIL** ("signature required in CI").
+
+## 4. Key Management
 
 ### Public Keys
 - Stored in repo: `ops/keys/reviewpack/<key_id>.pub`.
@@ -67,27 +98,22 @@ The signature is stored in a JSON file adjacent to the artifact.
 - **NEVER** stored in repo or pack.
 - **NEVER** logged.
 - Supplied via:
-    1.  **File**: `--key-file <path>` (Raw 32-byte seed or 64-byte private key).
+    1.  **File**: `--sign-key <path>` or `--key-file <path>` (Raw 32-byte seed or 64-byte private key, or base64).
     2.  **Env**: `REVIEWPACK_PRIVATE_KEY_B64` (Base64 encoded).
 
-## 4. Verification Logic (RunAlways)
+## 5. Keygen
 
-1.  **Determine Target**: Identify `.tar.gz`.
-2.  **Check Sidecar**: If `.sig.json` exists -> **VERIFICATION IS MANDATORY**.
-    - If no `.sig.json` -> verification skipped (unless policy requires it in S8).
-3.  **Read Sidecar**: Parse JSON. Check `contract="reviewpack.sig.v1"`, `alg="ed25519"`.
-4.  **Load Key**: Find public key matching `key_id` in `ops/keys/reviewpack/`.
-    - If key missing -> FAIL.
-5.  **Reconstruct Message**:
-    - Build canonical message using `artifact_sha256` and `checksums_sha256` from the **JSON** (Claimed).
-6.  **Verify Signature**: `Ed25519.Verify(pub, message, sig)`.
-    - If fail -> FAIL.
-7.  **Verify Integrity**:
-    - Compute actual SHA-256 of `.tar.gz`. Must match `artifact_sha256`.
-    - Compute actual SHA-256 of `CHECKSUMS.sha256` (extract or read). Must match `checksums_sha256`.
-    - If mismatch -> FAIL.
+The `evidencepack keygen` subcommand generates a fresh Ed25519 keypair:
 
-## 5. Audit Log (S7)
+```sh
+evidencepack keygen --id <key-id> --out-dir <dir>
+```
+
+Output:
+- `<dir>/<key-id>.key` — private key (base64, 600 permissions)
+- `<dir>/<key-id>.pub` — public key (JSON CryptoKey format)
+
+## 6. Audit Log (S7)
 
 - **File**: `.local/reviewpack_audit/audit.log.jsonl`.
 - **Append-only**.
