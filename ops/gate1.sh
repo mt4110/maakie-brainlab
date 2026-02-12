@@ -49,7 +49,7 @@ if [ "$VERIFY_ONLY" -eq 0 ]; then
 fi
 
 # 3.5 Evidence Check (Pack-contained mode)
-if [[ -f "30_make_test.log" ]]; then
+if [[ "$VERIFY_ONLY" -eq 1 && -f "30_make_test.log" ]]; then
     echo "[Gate-1] Verifying 30_make_test.log evidence..."
     grep 'go test \./\.\.\.' 30_make_test.log > /dev/null || { echo "[FAIL] Evidence missing: 'go test ./...' in 30_make_test.log"; exit 2; }
     grep 'unittest discover' 30_make_test.log > /dev/null || { echo "[FAIL] Evidence missing: 'unittest discover' in 30_make_test.log"; exit 2; }
