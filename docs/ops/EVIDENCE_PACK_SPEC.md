@@ -12,8 +12,8 @@ In addition to basic pack info, specific evaluation metadata is recorded:
 - `eval_source_bytes`: Size of source file
 
 ## Evidence Verification (`30_make_test.log`)
-The evidence log must be present and contain the following execution markers:
+If present, the evidence log must contain the following execution markers:
 - `go test ./...`
 - `unittest discover`
 
-Failure to find these markers in the log will cause Gate-1 or `reviewpack verify` to fail.
+Missing markers in a present log will cause Gate-1 (in verify-only mode) or `reviewpack verify` to fail. The `reviewpack verify` command additionally requires that `30_make_test.log` itself be present.
