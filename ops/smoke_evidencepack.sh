@@ -1,7 +1,7 @@
 #!/bin/bash
 # ops/smoke_evidencepack.sh
 # Deterministic end-to-end smoke test for evidencepack.
-# Validates: keygen -> pack (with embedded signing) -> verify -> health
+# Validates: keygen (seed) -> pack (embedded signing) -> verify -> health
 
 set -euo pipefail
 
@@ -30,21 +30,21 @@ PAYLOAD_DIR="$TMP_DIR/payload"
 mkdir -p "$PAYLOAD_DIR"
 
 # (B) Fixed payload (no date)
-printf "s12 smoke payload\n" > "$PAYLOAD_DIR/README.txt"
+printf "s13 smoke payload\n" > "$PAYLOAD_DIR/README.txt"
 
 # (F) Build-based execution for offline reliability
 BIN="$TMP_DIR/evidencepack"
 echo "--- [SMOKE] 0. Build"
 go build -o "$BIN" ./cmd/evidencepack
 
-KIND="s12test"
+KIND="s13test"
 
-# --- [NEW] Generate Ed25519 keypair for signing ---
-echo "--- [SMOKE] 1. Keygen"
+# --- Deterministic Ed25519 keypair via --seed ---
+echo "--- [SMOKE] 1. Keygen (seed-based, deterministic)"
 KEY_ID="smoke-test-key"
 KEY_DIR="$TMP_DIR/ops/keys/reviewpack"
 mkdir -p "$KEY_DIR"
-"$BIN" keygen --id "$KEY_ID" --out-dir "$KEY_DIR"
+"$BIN" keygen --id "$KEY_ID" --seed "reviewpack-smoke-v1" --out-dir "$KEY_DIR"
 PRIV_KEY="$KEY_DIR/${KEY_ID}.key"
 
 # Verify key files exist
@@ -84,6 +84,16 @@ echo "SIGNATURES/ found in tarball"
 echo "--- [SMOKE] 4. Verify"
 # (E) Flag-first order
 "$BIN" verify --repo "$TMP_DIR" "$LATEST"
+
+# Check that PubKeySHA256 is in the output
+echo "--- [SMOKE] 4a. Verify PubKeySHA256 in output"
+VERIFY_OUTPUT="$("$BIN" verify --repo "$TMP_DIR" "$LATEST" 2>&1)"
+if ! echo "$VERIFY_OUTPUT" | grep -q "PubKeySHA256"; then
+    echo "Error: PubKeySHA256 not found in verify output"
+    echo "$VERIFY_OUTPUT"
+    exit 5
+fi
+echo "PubKeySHA256 confirmed in verify output"
 
 echo "--- [SMOKE] 5. Health"
 "$BIN" health --repo "$TMP_DIR"
