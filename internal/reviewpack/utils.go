@@ -129,13 +129,17 @@ func createPortableLog(src, dst string) {
 		return
 	}
 	root := resolveRepoRoot()
+	tmp := os.TempDir()
 	// S8-4.3: Portable view (Suppress absolute paths)
 	s := string(content)
 	if root != "" {
 		s = strings.ReplaceAll(s, root, "<REPO_ROOT>")
 	}
-	// Suppress timings (e.g., "0.005s", "123ms") - simple regex placeholder if needed,
-	// but for now we follow the "Suppress" policy for absolute paths as primary goal.
+	if tmp != "" {
+		// os.TempDir() on mac often has a trailing slash or is a symlink.
+		// We use a simple replacement for the base if possible.
+		s = strings.ReplaceAll(s, tmp, "<TMPDIR>")
+	}
 	_ = os.WriteFile(dst, []byte(s), 0644)
 }
 
