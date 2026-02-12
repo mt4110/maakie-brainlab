@@ -110,10 +110,17 @@ func runVerify(args []string) {
 		os.Exit(1)
 	}
 
-	// 3. Status Check (01_status.txt)
-	statusPath := filepath.Join(verifyRoot, "01_status.txt")
-	if err := check01Status(statusPath); err != nil {
-		log.Fatalf("[FAIL] 01_status check: %v", err)
+	// 4. Evidence Marker Check (30_make_test.log)
+	testLogPath := filepath.Join(verifyRoot, fileMakeTest)
+	logBytes, err := os.ReadFile(testLogPath)
+	if err != nil {
+		log.Fatalf("[FAIL] Missing test evidence log: %s", fileMakeTest)
+	}
+	if !bytes.Contains(logBytes, []byte("go test ./...")) {
+		log.Fatalf("[FAIL] Evidence missing in %s: 'go test ./...'", fileMakeTest)
+	}
+	if !bytes.Contains(logBytes, []byte("unittest discover")) {
+		log.Fatalf("[FAIL] Evidence missing in %s: 'unittest discover'", fileMakeTest)
 	}
 
 	fmt.Println("PASS: Verify OK")
