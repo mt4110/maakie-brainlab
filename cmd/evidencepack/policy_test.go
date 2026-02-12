@@ -5,17 +5,22 @@ import (
 	"crypto/sha256"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
 func TestLoadPolicy(t *testing.T) {
 	tmpDir := t.TempDir()
 	policyPath := filepath.Join(tmpDir, "policy.toml")
+	fp1 := "c70af1649edfc2fa4607922370f1fcce494c1bf1c14bb82e54f66fdf48dca00a"
+	fp2 := "ddeeff0000000000000000000000000000000000000000000000000000000000"
 	content := `
 version = 1
 [keys]
 allowed_key_ids = ["key1", "key2"]
-allowed_pubkey_sha256 = ["aabbcc"]
+allowed_pubkey_sha256 = ["` + fp1 + `"]
+primary_pubkey_sha256 = "` + fp1 + `"
+revoked_pubkey_sha256 = ["` + fp2 + `"]
 [enforcement]
 mode_local = "permissive"
 mode_ci = "strict"
@@ -45,6 +50,12 @@ require_audit_in_ci = false
 	}
 	if p.Enforcement.ModeLocal != "permissive" {
 		t.Errorf("expected mode_local permissive, got %s", p.Enforcement.ModeLocal)
+	}
+	if p.Keys.PrimaryPubkeySHA256 != fp1 {
+		t.Errorf("expected primary_pubkey_sha256 %s, got %s", fp1, p.Keys.PrimaryPubkeySHA256)
+	}
+	if len(p.Keys.RevokedPubkeySHA256) != 1 || p.Keys.RevokedPubkeySHA256[0] != fp2 {
+		t.Errorf("expected revoked_pubkey_sha256 [%s], got %v", fp2, p.Keys.RevokedPubkeySHA256)
 	}
 }
 
@@ -175,6 +186,25 @@ func TestEvaluatePolicyFingerprint(t *testing.T) {
 			t.Error("both empty should fail")
 		}
 	})
+
+	t.Run("Revocation: FAIL even if allowed", func(t *testing.T) {
+		p := &ReviewPackPolicy{
+			Version: 1,
+			Keys: KeysConfig{
+				AllowedPubkeySHA256: []string{fp},
+				RevokedPubkeySHA256: []string{fp},
+			},
+			Enforcement: EnforcementConfig{ModeCI: "strict"},
+			Signing:     SigningConfig{RequireSignatureInCI: true, EnforceAllowlistInCI: true},
+		}
+		err := EvaluatePolicy(p, EnvCI, true, "any-key", fp)
+		if err == nil {
+			t.Error("revoked key should fail even if allowed")
+		}
+		if !strings.Contains(err.Error(), "revoked") {
+			t.Errorf("expected revocation error, got: %v", err)
+		}
+	})
 }
 
 // TestSeedDeterminism verifies that --seed produces the same key/fingerprint.
@@ -204,6 +234,44 @@ func TestSeedDeterminism(t *testing.T) {
 
 	if fp1 == fp3 {
 		t.Error("different seeds should produce different fingerprints")
+	}
+}
+
+func TestPolicyValidation(t *testing.T) {
+	tests := []struct {
+		name    string
+		policy  *ReviewPackPolicy
+		wantErr bool
+	}{
+		{
+			"Valid",
+			&ReviewPackPolicy{Version: 1, Keys: KeysConfig{PrimaryPubkeySHA256: "c70af1649edfc2fa4607922370f1fcce494c1bf1c14bb82e54f66fdf48dca00a"}},
+			false,
+		},
+		{
+			"Invalid Length",
+			&ReviewPackPolicy{Version: 1, Keys: KeysConfig{PrimaryPubkeySHA256: "abc"}},
+			true,
+		},
+		{
+			"Invalid Char",
+			&ReviewPackPolicy{Version: 1, Keys: KeysConfig{PrimaryPubkeySHA256: "G00af1649edfc2fa4607922370f1fcce494c1bf1c14bb82e54f66fdf48dca00a"}},
+			true,
+		},
+		{
+			"Uppercase Char",
+			&ReviewPackPolicy{Version: 1, Keys: KeysConfig{PrimaryPubkeySHA256: "C70af1649edfc2fa4607922370f1fcce494c1bf1c14bb82e54f66fdf48dca00a"}},
+			true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.policy.Validate()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
 	}
 }
 
