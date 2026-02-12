@@ -25,6 +25,8 @@ run-eval:
 	$(PYENV) $(PY) eval/run_eval.py
 
 test:
+	@echo "+ go test ./..."
+	go test ./...
 	$(PYENV) $(PY) -m unittest discover -v -s tests -p "test_*.py"
 
 ci: test
