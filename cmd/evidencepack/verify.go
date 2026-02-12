@@ -31,6 +31,7 @@ func runVerify(args []string) error {
 	policyPath := fs.String("policy", "", "Path to policy file (overrides default/bundled)")
 	keysDir := fs.String("keys-dir", "", "Path to keys directory (overrides default/bundled)")
 
+	repo := fs.String("repo", ".", "Repository root directory (for audit chain)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -43,7 +44,7 @@ func runVerify(args []string) error {
 		}
 	}
 
-	repoRoot := "."
+	repoRoot := *repo
 	logger, err := NewAuditLogger(repoRoot)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: Audit logger init failed: %v\n", err)

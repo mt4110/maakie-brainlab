@@ -55,6 +55,7 @@ func runPack(args []string) error {
 	store := fs.String("store", ".local/evidence_store", "Store directory")
 	sign := fs.Bool("sign", false, "Sign the artifact (requires key)")
 	keyFile := fs.String("key-file", "", "Path to private key file")
+	repo := fs.String("repo", ".", "Repository root directory (for audit chain)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -97,7 +98,7 @@ func runPack(args []string) error {
 	}
 
 	// Init Audit Logger
-	repoRoot := "."
+	repoRoot := *repo
 	logger, err := NewAuditLogger(repoRoot)
 	if err != nil {
 		return fmt.Errorf("audit init failed: %w", err)

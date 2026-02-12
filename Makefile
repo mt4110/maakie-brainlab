@@ -1,5 +1,4 @@
-.PHONY: server-start server-stop server-status log ingest ask run-eval test ci bootstrap \
-        sat-collect sat-normalize sat-gate sat-store sat-digest sat-index sat-run
+.PHONY: sat-collect sat-normalize sat-gate sat-store sat-digest sat-index sat-run smoke
 
 PY?=.venv/bin/python
 PYENV=PYTHONPATH=.
@@ -103,5 +102,8 @@ evidence-verify-demo:
 
 evidence-gc:
 	go run ./cmd/evidencepack gc --store .local/evidence_store
+
+smoke:
+	bash ops/smoke_evidencepack.sh
 
 

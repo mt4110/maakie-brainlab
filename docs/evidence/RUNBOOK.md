@@ -1,22 +1,28 @@
 # Evidence Pipeline Runbook
 
-## SMOKE TEST: Create and Verify (S10-00A)
+## SMOKE TEST: Create and Verify (S11-00)
 
+To run the automated smoke test:
+```bash
+make smoke
+```
+
+### Manual Smoke Steps (for debugging)
 ```bash
 # 1. Pack with arbitrary --kind label
 STORE=".local/evidence_store"
-KIND="s10test"
+KIND="s11test"
 go run ./cmd/evidencepack pack --kind "$KIND" --store "$STORE" ./README.md
 
-# 2. Locate the generated pack (it is stored under <store>/packs/<kind>/)
+# 2. Locate the generated pack (determistically)
 # TIP: If you lose track, use 'go run ./cmd/evidencepack kinds' to list kinds.
-LATEST="$(ls -1t "$STORE/packs/$KIND"/evidence_"$KIND"_*.tar.gz | head -n 1)"
+LATEST="$(find "$STORE/packs/$KIND" -maxdepth 1 -type f -name "evidence_${KIND}_*.tar.gz" | sort | tail -n 1)"
 
 # 3. Verify
-go run ./cmd/evidencepack verify "$LATEST"
+go run ./cmd/evidencepack verify --repo "." "$LATEST"
 
 # 4. Check Audit Chain Health
-go run ./cmd/evidencepack health
+go run ./cmd/evidencepack health --repo "."
 ```
 
 ## IF_FAIL: Verify Failed
