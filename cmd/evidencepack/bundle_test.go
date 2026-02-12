@@ -26,6 +26,7 @@ const (
 )
 
 func TestBundleRoundTripOK(t *testing.T) {
+	t.Setenv(EnvPolicyMode, "local")
 	tmp := t.TempDir()
 	storeDir := filepath.Join(tmp, "store")
 	keysDir := filepath.Join(tmp, "keys")
@@ -104,6 +105,7 @@ func TestBundleRoundTripOK(t *testing.T) {
 }
 
 func TestBundleFailsOnTamperedArtifact(t *testing.T) {
+	t.Setenv(EnvPolicyMode, "local")
 	tmp := t.TempDir()
 	storeDir := filepath.Join(tmp, "store")
 	opsKeysDir := filepath.Join(tmp, "ops", "keys", "reviewpack")
@@ -179,7 +181,7 @@ tamperkey = "owner"
 }
 
 func TestBundleFailsOnWrongKey(t *testing.T) {
-	// Similar setup but swap the key in bundle/keys
+	t.Setenv(EnvPolicyMode, "local")
 	tmp := t.TempDir()
 	storeDir := filepath.Join(tmp, "store")
 	opsKeysDir := filepath.Join(tmp, "ops", "keys", "reviewpack")
