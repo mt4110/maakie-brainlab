@@ -48,6 +48,14 @@ if [ "$VERIFY_ONLY" -eq 0 ]; then
     fi
 fi
 
+# 3.5 Evidence Check (Pack-contained mode)
+if [[ "$VERIFY_ONLY" -eq 1 && -f "30_make_test.log" ]]; then
+    echo "[Gate-1] Verifying 30_make_test.log evidence..."
+    grep 'go test \./\.\.\.' 30_make_test.log > /dev/null || { echo "[FAIL] Evidence missing: 'go test ./...' in 30_make_test.log"; exit 2; }
+    grep 'unittest discover' 30_make_test.log > /dev/null || { echo "[FAIL] Evidence missing: 'unittest discover' in 30_make_test.log"; exit 2; }
+    echo "[OK] Evidence markers found."
+fi
+
 # 4. Strict Verification (The "Constitution")
 echo "[Gate-1] Verifying Eval Results (Pass + Sources)..."
 

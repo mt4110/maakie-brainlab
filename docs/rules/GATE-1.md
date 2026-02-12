@@ -57,3 +57,4 @@ Code in this repo MUST NOT assume ownership of these paths or attempt to "clean"
     - `run-eval` を実行せず、`eval/results/latest.jsonl` を直接検証する。
     - ユニットテストや環境チェック（シンボリックリンク等）をスキップする。
     - 評価済みの「正しさの証跡」のみを確認する。
+    - **証跡検査**: `30_make_test.log` があれば `go test ./...` と `unittest discover` の実行痕跡を必須とする。
