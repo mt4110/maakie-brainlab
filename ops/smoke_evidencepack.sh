@@ -5,8 +5,8 @@
 
 set -euo pipefail
 
-# (A) Execution location stability
-ROOT="$(git rev-parse --show-toplevel)"
+# (A) Execution location stability (no git dependency)
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT"
 
 # (C) Deterministic sorting
@@ -15,6 +15,14 @@ export LC_ALL=C
 # Setup isolated environment
 TMP_DIR=$(mktemp -d)
 trap 'rm -rf "$TMP_DIR"' EXIT
+
+# Copy policy into isolated repo so --repo "$TMP_DIR" finds it
+if [[ ! -f "$ROOT/ops/reviewpack_policy.toml" ]]; then
+    echo "Error: missing policy: $ROOT/ops/reviewpack_policy.toml"
+    exit 2
+fi
+mkdir -p "$TMP_DIR/ops"
+cp "$ROOT/ops/reviewpack_policy.toml" "$TMP_DIR/ops/reviewpack_policy.toml"
 
 echo "--- [SMOKE] Setup: $TMP_DIR"
 STORE_DIR="$TMP_DIR/store"
