@@ -40,6 +40,9 @@ jobs:
     - name: Run Smoke Test
       run: make smoke
 
+    - name: Ensure no tracked files changed
+      run: git diff --exit-code
+
     # Linting could be added here (e.g. golangci-lint)
     - name: Vet
       run: go vet ./...
