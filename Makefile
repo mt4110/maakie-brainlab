@@ -1,4 +1,6 @@
-.PHONY: test gate1 smoke check-doc-links verify-pack ci bootstrap run-eval sat-run sat-collect sat-normalize sat-gate sat-store sat-digest sat-index
+.PHONY: test ci bootstrap run-eval gate1 s5 s5-verify s6-verify check-doc-links verify-pack seed-eval evidence-pack-demo evidence-verify-demo evidence-gc smoke
+.PHONY: sat-collect sat-normalize sat-gate sat-store sat-digest sat-index sat-run
+.PHONY: server-start server-stop server-status log ingest ask
 
 PY?=.venv/bin/python
 PYENV=PYTHONPATH=.
@@ -26,10 +28,15 @@ run-eval:
 
 test:
 	@echo "+ go test ./..."
+	go test ./...
+	$(PYENV) $(PY) -m unittest discover -v -s tests -p "test_*.py"
+
+ci-test:
+	@echo "+ go test -count=1 -mod=readonly ./... (Strict CI mode)"
 	go test -count=1 -mod=readonly ./...
 	$(PYENV) $(PY) -m unittest discover -v -s tests -p "test_*.py"
 
-ci: test
+ci: ci-test
 	$(PYENV) $(PY) -m compileall src eval
 
 bootstrap:
