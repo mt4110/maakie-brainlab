@@ -205,6 +205,23 @@ func TestEvaluatePolicyFingerprint(t *testing.T) {
 			t.Errorf("expected revocation error, got: %v", err)
 		}
 	})
+
+	t.Run("Revocation: FAIL even in permissive mode", func(t *testing.T) {
+		p := &ReviewPackPolicy{
+			Version: 1,
+			Keys: KeysConfig{
+				RevokedPubkeySHA256: []string{fp},
+			},
+			Enforcement: EnforcementConfig{ModeLocal: "permissive"},
+		}
+		err := EvaluatePolicy(p, EnvLocal, true, "any-key", fp)
+		if err == nil {
+			t.Error("revoked key should fail even in permissive mode")
+		}
+		if !strings.Contains(err.Error(), "revoked") {
+			t.Errorf("expected revocation error, got: %v", err)
+		}
+	})
 }
 
 // TestSeedDeterminism verifies that --seed produces the same key/fingerprint.

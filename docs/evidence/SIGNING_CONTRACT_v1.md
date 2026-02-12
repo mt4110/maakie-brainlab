@@ -44,6 +44,7 @@ payload data. Signing its hash transitively covers the entire pack content.
 **Determinism**: Same CHECKSUMS.sha256 + same key = same signature (Ed25519 is deterministic).
 
 ### Algorithm
+
 - **Ed25519** (pure Go implementation).
 
 ## 2. Signature Sidecar (`*.sig.json`) — Legacy
@@ -167,6 +168,30 @@ ERROR: signer pubkey is not allowed (Trust Anchor v1)
   Regen (smoke): evidencepack keygen --id <id> --seed "reviewpack-smoke-v1"
   Note: KeyID is a label; allowlist is enforced by PubKeySHA256
 ```
+
+## 7. Audit Log (S7) — TSV Chain
+
+Every `verify` operation that changes the state (or as an audit record) MUST append to the local audit chain.
+
+- **File**: `.local/reviewpack_artifacts/AUDIT_CHAIN_v1.tsv`.
+- **Format**: TSV (Tab Separated Values).
+- **Append-only**: New entries are always added to the end.
+- **Hash Chain**: Each entry contains `entry_sha256` which is computed over columns 1-9, and `prev_entry_sha256` which links to the previous line's hash.
+
+### 7.1 Column Schema (Fixed Order)
+
+| Col | Name | Description |
+|---|---|---|
+| 1 | `version` | Contract version (e.g., `v1`) |
+| 2 | `timestamp_utc` | ISO8601 UTC timestamp |
+| 3 | `pack_name` | Name of the verified pack |
+| 4 | `pack_sha256` | SHA-256 of the tarball |
+| 5 | `manifest_sha256` | SHA-256 of `MANIFEST.tsv` |
+| 6 | `checksums_sha256`| SHA-256 of `CHECKSUMS.sha256` |
+| 7 | `git_head` | Current git commit hash |
+| 8 | `tool_version` | Version of the `evidencepack` tool |
+| 9 | `prev_entry_sha256`| `entry_sha256` of the previous line (or 64 zeros for genesis) |
+| 10| `entry_sha256` | SHA-256 of columns 1-9 (tab-joined) |
 
 ## 8. Key Rotation v1
 

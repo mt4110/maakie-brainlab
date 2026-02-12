@@ -385,7 +385,7 @@ func locateSignature(path string) (string, error) {
 
 func formatPolicyError(err error, policy *ReviewPackPolicy, env, keyID, pubKeySHA256, policyPath string) error {
 	errMsg := err.Error()
-	howToFix := "See docs/evidence/RUNBOOK.md for policy recovery."
+	howToFix := "See docs/evidence/SIGNING_CONTRACT_v1.md for policy recovery."
 
 	if strings.Contains(errMsg, "is revoked") {
 		howToFix = "remove key from signer / rotate key, update policy revoked/allowed"

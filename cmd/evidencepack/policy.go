@@ -114,6 +114,15 @@ func DeterminePolicyEnv(cliEnv string) string {
 // EvaluatePolicy checks if the current state satisfies the policy.
 // pubKeySHA256 is the SHA256 fingerprint of the signer's public key (Trust Anchor v1).
 func EvaluatePolicy(p *ReviewPackPolicy, env string, hasSignature bool, keyID string, pubKeySHA256 string) error {
+	// 1. Revocation Check (Absolute Priority, even in permissive mode)
+	if hasSignature {
+		for _, revoked := range p.Keys.RevokedPubkeySHA256 {
+			if strings.EqualFold(revoked, pubKeySHA256) {
+				return fmt.Errorf("FAIL: signer key is revoked")
+			}
+		}
+	}
+
 	applicationMode := resolveApplicationMode(p, env)
 	if applicationMode == ModePermissive {
 		return nil
@@ -125,13 +134,6 @@ func EvaluatePolicy(p *ReviewPackPolicy, env string, hasSignature bool, keyID st
 			return fmt.Errorf("policy violation: signature required in CI but not found")
 		}
 		return nil
-	}
-
-	// 1. Revocation Check (Priority)
-	for _, revoked := range p.Keys.RevokedPubkeySHA256 {
-		if strings.EqualFold(revoked, pubKeySHA256) {
-			return fmt.Errorf("FAIL: signer key is revoked")
-		}
 	}
 
 	return checkKeyAllowlist(p, env, keyID, pubKeySHA256)
