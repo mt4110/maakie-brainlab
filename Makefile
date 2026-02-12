@@ -1,4 +1,4 @@
-.PHONY: sat-collect sat-normalize sat-gate sat-store sat-digest sat-index sat-run smoke
+.PHONY: test gate1 smoke check-doc-links verify-pack ci bootstrap run-eval sat-run sat-collect sat-normalize sat-gate sat-store sat-digest sat-index
 
 PY?=.venv/bin/python
 PYENV=PYTHONPATH=.
@@ -26,7 +26,7 @@ run-eval:
 
 test:
 	@echo "+ go test ./..."
-	go test ./...
+	go test -count=1 -mod=readonly ./...
 	$(PYENV) $(PY) -m unittest discover -v -s tests -p "test_*.py"
 
 ci: test
@@ -79,7 +79,7 @@ s5-verify:
 s6-verify:
 	bash ops/s6_verify_pack.sh "$(PACK)"
 
-.PHONY: check-doc-links
+
 check-doc-links:
 	@bash ops/check_no_file_url.sh
 
