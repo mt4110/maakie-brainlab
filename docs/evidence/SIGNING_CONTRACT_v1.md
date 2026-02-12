@@ -103,17 +103,72 @@ The signature is stored in a JSON file adjacent to the artifact.
 
 ## 5. Keygen
 
-The `evidencepack keygen` subcommand generates a fresh Ed25519 keypair:
+The `evidencepack keygen` subcommand generates an Ed25519 keypair:
 
 ```sh
+# Random key
 evidencepack keygen --id <key-id> --out-dir <dir>
+
+# Deterministic key (same seed = same key = same fingerprint)
+evidencepack keygen --id <key-id> --seed "reviewpack-smoke-v1" --out-dir <dir>
 ```
 
 Output:
 - `<dir>/<key-id>.key` — private key (base64, 600 permissions)
 - `<dir>/<key-id>.pub` — public key (JSON CryptoKey format)
+- `PubKeySHA256: <hex>` — fingerprint of the public key
 
-## 6. Audit Log (S7)
+When `--seed` is used, the key is derived deterministically:
+`ed25519.NewKeyFromSeed(sha256("reviewpack:keygen:v1:" + seed))`.
+This ensures CI can regenerate the same key without storing secrets.
+
+## 6. Trust Anchor v1 — Signer Identity Pinning
+
+### 6.1 PubKeySHA256 (fingerprint)
+
+```
+fingerprint = hex(sha256(pubkey_bytes))   # lowercase
+```
+
+- `pubkey_bytes` = raw 32-byte Ed25519 public key (no PEM wrapper)
+- This is the **security binding** — KeyID is just a human label
+
+### 6.2 Verify Output (always)
+
+Every verified pack MUST log:
+
+```
+  KeyID:        <string>
+  PubKeySHA256: <hex>
+  PubKeySource: embedded | file:<path>
+```
+
+### 6.3 Policy Enforcement (`ops/reviewpack_policy.toml`)
+
+```toml
+[keys]
+allowed_pubkey_sha256 = ["<hex>", ...]   # fingerprint allowlist
+allowed_key_ids = ["<id>", ...]          # legacy label allowlist
+```
+
+**Priority** (CI strict + `enforce_allowlist_in_ci = true`):
+
+1. `allowed_pubkey_sha256` non-empty → **fingerprint enforce** (priority)
+2. `allowed_pubkey_sha256` empty → `allowed_key_ids` enforce (compat fallback)
+3. Both empty → **FAIL** (misconfiguration)
+
+### 6.4 Failure Recovery (1-scroll template)
+
+```
+ERROR: signer pubkey is not allowed (Trust Anchor v1)
+  Expected PubKeySHA256: [<hex>, ...]
+  Got PubKeySHA256:      <hex>
+  Policy: ops/reviewpack_policy.toml (keys.allowed_pubkey_sha256)
+  Regen (smoke): evidencepack keygen --id <id> --seed "reviewpack-smoke-v1"
+  Note: KeyID is a label; allowlist is enforced by PubKeySHA256
+```
+
+## 7. Audit Log (S7)
 
 - **File**: `.local/reviewpack_audit/audit.log.jsonl`.
 - **Append-only**.
