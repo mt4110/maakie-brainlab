@@ -9,6 +9,7 @@ import (
 )
 
 func TestDiff(t *testing.T) {
+	t.Log("S9 Proof: intentional change")
 	// Setup two temporary bundles
 	tmpDir, err := os.MkdirTemp("", "diff-test-*")
 	if err != nil {
