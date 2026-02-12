@@ -10,7 +10,7 @@ The following checks must pass for any Pull Request targeting `main`.
 | :--- | :--- | :--- | :--- |
 | **Lint Go** | CI (Lint & Verify) | `pull_request` | Validates Go code using `golangci-lint`. |
 | **Lint Markdown** | CI (Lint & Verify) | `pull_request` | Validates Markdown files using `markdownlint-cli2`. |
-| **test** | Test | `pull_request` | Runs `make test` for unit and integration testing. |
+| **test** | Test | `pull_request` | Runs `make test` (Go + Python unit tests). |
 | **verify-pack** | Verify Pack | `pull_request` | Ensures `review_pack` generation works and output is clean. |
 
 ## Optional / Aggregator Checks
