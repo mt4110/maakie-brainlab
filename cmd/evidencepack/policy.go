@@ -124,7 +124,8 @@ func checkKeyAllowlist(p *ReviewPackPolicy, env string, keyID string, pubKeySHA2
 			"  Expected PubKeySHA256: %v\n"+
 			"  Got PubKeySHA256:      %s\n"+
 			"  Policy: ops/reviewpack_policy.toml (keys.allowed_pubkey_sha256)\n"+
-			"  Regen (smoke): evidencepack keygen --id <id> --seed \"reviewpack-smoke-v1\"\n"+
+			"  Regen (binary): evidencepack keygen --id <id> --seed \"reviewpack-smoke-v1\"\n"+
+			"  Regen (go run): go run ./cmd/evidencepack keygen --id <id> --seed \"reviewpack-smoke-v1\"\n"+
 			"  Note: KeyID is a label; allowlist is enforced by PubKeySHA256",
 			p.Keys.AllowedPubkeySHA256, pubKeySHA256)
 	}
