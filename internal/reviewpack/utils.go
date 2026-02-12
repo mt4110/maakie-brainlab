@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 )
@@ -77,17 +78,33 @@ func runMake(dir, logName string, cmdArgs []string, timeoutSec int, failCode int
 		_ = syscall.Kill(-pgid, syscall.SIGKILL)
 
 		fmt.Fprintf(logFile, "\n[TIMEOUT] exceeded %ds\n", timeoutSec)
+		_ = logFile.Close() // Close before sanitizing
+		sanitizeLogToFile(logPath)
 		fmt.Printf("[FAIL] timeout %v. See %s\n", cmdArgs, logName)
 		os.Exit(124)
 	case err := <-done:
+		_ = logFile.Close() // Close before sanitizing
+		sanitizeLogToFile(logPath)
 		if err != nil {
-			if exitErr, ok := err.(*exec.ExitError); ok {
-				fmt.Fprintf(logFile, "\n[FAIL] exit code %d\n", exitErr.ExitCode())
+			if _, ok := err.(*exec.ExitError); ok {
 				fmt.Printf("[FAIL] %v failed. See %s\n", cmdArgs, logName)
 				os.Exit(failCode)
 			}
 		}
 	}
+}
+
+func sanitizeLogToFile(path string) {
+	root := resolveRepoRoot()
+	if root == "" {
+		return
+	}
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return
+	}
+	newContent := strings.ReplaceAll(string(content), root, "<REPO_ROOT>")
+	_ = os.WriteFile(path, []byte(newContent), 0644)
 }
 
 func min(a, b int) int {
