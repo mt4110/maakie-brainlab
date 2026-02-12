@@ -116,11 +116,29 @@ func runVerify(args []string) {
 	if err != nil {
 		log.Fatalf("[FAIL] Missing test evidence log: %s/%s", dirLogsRaw, fileMakeTest)
 	}
-	if !bytes.Contains(logBytes, []byte("go test ./...")) {
-		log.Fatalf("[FAIL] Evidence missing in %s: 'go test ./...'", fileMakeTest)
+
+	hasGoTest := false
+	hasUnittest := false
+
+	evScanner := bufio.NewScanner(bytes.NewReader(logBytes))
+	for evScanner.Scan() {
+		line := strings.TrimSpace(evScanner.Text())
+		// Strip shell execution markers if present
+		line = strings.TrimPrefix(line, "+ ")
+
+		if strings.HasPrefix(line, "go test") && strings.Contains(line, "./...") {
+			hasGoTest = true
+		}
+		if strings.HasPrefix(line, "unittest discover") || strings.Contains(line, "python -m unittest discover") {
+			hasUnittest = true
+		}
 	}
-	if !bytes.Contains(logBytes, []byte("unittest discover")) {
-		log.Fatalf("[FAIL] Evidence missing in %s: 'unittest discover'", fileMakeTest)
+
+	if !hasGoTest {
+		log.Fatalf("[FAIL] Evidence missing in %s/%s: 'go test ./...' (required for Audit Tightening/Strict mode)", dirLogsRaw, fileMakeTest)
+	}
+	if !hasUnittest {
+		log.Fatalf("[FAIL] Evidence missing in %s/%s: 'unittest discover'", dirLogsRaw, fileMakeTest)
 	}
 
 	fmt.Println("PASS: Verify OK")

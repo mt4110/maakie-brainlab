@@ -136,9 +136,11 @@ func createPortableLog(src, dst string) {
 		s = strings.ReplaceAll(s, root, "<REPO_ROOT>")
 	}
 	if tmp != "" {
-		// os.TempDir() on mac often has a trailing slash or is a symlink.
-		// We use a simple replacement for the base if possible.
-		s = strings.ReplaceAll(s, tmp, "<TMPDIR>")
+		// Ensure trailing slash for readability: <TMPDIR>/path/to/file
+		if !strings.HasSuffix(tmp, string(os.PathSeparator)) {
+			tmp += string(os.PathSeparator)
+		}
+		s = strings.ReplaceAll(s, tmp, "<TMPDIR>/")
 	}
 	_ = os.WriteFile(dst, []byte(s), 0644)
 }
@@ -151,6 +153,11 @@ func writePortableRules(dir string) {
       "type": "replace",
       "pattern": "<REPO_ROOT>",
       "description": "Redact absolute repository root path for portability"
+    },
+    {
+      "type": "replace",
+      "pattern": "<TMPDIR>",
+      "description": "Redact system temporary directory path for portability"
     }
   ]
 }
