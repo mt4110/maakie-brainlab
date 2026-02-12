@@ -21,10 +21,12 @@ import (
 
 // PackConfig holds configuration for the packing process
 type PackConfig struct {
-	Kind      string
-	StoreDir  string
-	Payloads  []string
-	Timestamp time.Time
+	Kind        string
+	StoreDir    string
+	Payloads    []string
+	Timestamp   time.Time
+	SignKeyFile string // path to private key for embedded signing
+	RepoRoot    string // needed for key lookup
 }
 
 // Metadata represents the content of METADATA.json
@@ -54,7 +56,8 @@ func runPack(args []string) error {
 	kind := fs.String("kind", "", "Operator-defined label; used as packs/<kind>/... directory name. Examples: s10test, provenance")
 	store := fs.String("store", ".local/evidence_store", "Store directory")
 	sign := fs.Bool("sign", false, "Sign the artifact (requires key)")
-	keyFile := fs.String("key-file", "", "Path to private key file")
+	keyFile := fs.String("key-file", "", "Path to private key file (legacy)")
+	signKey := fs.String("sign-key", "", "Path to private key file (embeds SIGNATURES/ in pack)")
 	repo := fs.String("repo", ".", "Repository root directory (for audit chain)")
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -63,6 +66,12 @@ func runPack(args []string) error {
 	// Env Override for Sign
 	if os.Getenv("REVIEWPACK_SIGN") == "1" {
 		*sign = true
+	}
+
+	// --sign-key takes precedence; also implies --sign
+	if *signKey != "" {
+		*sign = true
+		*keyFile = *signKey
 	}
 
 	if *kind == "" {
@@ -86,10 +95,17 @@ func runPack(args []string) error {
 	}
 
 	config := PackConfig{
-		Kind:      *kind,
-		StoreDir:  *store,
-		Payloads:  payloads,
-		Timestamp: time.Now().UTC(),
+		Kind:        *kind,
+		StoreDir:    *store,
+		Payloads:    payloads,
+		Timestamp:   time.Now().UTC(),
+		SignKeyFile: "",
+		RepoRoot:    *repo,
+	}
+
+	// Embedded signing: set key path for two-pass tar
+	if *signKey != "" {
+		config.SignKeyFile = *signKey
 	}
 
 	packPath, err := executePack(config)
@@ -104,8 +120,8 @@ func runPack(args []string) error {
 		return fmt.Errorf("audit init failed: %w", err)
 	}
 
-	// Sign (Optional)
-	if *sign {
+	// Legacy sidecar signing (--sign without --sign-key)
+	if *sign && *signKey == "" {
 		if err := performSigning(packPath, *keyFile, repoRoot, logger); err != nil {
 			return fmt.Errorf("signing failed: %w", err)
 		}
@@ -327,8 +343,86 @@ func executePack(cfg PackConfig) (string, error) {
 		return "", err
 	}
 
-	// 4. Create tarball and update index
+	// 4. Embedded signing (two-pass if --sign-key set)
+	if cfg.SignKeyFile != "" {
+		if err := embedSignatures(stagingDir, cfg); err != nil {
+			return "", fmt.Errorf("embedded signing failed: %w", err)
+		}
+	}
+
+	// 5. Create tarball and update index
 	return finalizePackTarball(stagingDir, cfg, gitInfo)
+}
+
+// embedSignatures creates the SIGNATURES/ directory in the staging dir.
+// Signs the SHA256 digest of CHECKSUMS.sha256 using Ed25519.
+func embedSignatures(stagingDir string, cfg PackConfig) error {
+	// 1. Compute SHA256 of CHECKSUMS.sha256
+	checksumsPath := filepath.Join(stagingDir, "CHECKSUMS.sha256")
+	chkDigest, err := CalculateSHA256(checksumsPath)
+	if err != nil {
+		return fmt.Errorf("failed to hash CHECKSUMS.sha256: %w", err)
+	}
+
+	// 2. Load private key
+	privKey, err := LoadPrivateKey(cfg.SignKeyFile)
+	if err != nil {
+		return fmt.Errorf("failed to load signing key: %w", err)
+	}
+	if privKey == nil {
+		return fmt.Errorf("no signing key available (--sign-key path or REVIEWPACK_PRIVATE_KEY_B64)")
+	}
+
+	pub := privKey.Public().(ed25519.PublicKey)
+
+	// 3. Derive key ID (try repo keys, fall back to hash-based ID)
+	keyID := deriveKeyID(pub, cfg.RepoRoot)
+
+	// 4. Sign the digest
+	sig := SignDigest(chkDigest, privKey)
+
+	// 5. Create SIGNATURES/ directory
+	sigDir := filepath.Join(stagingDir, "SIGNATURES")
+	if err := os.MkdirAll(sigDir, 0755); err != nil {
+		return fmt.Errorf("failed to create SIGNATURES dir: %w", err)
+	}
+
+	// pack.sha256 — text file: "<hex>  CHECKSUMS.sha256\n"
+	sha256Content := fmt.Sprintf("%s  CHECKSUMS.sha256\n", chkDigest)
+	if err := os.WriteFile(filepath.Join(sigDir, "pack.sha256"), []byte(sha256Content), 0644); err != nil {
+		return err
+	}
+
+	// pack.sha256.sig — raw Ed25519 signature (64 bytes)
+	if err := os.WriteFile(filepath.Join(sigDir, "pack.sha256.sig"), sig, 0644); err != nil {
+		return err
+	}
+
+	// pack.pub — JSON public key
+	pubJSON, err := ExportPublicKeyJSON(pub, keyID)
+	if err != nil {
+		return err
+	}
+	pubJSON = append(pubJSON, '\n')
+	if err := os.WriteFile(filepath.Join(sigDir, "pack.pub"), pubJSON, 0644); err != nil {
+		return err
+	}
+
+	fmt.Printf("Embedded signature: KeyID=%s, Digest=%s\n", keyID, chkDigest[:16]+"...")
+	return nil
+}
+
+// deriveKeyID tries to find the key ID from the repo's key store.
+// Falls back to a truncated hash of the public key if not found.
+func deriveKeyID(pub ed25519.PublicKey, repoRoot string) string {
+	if repoRoot != "" {
+		keysDir := filepath.Join(repoRoot, "ops", "keys", "reviewpack")
+		if id, err := findKeyID(pub, keysDir); err == nil {
+			return id
+		}
+	}
+	// Fallback: use first 16 chars of hex-encoded public key
+	return hex.EncodeToString(pub[:8])
 }
 
 func stagePayloads(payloads []string, dataDir string) error {

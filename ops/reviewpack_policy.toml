@@ -10,8 +10,8 @@ mode_local = "permissive"
 mode_ci = "strict"
 
 [signing]
-# v1 デフォルトは false（段階的に強くするため）
-require_signature_in_ci = false
+# v1: CI requires signature (embedded SIGNATURES/ or .sig.json sidecar)
+require_signature_in_ci = true
 # 署名がある場合、CI(strict)では allowlist を必ず強制
 enforce_allowlist_in_ci = true
 

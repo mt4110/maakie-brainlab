@@ -57,6 +57,7 @@ var commands = map[string]func([]string) error{
 	CmdBundle: runBundle,
 	CmdHealth: runHealth,
 	CmdKinds:  runKinds,
+	CmdKeygen: runKeygen,
 }
 
 func dispatch(cmd string, args []string) error {
@@ -77,6 +78,7 @@ func usage() {
 	fmt.Fprintf(os.Stderr, "  gc      Garbage collect old evidence packs\n")
 	fmt.Fprintf(os.Stderr, "  health  Diagnose audit chain and local state\n")
 	fmt.Fprintf(os.Stderr, "  kinds   List known evidence kinds in store\n")
+	fmt.Fprintf(os.Stderr, "  keygen  Generate Ed25519 signing keypair\n")
 }
 
 // Stubs removed. Implementations are in separate files.
