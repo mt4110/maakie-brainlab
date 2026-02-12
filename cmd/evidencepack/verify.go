@@ -162,8 +162,8 @@ type verContext struct {
 func prepareVerificationContext(cfg VerifyConfig) (*verContext, error) {
 	ctx := &verContext{
 		TargetArtifact: cfg.Path,
-		PolicyPath:     filepath.Join(cfg.RepoRoot, "ops", policyFile),
-		KeysDir:        filepath.Join(cfg.RepoRoot, keysDirName),
+		PolicyPath:     resolvePathUpward(filepath.Join(cfg.RepoRoot, "ops", policyFile)),
+		KeysDir:        resolvePathUpward(filepath.Join(cfg.RepoRoot, keysDirName)),
 		Cleanup:        func() { /* no-op: overridden by prepareBundleContext when needed */ },
 	}
 
@@ -281,18 +281,44 @@ func verifyBundleAudit(ctx *verContext) error {
 }
 
 func loadPolicySafe(path, env string) (*ReviewPackPolicy, error) {
-	policy, err := LoadPolicy(path)
+	resolvedPath := resolvePathUpward(path)
+	policy, err := LoadPolicy(resolvedPath)
 	if err != nil {
 		if env == EnvCI {
-			return nil, fmt.Errorf("FATAL: Failed to load policy in CI environment (%s): %w\nSee docs/evidence/RUNBOOK.md for policy recovery.", path, err)
+			return nil, fmt.Errorf("FATAL: Failed to load policy in CI environment (%s): %w\nSee docs/evidence/RUNBOOK.md for policy recovery.", resolvedPath, err)
 		}
-		fmt.Fprintf(os.Stderr, "Warning: Failed to load policy from %s (%v). Proceeding with permissive default.\n", path, err)
+		fmt.Fprintf(os.Stderr, "Warning: Failed to load policy from %s (%v). Proceeding with permissive default.\n", resolvedPath, err)
 		return &ReviewPackPolicy{
 			Version:     1,
 			Enforcement: EnforcementConfig{ModeLocal: ModePermissive, ModeCI: ModeStrict},
 		}, nil
 	}
 	return policy, nil
+}
+
+// resolvePathUpward tries to resolve a relative path by walking upward from cwd.
+// If found, returns the resolved absolute path; otherwise returns the original rel.
+func resolvePathUpward(rel string) string {
+	if filepath.IsAbs(rel) {
+		return rel
+	}
+	wd, err := os.Getwd()
+	if err != nil {
+		return rel
+	}
+	dir := wd
+	for {
+		cand := filepath.Join(dir, rel)
+		if _, err := os.Stat(cand); err == nil {
+			return cand
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break
+		}
+		dir = parent
+	}
+	return rel
 }
 
 func verifySignatureWithAudit(path, keysDir string, logger *AuditLogger) (bool, string, error) {
