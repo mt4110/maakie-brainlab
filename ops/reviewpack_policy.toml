@@ -1,7 +1,7 @@
 version = 1
 
 [keys]
-allowed_key_ids = ["example-key-id"]  # CIで署名を検証するならここに登録
+allowed_key_ids = ["smoke-test-key"]  # CIで署名を検証するならここに登録
 
 [enforcement]
 # local は壊さない
