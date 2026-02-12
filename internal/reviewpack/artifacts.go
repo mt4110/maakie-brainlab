@@ -38,9 +38,17 @@ It guarantees that "Same Input -> Same Output" (Checksums match).
 - File order is strictly sorted by path.
 - Content hash (CHECKSUMS.sha256) is the single source of truth.
 
-## 3. Verification
-Run ./VERIFY.sh to validate integrity.
-`
+	## 3. Verification
+	Run ./VERIFY.sh to validate integrity.
+
+	## 4. Test Evidence Markers (Pack-Contained)
+	In pack-contained verification, Gate-1 (verify-only) and strict verification require 30_make_test.log to include evidence markers.
+	Evidence markers include:
+	~~~
+	go test ./...
+	unittest discover
+	~~~
+	`
 	_ = os.WriteFile(filepath.Join(dir, "SPEC.md"), []byte(spec), 0644)
 }
 
