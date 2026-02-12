@@ -100,6 +100,7 @@ func TestCanonicalAuditJSON(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestVerifyBundleAlsoVerifiesAuditWhenPresent(t *testing.T) {
+	t.Setenv(EnvPolicyMode, "local")
 	tmp := t.TempDir()
 	storeDir := filepath.Join(tmp, "store")
 	payloadDir := filepath.Join(tmp, "payload")
@@ -186,6 +187,7 @@ func TestVerifyBundleAlsoVerifiesAuditWhenPresent(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestVerifyBundlePassesWithoutAudit(t *testing.T) {
+	t.Setenv(EnvPolicyMode, "local")
 	tmp := t.TempDir()
 	storeDir := filepath.Join(tmp, "store")
 	payloadDir := filepath.Join(tmp, "payload")
