@@ -4,7 +4,7 @@
 
 ### 1. Remove Naive Scan Artifact Files
 - [x] Update `scanSecrets()` in evidence.go to use fmt.Printf instead of log.Printf
-- [x] Update `scanNull()` in evidence.go to use log.Printf instead of WriteFile
+- [x] Update `scanNull()` in evidence.go to use fmt.Println instead of log.Printf
 - [x] Verify no `_ = os.WriteFile(` calls remain in product code
 
 ### 2. Add Subprocess Test for Fail-Fast Behavior  
