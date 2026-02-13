@@ -36,8 +36,8 @@ This project uses a tiny control DSL to prevent “AI drift”:
 if any check fails -> error -> STOP
 
 - G1: docs hygiene
-  - No `file://` in docs/walkthrough
-  - No weird md blocks like ````carousel
+  - No file URL scheme in docs/walkthrough
+  - No carousel blocks
 - G2: CLI wiring exists
   - `go run ... diff --help` shows `--kind` and `--format`
 - G3: Exit code contract works (0/1/2)
@@ -75,5 +75,5 @@ Docs:
 - `go run cmd/reviewpack/main.go submit --mode verify-only` PASS
 - `go run cmd/reviewpack/main.go diff --help` includes `--kind/--format`
 - `diff` exit code contract (0/1/2) validated
-- docs hygiene (file:// and carousel blocks are zero)
+- docs hygiene (file URL scheme and carousel blocks are zero)
 - bundle generated after changes contains updated `src_snapshot/internal/reviewpack/diff.go`

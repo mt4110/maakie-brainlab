@@ -22,8 +22,8 @@ Last updated: 2026-02-13 (JST)
 
 ## 1) Gate Checks (PR前ゲート; 먼저ここで落とす)
 ### 1.1 docs hygiene
-- [ ] if `rg -n 'file://' docs walkthrough -S` hits -> error "file:// remains" -> STOP
-- [ ] if `rg -n '```{4}carousel|````carousel' docs walkthrough -S` hits -> error "carousel block remains" -> STOP
+- [ ] run: `bash ops/check_no_file_url.sh`
+- [ ] run: `rg -n '^\`{4}carousel' docs walkthrough -S && { echo "NG: carousel"; exit 2; } || true`
 - [ ] continue
 
 ### 1.2 CLI flags exist (help)
