@@ -19,6 +19,7 @@ func runSubmit(args []string) {
 	// Deprecated: existing skip-eval for pack, but for submit we use mode
 	_ = fs.Bool("skip-eval", false, "Deprecated: use --mode verify-only")
 	mode := fs.String("mode", "strict", "submit mode: strict | verify-only")
+	skipTest := fs.Bool("skip-test", false, "skip tests during submission")
 	// nCommits positional
 	fs.Parse(args)
 
@@ -27,7 +28,7 @@ func runSubmit(args []string) {
 	}
 
 	// 1. Pack with mode-specific logic
-	tarFile := packToTarForSubmit(fs.Args(), *timebox, *mode)
+	tarFile := packToTarForSubmit(fs.Args(), *timebox, *mode, *skipTest)
 	packSha, err := fileSha256(tarFile)
 	if err != nil {
 		log.Fatalf("[FATAL] sha256(%s): %v", tarFile, err)
@@ -67,7 +68,7 @@ func runSubmit(args []string) {
 	fmt.Printf("SHA256: %s\n", packSha)
 }
 
-func packToTarForSubmit(args []string, timebox int, mode string) string {
+func packToTarForSubmit(args []string, timebox int, mode string, skipTest bool) string {
 	defer logPhase("packToTarForSubmit")()
 
 	repoRoot := resolveRepoRoot()
@@ -100,11 +101,15 @@ func packToTarForSubmit(args []string, timebox int, mode string) string {
 	scanSecrets(packDir)
 
 	// 3. Make Test
-	testCmd := []string{"make", "test"}
-	if mode == "strict" {
-		testCmd = []string{"make", "ci-test"}
+	if !skipTest {
+		testCmd := []string{"make", "test"}
+		if mode == "strict" {
+			testCmd = []string{"make", "ci-test"}
+		}
+		runMake(packDir, fileMakeTest, testCmd, timebox, 4)
+	} else {
+		fmt.Println("[INFO] skip-test is active: skipping make test")
 	}
-	runMake(packDir, fileMakeTest, testCmd, timebox, 4)
 
 	// 4. Make Run-Eval (Unified Flow)
 	var selectedEvalAbs, selectedEvalRel string
