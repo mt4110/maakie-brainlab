@@ -1,9 +1,9 @@
-# S15-03: Naive Scan Artifact Cleanup & Test Improvements
+# S15-04: Naive Scan Artifact Cleanup & Test Improvements
 
 ## Status (S15 series)
 - S15-01 merged (#35): pack delta v1
 - S15-02 merged (#36): mkdir error fail-fast
-- S15-03 (this PR): cleanup naive scan artifacts + add fail-fast test coverage
+- S15-04 (this PR): cleanup naive scan artifacts + add fail-fast test coverage
 
 ## Summary
 This PR completes specific improvements identified during S15-02 review:
