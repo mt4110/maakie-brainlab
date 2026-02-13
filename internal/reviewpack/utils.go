@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"syscall"
 	"time"
@@ -142,6 +143,23 @@ func createPortableLog(src, dst string) {
 		}
 		s = strings.ReplaceAll(s, tmp, "<TMPDIR>/")
 	}
+
+	// S9-F: Portable noise resistance
+	// 1. Durations (handle tabs and spaces)
+	reDuration := regexp.MustCompile(`\s*\b[0-9.]+s\b`)
+	s = reDuration.ReplaceAllString(s, " <DURATION>")
+	
+	// 2. Build cache hits
+	s = strings.ReplaceAll(s, "(cached)", "<CACHED>")
+
+	// 3. Random temporary subdirectories (Go/Python often use tmp... or similar)
+	reTempSuffix := regexp.MustCompile(`(tmp|bundle_unpack|Test[a-zA-Z0-9]+)[a-zA-Z0-9_]{5,}`)
+	s = reTempSuffix.ReplaceAllString(s, "<RAND>")
+
+	// 4. Evidence pack filenames (contains timestamp and git sha)
+	reEvidencePack := regexp.MustCompile(`evidence_[a-zA-Z0-9_]+T[a-zA-Z0-9_.]+\.tar\.gz`)
+	s = reEvidencePack.ReplaceAllString(s, "evidence_pack_<TIMESTAMP_SHA>.tar.gz")
+
 	_ = os.WriteFile(dst, []byte(s), 0644)
 }
 
@@ -158,6 +176,16 @@ func writePortableRules(dir string) {
       "type": "replace",
       "pattern": "<TMPDIR>",
       "description": "Redact system temporary directory path for portability"
+    },
+    {
+      "type": "replace",
+      "pattern": "<DURATION>",
+      "description": "Normalize command execution durations for stable diffs"
+    },
+    {
+      "type": "replace",
+      "pattern": "<CACHED>",
+      "description": "Normalize build cache hits (cached) for stable diffs"
     }
   ]
 }

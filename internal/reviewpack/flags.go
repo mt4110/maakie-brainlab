@@ -12,4 +12,5 @@ func usage() {
 	fmt.Fprintf(os.Stderr, "  verify <dir|tar.gz>\n")
 	fmt.Fprintf(os.Stderr, "  submit [--timebox N] [--mode strict|verify-only] [N_COMMITS]\n")
 	fmt.Fprintf(os.Stderr, "  repro-check\n")
+	fmt.Fprintf(os.Stderr, "  diff <bundleA> <bundleB>\n")
 }
