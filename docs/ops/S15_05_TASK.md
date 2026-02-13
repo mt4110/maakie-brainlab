@@ -30,20 +30,22 @@
   - [x] file names deterministic (no wallclock in filenames unless purely log)
 
 ## Phase 4 — Evidence rails (must)
-- [/] Record inputs (prompt, config, model id, seed) as a manifest (json or tsv)
-- [ ] Record outputs (response, metrics) as jsonl
-- [ ] Record sha256 for each artifact
-- [ ] IF any evidence file is missing THEN STOP
+- [x] Record inputs (prompt, config, model id, seed) as a manifest (json or tsv)
+- [x] Record outputs (response, metrics) as jsonl
+- [x] Record sha256 for each artifact
+- [x] IF any evidence file is missing THEN STOP
 
 ## Phase 5 — Tests (minimal)
-- [ ] Run fast unit tests for AI lane (existing test framework)
-- [ ] IF tests are flaky/time-based THEN skip with 1-line reason + create deterministic alternative
+- [x] Run fast unit tests for AI lane (existing test framework)
+- [ ] IF tests are flaky/time-based THEN skip with 1-line reason + create deterministic alternative (N/A)
 
 ## Phase 6 — Gate (the truth machine)
-- [ ] `make test`
-- [ ] `go run cmd/reviewpack/main.go submit --mode verify-only`
-- [ ] IF preflight says dirty tree THEN STOP (hygiene regression)
-- [ ] ELSE capture SUBMIT filename + SHA256 into SOT
+- [x] `make test`
+- [x] `go run cmd/reviewpack/main.go submit --mode verify-only`
+- [x] IF preflight says dirty tree THEN STOP (hygiene regression)
+- [x] ELSE capture SUBMIT filename + SHA256 into SOT
+  - SUBMIT: review_bundle_20260213_182558.tar.gz
+  - SHA256: af54a9773362f150d3f512798d535bc9c7b495f0747615d676d1069a92c17904
 
 ## Phase 7 — PR rail
 - [ ] `git push -u origin s15-05-ai-work-v1`
