@@ -113,19 +113,8 @@ func packToTarForSubmit(args []string, timebox int, mode string, skipTest bool) 
 		runMake(packDir, fileMakeTest, testCmd, timebox, 4)
 	} else {
 		fmt.Println("[INFO] skip-test is active: skipping make test")
-		// S15-H03: Generate placeholder log to satisfy runVerify/Audit markers
-		placeholderLog := fmt.Sprintf("# [INFO] skip-test is active for baseline generation\n# markers for audit:\n+ go test ./...\n+ unittest discover\n[SKIP] tests skipped by flag\n")
-		rawDir := filepath.Join(packDir, dirLogsRaw)
-		if err := os.MkdirAll(rawDir, 0755); err == nil {
-			logPath := filepath.Join(rawDir, fileMakeTest)
-			_ = os.WriteFile(logPath, []byte(placeholderLog), 0644)
-			// S15: Support portable output for verification consistency
-			portDir := filepath.Join(packDir, dirLogsPortable)
-			_ = os.MkdirAll(portDir, 0755)
-			createPortableLog(logPath, filepath.Join(portDir, fileMakeTest))
-			sha, _ := fileSha256(logPath)
-			_ = os.WriteFile(logPath+".sha256", []byte(sha+"\n"), 0644)
-			writePortableRules(portDir)
+		if err := generatePlaceholderLog(packDir); err != nil {
+			log.Fatalf("[FATAL] %v", err)
 		}
 	}
 
@@ -198,8 +187,8 @@ func packToTarForSubmit(args []string, timebox int, mode string, skipTest bool) 
 	// 5. Source Snapshot & Bundle Eval Result
 	log.Println("DEBUG: Creating src_snapshot...")
 	snapshotDir := filepath.Join(packDir, dirSrcSnapshot)
-	if err := os.MkdirAll(snapshotDir, 0755); err != nil {
-		log.Fatalf(msgFatalMkdirAll, err)
+	if err := ensureDir(snapshotDir); err != nil {
+		log.Fatalf("[FATAL] %v", err)
 	}
 	for _, f := range listTrackedFiles() {
 		copyFile(f, filepath.Join(snapshotDir, f))

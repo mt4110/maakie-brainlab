@@ -62,7 +62,7 @@ func runMake(dir, logName string, cmdArgs []string, timeoutSec int, failCode int
 	rawLogPath := filepath.Join(rawDir, logName)
 	rawLogFile, err := os.Create(rawLogPath)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf(msgFatalCreate, rawLogPath, err)
 	}
 	defer rawLogFile.Close()
 
@@ -207,6 +207,47 @@ func runSelfVerify(dir string) {
 	var buf bytes.Buffer
 	buf.WriteString("self-verify: placeholder log\n")
 	if err := os.WriteFile(logPath, buf.Bytes(), 0644); err != nil {
-		log.Fatalf("[FATAL] write self verify log: %v", err)
+		log.Fatalf(msgFatalWrite, logPath, err)
 	}
+}
+
+// ensureDir is a testable helper for MkdirAll. Returns error instead of Fatal.
+func ensureDir(dir string) error {
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("mkdir %s: %w", dir, err)
+	}
+	return nil
+}
+
+// generatePlaceholderLog writes a standard skip-test placeholder log.
+func generatePlaceholderLog(dir string) error {
+	placeholderLog := fmt.Sprintf("# [INFO] skip-test is active for baseline generation\n# markers for audit:\n+ go test ./...\n+ unittest discover\n[SKIP] tests skipped by flag\n")
+	
+	rawDir := filepath.Join(dir, dirLogsRaw)
+	if err := ensureDir(rawDir); err != nil {
+		return err
+	}
+	logPath := filepath.Join(rawDir, fileMakeTest)
+	if err := os.WriteFile(logPath, []byte(placeholderLog), 0644); err != nil {
+		return fmt.Errorf("write %s: %w", logPath, err)
+	}
+
+	// S15: Support portable output for verification consistency
+	portDir := filepath.Join(dir, dirLogsPortable)
+	if err := ensureDir(portDir); err != nil {
+		return err
+	}
+	createPortableLog(logPath, filepath.Join(portDir, fileMakeTest))
+	
+	sha, err := fileSha256(logPath)
+	if err != nil {
+		return err
+	}
+	shaPath := logPath + ".sha256"
+	if err := os.WriteFile(shaPath, []byte(sha+"\n"), 0644); err != nil {
+		return fmt.Errorf("write %s: %w", shaPath, err)
+	}
+	
+	writePortableRules(portDir)
+	return nil
 }
