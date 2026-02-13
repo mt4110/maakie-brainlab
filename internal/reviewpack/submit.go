@@ -116,17 +116,24 @@ func packToTarForSubmit(args []string, timebox int, mode string, skipTest bool) 
 		// S15-H03: Generate placeholder log to satisfy runVerify/Audit markers
 		placeholderLog := fmt.Sprintf("# [INFO] skip-test is active for baseline generation\n# markers for audit:\n+ go test ./...\n+ unittest discover\n[SKIP] tests skipped by flag\n")
 		rawDir := filepath.Join(packDir, dirLogsRaw)
-		if err := os.MkdirAll(rawDir, 0755); err == nil {
-			logPath := filepath.Join(rawDir, fileMakeTest)
-			_ = os.WriteFile(logPath, []byte(placeholderLog), 0644)
-			// S15: Support portable output for verification consistency
-			portDir := filepath.Join(packDir, dirLogsPortable)
-			_ = os.MkdirAll(portDir, 0755)
-			createPortableLog(logPath, filepath.Join(portDir, fileMakeTest))
-			sha, _ := fileSha256(logPath)
-			_ = os.WriteFile(logPath+".sha256", []byte(sha+"\n"), 0644)
-			writePortableRules(portDir)
+		if err := os.MkdirAll(rawDir, 0755); err != nil {
+			log.Fatalf(msgFatalMkdirAll, err)
 		}
+		logPath := filepath.Join(rawDir, fileMakeTest)
+		if err := os.WriteFile(logPath, []byte(placeholderLog), 0644); err != nil {
+			log.Fatalf(msgFatalWrite, logPath, err)
+		}
+		// S15: Support portable output for verification consistency
+		portDir := filepath.Join(packDir, dirLogsPortable)
+		if err := os.MkdirAll(portDir, 0755); err != nil {
+			log.Fatalf(msgFatalMkdirAll, err)
+		}
+		createPortableLog(logPath, filepath.Join(portDir, fileMakeTest))
+		sha, _ := fileSha256(logPath)
+		if err := os.WriteFile(logPath+".sha256", []byte(sha+"\n"), 0644); err != nil {
+			log.Fatalf(msgFatalWrite, logPath+".sha256", err)
+		}
+		writePortableRules(portDir)
 	}
 
 	// 4. Make Run-Eval (Unified Flow)

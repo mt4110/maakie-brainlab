@@ -35,8 +35,12 @@ func TestDiff(t *testing.T) {
 
 	rootA := filepath.Join(tmpDir, "rootA")
 	rootB := filepath.Join(tmpDir, "rootB")
-	os.MkdirAll(filepath.Join(rootA, "logs/portable"), 0755)
-	os.MkdirAll(filepath.Join(rootB, "logs/portable"), 0755)
+	if err := os.MkdirAll(filepath.Join(rootA, "logs/portable"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(rootB, "logs/portable"), 0755); err != nil {
+		t.Fatal(err)
+	}
 	
 	os.WriteFile(filepath.Join(rootA, "logs/portable/test.log"), []byte("line1\nline2\n"), 0644)
 	os.WriteFile(filepath.Join(rootB, "logs/portable/test.log"), []byte("line1\nline2changed\n"), 0644)
@@ -59,8 +63,12 @@ func TestCompareRaw(t *testing.T) {
 
 	rootA := filepath.Join(tmpDir, "rootA")
 	rootB := filepath.Join(tmpDir, "rootB")
-	os.MkdirAll(filepath.Join(rootA, dirLogsRaw), 0755)
-	os.MkdirAll(filepath.Join(rootB, dirLogsRaw), 0755)
+	if err := os.MkdirAll(filepath.Join(rootA, dirLogsRaw), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(rootB, dirLogsRaw), 0755); err != nil {
+		t.Fatal(err)
+	}
 
 	os.WriteFile(filepath.Join(rootA, dirLogsRaw, "test.raw"), []byte("raw1\n"), 0644)
 	os.WriteFile(filepath.Join(rootA, dirLogsRaw, "test.raw.sha256"), []byte("hash1"), 0644)
@@ -94,8 +102,12 @@ func TestRawNucleusViolation(t *testing.T) {
 
 	rootA := filepath.Join(tmpDir, "rootA")
 	rootB := filepath.Join(tmpDir, "rootB")
-	os.MkdirAll(filepath.Join(rootA, dirLogsRaw), 0755)
-	os.MkdirAll(filepath.Join(rootB, dirLogsRaw), 0755)
+	if err := os.MkdirAll(filepath.Join(rootA, dirLogsRaw), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(rootB, dirLogsRaw), 0755); err != nil {
+		t.Fatal(err)
+	}
 
 	// A has sidecar, B is missing it
 	os.WriteFile(filepath.Join(rootA, dirLogsRaw, "test.log"), []byte("data"), 0644)
