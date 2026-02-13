@@ -1,36 +1,36 @@
 # S15-05 TASK: AI Work v1 — deterministic local AI lane + evidence rails
 
 ## Phase 0 — Preflight (STOP early)
-- [ ] IF `git status --porcelain` is NOT empty THEN STOP (error: paste output)
-- [ ] ELSE continue
+- [x] IF `git status --porcelain` is NOT empty THEN STOP (error: paste output)
+- [x] ELSE continue
 
 ## Phase 1 — Locate AI entrypoint (FOR + break)
-- [ ] FOR file in:
-  - [ ] src/local_llm.py
-  - [ ] src/ask.py
-  - [ ] eval/run_eval.py
-  - [ ] infra/run-llama-server.sh
-  - [ ] prompts/system.md
-  - [ ] prompts/rag.md
-  - [ ] docs/rules/AI_TEXT_GUARD.md
-- [ ] IF file exists THEN mark "FOUND" and continue
+- [x] FOR file in:
+  - [x] src/local_llm.py
+  - [x] src/ask.py
+  - [x] eval/run_eval.py
+  - [x] infra/run-llama-server.sh
+  - [x] prompts/system.md
+  - [x] prompts/rag.md
+  - [x] docs/rules/AI_TEXT_GUARD.md
+- [x] IF file exists THEN mark "FOUND" and continue
 - [ ] ELSE skip with 1-line reason
 - [ ] IF none FOUND THEN STOP (error: "AI entrypoint missing")
 
 ## Phase 2 — Determinism locks (must)
-- [ ] IF any run depends on current time for semantic output THEN error + remove it
-- [ ] IF iteration order depends on filesystem order THEN sort paths
-- [ ] IF randomness exists THEN set fixed seed (single source of truth)
-- [ ] IF network call exists in AI lane THEN STOP (offline-only)
+- [x] IF any run depends on current time for semantic output THEN error + remove it
+- [x] IF iteration order depends on filesystem order THEN sort paths (Checked src/ask.py)
+- [x] IF randomness exists THEN set fixed seed (Set temperature=0.0 default)
+- [x] IF network call exists in AI lane THEN STOP (offline-only verified)
 
 ## Phase 3 — Hygiene locks (must)
-- [ ] IF outputs can be written under repo root THEN reroute to `.local/ai_runs/**` or tempdir
-- [ ] IF `.local/ai_runs/**` is used THEN ensure:
-  - [ ] directory created safely (mkdir fail-fast)
-  - [ ] file names deterministic (no wallclock in filenames unless purely log)
+- [x] IF outputs can be written under repo root THEN reroute to `.local/ai_runs/**` or tempdir
+- [x] IF `.local/ai_runs/**` is used THEN ensure:
+  - [x] directory created safely (mkdir fail-fast)
+  - [x] file names deterministic (no wallclock in filenames unless purely log)
 
 ## Phase 4 — Evidence rails (must)
-- [ ] Record inputs (prompt, config, model id, seed) as a manifest (json or tsv)
+- [/] Record inputs (prompt, config, model id, seed) as a manifest (json or tsv)
 - [ ] Record outputs (response, metrics) as jsonl
 - [ ] Record sha256 for each artifact
 - [ ] IF any evidence file is missing THEN STOP

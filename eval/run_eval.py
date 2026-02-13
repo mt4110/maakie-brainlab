@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import hashlib
 import json
 import os
 import re
@@ -12,7 +13,9 @@ from typing import Optional
 
 ROOT = Path(__file__).resolve().parents[1]
 QUESTIONS = ROOT / "eval" / "questions.jsonl"
-OUT_DIR = ROOT / "eval" / "results"
+OUT_DIR = ROOT / ".local" / "ai_runs" / "eval"
+# Evidence filename should be deterministic for SOT compliance
+EVIDENCE_FILE = "eval_results.jsonl"
 
 # S1: unknown/参照なし を fail 扱い（安全側に倒す）
 UNKNOWN_TOKENS = (
@@ -342,8 +345,7 @@ def check_server_status(base_url: str) -> dict:
 
 def main() -> None:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    ts = datetime.now(timezone.utc).astimezone().strftime("%Y%m%d-%H%M%S")
-    out_path = OUT_DIR / f"{ts}.jsonl"
+    out_path = OUT_DIR / EVIDENCE_FILE
 
     # --- Pre-flight Check ---
     base_url = os.getenv("OPENAI_API_BASE", "http://127.0.0.1:8080/v1")
@@ -352,7 +354,7 @@ def main() -> None:
     with out_path.open("w", encoding="utf-8") as f:
         meta = {
             "meta": "pre_flight",
-            "timestamp": ts,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "pre_flight": pf,
         }
         f.write(json.dumps(meta, ensure_ascii=False) + "\n")
@@ -415,6 +417,24 @@ def main() -> None:
         print(f"[eval] {qid} type={q_type} pass={res['passed']} exit={p.returncode} reason={reason_str}")
 
     print(f"[eval] saved: {out_path}")
+    
+    # Evidence Rail: Record SHA256 of the artifact
+    sha256 = hashlib.sha256(out_path.read_bytes()).hexdigest()
+    print(f"[evidence] SHA256({out_path.name}) = {sha256}")
+    
+    # Store SHA256 in a separate manifest for easy tracking
+    manifest_path = OUT_DIR / "manifest.json"
+    manifest = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "artifact": out_path.name,
+        "sha256": sha256,
+        "model_id": pf["model_id"],
+        "total_questions": len(lines),
+        "failed_count": failed
+    }
+    manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8")
+    print(f"[evidence] manifest saved: {manifest_path}")
+
     if failed > 0:
         raise SystemExit(1)
 
