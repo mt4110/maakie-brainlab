@@ -377,3 +377,4 @@ func diffLines(a, b []string) {
 	}
 }
 // intentional change for diff
+// intentional change v2
