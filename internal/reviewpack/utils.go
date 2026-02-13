@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"syscall"
 	"time"
@@ -142,6 +143,12 @@ func createPortableLog(src, dst string) {
 		}
 		s = strings.ReplaceAll(s, tmp, "<TMPDIR>/")
 	}
+
+	// S9-F: Portable noise resistance
+	reDuration := regexp.MustCompile(`\s+[0-9.]+s`)
+	s = reDuration.ReplaceAllString(s, " <DURATION>")
+	s = strings.ReplaceAll(s, "(cached)", "<CACHED>")
+
 	_ = os.WriteFile(dst, []byte(s), 0644)
 }
 
@@ -158,6 +165,16 @@ func writePortableRules(dir string) {
       "type": "replace",
       "pattern": "<TMPDIR>",
       "description": "Redact system temporary directory path for portability"
+    },
+    {
+      "type": "replace",
+      "pattern": "<DURATION>",
+      "description": "Normalize command execution durations for stable diffs"
+    },
+    {
+      "type": "replace",
+      "pattern": "<CACHED>",
+      "description": "Normalize build cache hits (cached) for stable diffs"
     }
   ]
 }
