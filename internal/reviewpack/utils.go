@@ -145,9 +145,16 @@ func createPortableLog(src, dst string) {
 	}
 
 	// S9-F: Portable noise resistance
-	reDuration := regexp.MustCompile(`\s+[0-9.]+s`)
+	// 1. Durations (handle tabs and spaces)
+	reDuration := regexp.MustCompile(`\s*\b[0-9.]+s\b`)
 	s = reDuration.ReplaceAllString(s, " <DURATION>")
+	
+	// 2. Build cache hits
 	s = strings.ReplaceAll(s, "(cached)", "<CACHED>")
+
+	// 3. Random temporary subdirectories (Go/Python often use tmp... or similar)
+	reTempSuffix := regexp.MustCompile(`<TMPDIR>/tmp[a-zA-Z0-9_]+`)
+	s = reTempSuffix.ReplaceAllString(s, "<TMPDIR>/<RAND>")
 
 	_ = os.WriteFile(dst, []byte(s), 0644)
 }
