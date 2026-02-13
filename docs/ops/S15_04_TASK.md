@@ -1,4 +1,4 @@
-# S15-03 TASK: Naive Scan Artifact Cleanup & Test Improvements
+# S15-04 TASK: Naive Scan Artifact Cleanup & Test Improvements
 
 ## Completed Changes
 
