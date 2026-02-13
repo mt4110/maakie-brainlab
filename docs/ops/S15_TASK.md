@@ -31,7 +31,8 @@ S15-H05 Baseline Prep
 
 S15-H06 Doc Hygiene
 
-- [x] if rg "file[:]//" has hits in docs/ -> STOP
+- [x] if make check-doc-links fails -> STOP
+- [x] if bash ops/check_no_file_url.sh --check fails -> STOP
 - [x] replace absolute paths with relative repo paths
 
 S15-H08 Contract Gate

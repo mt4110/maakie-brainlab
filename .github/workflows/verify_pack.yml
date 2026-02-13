@@ -81,17 +81,20 @@ jobs:
         shell: bash
         working-directory: ${{ github.workspace }}
         run: |
-          set -euo pipefail
-
           KEYDIR="$(mktemp -d)"
           echo "KEYDIR=$KEYDIR" >> "$GITHUB_ENV"
 
           # Run from module root so go.mod is found
           # Keys output to /tmp (clean workspace)
-          go run ./cmd/gopsign/main.go -mode=keygen -id="CI Builder" -out-dir "$KEYDIR"
+          if ! go run ./cmd/gopsign/main.go -mode=keygen -id="CI Builder" -out-dir "$KEYDIR"; then
+            echo "[FAIL] Key generation failed"
+            exit 1
+          fi
 
-          test -s "$KEYDIR/privkey.asc"
-          test -s "$KEYDIR/pubkey.asc"
+          if [ ! -s "$KEYDIR/privkey.asc" ] || [ ! -s "$KEYDIR/pubkey.asc" ]; then
+            echo "[FAIL] Missing generated keys"
+            exit 1
+          fi
 
           echo "S6_SIGNING_KEY=$KEYDIR/privkey.asc" >> "$GITHUB_ENV"
           echo "S6_VERIFY_KEY=$KEYDIR/pubkey.asc" >> "$GITHUB_ENV"
@@ -111,8 +114,6 @@ jobs:
         run: |
           set +e
           {
-            set -euo pipefail
-            
             # Failure Injection: seed-missing
             if [ "${{ inputs.inject_failure }}" == "seed-missing" ]; then
               echo "[INJECT] Simulating missing seed by skipping seed logic or corrupting it"
@@ -205,13 +206,24 @@ jobs:
         run: |
           set +e
           {
-            set -euo pipefail
-            go run ./cmd/reviewpack/main.go submit --mode verify-only
+            if ! go run ./cmd/reviewpack/main.go submit --mode verify-only; then
+              echo "[FAIL] reviewpack submit failed"
+              exit 1
+            fi
             PACK=$(ls -t review_bundle_*.tar.gz | head -n 1)
-            test -s "$PACK"
+            if [ -z "$PACK" ] || [ ! -s "$PACK" ]; then
+              echo "[FAIL] review bundle not found"
+              exit 1
+            fi
             echo "[OK] Created: $PACK"
-            go run ./cmd/gopsign/main.go -mode=sign -key="$S6_SIGNING_KEY" -target="$PACK"
-            test -s "$PACK.asc"
+            if ! go run ./cmd/gopsign/main.go -mode=sign -key="$S6_SIGNING_KEY" -target="$PACK"; then
+              echo "[FAIL] gopsign failed"
+              exit 1
+            fi
+            if [ ! -s "$PACK.asc" ]; then
+              echo "[FAIL] Missing signature: $PACK.asc"
+              exit 1
+            fi
             echo "[OK] Signed: $PACK.asc"
           } 2>&1 | tee .local/ci/review_bundle.log
           ec=${PIPESTATUS[0]}
