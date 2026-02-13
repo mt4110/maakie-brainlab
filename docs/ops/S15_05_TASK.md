@@ -44,8 +44,8 @@
 - [x] `go run cmd/reviewpack/main.go submit --mode verify-only`
 - [x] IF preflight says dirty tree THEN STOP (hygiene regression)
 - [x] ELSE capture SUBMIT filename + SHA256 into SOT
-  - SUBMIT: review_bundle_20260213_182558.tar.gz
-  - SHA256: af54a9773362f150d3f512798d535bc9c7b495f0747615d676d1069a92c17904
+  - SUBMIT: review_bundle_20260213_183820.tar.gz
+  - SHA256: dd0db9c4e8a5e7187fd40ea9f3e32ded741f7d79b72902cef94ae95c59cc187a
 
 ## Phase 7 — PR rail
 - [ ] `git push -u origin s15-05-ai-work-v1`

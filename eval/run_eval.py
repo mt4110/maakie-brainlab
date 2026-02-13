@@ -339,8 +339,15 @@ def check_server_status(base_url: str) -> dict:
         return result
 
     dt = (time.time() - t0) * 1000
+    # latency_ms is only for logs, not for deterministic artifacts
     result["latency_ms"] = int(dt)
     return result
+
+def sanitize_pf(pf: dict) -> dict:
+    """Remove non-deterministic fields from pre-flight for artifact storage."""
+    s = pf.copy()
+    s.pop("latency_ms", None)
+    return s
 
 
 def main() -> None:
@@ -354,10 +361,9 @@ def main() -> None:
     with out_path.open("w", encoding="utf-8") as f:
         meta = {
             "meta": "pre_flight",
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "pre_flight": pf,
+            "pre_flight": sanitize_pf(pf),
         }
-        f.write(json.dumps(meta, ensure_ascii=False) + "\n")
+        f.write(json.dumps(meta, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n")
 
     if pf["status"] != "ok":
         print(f"[eval] PRE-FLIGHT FAILED: {pf['reason_code']} (exit={pf['exit_code']})")
@@ -411,7 +417,7 @@ def main() -> None:
         }
 
         with out_path.open("a", encoding="utf-8") as f:
-            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+            f.write(json.dumps(rec, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n")
 
         reason_str = res["reason_code"] if res["reason_code"] else "-"
         print(f"[eval] {qid} type={q_type} pass={res['passed']} exit={p.returncode} reason={reason_str}")
@@ -425,14 +431,13 @@ def main() -> None:
     # Store SHA256 in a separate manifest for easy tracking
     manifest_path = OUT_DIR / "manifest.json"
     manifest = {
-        "timestamp": datetime.now(timezone.utc).isoformat(),
         "artifact": out_path.name,
         "sha256": sha256,
         "model_id": pf["model_id"],
         "total_questions": len(lines),
         "failed_count": failed
     }
-    manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8")
+    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True, ensure_ascii=False), encoding="utf-8")
     print(f"[evidence] manifest saved: {manifest_path}")
 
     if failed > 0:

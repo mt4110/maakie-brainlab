@@ -12,6 +12,7 @@ S15-04で固めた hygiene + evidence rails の上で、AI作業（ローカルL
 ## Hard Invariants
 - IF 実行が repo root に新規ファイル/変更を書いた THEN error（`.local/**` と tempdir 以外禁止）
 - IF 実行が非決定論（時刻/乱数/順序）に依存 THEN error（seed/順序固定）
+- IF 成果物（jsonl/manifest）に timestamp / latency_ms が含まれる THEN error (MUST)
 - IF 失敗した THEN fail-fast + その場で原因とパスを出す（黙って進まない）
 - 証拠は bundle/pack に乗る（“どの入力→どの出力” が辿れる）
 
