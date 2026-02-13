@@ -100,7 +100,10 @@ func runMake(dir, logName string, cmdArgs []string, timeoutSec int, failCode int
 	// Post-processing: Portable Log and SHA256
 	createPortableLog(rawLogPath, filepath.Join(portDir, logName))
 	sha, _ := fileSha256(rawLogPath)
-	_ = os.WriteFile(rawLogPath+".sha256", []byte(sha+"\n"), 0644)
+	shaPath := rawLogPath + ".sha256"
+	if err := os.WriteFile(shaPath, []byte(sha+"\n"), 0644); err != nil {
+		log.Fatalf(msgFatalWrite, shaPath, err)
+	}
 	writePortableRules(portDir)
 
 	if timeout {
@@ -160,7 +163,9 @@ func createPortableLog(src, dst string) {
 	reEvidencePack := regexp.MustCompile(`evidence_[a-zA-Z0-9_]+T[a-zA-Z0-9_.]+\.tar\.gz`)
 	s = reEvidencePack.ReplaceAllString(s, "evidence_pack_<TIMESTAMP_SHA>.tar.gz")
 
-	_ = os.WriteFile(dst, []byte(s), 0644)
+	if err := os.WriteFile(dst, []byte(s), 0644); err != nil {
+		log.Fatalf(msgFatalWrite, dst, err)
+	}
 }
 
 func writePortableRules(dir string) {
@@ -190,7 +195,10 @@ func writePortableRules(dir string) {
   ]
 }
 `
-	_ = os.WriteFile(filepath.Join(dir, "rules-v1.json"), []byte(rules), 0644)
+	rulesPath := filepath.Join(dir, "rules-v1.json")
+	if err := os.WriteFile(rulesPath, []byte(rules), 0644); err != nil {
+		log.Fatalf(msgFatalWrite, rulesPath, err)
+	}
 }
 
 

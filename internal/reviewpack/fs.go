@@ -19,11 +19,11 @@ func setupPackDir(packName string) (string, func()) {
 	// Use a temp dir for construction
 	tmpDir, err := os.MkdirTemp("", "reviewpack-*")
 	if err != nil {
-		log.Fatalf(msgFatalMkdirTemp, err)
+		log.Fatalf(msgFatalMkdirTemp, "reviewpack-*", err)
 	}
 	packDir := filepath.Join(tmpDir, packName)
 	if err := os.MkdirAll(packDir, 0755); err != nil {
-		log.Fatalf(msgFatalMkdirAll, err)
+		log.Fatalf(msgFatalMkdirAll, packDir, err)
 	}
 	return packDir, func() {
 		os.RemoveAll(tmpDir)

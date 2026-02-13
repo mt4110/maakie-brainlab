@@ -22,7 +22,7 @@ func runVerify(args []string) {
 	if strings.HasSuffix(target, ".tar.gz") {
 		tmpDir, err := os.MkdirTemp("", "reviewpack-verify-*")
 		if err != nil {
-			log.Fatalf(msgFatalMkdirTemp, err)
+			log.Fatalf(msgFatalMkdirTemp, tmpDir, err)
 		}
 		defer os.RemoveAll(tmpDir)
 
@@ -33,7 +33,7 @@ func runVerify(args []string) {
 			// Fallback: try to find it
 			r, err := findDirContainingFile(tmpDir, "PACK_VERSION", 2)
 			if err != nil {
-				log.Fatalf("[FATAL] Could not find pack root: %v", err)
+				log.Fatalf("[FATAL] Could not find pack root in %s: %v", tmpDir, err)
 			}
 			verifyRoot = r
 		}
@@ -45,12 +45,13 @@ func runVerify(args []string) {
 	checksumsFile := filepath.Join(verifyRoot, fileChecksums)
 	content, err := os.ReadFile(checksumsFile)
 	if err != nil {
-		log.Fatalf("[FAIL] No CHECKSUMS.sha256 found: %v", err)
+		log.Fatalf("[FAIL] No %s found: %v", checksumsFile, err)
 	}
 
 	// C10-03: PACK_KIND Check
-	if _, err := os.Stat(filepath.Join(verifyRoot, "review_pack_v1")); os.IsNotExist(err) {
-		log.Fatalf("[FAIL] Missing PACK_KIND file: review_pack_v1")
+	packKindFile := filepath.Join(verifyRoot, "review_pack_v1")
+	if _, err := os.Stat(packKindFile); os.IsNotExist(err) {
+		log.Fatalf("[FAIL] Missing PACK_KIND file: %s", packKindFile)
 	}
 
 	validFiles := make(map[string]bool)

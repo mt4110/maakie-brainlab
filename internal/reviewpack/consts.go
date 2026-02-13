@@ -5,8 +5,8 @@ const (
 	packPrefix        = "review_bundle"
 
 	// Constants for logging and filenames
-	msgFatalMkdirTemp = "[FATAL] MkdirTemp: %v"
-	msgFatalMkdirAll  = "[FATAL] MkdirAll: %v"
+	msgFatalMkdirTemp = "[FATAL] MkdirTemp %s: %v"
+	msgFatalMkdirAll  = "[FATAL] MkdirAll %s: %v"
 	msgDebugPreflight = "DEBUG: Starting preflight checks..."
 	msgFatalGitStatus = "[FATAL] git status --porcelain failed: %v"
 	msgFatalSha256    = "[FATAL] sha256 %s: %v"
