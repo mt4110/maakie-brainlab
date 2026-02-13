@@ -153,8 +153,12 @@ func createPortableLog(src, dst string) {
 	s = strings.ReplaceAll(s, "(cached)", "<CACHED>")
 
 	// 3. Random temporary subdirectories (Go/Python often use tmp... or similar)
-	reTempSuffix := regexp.MustCompile(`<TMPDIR>/tmp[a-zA-Z0-9_]+`)
-	s = reTempSuffix.ReplaceAllString(s, "<TMPDIR>/<RAND>")
+	reTempSuffix := regexp.MustCompile(`(tmp|bundle_unpack|Test[a-zA-Z0-9]+)[a-zA-Z0-9_]{5,}`)
+	s = reTempSuffix.ReplaceAllString(s, "<RAND>")
+
+	// 4. Evidence pack filenames (contains timestamp and git sha)
+	reEvidencePack := regexp.MustCompile(`evidence_[a-zA-Z0-9_]+T[a-zA-Z0-9_.]+\.tar\.gz`)
+	s = reEvidencePack.ReplaceAllString(s, "evidence_pack_<TIMESTAMP_SHA>.tar.gz")
 
 	_ = os.WriteFile(dst, []byte(s), 0644)
 }
