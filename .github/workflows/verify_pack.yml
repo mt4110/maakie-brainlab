@@ -243,81 +243,99 @@ jobs:
       # S15: Pack Delta Report (PR vs main baseline)
       - name: Pack Delta Report
         run: |
-          set +e
-          {
-            set -euo pipefail
-            
-            # S15-03 baseline(main) worktree
-            BASE_DIR=".local/ci/pack_delta/main"
-            mkdir -p .local/ci/pack_delta
-            git fetch origin main
-            git worktree add "$BASE_DIR" origin/main
-            
-            # S15-03 Generate main bundle (Option A)
-            (
-              cd "$BASE_DIR"
-              go run ./cmd/reviewpack/main.go submit --mode verify-only
-            )
-            
-            # S15-04 bundle path confirmation
-            BUNDLE_PR=$(find . -maxdepth 1 -name 'review_bundle_*.tar.gz' -print | sort | tail -n 1)
-            BUNDLE_MAIN=$(find "$BASE_DIR" -maxdepth 1 -name 'review_bundle_*.tar.gz' -print | sort | tail -n 1)
-            
-            if [ -z "$BUNDLE_PR" ] || [ -z "$BUNDLE_MAIN" ]; then
-              echo "[pack-delta] missing bundle (PR=$BUNDLE_PR, MAIN=$BUNDLE_MAIN)"
-              exit 2
-            fi
-            
-            # S15-05 delta diff execution (JSON)
-            set +e
-            go run cmd/reviewpack/main.go diff --kind both --format json "$BUNDLE_MAIN" "$BUNDLE_PR" > .local/ci/pack_delta/diff.json
-            EC=$?
-            set -e
-            
-            # S15-06 delta diff execution (Text)
-            set +e
-            go run cmd/reviewpack/main.go diff --kind both --format text "$BUNDLE_MAIN" "$BUNDLE_PR" > .local/ci/pack_delta/diff.txt
-            set -e
-            
-            # S15-05 Exit Code Contract (0/1 success, 2 fail)
-            if [ "$EC" -eq 2 ]; then
-              echo "[pack-delta] diff error (exit=2)"
-              exit 2
-            elif [ "$EC" -eq 0 ]; then
-              echo "[pack-delta] no diff (exit=0)"
-            elif [ "$EC" -eq 1 ]; then
-              echo "[pack-delta] diff found (exit=1) - success as info"
-            else
-              echo "[pack-delta] unexpected exit=$EC"
-              exit 2
-            fi
+          # S15-H00: NO set -euo pipefail (manual EC recovery)
 
-            # S15-07 Update CI summary.md
-            mkdir -p .local/ci
-            touch .local/ci/summary.md
-            {
-              echo "## Pack Delta (PR vs main)"
-              echo ""
-              echo "- BUNDLE_MAIN: \`$BUNDLE_MAIN\`"
-              echo "- BUNDLE_PR  : \`$BUNDLE_PR\`"
-              echo "- diff exit  : \`$EC\` (0=no diff, 1=diff found, 2=error)"
-              echo "- diff.json  : \`.local/ci/pack_delta/diff.json\`"
-              echo "- diff.txt   : \`.local/ci/pack_delta/diff.txt\`"
-              echo ""
-            } >> .local/ci/summary.md
-            
-            # Success summary status
-            echo -e "pack_delta\t0" >> .local/ci/10_status.tsv
-          } 2>&1 | tee .local/ci/pack_delta.log
+          # BASE_DIR strategy: GitHub Actions provides RUNNER_TEMP
+          BASE_DIR="${{ runner.temp }}/main-worktree"
+          DELTA_DIR=".local/ci/pack_delta"
+          mkdir -p "$DELTA_DIR"
 
-          # If the block failed (set -e caught something or exit 2)
-          PIPE_EC=${PIPESTATUS[0]}
-          if [ "$PIPE_EC" -ne 0 ]; then
-             echo -e "pack_delta\t$PIPE_EC" >> .local/ci/10_status.tsv
-             # Only fail CI if it was an error (EC=2), but since we set -e, any non-zero might come here.
-             # In S15, we only want EC=2 to fail.
-             # However, if git worktree or bundle generation fails, we should probably fail too.
+          # Worktree cleanup
+          git worktree remove --force "$BASE_DIR" 2>/dev/null || true
+          git worktree prune
+
+          # S15-03: baseline(main) worktree
+          echo "[pack-delta] Fetching origin main..."
+          git fetch origin main
+          git worktree add "$BASE_DIR" origin/main
+          if [ $? -ne 0 ]; then
+            echo "[pack-delta] ERROR: git worktree add failed"
+            echo -e "pack_delta\t2" >> .local/ci/10_status.tsv
+            exit 0
           fi
+
+          # S15-H05: baseline(main) seed for eval/results/ci.jsonl
+          mkdir -p "$BASE_DIR/eval/results"
+          if [ ! -f "$BASE_DIR/eval/results/ci.jsonl" ]; then
+            cp -f "$BASE_DIR/eval/fixtures/latest.jsonl" "$BASE_DIR/eval/results/ci.jsonl"
+            if [ $? -ne 0 ]; then
+              echo "[pack-delta] ERROR: failed to seed baseline eval"
+              echo -e "pack_delta\t2" >> .local/ci/10_status.tsv
+              exit 0
+            fi
+          fi
+
+          # S15-03: Generate main bundle
+          echo "[pack-delta] Generating baseline bundle..."
+          (
+            cd "$BASE_DIR"
+            go run ./cmd/reviewpack/main.go submit --mode verify-only
+          )
+          if [ $? -ne 0 ]; then
+            echo "[pack-delta] ERROR: baseline bundle generation failed"
+            echo -e "pack_delta\t2" >> .local/ci/10_status.tsv
+            exit 0
+          fi
+
+          # S15-04: bundle path confirmation
+          BUNDLE_PR=$(find . -maxdepth 1 -name 'review_bundle_*.tar.gz' -print | sort | tail -n 1)
+          BUNDLE_MAIN=$(find "$BASE_DIR" -maxdepth 1 -name 'review_bundle_*.tar.gz' -print | sort | tail -n 1)
+
+          if [ -z "$BUNDLE_PR" ] || [ -z "$BUNDLE_MAIN" ]; then
+            echo "[pack-delta] ERROR: missing bundle (PR=$BUNDLE_PR, MAIN=$BUNDLE_MAIN)"
+            echo -e "pack_delta\t2" >> .local/ci/10_status.tsv
+            exit 0
+          fi
+
+          # S15-05: delta diff execution (JSON)
+          echo "[pack-delta] Running diff (json)..."
+          go run cmd/reviewpack/main.go diff --kind both --format json "$BUNDLE_MAIN" "$BUNDLE_PR" > "$DELTA_DIR/diff.json"
+          EC=$?
+
+          # S15-06: delta diff execution (Text)
+          echo "[pack-delta] Running diff (text)..."
+          go run cmd/reviewpack/main.go diff --kind both --format text "$BUNDLE_MAIN" "$BUNDLE_PR" > "$DELTA_DIR/diff.txt"
+
+          # S15-05: Exit Code Contract (0/1 success, 2 fail)
+          if [ "$EC" -eq 2 ]; then
+            echo "[pack-delta] diff error (exit=2)"
+            echo -e "pack_delta\t2" >> .local/ci/10_status.tsv
+          elif [ "$EC" -eq 0 ]; then
+            echo "[pack-delta] no diff (exit=0)"
+            echo -e "pack_delta\t0" >> .local/ci/10_status.tsv
+          elif [ "$EC" -eq 1 ]; then
+            echo "[pack-delta] diff found (exit=1) - success as info"
+            echo -e "pack_delta\t0" >> .local/ci/10_status.tsv
+          else
+            echo "[pack-delta] unexpected exit=$EC"
+            echo -e "pack_delta\t2" >> .local/ci/10_status.tsv
+          fi
+
+          # S15-H04: Fix RED #2: summary write to pack_delta/summary.md (Avoid overwrite)
+          SUMMARY_PART="$DELTA_DIR/summary.md"
+          {
+            echo "## Pack Delta (PR vs main)"
+            echo ""
+            echo "- BUNDLE_MAIN: \`$(basename "$BUNDLE_MAIN")\`"
+            echo "- BUNDLE_PR  : \`$(basename "$BUNDLE_PR")\`"
+            echo "- diff exit  : \`$EC\` (0=no diff, 1=diff found, 2=error)"
+            echo "- diff.json  : \`$DELTA_DIR/diff.json\`"
+            echo "- diff.txt   : \`$DELTA_DIR/diff.txt\`"
+            echo ""
+          } > "$SUMMARY_PART"
+
+          # Clean up worktree to save space
+          git worktree remove --force "$BASE_DIR" 2>/dev/null || true
           exit 0
 
       - name: Check Doc Links
@@ -392,10 +410,16 @@ jobs:
               echo "Investigate failures in logs." >> "$SUMMARY_MD"
           fi
 
-          # 2. Output to Job Summary (Append)
-          cat "$SUMMARY_MD" >> $GITHUB_STEP_SUMMARY
+           # 2. Append Pack Delta Summary if exists
+           if [ -f "${CI_DIR}/pack_delta/summary.md" ]; then
+               echo "" >> "$SUMMARY_MD"
+               cat "${CI_DIR}/pack_delta/summary.md" >> "$SUMMARY_MD"
+           fi
 
-          # 3. Generate summary.jsonl (Machine)
+           # 3. Output to Job Summary (Append)
+           cat "$SUMMARY_MD" >> $GITHUB_STEP_SUMMARY
+
+          # 4. Generate summary.jsonl (Machine)
           python3 -c "
           import json
           import os
