@@ -59,6 +59,6 @@ func scanSecrets(dir string) {
 
 func scanNull(dir string, data []byte) {
 	if bytes.Contains(data, []byte{0}) {
-		fmt.Printf("[WARN] naive scan: NUL bytes detected in staged diff\n")
+		fmt.Println("[WARN] naive scan: NUL bytes detected in staged diff")
 	}
 }
