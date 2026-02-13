@@ -42,9 +42,93 @@ func TestDiff(t *testing.T) {
 	os.WriteFile(filepath.Join(rootA, "logs/portable/test.log"), []byte("line1\nline2\n"), 0644)
 	os.WriteFile(filepath.Join(rootB, "logs/portable/test.log"), []byte("line1\nline2changed\n"), 0644)
 
-	diffs := comparePortable(rootA, rootB)
+	diffs := comparePortable(rootA, rootB, "text")
 	if !diffs {
 		t.Errorf("Expected differences found, but got none")
+	}
+}
+
+func TestCompareRaw(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "raw-test-*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	rootA := filepath.Join(tmpDir, "rootA")
+	rootB := filepath.Join(tmpDir, "rootB")
+	os.MkdirAll(filepath.Join(rootA, dirLogsRaw), 0755)
+	os.MkdirAll(filepath.Join(rootB, dirLogsRaw), 0755)
+
+	os.WriteFile(filepath.Join(rootA, dirLogsRaw, "test.raw"), []byte("raw1\n"), 0644)
+	os.WriteFile(filepath.Join(rootB, dirLogsRaw, "test.raw"), []byte("raw2\n"), 0644)
+
+	diffs := compareRaw(rootA, rootB, "text")
+	if !diffs {
+		t.Errorf("Expected raw differences found, but got none")
+	}
+}
+
+func TestRunDiffExitCodes(t *testing.T) {
+	// Mock bundles
+	tmpDir, err := os.MkdirTemp("", "cli-test-*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	bundleA := filepath.Join(tmpDir, "A.tar.gz")
+	bundleB := filepath.Join(tmpDir, "B.tar.gz")
+	bundleC := filepath.Join(tmpDir, "C.tar.gz")
+
+	createTestBundle(t, bundleA, map[string]string{
+		"review_pack/logs/portable/test.log": "line1\n",
+		"review_pack/PACK_VERSION":           "1\n",
+	})
+	createTestBundle(t, bundleB, map[string]string{
+		"review_pack/logs/portable/test.log": "line1\n",
+		"review_pack/PACK_VERSION":           "1\n",
+	})
+	createTestBundle(t, bundleC, map[string]string{
+		"review_pack/logs/portable/test.log": "line1changed\n",
+		"review_pack/PACK_VERSION":           "1\n",
+	})
+
+	// Case 0: No diff
+	if code := runDiff([]string{bundleA, bundleB}); code != 0 {
+		t.Errorf("Expected exit code 0 for identical bundles, got %d", code)
+	}
+
+	// Case 1: Diff found
+	if code := runDiff([]string{bundleA, bundleC}); code != 1 {
+		t.Errorf("Expected exit code 1 for different bundles, got %d", code)
+	}
+
+	// Case 2: Error (missing file)
+	if code := runDiff([]string{bundleA, "nonexistent.tar.gz"}); code != 2 {
+		t.Errorf("Expected exit code 2 for missing bundle, got %d", code)
+	}
+}
+
+func TestNormalization(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "norm-test-*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	src := filepath.Join(tmpDir, "raw.log")
+	dst := filepath.Join(tmpDir, "port.log")
+
+	content := "test\t0.123s\nbuild (cached)\n"
+	os.WriteFile(src, []byte(content), 0644)
+
+	createPortableLog(src, dst)
+
+	got, _ := os.ReadFile(dst)
+	expected := "test <DURATION>\nbuild <CACHED>\n"
+	if string(got) != expected {
+		t.Errorf("Normalization failed.\nGot: %q\nExp: %q", string(got), expected)
 	}
 }
 

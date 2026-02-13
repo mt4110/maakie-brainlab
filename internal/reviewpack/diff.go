@@ -1,66 +1,89 @@
 package reviewpack
 
 import (
+	"archive/tar"
+	"compress/gzip"
+	"flag"
 	"fmt"
-	"log"
+	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
 )
 
 // runDiff implements the "diff" subcommand.
-func runDiff(args []string) {
-	if len(args) < 2 {
-		log.Fatal("Usage: reviewpack diff <bundleA> <bundleB>")
+func runDiff(args []string) int {
+	fs := flag.NewFlagSet("diff", flag.ContinueOnError)
+	kind := fs.String("kind", "portable", "Diff kind: portable, raw, both")
+	format := fs.String("format", "text", "Output format: text, json")
+	if err := fs.Parse(args); err != nil {
+		if err == flag.ErrHelp {
+			return 0
+		}
+		return 2
 	}
-	bundleA := args[0]
-	bundleB := args[1]
+
+	cmdArgs := fs.Args()
+	if len(cmdArgs) < 2 {
+		fmt.Fprintf(os.Stderr, "Usage: reviewpack diff <bundleA> <bundleB> [--kind portable|raw|both] [--format text|json]\n")
+		return 2
+	}
+	bundleA := cmdArgs[0]
+	bundleB := cmdArgs[1]
 
 	// 5.1 Extract
 	tmpDirA, err := os.MkdirTemp("", "diff-a-*")
 	if err != nil {
-		log.Fatalf("[FATAL] mkdir temp: %v", err)
+		fmt.Fprintf(os.Stderr, "[ERROR] mkdir temp: %v\n", err)
+		return 2
 	}
 	defer os.RemoveAll(tmpDirA)
 
 	tmpDirB, err := os.MkdirTemp("", "diff-b-*")
 	if err != nil {
-		log.Fatalf("[FATAL] mkdir temp: %v", err)
+		fmt.Fprintf(os.Stderr, "[ERROR] mkdir temp: %v\n", err)
+		return 2
 	}
 	defer os.RemoveAll(tmpDirB)
 
-	extractTar(bundleA, tmpDirA)
-	extractTar(bundleB, tmpDirB)
+	if err := extractTarGraceful(bundleA, tmpDirA); err != nil {
+		fmt.Fprintf(os.Stderr, "[ERROR] bundleA: %v\n", err)
+		return 2
+	}
+	if err := extractTarGraceful(bundleB, tmpDirB); err != nil {
+		fmt.Fprintf(os.Stderr, "[ERROR] bundleB: %v\n", err)
+		return 2
+	}
 
-	// Assumption: Bundles have "review_pack" root (as per verify.go logic)
 	rootA, err := findPackRoot(tmpDirA)
 	if err != nil {
-		log.Fatalf("[FAIL] bundleA: %v", err)
+		fmt.Fprintf(os.Stderr, "[ERROR] findPackRoot bundleA: %v\n", err)
+		return 2
 	}
 	rootB, err := findPackRoot(tmpDirB)
 	if err != nil {
-		log.Fatalf("[FAIL] bundleB: %v", err)
+		fmt.Fprintf(os.Stderr, "[ERROR] findPackRoot bundleB: %v\n", err)
+		return 2
 	}
 
-	// 5.2 Validate
-	portA := filepath.Join(rootA, dirLogsPortable)
-	portB := filepath.Join(rootB, dirLogsPortable)
-
-	if _, err := os.Stat(portA); os.IsNotExist(err) {
-		log.Fatalf("[FAIL] bundleA missing logs/portable/")
+	diffsFound := false
+	if *kind == "portable" || *kind == "both" {
+		if comparePortable(rootA, rootB, *format) {
+			diffsFound = true
+		}
 	}
-	if _, err := os.Stat(portB); os.IsNotExist(err) {
-		log.Fatalf("[FAIL] bundleB missing logs/portable/")
+	if *kind == "raw" || *kind == "both" {
+		if compareRaw(rootA, rootB, *format) {
+			diffsFound = true
+		}
 	}
-
-	// 5.3 Compare (portable)
-	diffsFound := comparePortable(rootA, rootB)
 
 	if diffsFound {
-		os.Exit(1)
+		return 1
 	}
-	os.Exit(0)
+	return 0
 }
 
 func findPackRoot(tmpDir string) (string, error) {
@@ -72,9 +95,20 @@ func findPackRoot(tmpDir string) (string, error) {
 	return findDirContainingFile(tmpDir, "PACK_VERSION", 2)
 }
 
-func comparePortable(rootA, rootB string) bool {
-	filesA := walkPortable(rootA)
-	filesB := walkPortable(rootB)
+func comparePortable(rootA, rootB, format string) bool {
+	if format == "json" {
+		fmt.Println("[WARN] json format not fully implemented for portable diff")
+	}
+	filesA, errA := walkPortable(rootA)
+	if errA != nil {
+		fmt.Fprintf(os.Stderr, "[ERROR] walkA: %v\n", errA)
+		return false
+	}
+	filesB, errB := walkPortable(rootB)
+	if errB != nil {
+		fmt.Fprintf(os.Stderr, "[ERROR] walkB: %v\n", errB)
+		return false
+	}
 
 	sortedPaths := getSortedPaths(filesA, filesB)
 	added, removed, modified := categorizeChanges(filesA, filesB, sortedPaths)
@@ -92,6 +126,40 @@ func comparePortable(rootA, rootB string) bool {
 	for _, p := range modified {
 		fmt.Printf("[!] MODIFIED: %s\n", p)
 		showUnifiedDiff(filepath.Join(rootA, dirLogsPortable, p), filepath.Join(rootB, dirLogsPortable, p), p)
+	}
+
+	return len(added) > 0 || len(removed) > 0 || len(modified) > 0
+}
+
+func compareRaw(rootA, rootB, format string) bool {
+	if format == "json" {
+		fmt.Println("[WARN] json format not fully implemented for raw diff")
+	}
+	fmt.Println("--- RAW BUNDLE DIFF (Nucleus) ---")
+	filesA, errA := walkRaw(rootA)
+	if errA != nil {
+		fmt.Fprintf(os.Stderr, "[ERROR] walkA(raw): %v\n", errA)
+		return false
+	}
+	filesB, errB := walkRaw(rootB)
+	if errB != nil {
+		fmt.Fprintf(os.Stderr, "[ERROR] walkB(raw): %v\n", errB)
+		return false
+	}
+
+	sortedPaths := getSortedPaths(filesA, filesB)
+	added, removed, modified := categorizeChanges(filesA, filesB, sortedPaths)
+
+	fmt.Printf("Summary (Raw): %d added, %d removed, %d modified\n", len(added), len(removed), len(modified))
+
+	for _, p := range removed {
+		fmt.Printf("[-] REMOVED (Raw): %s\n", p)
+	}
+	for _, p := range added {
+		fmt.Printf("[+] ADDED (Raw):   %s\n", p)
+	}
+	for _, p := range modified {
+		fmt.Printf("[!] MODIFIED (Raw): %s\n", p)
 	}
 
 	return len(added) > 0 || len(removed) > 0 || len(modified) > 0
@@ -130,30 +198,110 @@ func categorizeChanges(filesA, filesB map[string]string, sortedPaths []string) (
 	return
 }
 
-func walkPortable(root string) map[string]string {
+func walkPortable(root string) (map[string]string, error) {
 	portDir := filepath.Join(root, dirLogsPortable)
 	res := make(map[string]string)
-	_ = filepath.WalkDir(portDir, func(path string, d os.DirEntry, err error) error {
-		if err != nil || d.IsDir() {
+	if _, err := os.Stat(portDir); os.IsNotExist(err) {
+		return nil, fmt.Errorf("missing %s", dirLogsPortable)
+	}
+	err := filepath.WalkDir(portDir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
 			return nil
 		}
 		rel, _ := filepath.Rel(portDir, path)
 		rel = filepath.ToSlash(rel)
-		hash, _ := fileSha256(path)
+		hash, err := fileSha256(path)
+		if err != nil {
+			return err
+		}
 		res[rel] = hash
 		return nil
 	})
-	return res
+	return res, err
+}
+
+func walkRaw(root string) (map[string]string, error) {
+	rawDir := filepath.Join(root, dirLogsRaw)
+	res := make(map[string]string)
+	if _, err := os.Stat(rawDir); os.IsNotExist(err) {
+		return nil, fmt.Errorf("missing %s", dirLogsRaw)
+	}
+	err := filepath.WalkDir(rawDir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+		rel, _ := filepath.Rel(rawDir, path)
+		rel = filepath.ToSlash(rel)
+		// nucleus comparison: only care about .sha256 if they exist, or the files themselves
+		hash, err := fileSha256(path)
+		if err != nil {
+			return err
+		}
+		res[rel] = hash
+		return nil
+	})
+	return res, err
+}
+
+func extractTarGraceful(tarFile, dstDir string) error {
+	f, err := os.Open(tarFile)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	gz, err := gzip.NewReader(f)
+	if err != nil {
+		return err
+	}
+	defer gz.Close()
+	tr := tar.NewReader(gz)
+
+	for {
+		header, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+		target := filepath.Join(dstDir, header.Name)
+		switch header.Typeflag {
+		case tar.TypeDir:
+			if err := os.MkdirAll(target, 0755); err != nil {
+				return err
+			}
+		case tar.TypeReg:
+			if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
+				return err
+			}
+			outFile, err := os.Create(target)
+			if err != nil {
+				return err
+			}
+			if _, err := io.Copy(outFile, tr); err != nil {
+				outFile.Close()
+				return err
+			}
+			outFile.Close()
+		}
+	}
+	return nil
 }
 
 func showUnifiedDiff(pathA, pathB, rel string) {
-	// For now, use a simple line-based unified diff if possible, or just note the change.
-	// Since we want to avoid extra dependencies, we can implement a basic one or just print "content changed".
-	// The user requested a line-based unified diff.
+	fmt.Printf("--- a/%s\n", rel)
+	fmt.Printf("+++ b/%s\n", rel)
+
 	contentA, errA := os.ReadFile(pathA)
 	contentB, errB := os.ReadFile(pathB)
 	if errA != nil || errB != nil {
-		fmt.Printf("    (Failed to read for diff)\n")
+		fmt.Printf("    (Failed to read for diff: A=%v, B=%v)\n", errA, errB)
 		return
 	}
 
@@ -162,18 +310,30 @@ func showUnifiedDiff(pathA, pathB, rel string) {
 		return
 	}
 
+	// Try external diff -u
+	cmd := exec.Command("diff", "-u", pathA, pathB)
+	out, err := cmd.Output()
+	if err == nil || (err != nil && cmd.ProcessState.ExitCode() == 1) {
+		lines := strings.Split(string(out), "\n")
+		maxLines := 100
+		for i, line := range lines {
+			if i >= maxLines {
+				fmt.Printf("... (diff truncated after %d lines)\n", maxLines)
+				break
+			}
+			if strings.HasPrefix(line, "---") || strings.HasPrefix(line, "+++") {
+				continue
+			}
+			if line != "" {
+				fmt.Println(line)
+			}
+		}
+		return
+	}
+
+	// Fallback
 	linesA := strings.Split(string(contentA), "\n")
 	linesB := strings.Split(string(contentB), "\n")
-
-	// Very basic diff (Hunk-less, just line by line for now)
-	// TODO: Use a real LCS-based diff if needed, but for logs simple line mismatch is often enough.
-	// But unified diff usually means hunk format.
-	fmt.Printf("--- a/%s\n", rel)
-	fmt.Printf("+++ b/%s\n", rel)
-	
-	// Implementation placeholder: for now just show changed lines
-	// To follow deterministic rule, we should be careful.
-	// Let's use a simple diff implementation.
 	diffLines(linesA, linesB)
 }
 
@@ -187,25 +347,32 @@ func isBinary(data []byte) bool {
 }
 
 func diffLines(a, b []string) {
-	// Tiny line-by-line diff for now (not full LCS)
-	// Real unified diff would be better.
-	max := len(a)
-	if len(b) > max {
-		max = len(b)
+	maxLines := 50
+	count := 0
+	maxLen := len(a)
+	if len(b) > maxLen {
+		maxLen = len(b)
 	}
 
-	for i := 0; i < max; i++ {
+	for i := 0; i < maxLen; i++ {
+		if count >= maxLines {
+			fmt.Printf("... (diff truncated after %d lines)\n", maxLines)
+			break
+		}
 		if i >= len(a) {
 			fmt.Printf("+ %s\n", b[i])
+			count++
 			continue
 		}
 		if i >= len(b) {
 			fmt.Printf("- %s\n", a[i])
+			count++
 			continue
 		}
 		if a[i] != b[i] {
 			fmt.Printf("- %s\n", a[i])
 			fmt.Printf("+ %s\n", b[i])
+			count += 2
 		}
 	}
 }
