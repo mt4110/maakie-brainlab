@@ -35,9 +35,8 @@ jobs:
       - name: Init CI (Run Always)
         run: |
           mkdir -p .local/ci
-          date -u +"%Y%m%dT%H%M%SZ" > .local/ci/00_utc.txt
-          echo "sha=$(git rev-parse HEAD)" > .local/ci/00_meta.txt
           echo "run_id=${{ github.run_id }}" >> .local/ci/00_meta.txt
+          : > .local/ci/10_status.tsv
 
           # Failure Injection: doclinks (v3 Robust)
           if [ "${{ inputs.inject_failure }}" == "doclinks" ]; then
@@ -261,7 +260,16 @@ jobs:
           # BASE_DIR strategy: GitHub Actions provides RUNNER_TEMP
           BASE_DIR="${{ runner.temp }}/main-worktree"
           DELTA_DIR=".local/ci/pack_delta"
+          REVIEWPACK_BIN="${{ runner.temp }}/reviewpack"
           mkdir -p "$DELTA_DIR"
+
+          # S15-H00: Build PR reviewpack binary for baseline/diff consistency
+          echo "[pack-delta] Building PR reviewpack binary..."
+          if ! go build -o "$REVIEWPACK_BIN" ./cmd/reviewpack; then
+            echo "[pack-delta] ERROR: go build reviewpack failed"
+            echo -e "pack_delta\t2" >> .local/ci/10_status.tsv
+            exit 0
+          fi
 
           # Worktree cleanup
           git worktree remove --force "$BASE_DIR" 2>/dev/null || true
@@ -291,11 +299,11 @@ jobs:
             fi
           fi
 
-          # S15-H03: Generate main bundle
+          # S15-H03: Generate main bundle (using PR binary to support --skip-test)
           echo "[pack-delta] Generating baseline bundle..."
           if ! (
             cd "$BASE_DIR"
-            go run ./cmd/reviewpack/main.go submit --mode verify-only --skip-test
+            "$REVIEWPACK_BIN" submit --mode verify-only --skip-test
           ); then
             echo "[pack-delta] ERROR: baseline bundle generation failed"
             echo -e "pack_delta\t2" >> .local/ci/10_status.tsv
@@ -317,7 +325,7 @@ jobs:
 
           # S15-H05: delta diff execution (JSON)
           echo "[pack-delta] Running diff (json)..."
-          if go run cmd/reviewpack/main.go diff --kind both --format json "$BUNDLE_MAIN" "$BUNDLE_PR" > "$DELTA_DIR/diff.json"; then
+          if "$REVIEWPACK_BIN" diff --kind both --format json "$BUNDLE_MAIN" "$BUNDLE_PR" > "$DELTA_DIR/diff.json"; then
             EC=0
           else
             EC=$?
@@ -325,8 +333,8 @@ jobs:
 
           # S15-H06: delta diff execution (Text)
           echo "[pack-delta] Running diff (text)..."
-          if ! go run cmd/reviewpack/main.go diff --kind both --format text "$BUNDLE_MAIN" "$BUNDLE_PR" > "$DELTA_DIR/diff.txt"; then
-            echo "[pack-delta] WARNING: text diff failed (EC=$?)"
+          if ! "$REVIEWPACK_BIN" diff --kind both --format text "$BUNDLE_MAIN" "$BUNDLE_PR" > "$DELTA_DIR/diff.txt"; then
+            echo "[pack_delta] WARNING: text diff failed (EC=$?)"
           fi
 
           # S15-H07: Exit Code Contract (0/1 success, 2 fail)
