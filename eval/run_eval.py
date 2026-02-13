@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+import argparse
 import hashlib
 import json
 import os
@@ -9,11 +9,11 @@ import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Dict, Any
 
 ROOT = Path(__file__).resolve().parents[1]
 QUESTIONS = ROOT / "eval" / "questions.jsonl"
-OUT_DIR = ROOT / ".local" / "ai_runs" / "eval"
+STORE_DIR = ROOT / ".local" / "aiwork"
 # Evidence filename should be deterministic for SOT compliance
 EVIDENCE_FILE = "eval_results.jsonl"
 
@@ -51,6 +51,12 @@ class ReasonCode:
     FORMAT_INVALID = "FORMAT_INVALID"
 
 
+def calculate_spec_hash(spec: Dict[str, Any]) -> str:
+    """Calculate a stable hash for the given specification."""
+    canonical = json.dumps(spec, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
 def parse_sources(answer: str) -> list[str]:
     """
     参照: セクションの - ... 行を抽出する
@@ -68,10 +74,6 @@ def parse_sources(answer: str) -> list[str]:
             if line.startswith("-"):
                 sources.append(line.lstrip("- ").strip())
             else:
-                # 参照ブロック終了（空行以外の非リスト行が出たら終わりとみなす実装もあるが、
-                # ここでは簡易に「見出しが来るまで」あるいは「最後まで」拾うならこれでもよいが、
-                # 仕様上 "参照:" の次はリストが続くと仮定。
-                # 安全のため、明らかに別のセクション見出しっぽいものが来たら抜ける
                 if re.match(r"^[^:\-]*:$", line):
                     break
     return sources
@@ -121,8 +123,6 @@ def determine_standard_fail_reason(
             return ReasonCode.CONTEXT_EMPTY
         return ReasonCode.UNKNOWN_ANSWER
     
-    # has_sources check is now strict based on parsed sources check in caller usually, 
-    # but here we rely on the passed flag which is derived from strict parsing
     if not has_sources: 
         return ReasonCode.NO_SOURCES
 
@@ -138,29 +138,16 @@ def apply_type_constraints(
     has_sources: bool
 ) -> Optional[str]:
     if q_type == "negative_control":
-        # Strong Check 1: 結論行のヒューリスティック (Mixed Hallucination)
-        # "Unknown but..." logic is suspicious
         if conclusion_line:
-            # 逃げ口上っぽい接続詞
             bad_terms = ["ただし", "しかし", "一方", "ちなみに", "可能性があります", "ですが", "一般的"]
             if any(t in conclusion_line for t in bad_terms):
                 return ReasonCode.POSITIVE_HALLUCINATION
 
-        # Strong Check 2: Sourcesがあるなら Hallucination... BUT ONLY IF ANSWER IS NOT UNKNOWN
-        # (If LLM says "Unknown" validly, it might still cite sources it checked. That is OK.)
-        # mentions_unknown check is based on strict conclusion line if available.
-        # So logic is: If it HAS sources AND does NOT mention unknown -> It's a hallucination (answer with support).
-        
-        # Note: apply_type_constraints args don't include mentions_unknown directly?
-        # Standard workflow: determine_standard_fail_reason uses mentions_unknown to set UNKNOWN_ANSWER.
-        # So we can check if fail_reason_code == UNKNOWN_ANSWER.
-        
         is_unknown = (fail_reason_code == ReasonCode.UNKNOWN_ANSWER)
         
         if has_sources and not is_unknown:
             return ReasonCode.POSITIVE_HALLUCINATION
 
-        # Pass if Unknown/NoSource/ContextEmpty
         if fail_reason_code in (
             ReasonCode.UNKNOWN_ANSWER,
             ReasonCode.CONTEXT_EMPTY,
@@ -168,18 +155,15 @@ def apply_type_constraints(
         ):
             return None
         
-        # Answered normally (fail_reason_code is None) -> Hallucination
         if fail_reason_code is None:
             return ReasonCode.POSITIVE_HALLUCINATION
             
         return fail_reason_code
 
-    # Normal/Ref/Boundary/MultiChunk
     if fail_reason_code is None:
         if not has_required_source:
             return ReasonCode.MISSING_REQUIRED_SOURCE
         
-        # Evidence Check Logic
         if not has_expected_evidence:
             return ReasonCode.MISSING_EXPECTED_EVIDENCE
 
@@ -187,7 +171,6 @@ def apply_type_constraints(
 
 
 def _norm(s: str) -> str:
-    # 空白/改行/タブを潰して比較を安定化
     return "".join((s or "").split()).lower()
 
 
@@ -201,34 +184,26 @@ def analyze_result(
     expected_source = question.get("expected_source")
     expected_evidence = question.get("expected_evidence")
 
-    # 1. Parse Structure
     extracted_sources = parse_sources(answer)
-    # S1: "不明" などのダミー参照は sources としてカウントしない
     valid_sources = [s for s in extracted_sources if not any(tok in s for tok in UNKNOWN_TOKENS)]
     has_sources = len(valid_sources) > 0
     conclusion_line = extract_conclusion_line(answer)
 
-    # 2. Unknown Check (Strict: only in Conclusion)
-    # 結論行が取れない場合は FORMAT_INVALID とする（空でない場合）
     format_invalid = (exit_code == 0 and bool(answer) and conclusion_line is None)
 
     target_text = conclusion_line or ""
     mentions_unknown = any(tok in target_text for tok in UNKNOWN_TOKENS)
 
-    # 3. Source Check (Strict)
     has_required_source = True
     if expected_source:
         has_required_source = False
-        # expected_source が extracted_sources のいずれかに含まれるか
-        # suffix match logic (e.g. "hello.md" matches "hello.md#chunk-0")
         for src in extracted_sources:
             if expected_source in src:
                 has_required_source = True
                 break
 
-    # 4. Evidence Check (Mode: ANY vs ALL)
     has_expected_evidence = True
-    matched_evidence = None  # for ANY mode compatibility
+    matched_evidence = None
     matched_evidence_all = []
     missing_evidence = []
     
@@ -257,7 +232,6 @@ def analyze_result(
                 missing_evidence = misses
             matched_evidence_all = matches
 
-    # 5. Determine Fail Reason
     if format_invalid:
         fail_reason_code = ReasonCode.FORMAT_INVALID
     else:
@@ -265,9 +239,7 @@ def analyze_result(
             answer, stderr, exit_code, mentions_unknown, has_sources
         )
 
-    # 6. Evaluate Constraints based on Type
     final_reason_code = apply_type_constraints(q_type, fail_reason_code, has_required_source, has_expected_evidence, conclusion_line, has_sources)
-
     passed = (final_reason_code is None)
 
     return {
@@ -288,15 +260,7 @@ def analyze_result(
     }
 
 
-
-
-
 def check_server_status(base_url: str) -> dict:
-    """
-    SERVER_UNREACHABLE (101)
-    SERVER_MODEL_MISSING (102)
-    INFERENCE_FAILED (103)
-    """
     result = {
         "status": "ok",
         "latency_ms": 0,
@@ -305,7 +269,6 @@ def check_server_status(base_url: str) -> dict:
         "exit_code": 0,
     }
 
-    # 1. Connectivity & Models check
     t0 = time.time()
     try:
         r = requests.get(f"{base_url.rstrip('/')}/models", timeout=5)
@@ -320,7 +283,6 @@ def check_server_status(base_url: str) -> dict:
         result.update({"status": "error", "reason_code": ReasonCode.SERVER_UNREACHABLE, "exit_code": 101, "error": str(e)})
         return result
 
-    # 2. Minimal Inference check
     try:
         chat_url = f"{base_url.rstrip('/')}/chat/completions"
         payload = {
@@ -339,39 +301,72 @@ def check_server_status(base_url: str) -> dict:
         return result
 
     dt = (time.time() - t0) * 1000
-    # latency_ms is only for logs, not for deterministic artifacts
     result["latency_ms"] = int(dt)
     return result
 
+
 def sanitize_pf(pf: dict) -> dict:
-    """Remove non-deterministic fields from pre-flight for artifact storage."""
     s = pf.copy()
     s.pop("latency_ms", None)
     return s
 
 
+def mock_ask(question_data: dict, spec_hash: str) -> tuple[int, str, str]:
+    """Mock provider: produce output that satisfies the question's constraints."""
+    q_type = question_data.get("type", "normal")
+    if q_type == "negative_control":
+        # For negative control, we expect "Unknown" and NO sources/evidence.
+        answer = "結論:\n- 参照できる根拠が見つかりません。\n\n参照:\n- なし"
+        return 0, answer, ""
+    
+    expected_source = question_data.get("expected_source", "mock_source.md")
+    expected_evidence = question_data.get("expected_evidence", [])
+    
+    evidence_str = ""
+    if expected_evidence:
+        # For multi_chunk or boundary, we might need multiple items
+        evidence_str = "\n".join([f"- {e}" for e in expected_evidence])
+    else:
+        evidence_str = "- [MOCK] Evidence found."
+
+    answer = f"結論:\n- [MOCK] Success for {spec_hash}\n{evidence_str}\n\n参照:\n- {expected_source}"
+    return 0, answer, ""
+
+
 def main() -> None:
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
-    out_path = OUT_DIR / EVIDENCE_FILE
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--mode", choices=["record", "replay", "verify-only"], default="record")
+    parser.add_argument("--provider", choices=["real", "mock"], default="real")
+    args = parser.parse_args()
+
+    mode = args.mode
+    provider = args.provider
+
+    # In verify-only mode, we FORCE replay.
+    if mode == "verify-only":
+        print("[eval] mode=verify-only implies replay from existing artifacts.")
+
+    STORE_DIR.mkdir(parents=True, exist_ok=True)
+    evidence_dir = ROOT / "docs" / "evidence" / "s15-06"
+    evidence_dir.mkdir(parents=True, exist_ok=True)
+    
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    evidence_path = evidence_dir / f"eval_{mode}_{timestamp}.jsonl"
 
     # --- Pre-flight Check ---
     base_url = os.getenv("OPENAI_API_BASE", "http://127.0.0.1:8080/v1")
-    pf = check_server_status(base_url)
-
-    with out_path.open("w", encoding="utf-8") as f:
-        meta = {
-            "meta": "pre_flight",
-            "pre_flight": sanitize_pf(pf),
-        }
-        f.write(json.dumps(meta, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n")
+    if provider == "real":
+        pf = check_server_status(base_url)
+        model_id = pf["model_id"]
+    else:
+        pf = {"status": "ok", "model_id": "mock-model", "exit_code": 0}
+        model_id = "mock-model"
 
     if pf["status"] != "ok":
         print(f"[eval] PRE-FLIGHT FAILED: {pf['reason_code']} (exit={pf['exit_code']})")
-        if "error" in pf:
-            print(f"       Error: {pf['error']}")
         sys.exit(pf["exit_code"])
 
-    print(f"[eval] PRE-FLIGHT OK: latency={pf['latency_ms']}ms model={pf['model_id']}")
+    print(f"[eval] PRE-FLIGHT OK: provider={provider} model={model_id}")
 
     if not QUESTIONS.exists():
         raise SystemExit(f"questions not found: {QUESTIONS}")
@@ -383,65 +378,110 @@ def main() -> None:
     ]
     failed = 0
 
+    results_for_evidence = []
+
     for line in lines:
         q = json.loads(line)
         qid = q["id"]
         question = q["question"]
         q_type = q.get("type", "normal")
 
-        p = subprocess.run(
-            [sys.executable, str(ROOT / "src" / "ask.py"), question],
-            capture_output=True,
-            text=True,
-        )
+        # Define WorkSpec
+        spec = {
+            "purpose": "evaluation",
+            "question_id": qid,
+            "question": question,
+            "model_id": model_id,
+            "type": q_type,
+            "provider": provider,
+        }
+        spec_hash = calculate_spec_hash(spec)
+        run_dir = STORE_DIR / spec_hash
+        spec_file = run_dir / "spec.json"
+        result_file = run_dir / "result.json"
 
-        answer = (p.stdout or "").strip()
-        err = (p.stderr or "").strip()
+        answer, err, exit_code = "", "", 0
 
-        # Analysis Logic Extracted
-        res = analyze_result(q, answer, p.returncode, err)
+        if mode in ("replay", "verify-only"):
+            if not result_file.exists():
+                print(f"[eval] ERROR: Missing result for {qid} (hash={spec_hash}) in {mode} mode.")
+                sys.exit(1)
+            
+            with result_file.open("r", encoding="utf-8") as rf:
+                stored = json.load(rf)
+                # Verify spec consistency
+                if stored.get("spec_hash") != spec_hash:
+                    print(f"[eval] ERROR: Spec hash mismatch for {qid}. Expected {spec_hash}, found {stored.get('spec_hash')}")
+                    sys.exit(1)
+                answer = stored["answer"]
+                err = stored["stderr"]
+                exit_code = stored["exit_code"]
+        else:
+            # record mode
+            if provider == "mock":
+                exit_code, answer, err = mock_ask(q, spec_hash)
+            else:
+                p = subprocess.run(
+                    [sys.executable, str(ROOT / "src" / "ask.py"), question],
+                    capture_output=True,
+                    text=True,
+                )
+                answer, err, exit_code = (p.stdout or "").strip(), (p.stderr or "").strip(), p.returncode
 
+            # Save artifacts
+            if mode == "record":
+                run_dir.mkdir(parents=True, exist_ok=True)
+                with spec_file.open("w", encoding="utf-8") as sf:
+                    json.dump(spec, sf, indent=2, sort_keys=True, ensure_ascii=False)
+                
+                with result_file.open("w", encoding="utf-8") as rf:
+                    json.dump({
+                        "spec_hash": spec_hash,
+                        "exit_code": exit_code,
+                        "answer": answer,
+                        "stderr": err,
+                    }, rf, indent=2, sort_keys=True, ensure_ascii=False)
+
+        # Analysis Logic
+        res = analyze_result(q, answer, exit_code, err)
         if not res["passed"]:
             failed += 1
 
         rec = {
             "id": qid,
-            "question": question,
-            "type": q_type,
-            "exit_code": p.returncode,
+            "spec_hash": spec_hash,
+            "mode": mode,
             "passed": res["passed"],
             "reason_code": res["reason_code"],
-            "answer": answer,
-            "stderr": err,
+            "answer": answer if len(answer) < 500 else answer[:500] + "...", # truncate for evidence
             "details": res["details"]
         }
-
-        with out_path.open("a", encoding="utf-8") as f:
-            f.write(json.dumps(rec, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n")
+        results_for_evidence.append(rec)
 
         reason_str = res["reason_code"] if res["reason_code"] else "-"
-        print(f"[eval] {qid} type={q_type} pass={res['passed']} exit={p.returncode} reason={reason_str}")
+        print(f"[eval] {qid} hash={spec_hash[:8]} pass={res['passed']} exit={exit_code} reason={reason_str}")
 
-    print(f"[eval] saved: {out_path}")
-    
-    # Evidence Rail: Record SHA256 of the artifact
-    sha256 = hashlib.sha256(out_path.read_bytes()).hexdigest()
-    print(f"[evidence] SHA256({out_path.name}) = {sha256}")
-    
-    # Store SHA256 in a separate manifest for easy tracking
-    manifest_path = OUT_DIR / "manifest.json"
-    manifest = {
-        "artifact": out_path.name,
-        "sha256": sha256,
-        "model_id": pf["model_id"],
-        "total_questions": len(lines),
-        "failed_count": failed
-    }
-    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True, ensure_ascii=False), encoding="utf-8")
-    print(f"[evidence] manifest saved: {manifest_path}")
+    # Save evidence
+    with evidence_path.open("w", encoding="utf-8") as f:
+        meta = {
+            "meta": "summary",
+            "mode": mode,
+            "provider": provider,
+            "model_id": model_id,
+            "total": len(lines),
+            "failed": failed,
+            "timestamp": timestamp,
+        }
+        f.write(json.dumps(meta, ensure_ascii=False, sort_keys=True) + "\n")
+        for r in results_for_evidence:
+            f.write(json.dumps(r, ensure_ascii=False, sort_keys=True) + "\n")
 
+    print(f"[evidence] saved: {evidence_path}")
+    
     if failed > 0:
-        raise SystemExit(1)
+        print(f"[eval] FAILED: {failed} questions failed.")
+        sys.exit(1)
+    print("[eval] ALL PASSED")
 
 
 if __name__ == "__main__":
