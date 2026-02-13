@@ -27,7 +27,7 @@ Last updated: 2026-02-13 (JST)
 - [ ] continue
 
 ### 1.2 CLI flags exist (help)
-- [ ] run: `go run cmd/reviewpack/main.go diff --help | rg -n -- '--kind|--format'`
+- [ ] run: `go run cmd/reviewpack/main.go diff --help 2>&1 | rg -n -- '(-|--)kind|(-|--)format'`
 - [ ] if no match -> error "flags not wired" -> STOP
 - [ ] continue
 

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -40,7 +41,10 @@ func TestDiff(t *testing.T) {
 	os.WriteFile(filepath.Join(rootA, "logs/portable/test.log"), []byte("line1\nline2\n"), 0644)
 	os.WriteFile(filepath.Join(rootB, "logs/portable/test.log"), []byte("line1\nline2changed\n"), 0644)
 
-	diffs := comparePortable(rootA, rootB, "text")
+	diffs, err := comparePortable(rootA, rootB, "text")
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !diffs {
 		t.Errorf("Expected differences found, but got none")
 	}
@@ -59,7 +63,9 @@ func TestCompareRaw(t *testing.T) {
 	os.MkdirAll(filepath.Join(rootB, dirLogsRaw), 0755)
 
 	os.WriteFile(filepath.Join(rootA, dirLogsRaw, "test.raw"), []byte("raw1\n"), 0644)
+	os.WriteFile(filepath.Join(rootA, dirLogsRaw, "test.raw.sha256"), []byte("hash1"), 0644)
 	os.WriteFile(filepath.Join(rootB, dirLogsRaw, "test.raw"), []byte("raw2\n"), 0644)
+	os.WriteFile(filepath.Join(rootB, dirLogsRaw, "test.raw.sha256"), []byte("hash2"), 0644)
 
 	diffs, err := walkRaw(rootA)
 	if err != nil { t.Fatal(err) }
@@ -70,9 +76,35 @@ func TestCompareRaw(t *testing.T) {
 		t.Errorf("walkRaw returned empty map")
 	}
 
-	res := compareRaw(rootA, rootB, "text")
+	res, err := compareRaw(rootA, rootB, "text")
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !res {
 		t.Errorf("Expected raw differences found, but got none")
+	}
+}
+
+func TestRawNucleusViolation(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "nucleus-test-*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	rootA := filepath.Join(tmpDir, "rootA")
+	rootB := filepath.Join(tmpDir, "rootB")
+	os.MkdirAll(filepath.Join(rootA, dirLogsRaw), 0755)
+	os.MkdirAll(filepath.Join(rootB, dirLogsRaw), 0755)
+
+	// A has sidecar, B is missing it
+	os.WriteFile(filepath.Join(rootA, dirLogsRaw, "test.log"), []byte("data"), 0644)
+	os.WriteFile(filepath.Join(rootA, dirLogsRaw, "test.log.sha256"), []byte("hash"), 0644)
+	os.WriteFile(filepath.Join(rootB, dirLogsRaw, "test.log"), []byte("data"), 0644)
+
+	_, err = compareRaw(rootA, rootB, "text")
+	if err == nil || !strings.Contains(err.Error(), "nucleus violation") {
+		t.Errorf("Expected nucleus violation error for missing sidecar, got %v", err)
 	}
 }
 
