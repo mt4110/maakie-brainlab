@@ -20,30 +20,30 @@ CIは replay + verify-only で回る。
 - Filters: Excluded `.git/`, `.local/`, `target/`, etc.
 
 ### A. AI Lane Core
-- [eval/run_eval.py](file:///Users/takemuramasaki/dev/maakie-brainlab/eval/run_eval.py) (includes WorkSpec, spec_hash, and modes)
+- `eval/run_eval.py` (includes WorkSpec, spec_hash, and modes)
 
 ### B. Providers
-- [eval/run_eval.py](file:///Users/takemuramasaki/dev/maakie-brainlab/eval/run_eval.py) (includes Mock provider)
+- `eval/run_eval.py` (includes Mock provider)
 
 ### C. Storage Layout / Hashing
-- [eval/run_eval.py](file:///Users/takemuramasaki/dev/maakie-brainlab/eval/run_eval.py) (Layout: `.local/aiwork/<spec_hash>/`)
+- `eval/run_eval.py` (Layout: `.local/aiwork/<spec_hash>/`)
 
 ### D. CLI / Entrypoints
-- [eval/run_eval.py](file:///Users/takemuramasaki/dev/maakie-brainlab/eval/run_eval.py) (--mode {record,replay,verify-only})
+- `eval/run_eval.py` (--mode {record,replay,verify-only})
 
 ### E. Make / Scripts
-- [Makefile](file:///Users/takemuramasaki/dev/maakie-brainlab/Makefile) (ai-smoke, ai-verify)
+- `Makefile` (ai-smoke, ai-verify)
 
 ### F. CI Workflows
-- [.github/workflows/verify_pack.yml](file:///Users/takemuramasaki/dev/maakie-brainlab/.github/workflows/verify_pack.yml)
+- `.github/workflows/verify_pack.yml`
 
 ### G. Ops Docs / Evidence Rails
-- [docs/ops/S15-06_PLAN.md](file:///Users/takemuramasaki/dev/maakie-brainlab/docs/ops/S15-06_PLAN.md)
-- [docs/ops/S15-06_TASK.md](file:///Users/takemuramasaki/dev/maakie-brainlab/docs/ops/S15-06_TASK.md)
-- [docs/ops/S15-06_ACCEPTANCE.md](file:///Users/takemuramasaki/dev/maakie-brainlab/docs/ops/S15-06_ACCEPTANCE.md)
+- `docs/ops/S15-06_PLAN.md`
+- `docs/ops/S15-06_TASK.md`
+- `docs/ops/S15-06_ACCEPTANCE.md`
 
 ### I. Tests
-- [tests/test_eval_artifacts_determinism.py](file:///Users/takemuramasaki/dev/maakie-brainlab/tests/test_eval_artifacts_determinism.py)
+- `tests/test_eval_artifacts_determinism.py`
 
 ---
 
