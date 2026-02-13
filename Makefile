@@ -1,6 +1,7 @@
 .PHONY: test ci bootstrap run-eval gate1 s5 s5-verify s6-verify check-doc-links verify-pack seed-eval evidence-pack-demo evidence-verify-demo evidence-gc smoke
 .PHONY: sat-collect sat-normalize sat-gate sat-store sat-digest sat-index sat-run
 .PHONY: server-start server-stop server-status log ingest ask
+.PHONY: ai-smoke ai-verify
 
 PY?=.venv/bin/python
 PYENV=PYTHONPATH=.
@@ -115,4 +116,8 @@ evidence-gc:
 smoke:
 	bash ops/smoke_evidencepack.sh
 
+ai-smoke:
+	$(PYENV) $(PY) eval/run_eval.py --mode record --provider mock
 
+ai-verify:
+	$(PYENV) $(PY) eval/run_eval.py --mode verify-only --provider mock
