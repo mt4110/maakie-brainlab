@@ -40,7 +40,6 @@ func scanSecrets(dir string) {
 	// Replaced by strict contamination checks in generatePackFilelist
 	// Keeping this signature/call for naive scan if enabled, otherwise no-op or just report
 	// We'll keep it as a 'naive scan' report generator for now, but not the enforcer.
-	outPath := filepath.Join(dir, "21_secrets_scan.txt")
 	var buf bytes.Buffer
 	buf.WriteString("secret scan: naive patterns\n")
 
@@ -55,13 +54,11 @@ func scanSecrets(dir string) {
 	} else {
 		buf.WriteString("OK: no obvious secrets\n")
 	}
-	if err := os.WriteFile(outPath, buf.Bytes(), 0644); err != nil {
-		log.Fatalf("[FATAL] write secrets scan: %v", err)
-	}
+	log.Printf("[INFO] naive secrets scan report:\n%s", buf.String())
 }
 
 func scanNull(dir string, data []byte) {
 	if bytes.Contains(data, []byte{0}) {
-		_ = os.WriteFile(filepath.Join(dir, "20_null_bytes.txt"), []byte("NUL bytes detected\n"), 0644)
+		log.Printf("[WARN] naive scan: NUL bytes detected in staged diff")
 	}
 }

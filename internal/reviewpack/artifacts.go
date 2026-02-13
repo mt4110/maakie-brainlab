@@ -16,7 +16,10 @@ import (
 
 func writeVersionAndSpec(dir string) {
 	// S4-05
-	_ = os.WriteFile(filepath.Join(dir, "PACK_VERSION"), []byte("1\n"), 0644)
+	versionPath := filepath.Join(dir, "PACK_VERSION")
+	if err := os.WriteFile(versionPath, []byte("1\n"), 0644); err != nil {
+		log.Fatalf(msgFatalWrite, versionPath, err)
+	}
 
 	spec := `# Reviewpack Specification (v1)
 
@@ -54,7 +57,10 @@ It guarantees that "Same Input -> Same Output" (Checksums match).
 	unittest discover
 	~~~
 	`
-	_ = os.WriteFile(filepath.Join(dir, "SPEC.md"), []byte(strings.ReplaceAll(spec, "\t", "    ")), 0644)
+	specPath := filepath.Join(dir, "SPEC.md")
+	if err := os.WriteFile(specPath, []byte(strings.ReplaceAll(spec, "\t", "    ")), 0644); err != nil {
+		log.Fatalf(msgFatalWrite, specPath, err)
+	}
 }
 
 func createManifest(dir string, files []string) {
@@ -110,7 +116,7 @@ func createChecksums(dir string) {
 	// Write
 	out := filepath.Join(dir, fileChecksums)
 	if err := os.WriteFile(out, []byte(strings.Join(lines, "\n")+"\n"), 0644); err != nil {
-		log.Fatalf("[FATAL] write checksums: %v", err)
+		log.Fatalf(msgFatalWrite, out, err)
 	}
 }
 
@@ -172,7 +178,7 @@ func createDeterministicTar(srcDir string, fileList []string, rootName string, o
 			}
 			if _, err := io.Copy(tw, data); err != nil {
 				data.Close()
-				log.Fatalf("[FATAL] copy content %s: %v", abs, err)
+				log.Fatalf("[FATAL] copy content %s to tar: %v", abs, err)
 			}
 			data.Close()
 		}
@@ -317,7 +323,8 @@ func writeMeta(dir, timestamp string, timebox int, skipEval bool, evalMode strin
 	meta += fmt.Sprintf("eval_source_sha256=%s\n", evalSrcSha)
 	meta += fmt.Sprintf("eval_source_bytes=%d\n", evalSrcBytes)
 
-	if err := os.WriteFile(filepath.Join(dir, "00_meta.txt"), []byte(meta), 0644); err != nil {
-		log.Fatalf("[FATAL] write meta: %v", err)
+	metaPath := filepath.Join(dir, "00_meta.txt")
+	if err := os.WriteFile(metaPath, []byte(meta), 0644); err != nil {
+		log.Fatalf(msgFatalWrite, metaPath, err)
 	}
 }

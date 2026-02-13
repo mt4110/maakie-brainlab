@@ -65,7 +65,10 @@ func packToTar(args []string) string {
 	if !*skipEval {
 		runMake(packDir, fileMakeEval, []string{"make", "run-eval"}, *timebox, 5)
 	} else {
-		_ = os.WriteFile(filepath.Join(packDir, fileMakeEval), []byte("SKIP_EVAL set.\n"), 0644)
+		skipPath := filepath.Join(packDir, fileMakeEval)
+		if err := os.WriteFile(skipPath, []byte("SKIP_EVAL set.\n"), 0644); err != nil {
+			log.Fatalf(msgFatalWrite, skipPath, err)
+		}
 	}
 
 	snapshotDir := filepath.Join(packDir, dirSrcSnapshot)
@@ -96,7 +99,10 @@ func packToTar(args []string) string {
 	writeVersionAndSpec(packDir)
 	writeReadme(packDir)
 	writeVerifyScript(packDir)
-	_ = os.WriteFile(filepath.Join(packDir, "review_pack_v1"), []byte("1\n"), 0644)
+	kindPath := filepath.Join(packDir, "review_pack_v1")
+	if err := os.WriteFile(kindPath, []byte("1\n"), 0644); err != nil {
+		log.Fatalf(msgFatalWrite, kindPath, err)
+	}
 
 	// 7. Self-Verify
 	runSelfVerify(packDir)

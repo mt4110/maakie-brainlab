@@ -42,7 +42,7 @@ func runSubmit(args []string) {
 	// Verification Phase
 	tmpDir, err := os.MkdirTemp("", "reviewpack-verify-*")
 	if err != nil {
-		log.Fatalf(msgFatalMkdirTemp, err)
+		log.Fatalf(msgFatalMkdirTemp, "reviewpack-verify-*", err)
 	}
 	defer os.RemoveAll(tmpDir)
 
@@ -224,7 +224,10 @@ func packToTarForSubmit(args []string, timebox int, mode string, skipTest bool) 
 	writeVersionAndSpec(packDir)
 	writeReadme(packDir)
 	writeVerifyScript(packDir)
-	_ = os.WriteFile(filepath.Join(packDir, "review_pack_v1"), []byte("1\n"), 0644)
+	kindPath := filepath.Join(packDir, "review_pack_v1")
+	if err := os.WriteFile(kindPath, []byte("1\n"), 0644); err != nil {
+		log.Fatalf(msgFatalWrite, kindPath, err)
+	}
 
 	// 7. Self-Verify
 	runSelfVerify(packDir)
