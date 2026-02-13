@@ -302,13 +302,14 @@ echo "  go run ./src_snapshot/cmd/reviewpack/main.go verify ."
 	}
 }
 
-func writeMeta(dir, timestamp string, timebox int, skipEval bool, evalMode string,
+func writeMeta(dir, timestamp string, timebox int, skipEval bool, evalMode string, skipTest bool,
 	evalResultSha string, evalResultBytes int64,
 	evalSrcRel string, evalSrcSha string, evalSrcBytes int64) {
 
 	meta := fmt.Sprintf("timestamp=%s\n", timestamp)
 	meta += fmt.Sprintf("timebox_sec=%d\n", timebox)
 	meta += fmt.Sprintf("skip_eval=%v\n", skipEval)
+	meta += fmt.Sprintf("skip_test=%v\n", skipTest)
 	meta += fmt.Sprintf("eval_mode=%s\n", evalMode)
 	meta += fmt.Sprintf("eval_result_sha256=%s\n", evalResultSha)
 	meta += fmt.Sprintf("eval_result_bytes=%d\n", evalResultBytes)

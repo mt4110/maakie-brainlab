@@ -48,7 +48,7 @@ func packToTar(args []string) string {
 	fmt.Printf("=== review_pack (S4 Hardened) ===\nTarget : %s%s\nTimebox: %ds\nWork   : %s\n", packName, extTarGz, *timebox, packDir)
 
 	// 1. Preflight
-	runPreflightChecks(repoRoot, packDir, timestamp, *timebox, *skipEval, "legacy")
+	runPreflightChecks(repoRoot, packDir, timestamp, *timebox, *skipEval, "legacy", false)
 
 	nCommits := "5"
 	if fs.NArg() > 0 {

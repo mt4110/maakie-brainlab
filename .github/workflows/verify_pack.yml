@@ -19,8 +19,6 @@ concurrency:
 permissions:
   contents: read
 
-
-
 jobs:
   verify-pack:
     runs-on: ubuntu-latest
@@ -34,16 +32,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Sanity Check (Finalize Clean)
-        run: bash ops/finalize_clean.sh --check
-
       - name: Init CI (Run Always)
         run: |
           mkdir -p .local/ci
-          date -u +"%Y%m%dT%H%M%SZ" > .local/ci/00_utc.txt
-          echo "sha=$(git rev-parse HEAD)" > .local/ci/00_meta.txt
           echo "run_id=${{ github.run_id }}" >> .local/ci/00_meta.txt
-          
+          : > .local/ci/10_status.tsv
+
           # Failure Injection: doclinks (v3 Robust)
           if [ "${{ inputs.inject_failure }}" == "doclinks" ]; then
              echo "[INJECT] doclinks: patching README.md (tracked) for scan..."
@@ -54,11 +48,15 @@ jobs:
              # Check if injection worked
              grep -n "INJECT_DO_NOT_OPEN" README.md || true
           fi
+
+      - name: Sanity Check (Finalize Clean)
+        run: bash ops/finalize_clean.sh --check
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-          cache: 'pip'
+          python-version: "3.11"
+          cache: "pip"
 
       - name: Create venv & Install Deps
         run: |
@@ -82,17 +80,20 @@ jobs:
         shell: bash
         working-directory: ${{ github.workspace }}
         run: |
-          set -euo pipefail
-
           KEYDIR="$(mktemp -d)"
           echo "KEYDIR=$KEYDIR" >> "$GITHUB_ENV"
 
           # Run from module root so go.mod is found
           # Keys output to /tmp (clean workspace)
-          go run ./cmd/gopsign/main.go -mode=keygen -id="CI Builder" -out-dir "$KEYDIR"
+          if ! go run ./cmd/gopsign/main.go -mode=keygen -id="CI Builder" -out-dir "$KEYDIR"; then
+            echo "[FAIL] Key generation failed"
+            exit 1
+          fi
 
-          test -s "$KEYDIR/privkey.asc"
-          test -s "$KEYDIR/pubkey.asc"
+          if [ ! -s "$KEYDIR/privkey.asc" ] || [ ! -s "$KEYDIR/pubkey.asc" ]; then
+            echo "[FAIL] Missing generated keys"
+            exit 1
+          fi
 
           echo "S6_SIGNING_KEY=$KEYDIR/privkey.asc" >> "$GITHUB_ENV"
           echo "S6_VERIFY_KEY=$KEYDIR/pubkey.asc" >> "$GITHUB_ENV"
@@ -112,8 +113,6 @@ jobs:
         run: |
           set +e
           {
-            set -euo pipefail
-            
             # Failure Injection: seed-missing
             if [ "${{ inputs.inject_failure }}" == "seed-missing" ]; then
               echo "[INJECT] Simulating missing seed by skipping seed logic or corrupting it"
@@ -141,7 +140,7 @@ jobs:
             # Sanity
             ls -la eval/results
           } 2>&1 | tee .local/ci/seed_eval.log
-          
+
           # Capture status
           ec=${PIPESTATUS[0]}
           echo -e "seed_eval\t$ec" >> .local/ci/10_status.tsv
@@ -193,7 +192,7 @@ jobs:
             echo "== .local/reviewpack_artifacts tree =="
             ls -R .local/reviewpack_artifacts 2>/dev/null || true
           } > ci_out/artifact_upload.log
-          
+
           cp ci_out/artifact_upload.log ci_out/diagnostics.txt
 
           # Capture status (Run Always)
@@ -201,19 +200,29 @@ jobs:
           cp "$TMPDIR/verify_pack.log" .local/ci/s5_evidence_pack.log || true
           exit 0
 
-
       # Review Bundle (Run Always Wrap)
       - name: Create Review Bundle
         run: |
           set +e
           {
-            set -euo pipefail
-            go run ./cmd/reviewpack/main.go submit --mode verify-only
+            if ! go run ./cmd/reviewpack/main.go submit --mode verify-only; then
+              echo "[FAIL] reviewpack submit failed"
+              exit 1
+            fi
             PACK=$(ls -t review_bundle_*.tar.gz | head -n 1)
-            test -s "$PACK"
+            if [ -z "$PACK" ] || [ ! -s "$PACK" ]; then
+              echo "[FAIL] review bundle not found"
+              exit 1
+            fi
             echo "[OK] Created: $PACK"
-            go run ./cmd/gopsign/main.go -mode=sign -key="$S6_SIGNING_KEY" -target="$PACK"
-            test -s "$PACK.asc"
+            if ! go run ./cmd/gopsign/main.go -mode=sign -key="$S6_SIGNING_KEY" -target="$PACK"; then
+              echo "[FAIL] gopsign failed"
+              exit 1
+            fi
+            if [ ! -s "$PACK.asc" ]; then
+              echo "[FAIL] Missing signature: $PACK.asc"
+              exit 1
+            fi
             echo "[OK] Signed: $PACK.asc"
           } 2>&1 | tee .local/ci/review_bundle.log
           ec=${PIPESTATUS[0]}
@@ -236,11 +245,129 @@ jobs:
         run: |
           set +e
           {
-             PACK=$(ls -t review_bundle_*.tar.gz | head -n 1)
-             make verify-pack PACK="$PACK"
+            PACK=$(ls -t review_bundle_*.tar.gz | head -n 1)
+            make verify-pack PACK="$PACK"
           } 2>&1 | tee .local/ci/verify_bundle.log
           ec=${PIPESTATUS[0]}
           echo -e "verify_bundle\t$ec" >> .local/ci/10_status.tsv
+          exit 0
+
+      # S15: Pack Delta Report (PR vs main baseline)
+      - name: Pack Delta Report
+        run: |
+          # S15-H00: NO set -euo pipefail (manual EC recovery)
+
+          # BASE_DIR strategy: GitHub Actions provides RUNNER_TEMP
+          BASE_DIR="${{ runner.temp }}/main-worktree"
+          DELTA_DIR=".local/ci/pack_delta"
+          REVIEWPACK_BIN="${{ runner.temp }}/reviewpack"
+          mkdir -p "$DELTA_DIR"
+
+          # S15-H00: Build PR reviewpack binary for baseline/diff consistency
+          echo "[pack-delta] Building PR reviewpack binary..."
+          if ! go build -o "$REVIEWPACK_BIN" ./cmd/reviewpack; then
+            echo "[pack-delta] ERROR: go build reviewpack failed"
+            echo -e "pack_delta\t2" >> .local/ci/10_status.tsv
+            exit 0
+          fi
+
+          # Worktree cleanup
+          git worktree remove --force "$BASE_DIR" 2>/dev/null || true
+          git worktree prune
+
+          # S15-H02: baseline(main) worktree
+          echo "[pack-delta] Fetching origin main..."
+          if ! git fetch origin main; then
+            echo "[pack-delta] ERROR: git fetch failed"
+            echo -e "pack_delta\t2" >> .local/ci/10_status.tsv
+            exit 0
+          fi
+
+          if ! git worktree add "$BASE_DIR" origin/main; then
+            echo "[pack-delta] ERROR: git worktree add failed"
+            echo -e "pack_delta\t2" >> .local/ci/10_status.tsv
+            exit 0
+          fi
+
+          # S15-H05: baseline(main) seed for eval/results/ci.jsonl
+          mkdir -p "$BASE_DIR/eval/results"
+          if [ ! -f "$BASE_DIR/eval/results/ci.jsonl" ]; then
+            if ! cp -f "$BASE_DIR/eval/fixtures/latest.jsonl" "$BASE_DIR/eval/results/ci.jsonl"; then
+              echo "[pack-delta] ERROR: failed to seed baseline eval"
+              echo -e "pack_delta\t2" >> .local/ci/10_status.tsv
+              exit 0
+            fi
+          fi
+
+          # S15-H03: Generate main bundle (using PR binary to support --skip-test)
+          echo "[pack-delta] Generating baseline bundle..."
+          if ! (
+            cd "$BASE_DIR"
+            "$REVIEWPACK_BIN" submit --mode verify-only --skip-test
+          ); then
+            echo "[pack-delta] ERROR: baseline bundle generation failed"
+            echo -e "pack_delta\t2" >> .local/ci/10_status.tsv
+            exit 0
+          fi
+
+          # S15-H04: bundle path confirmation (Ambiguity Prevention)
+          COUNT_PR=$(find . -maxdepth 1 -name 'review_bundle_*.tar.gz' | wc -l)
+          COUNT_MAIN=$(find "$BASE_DIR" -maxdepth 1 -name 'review_bundle_*.tar.gz' | wc -l)
+
+          if [ "$COUNT_PR" -ne 1 ] || [ "$COUNT_MAIN" -ne 1 ]; then
+            echo "[pack-delta] ERROR: bundle count mismatch (PR=$COUNT_PR, MAIN=$COUNT_MAIN) - must be exactly 1"
+            echo -e "pack_delta\t2" >> .local/ci/10_status.tsv
+            exit 0
+          fi
+
+          BUNDLE_PR=$(find . -maxdepth 1 -name 'review_bundle_*.tar.gz' -print)
+          BUNDLE_MAIN=$(find "$BASE_DIR" -maxdepth 1 -name 'review_bundle_*.tar.gz' -print)
+
+          # S15-H05: delta diff execution (JSON)
+          echo "[pack-delta] Running diff (json)..."
+          if "$REVIEWPACK_BIN" diff --kind both --format json "$BUNDLE_MAIN" "$BUNDLE_PR" > "$DELTA_DIR/diff.json"; then
+            EC=0
+          else
+            EC=$?
+          fi
+
+          # S15-H06: delta diff execution (Text)
+          echo "[pack-delta] Running diff (text)..."
+          if ! "$REVIEWPACK_BIN" diff --kind both --format text "$BUNDLE_MAIN" "$BUNDLE_PR" > "$DELTA_DIR/diff.txt"; then
+            echo "[pack_delta] WARNING: text diff failed (EC=$?)"
+          fi
+
+          # S15-H07: Exit Code Contract (0/1 success, 2 fail)
+          if [ "$EC" -eq 2 ]; then
+            echo "[pack-delta] diff error (exit=2)"
+            echo -e "pack_delta\t2" >> .local/ci/10_status.tsv
+          elif [ "$EC" -eq 0 ]; then
+            echo "[pack-delta] no diff (exit=0)"
+            echo -e "pack_delta\t0" >> .local/ci/10_status.tsv
+          elif [ "$EC" -eq 1 ]; then
+            echo "[pack-delta] diff found (exit=1) - success as info"
+            echo -e "pack_delta\t1" >> .local/ci/10_status.tsv
+          else
+            echo "[pack-delta] unexpected exit=$EC"
+            echo -e "pack_delta\t2" >> .local/ci/10_status.tsv
+          fi
+
+          # S15-H04: Fix RED #2: summary write to pack_delta/summary.md (Avoid overwrite)
+          SUMMARY_PART="$DELTA_DIR/summary.md"
+          {
+            echo "## Pack Delta (PR vs main)"
+            echo ""
+            echo "- BUNDLE_MAIN: \`$(basename "$BUNDLE_MAIN")\`"
+            echo "- BUNDLE_PR  : \`$(basename "$BUNDLE_PR")\`"
+            echo "- diff exit  : \`$EC\` (0=no diff, 1=diff found, 2=error)"
+            echo "- diff.json  : \`$DELTA_DIR/diff.json\`"
+            echo "- diff.txt   : \`$DELTA_DIR/diff.txt\`"
+            echo ""
+          } > "$SUMMARY_PART"
+
+          # Clean up worktree to save space
+          git worktree remove --force "$BASE_DIR" 2>/dev/null || true
+          git worktree prune
           exit 0
 
       - name: Check Doc Links
@@ -248,10 +375,10 @@ jobs:
           set +e
           # Debug recipe (v3)
           make -n check-doc-links > .local/ci/21_doclinks_recipe.txt 2>&1 || true
-          
+
           make check-doc-links 2>&1 | tee .local/ci/doc_links.log
           ec=${PIPESTATUS[0]}
-          
+
           # Fail Safe for Injection (v3)
           if [ "${{ inputs.inject_failure }}" == "doclinks" ] && [ "$ec" -eq 0 ]; then
              echo "[INJECT][ERROR] doclinks injection did NOT trigger failure; marking doc_links as invalid test (ec=99)" | tee -a .local/ci/doc_links.log
@@ -259,108 +386,114 @@ jobs:
           fi
 
           echo -e "doc_links\t$ec" >> .local/ci/10_status.tsv
-          
+
           # Restore README if injected (Best effort cleanup in CI, though runner cleans workspace)
           if [ "${{ inputs.inject_failure }}" == "doclinks" ]; then
              git restore -- README.md || true
           fi
-          
+
           exit 0
 
       # Summary & Upload (Run Always)
       - name: CI Summary
         if: always()
         run: |
-           CI_DIR=".local/ci"
-           SUMMARY_MD="${CI_DIR}/summary.md"
-           SUMMARY_JSONL="${CI_DIR}/summary.jsonl"
-           STATUS_FILE="${CI_DIR}/10_status.tsv"
-           
-           # 1. Generate summary.md (Human)
-           echo "## Run Always Summary: ${{ github.run_number }}-${{ github.sha }}" > "$SUMMARY_MD"
-           echo "" >> "$SUMMARY_MD"
-           echo "- **Time (UTC)**: $(cat ${CI_DIR}/00_utc.txt 2>/dev/null || date -u)" >> "$SUMMARY_MD"
-           echo "- **Git SHA**: ${{ github.sha }}" >> "$SUMMARY_MD"
-           
-           STATUS="FAIL"
-           if [ -f "$STATUS_FILE" ] && awk '$2 != 0 {exit 1}' "$STATUS_FILE"; then
-               STATUS="PASS"
-           fi
-           echo "- **Result**: ${STATUS}" >> "$SUMMARY_MD"
-           echo "" >> "$SUMMARY_MD"
-           
-           echo "### Checks" >> "$SUMMARY_MD"
-           echo "| Step | Status |" >> "$SUMMARY_MD"
-           echo "|---|---|" >> "$SUMMARY_MD"
-           if [ -f "$STATUS_FILE" ]; then
-               while read -r name code; do
-                   verdict="PASS"
-                   if [ "$code" != "0" ]; then verdict="FAIL ($code)"; fi
-                   echo "| $name | $verdict |" >> "$SUMMARY_MD"
-               done < "$STATUS_FILE"
-           else
-               echo "| (No status file) | - |" >> "$SUMMARY_MD"
-           fi
-           
-           echo "" >> "$SUMMARY_MD"
-           echo "### Artifacts" >> "$SUMMARY_MD"
-           echo "- [Log Directory](.)" >> "$SUMMARY_MD"
-           ls -1 "${CI_DIR}" | grep "\.log$" | sed 's/^/- /' >> "$SUMMARY_MD"
-           
-           echo "" >> "$SUMMARY_MD"
-           echo "### Next Action" >> "$SUMMARY_MD"
-           if [ "$STATUS" == "PASS" ]; then
-               echo "No action required." >> "$SUMMARY_MD"
-           else
-               echo "Investigate failures in logs." >> "$SUMMARY_MD"
-           fi
-           
-           # 2. Output to Job Summary (Append)
+          CI_DIR=".local/ci"
+          SUMMARY_MD="${CI_DIR}/summary.md"
+          SUMMARY_JSONL="${CI_DIR}/summary.jsonl"
+          STATUS_FILE="${CI_DIR}/10_status.tsv"
+
+          # 1. Generate summary.md (Human)
+          echo "## Run Always Summary: ${{ github.run_number }}-${{ github.sha }}" > "$SUMMARY_MD"
+          echo "" >> "$SUMMARY_MD"
+          echo "- **Time (UTC)**: $(cat ${CI_DIR}/00_utc.txt 2>/dev/null || date -u)" >> "$SUMMARY_MD"
+          echo "- **Git SHA**: ${{ github.sha }}" >> "$SUMMARY_MD"
+
+          STATUS="FAIL"
+          if [ -f "$STATUS_FILE" ] && awk '$2 != 0 {exit 1}' "$STATUS_FILE"; then
+              STATUS="PASS"
+          fi
+          echo "- **Result**: ${STATUS}" >> "$SUMMARY_MD"
+          echo "" >> "$SUMMARY_MD"
+
+          echo "### Checks" >> "$SUMMARY_MD"
+          echo "| Step | Status |" >> "$SUMMARY_MD"
+          echo "|---|---|" >> "$SUMMARY_MD"
+          if [ -f "$STATUS_FILE" ]; then
+              while read -r name code; do
+                  verdict="PASS"
+                  if [ "$code" != "0" ]; then verdict="FAIL ($code)"; fi
+                  echo "| $name | $verdict |" >> "$SUMMARY_MD"
+              done < "$STATUS_FILE"
+          else
+              echo "| (No status file) | - |" >> "$SUMMARY_MD"
+          fi
+
+          echo "" >> "$SUMMARY_MD"
+          echo "### Artifacts" >> "$SUMMARY_MD"
+          echo "- [Log Directory](.)" >> "$SUMMARY_MD"
+          ls -1 "${CI_DIR}" | grep "\.log$" | sed 's/^/- /' >> "$SUMMARY_MD"
+
+          echo "" >> "$SUMMARY_MD"
+          echo "### Next Action" >> "$SUMMARY_MD"
+          if [ "$STATUS" == "PASS" ]; then
+            echo "No action required." >> "$SUMMARY_MD"
+          else
+            echo "Investigate failures in logs." >> "$SUMMARY_MD"
+          fi
+
+          # 2. Append Pack Delta Summary if exists
+          if [ -f "${CI_DIR}/pack_delta/summary.md" ]; then
+            echo "" >> "$SUMMARY_MD"
+            cat "${CI_DIR}/pack_delta/summary.md" >> "$SUMMARY_MD"
+          fi
+
+           # 3. Output to Job Summary (Append)
            cat "$SUMMARY_MD" >> $GITHUB_STEP_SUMMARY
-           
-           # 3. Generate summary.jsonl (Machine)
-           python3 -c "
-           import json
-           import os
-           try:
-               checks = []
-               status_file = '${STATUS_FILE}'
-               if os.path.exists(status_file):
-                   with open(status_file) as f:
-                       for line in f:
-                           parts = line.strip().split('\t')
-                           if len(parts) >= 2:
-                               checks.append({'name': parts[0], 'code': int(parts[1])})
-               data = {
-                   'timestamp_utc': '$(cat ${CI_DIR}/00_utc.txt 2>/dev/null || date -u)',
-                   'run_id': '${{ github.run_id }}',
-                   'git_sha': '${{ github.sha }}',
-                   'status': '${STATUS}',
-                   'checks': checks,
-                   'artifacts': [f for f in os.listdir('${CI_DIR}') if f.endswith('.log') or f.endswith('.md')]
-               }
-               print(json.dumps(data))
-           except Exception as e:
-               print(json.dumps({'error': str(e)}))
-           " > "$SUMMARY_JSONL"
-           
-           # Show failures in Job Summary
-           echo "" >> $GITHUB_STEP_SUMMARY
-           echo "### Failure Logs (Tail)" >> $GITHUB_STEP_SUMMARY
-           if [ -f "$STATUS_FILE" ]; then
-             cat "$STATUS_FILE" | awk '$2 != 0 {print $1}' | while read -r name; do
-               logfile="${CI_DIR}/${name}.log"
-               if [ -f "$logfile" ]; then
-                 echo "<details><summary>Log: $name</summary>" >> $GITHUB_STEP_SUMMARY
-                 echo "" >> $GITHUB_STEP_SUMMARY
-                 echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-                 tail -n 80 "$logfile" >> $GITHUB_STEP_SUMMARY
-                 echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-                 echo "" >> $GITHUB_STEP_SUMMARY
-                 echo "</details>" >> $GITHUB_STEP_SUMMARY
-               fi
-             done
-           fi
+
+          # 4. Generate summary.jsonl (Machine)
+          python3 -c "
+          import json
+          import os
+          try:
+              checks = []
+              status_file = '${STATUS_FILE}'
+              if os.path.exists(status_file):
+                  with open(status_file) as f:
+                      for line in f:
+                          parts = line.strip().split('\t')
+                          if len(parts) >= 2:
+                              checks.append({'name': parts[0], 'code': int(parts[1])})
+              data = {
+                  'timestamp_utc': '$(cat ${CI_DIR}/00_utc.txt 2>/dev/null || date -u)',
+                  'run_id': '${{ github.run_id }}',
+                  'git_sha': '${{ github.sha }}',
+                  'status': '${STATUS}',
+                  'checks': checks,
+                  'artifacts': [f for f in os.listdir('${CI_DIR}') if f.endswith('.log') or f.endswith('.md')]
+              }
+              print(json.dumps(data))
+          except Exception as e:
+              print(json.dumps({'error': str(e)}))
+          " > "$SUMMARY_JSONL"
+
+          # Show failures in Job Summary
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Failure Logs (Tail)" >> $GITHUB_STEP_SUMMARY
+          if [ -f "$STATUS_FILE" ]; then
+            cat "$STATUS_FILE" | awk '$2 != 0 {print $1}' | while read -r name; do
+              logfile="${CI_DIR}/${name}.log"
+              if [ -f "$logfile" ]; then
+                echo "<details><summary>Log: $name</summary>" >> $GITHUB_STEP_SUMMARY
+                echo "" >> $GITHUB_STEP_SUMMARY
+                echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+                tail -n 80 "$logfile" >> $GITHUB_STEP_SUMMARY
+                echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+                echo "" >> $GITHUB_STEP_SUMMARY
+                echo "</details>" >> $GITHUB_STEP_SUMMARY
+              fi
+            done
+          fi
 
       - name: Upload Artifacts (Run Always)
         if: always()
@@ -381,16 +514,16 @@ jobs:
           # Fail if tracked files are modified (Mode M, A, D, etc. in first column area)
           # Porcelain v1: XY Path. X=Index, Y=Worktree.
           # If Y is not space? Or just grep anything that isn't "??"
-          
+
           # Allow untracked in .local/
           # Fail everything else.
-          
+
           STATUS=$(git status --porcelain=v1)
           if [ -z "$STATUS" ]; then
             echo "[PASS] Workspace clean"
             exit 0
           fi
-          
+
           # Check for non-untracked (modified/added/deleted in index or worktree)
           # grep -v "^??" checks if there are lines NOT starting with ??
           if echo "$STATUS" | grep -v "^??"; then
@@ -398,7 +531,7 @@ jobs:
              echo "$STATUS" | grep -v "^??"
              exit 1
           fi
-          
+
           # Check for untracked outside .local/
           # Filter out lines starting with "?? .local/"
           UNKNOWN=$(echo "$STATUS" | grep "^??" | grep -v "^?? .local/") || true
@@ -407,22 +540,52 @@ jobs:
              echo "$UNKNOWN"
              exit 1
           fi
-          
+
           echo "[PASS] Workspace clean (ignoring .local/)"
 
       - name: Final Aggregation
         if: always()
         run: |
           if [ -f .local/ci/10_status.tsv ]; then
-             # If any exit code is not 0, fail the job
-             if awk '$2 != 0 {exit 1}' .local/ci/10_status.tsv; then
-                echo "[PASS] All steps passed"
-                exit 0
-             else
-                echo "[FAIL] Failures detected in Run Always steps"
-                exit 1
-             fi
+            echo "== .local/ci/10_status.tsv =="
+            cat .local/ci/10_status.tsv || true
+
+            fail=0
+
+            while IFS=$'\t' read -r name code; do
+              # 空行スキップ
+              [ -z "${name:-}" ] && continue
+
+              # 数値化（念のため）
+              c=$((code+0)) 2>/dev/null || c=999
+
+              if [ "$name" = "pack_delta" ]; then
+                # pack_delta は 0/1 OK, 2 NG（それ以外もNG）
+                if [ "$c" -eq 2 ] || [ "$c" -gt 2 ]; then
+                  echo "[FAIL] $name=$c (pack_delta allows only 0/1)"
+                  fail=1
+                else
+                  echo "[OK]   $name=$c"
+                fi
+              else
+                # それ以外は 0 のみOK
+                if [ "$c" -ne 0 ]; then
+                  echo "[FAIL] $name=$c"
+                  fail=1
+                else
+                  echo "[OK]   $name=$c"
+                fi
+              fi
+            done < .local/ci/10_status.tsv
+
+            if [ "$fail" -eq 0 ]; then
+              echo "[PASS] Aggregation passed"
+              exit 0
+            else
+              echo "[FAIL] Failures detected in Run Always steps"
+              exit 1
+            fi
           else
-             echo "[FAIL] No status file found!"
-             exit 1
+            echo "[FAIL] No status file found!"
+            exit 1
           fi
