@@ -54,17 +54,11 @@ func scanSecrets(dir string) {
 	} else {
 		buf.WriteString("OK: no obvious secrets\n")
 	}
-	secretPath := filepath.Join(dir, "21_secrets_scan.log")
-	if err := os.WriteFile(secretPath, buf.Bytes(), 0644); err != nil {
-		log.Fatalf("[FATAL] write secrets scan %s: %v", secretPath, err)
-	}
+	log.Printf("[INFO] naive secrets scan report:\n%s", buf.String())
 }
 
 func scanNull(dir string, data []byte) {
 	if bytes.Contains(data, []byte{0}) {
-		nulPath := filepath.Join(dir, "20_null_bytes.txt")
-		if err := os.WriteFile(nulPath, []byte("NUL bytes detected\n"), 0644); err != nil {
-			log.Fatalf(msgFatalWrite, nulPath, err)
-		}
+		log.Printf("[WARN] naive scan: NUL bytes detected in staged diff")
 	}
 }
