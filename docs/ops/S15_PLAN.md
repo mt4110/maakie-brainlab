@@ -51,3 +51,9 @@ Init safety（ゾンビ対策は同一run内の二次防止）:
 ## Docs / Ops
 - S15_TASK.md の手順に「PR reviewpack binary を作って baseline で使う」項目を追加。
 - 変更点を audit-friendly に1行で残す。
+
+## Future Steps (S15-07..10)
+- [S15_07_PLAN.md](file:///Users/takemuramasaki/dev/maakie-brainlab/docs/ops/S15_07_PLAN.md)
+- [S15_08_PLAN.md](file:///Users/takemuramasaki/dev/maakie-brainlab/docs/ops/S15_08_PLAN.md)
+- [S15_09_PLAN.md](file:///Users/takemuramasaki/dev/maakie-brainlab/docs/ops/S15_09_PLAN.md)
+- [S15_10_PLAN.md](file:///Users/takemuramasaki/dev/maakie-brainlab/docs/ops/S15_10_PLAN.md)
