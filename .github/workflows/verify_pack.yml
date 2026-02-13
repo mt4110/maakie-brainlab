@@ -246,8 +246,8 @@ jobs:
         run: |
           set +e
           {
-             PACK=$(ls -t review_bundle_*.tar.gz | head -n 1)
-             make verify-pack PACK="$PACK"
+            PACK=$(ls -t review_bundle_*.tar.gz | head -n 1)
+            make verify-pack PACK="$PACK"
           } 2>&1 | tee .local/ci/verify_bundle.log
           ec=${PIPESTATUS[0]}
           echo -e "verify_bundle\t$ec" >> .local/ci/10_status.tsv
@@ -338,7 +338,7 @@ jobs:
             echo -e "pack_delta\t0" >> .local/ci/10_status.tsv
           elif [ "$EC" -eq 1 ]; then
             echo "[pack-delta] diff found (exit=1) - success as info"
-            echo -e "pack_delta\t0" >> .local/ci/10_status.tsv
+            echo -e "pack_delta\t1" >> .local/ci/10_status.tsv
           else
             echo "[pack-delta] unexpected exit=$EC"
             echo -e "pack_delta\t2" >> .local/ci/10_status.tsv
@@ -539,15 +539,45 @@ jobs:
         if: always()
         run: |
           if [ -f .local/ci/10_status.tsv ]; then
-             # If any exit code is not 0, fail the job
-             if awk '$2 != 0 {exit 1}' .local/ci/10_status.tsv; then
-                echo "[PASS] All steps passed"
-                exit 0
-             else
-                echo "[FAIL] Failures detected in Run Always steps"
-                exit 1
-             fi
+            echo "== .local/ci/10_status.tsv =="
+            cat .local/ci/10_status.tsv || true
+
+            fail=0
+
+            while IFS=$'\t' read -r name code; do
+              # 空行スキップ
+              [ -z "${name:-}" ] && continue
+
+              # 数値化（念のため）
+              c=$((code+0)) 2>/dev/null || c=999
+
+              if [ "$name" = "pack_delta" ]; then
+                # pack_delta は 0/1 OK, 2 NG（それ以外もNG）
+                if [ "$c" -eq 2 ] || [ "$c" -gt 2 ]; then
+                  echo "[FAIL] $name=$c (pack_delta allows only 0/1)"
+                  fail=1
+                else
+                  echo "[OK]   $name=$c"
+                fi
+              else
+                # それ以外は 0 のみOK
+                if [ "$c" -ne 0 ]; then
+                  echo "[FAIL] $name=$c"
+                  fail=1
+                else
+                  echo "[OK]   $name=$c"
+                fi
+              fi
+            done < .local/ci/10_status.tsv
+
+            if [ "$fail" -eq 0 ]; then
+              echo "[PASS] Aggregation passed"
+              exit 0
+            else
+              echo "[FAIL] Failures detected in Run Always steps"
+              exit 1
+            fi
           else
-             echo "[FAIL] No status file found!"
-             exit 1
+            echo "[FAIL] No status file found!"
+            exit 1
           fi
