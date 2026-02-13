@@ -32,9 +32,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Sanity Check (Finalize Clean)
-        run: bash ops/finalize_clean.sh --check
-
       - name: Init CI (Run Always)
         run: |
           mkdir -p .local/ci
@@ -52,6 +49,10 @@ jobs:
              # Check if injection worked
              grep -n "INJECT_DO_NOT_OPEN" README.md || true
           fi
+
+      - name: Sanity Check (Finalize Clean)
+        run: bash ops/finalize_clean.sh --check
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
