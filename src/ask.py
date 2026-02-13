@@ -194,7 +194,7 @@ def main() -> None:
     ap.add_argument("--index-dir", default="index")
     ap.add_argument("--db-name", default="index.sqlite3")
     ap.add_argument("--top-k", type=int, default=5)
-    ap.add_argument("--temperature", type=float, default=0.2)
+    ap.add_argument("--temperature", type=float, default=0.0)
     args = ap.parse_args()
 
     db_path = ROOT / args.index_dir / args.db_name
