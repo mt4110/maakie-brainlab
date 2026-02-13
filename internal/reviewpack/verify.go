@@ -22,7 +22,7 @@ func runVerify(args []string) {
 	if strings.HasSuffix(target, ".tar.gz") {
 		tmpDir, err := os.MkdirTemp("", "reviewpack-verify-*")
 		if err != nil {
-			log.Fatalf(msgFatalMkdirTemp, tmpDir, err)
+			log.Fatalf(msgFatalMkdirTemp, "reviewpack-verify-*", err)
 		}
 		defer os.RemoveAll(tmpDir)
 
