@@ -269,15 +269,13 @@ jobs:
 
           # S15-H02: baseline(main) worktree
           echo "[pack-delta] Fetching origin main..."
-          git fetch origin main
-          if [ $? -ne 0 ]; then
+          if ! git fetch origin main; then
             echo "[pack-delta] ERROR: git fetch failed"
             echo -e "pack_delta\t2" >> .local/ci/10_status.tsv
             exit 0
           fi
 
-          git worktree add "$BASE_DIR" origin/main
-          if [ $? -ne 0 ]; then
+          if ! git worktree add "$BASE_DIR" origin/main; then
             echo "[pack-delta] ERROR: git worktree add failed"
             echo -e "pack_delta\t2" >> .local/ci/10_status.tsv
             exit 0
@@ -286,8 +284,7 @@ jobs:
           # S15-H05: baseline(main) seed for eval/results/ci.jsonl
           mkdir -p "$BASE_DIR/eval/results"
           if [ ! -f "$BASE_DIR/eval/results/ci.jsonl" ]; then
-            cp -f "$BASE_DIR/eval/fixtures/latest.jsonl" "$BASE_DIR/eval/results/ci.jsonl"
-            if [ $? -ne 0 ]; then
+            if ! cp -f "$BASE_DIR/eval/fixtures/latest.jsonl" "$BASE_DIR/eval/results/ci.jsonl"; then
               echo "[pack-delta] ERROR: failed to seed baseline eval"
               echo -e "pack_delta\t2" >> .local/ci/10_status.tsv
               exit 0
@@ -296,11 +293,10 @@ jobs:
 
           # S15-H03: Generate main bundle
           echo "[pack-delta] Generating baseline bundle..."
-          (
+          if ! (
             cd "$BASE_DIR"
             go run ./cmd/reviewpack/main.go submit --mode verify-only --skip-test
-          )
-          if [ $? -ne 0 ]; then
+          ); then
             echo "[pack-delta] ERROR: baseline bundle generation failed"
             echo -e "pack_delta\t2" >> .local/ci/10_status.tsv
             exit 0
@@ -321,15 +317,16 @@ jobs:
 
           # S15-H05: delta diff execution (JSON)
           echo "[pack-delta] Running diff (json)..."
-          go run cmd/reviewpack/main.go diff --kind both --format json "$BUNDLE_MAIN" "$BUNDLE_PR" > "$DELTA_DIR/diff.json"
-          EC=$?
+          if go run cmd/reviewpack/main.go diff --kind both --format json "$BUNDLE_MAIN" "$BUNDLE_PR" > "$DELTA_DIR/diff.json"; then
+            EC=0
+          else
+            EC=$?
+          fi
 
           # S15-H06: delta diff execution (Text)
           echo "[pack-delta] Running diff (text)..."
-          go run cmd/reviewpack/main.go diff --kind both --format text "$BUNDLE_MAIN" "$BUNDLE_PR" > "$DELTA_DIR/diff.txt"
-          EC_TEXT=$?
-          if [ "$EC_TEXT" -eq 2 ]; then
-            echo "[pack-delta] WARNING: text diff failed (EC=2)"
+          if ! go run cmd/reviewpack/main.go diff --kind both --format text "$BUNDLE_MAIN" "$BUNDLE_PR" > "$DELTA_DIR/diff.txt"; then
+            echo "[pack-delta] WARNING: text diff failed (EC=$?)"
           fi
 
           # S15-H07: Exit Code Contract (0/1 success, 2 fail)

@@ -21,6 +21,11 @@ This provides immediate feedback on what changed in the submission bundle.
    - Strictly enforces a "one-bundle-only" rule to prevent ambiguity in comparison.
    - Any violation of these checks results in a system error (EC=2), recorded in `pack_delta`.
 
+## Hardening Details (V1 Refinement)
+
+- **Zero `$?` Logic**: Fragile post-execution exit code checks have been replaced with robust `if ! cmd; then ...; fi` or `if cmd; then EC=0; else EC=$?; fi` wraps. This ensures reliable error recovery in CI without relying on `set -e`.
+- **Baseline Bypass (`--skip-test`)**: In main-branch (baseline) worktrees, environment setup (e.g., `.venv`) may be missing. To ensure audit stability without complex setup, the `--skip-test` flag allows generating a baseline bundle with placeholder logs that satisfy verification gates. This is strictly restricted to `verify-only` mode and recorded in metadata.
+
 ## Exit Code Contract
 
 - `0`: No diff (Success)

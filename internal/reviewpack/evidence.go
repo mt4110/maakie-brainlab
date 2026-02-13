@@ -10,10 +10,10 @@ import (
 	"regexp"
 )
 
-func runPreflightChecks(repoRoot, packDir, timestamp string, timebox int, skipEval bool, mode string) {
+func runPreflightChecks(repoRoot, packDir, timestamp string, timebox int, skipEval bool, mode string, skipTest bool) {
 	log.Println(msgDebugPreflight)
 	// Write pending meta (pass 0/empty for results as they are unknown yet)
-	writeMeta(packDir, timestamp, timebox, skipEval, mode, "", 0, "", "", 0)
+	writeMeta(packDir, timestamp, timebox, skipEval, mode, skipTest, "", 0, "", "", 0)
 
 	runCmd(repoRoot, "git", "status", ">", filepath.Join(packDir, fileStatus))
 
