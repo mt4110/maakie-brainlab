@@ -42,8 +42,12 @@ func TestDiff(t *testing.T) {
 		t.Fatal(err)
 	}
 	
-	os.WriteFile(filepath.Join(rootA, "logs/portable/test.log"), []byte("line1\nline2\n"), 0644)
-	os.WriteFile(filepath.Join(rootB, "logs/portable/test.log"), []byte("line1\nline2changed\n"), 0644)
+	if err := os.WriteFile(filepath.Join(rootA, "logs/portable/test.log"), []byte("line1\nline2\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(rootB, "logs/portable/test.log"), []byte("line1\nline2changed\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
 
 	diffs, err := comparePortable(rootA, rootB, "text")
 	if err != nil {
@@ -70,10 +74,18 @@ func TestCompareRaw(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	os.WriteFile(filepath.Join(rootA, dirLogsRaw, "test.raw"), []byte("raw1\n"), 0644)
-	os.WriteFile(filepath.Join(rootA, dirLogsRaw, "test.raw.sha256"), []byte("hash1"), 0644)
-	os.WriteFile(filepath.Join(rootB, dirLogsRaw, "test.raw"), []byte("raw2\n"), 0644)
-	os.WriteFile(filepath.Join(rootB, dirLogsRaw, "test.raw.sha256"), []byte("hash2"), 0644)
+	if err := os.WriteFile(filepath.Join(rootA, dirLogsRaw, "test.raw"), []byte("raw1\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(rootA, dirLogsRaw, "test.raw.sha256"), []byte("hash1"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(rootB, dirLogsRaw, "test.raw"), []byte("raw2\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(rootB, dirLogsRaw, "test.raw.sha256"), []byte("hash2"), 0644); err != nil {
+		t.Fatal(err)
+	}
 
 	diffs, err := walkRaw(rootA)
 	if err != nil { t.Fatal(err) }
@@ -110,9 +122,15 @@ func TestRawNucleusViolation(t *testing.T) {
 	}
 
 	// A has sidecar, B is missing it
-	os.WriteFile(filepath.Join(rootA, dirLogsRaw, "test.log"), []byte("data"), 0644)
-	os.WriteFile(filepath.Join(rootA, dirLogsRaw, "test.log.sha256"), []byte("hash"), 0644)
-	os.WriteFile(filepath.Join(rootB, dirLogsRaw, "test.log"), []byte("data"), 0644)
+	if err := os.WriteFile(filepath.Join(rootA, dirLogsRaw, "test.log"), []byte("data"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(rootA, dirLogsRaw, "test.log.sha256"), []byte("hash"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(rootB, dirLogsRaw, "test.log"), []byte("data"), 0644); err != nil {
+		t.Fatal(err)
+	}
 
 	_, err = compareRaw(rootA, rootB, "text")
 	if err == nil || !strings.Contains(err.Error(), "nucleus violation") {
@@ -172,7 +190,9 @@ func TestNormalization(t *testing.T) {
 	dst := filepath.Join(tmpDir, "port.log")
 
 	content := "test\t0.123s\nbuild (cached)\n<TMPDIR>/tmp123abc/data\n"
-	os.WriteFile(src, []byte(content), 0644)
+	if err := os.WriteFile(src, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
 
 	createPortableLog(src, dst)
 

@@ -69,8 +69,8 @@ func packToTar(args []string) string {
 	}
 
 	snapshotDir := filepath.Join(packDir, dirSrcSnapshot)
-	if err := os.MkdirAll(snapshotDir, 0755); err != nil {
-		log.Fatalf(msgFatalMkdirAll, err)
+	if err := ensureDir(snapshotDir); err != nil {
+		log.Fatalf("[FATAL] %v", err)
 	}
 	for _, f := range listTrackedFiles() {
 		copyFile(f, filepath.Join(snapshotDir, f))

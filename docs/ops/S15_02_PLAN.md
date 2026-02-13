@@ -1,10 +1,11 @@
 # S15-02: os.MkdirAll Error Hardening
 
 ## Goal
-os.MkdirAll のエラーが握りつぶされてる箇所をゼロにし、失敗時に return error で診断可能にする。
+os.MkdirAll のエラーが握りつぶされてる箇所をゼロにし、失敗時に診断可能なエラーメッセージと共に fail-fast させる。
 
 ## Background
-os.MkdirAll のエラーが握りつぶされていると、その後の WriteFile 等が静かに失敗（あるいは別のエラーとして発生）し、根本原因（ディレクトリ作成失敗）の特定が困難になる。
+- os.MkdirAll のエラーが握りつぶされていると、その後の WriteFile 等が静かに失敗（あるいは別のエラーとして発生）し、根本原因（ディレクトリ作成失敗）の特定が困難になる。
+- CI(test) での `log.Fatal` 引数不正（複数引数渡し）によるビルドエラーを根治する。
 
 ## Non-goals
 - 機能追加
@@ -13,22 +14,18 @@ os.MkdirAll のエラーが握りつぶされていると、その後の WriteFi
 
 ## Implementation Strategy
 
-plan:
-- if main が最新でない → STOP（pullしてから）
-- for each hit in rg "MkdirAll\(":
-    - if err を無視している (_ = os.MkdirAll / os.MkdirAll(...); の戻り未処理 / || true 相当) → fix対象
-    - else continue
-- if fix対象が0件 → skip（理由：すでに硬化済み）
+### 1) 診断性向上のための設計
+- 内部 helper (`ensureDir`, `generatePlaceholderLog`) は `error` を返す（ユニットテスト可能にするため）。
+- 外部コマンド層（`submit`, `pack` 等）は helper のエラーを受けて `log.Fatalf` で即座に終了する。
+- エラーメッセージには必ず対象のディレクトリパスを含める。
 
-implement:
-- `if err := os.MkdirAll(dir, 0o755); err != nil { return fmt.Errorf("mkdir %s: %w", dir, err) }`
+### 2) テストコードの硬化
+- `diff_test.go` 等のテストフィクスチャ作成時における `os.WriteFile` や `os.MkdirAll` のエラーをすべて `t.Fatal` で拾うようにし、テスト環境の不備を隠蔽しない。
 
-add tests:
-- if テストで MkdirAll を確実に失敗させられない → STOP（嘘テスト禁止）
-- 推奨失敗パターン（決定論）：
-    - temp dir に ファイルを作って、そのパス配下に dir を掘ろうとして失敗させる（“not a directory”）
+### 3) 決定論的失敗テスト
+- `mkdir_test.go` にて、既存ファイル配下にディレクトリを作成しようとして意図的に失敗させ、エラーメッセージの内容（pathの含有）と伝播を検証する。
 
 ## Gates
 - make ci-test PASS
 - go test ./... PASS
-- 変更差分が mkdir 周辺に限定されていること
+- 変更差分が mkdir 周辺およびテストフィクスチャ修正に限定されていること
