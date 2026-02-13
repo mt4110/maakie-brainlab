@@ -107,7 +107,7 @@
   - exact commands (```bash)
   - bundle sha256
   - diff outputs (text + json validation)
-  - no file://, no carousel blocks
+  - no file[:]//, no carousel blocks
 - [x] if walkthrough claims feature not present → error "walkthrough mismatch" → STOP
 
 ---
