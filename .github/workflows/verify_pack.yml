@@ -257,6 +257,12 @@ jobs:
           # S15-03: baseline(main) worktree
           echo "[pack-delta] Fetching origin main..."
           git fetch origin main
+          if [ $? -ne 0 ]; then
+            echo "[pack-delta] ERROR: git fetch failed"
+            echo -e "pack_delta\t2" >> .local/ci/10_status.tsv
+            exit 0
+          fi
+
           git worktree add "$BASE_DIR" origin/main
           if [ $? -ne 0 ]; then
             echo "[pack-delta] ERROR: git worktree add failed"
@@ -287,15 +293,18 @@ jobs:
             exit 0
           fi
 
-          # S15-04: bundle path confirmation
-          BUNDLE_PR=$(find . -maxdepth 1 -name 'review_bundle_*.tar.gz' -print | sort | tail -n 1)
-          BUNDLE_MAIN=$(find "$BASE_DIR" -maxdepth 1 -name 'review_bundle_*.tar.gz' -print | sort | tail -n 1)
+          # S15-04: bundle path confirmation (Ambiguity Prevention)
+          COUNT_PR=$(find . -maxdepth 1 -name 'review_bundle_*.tar.gz' | wc -l)
+          COUNT_MAIN=$(find "$BASE_DIR" -maxdepth 1 -name 'review_bundle_*.tar.gz' | wc -l)
 
-          if [ -z "$BUNDLE_PR" ] || [ -z "$BUNDLE_MAIN" ]; then
-            echo "[pack-delta] ERROR: missing bundle (PR=$BUNDLE_PR, MAIN=$BUNDLE_MAIN)"
+          if [ "$COUNT_PR" -ne 1 ] || [ "$COUNT_MAIN" -ne 1 ]; then
+            echo "[pack-delta] ERROR: bundle count mismatch (PR=$COUNT_PR, MAIN=$COUNT_MAIN) - must be exactly 1"
             echo -e "pack_delta\t2" >> .local/ci/10_status.tsv
             exit 0
           fi
+
+          BUNDLE_PR=$(find . -maxdepth 1 -name 'review_bundle_*.tar.gz' -print)
+          BUNDLE_MAIN=$(find "$BASE_DIR" -maxdepth 1 -name 'review_bundle_*.tar.gz' -print)
 
           # S15-05: delta diff execution (JSON)
           echo "[pack-delta] Running diff (json)..."
