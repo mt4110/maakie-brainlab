@@ -15,7 +15,7 @@ This PR completes specific improvements identified during S15-02 review:
 
 ### 1. Naive Scan Artifact Cleanup (evidence.go)
 - **Before**: `scanSecrets()` wrote `21_secrets_scan.log`, `scanNull()` wrote `20_null_bytes.txt`
-- **After**: Both functions use `log.Printf()` instead
+- **After**: scanSecrets() uses `fmt.Printf()` and scanNull() uses `fmt.Println()` instead
 - **Rationale**: These naive scans were informational only and cluttering the artifact directory
 
 ### 2. Test Coverage for Fail-Fast (mkdir_fail_fast_test.go)
