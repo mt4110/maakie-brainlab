@@ -1,6 +1,6 @@
 # S15-02 TASK — Fail fast on MkdirAll errors
 
-禁止：set -euo pipefail（絶対禁止）
+注意（このタスク内のシェル例に限る）：このドキュメント中のシェルスニペットでは set -euo pipefail を使用しないこと（リポジトリ内の実スクリプトの方針とは無関係）。
 
 ## 0) Preflight
 - [x] cd "$(git rev-parse --show-toplevel)"
