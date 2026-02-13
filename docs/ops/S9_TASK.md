@@ -1,162 +1,129 @@
-# S9 Task — Pack Diff Refinement “実体化” (Ambi-run)
-Last updated: 2026-02-13 (JST)
+# S9_TASK (DSL-Alignment / V2 実行レール)
 
-## Control Keywords
-- if / else if / else
-- for / continue / break
-- skip (must record reason)
-- error (exit 2)
-- STOP (no further steps)
-
----
-
-## 0) Preflight (absolute must)
-- [ ] `cd "$(git rev-parse --show-toplevel)"`
-- [ ] if `git status --porcelain=v1` is not empty -> error "dirty tree" -> STOP
-- [ ] `make ci-test`
-- [ ] if fail -> error "baseline ci-test failed" -> STOP
-- [ ] `go run cmd/reviewpack/main.go submit --mode verify-only`
-- [ ] if fail -> error "verify-only baseline failed" -> STOP
+## ルール
+- `if / else if / else`
+- `for / continue / break`
+- `skip`（必ず理由を書いて“監査性を落とさない”）
+- `error`（即 exit 2）
+- `STOP`（以降の作業禁止）
 
 ---
 
-## 1) Gate Checks (PR前ゲート; 먼저ここで落とす)
-### 1.1 docs hygiene
-- [ ] run: `bash ops/check_no_file_url.sh`
-- [ ] run: `rg -n '^\`{4}carousel' docs walkthrough -S && { echo "NG: carousel"; exit 2; } || true`
-- [ ] continue
-
-### 1.2 CLI flags exist (help)
-- [ ] run: `go run cmd/reviewpack/main.go diff --help 2>&1 | rg -n -- '(-|--)kind|(-|--)format'`
-- [ ] if no match -> error "flags not wired" -> STOP
-- [ ] continue
+## 0) Preflight（絶対）
+- [x] if `git status --porcelain=v1` が空でない → error "dirty tree" → STOP
+- [x] `make ci-test`
+- [x] if fail → error "baseline ci-test failed" → STOP
+- [x] `go run cmd/reviewpack/main.go submit --mode verify-only`
+- [x] if fail → error "verify-only baseline failed" → STOP
 
 ---
 
-## 2) Implementation Tasks (no silent failure)
-### 2.1 STOP rule: ban os.Exit/log.Fatal in diff logic
-- [ ] if `rg -n 'os\.Exit\(|log\.Fatal' internal/reviewpack/diff.go -S` hits:
-  - [ ] else if those are only in top-level main/app layer:
-    - [ ] continue
-  - [ ] else -> error "diff logic uses os.Exit/log.Fatal" -> STOP
+## 1) Docs Hygiene Gate（PR前ゲート）
+- [x] `bash ops/check_no_file_url.sh`
+- [x] if fail → error "file URL found" → STOP
 
-### 2.2 Implement CLI contract
-Files:
-- `internal/reviewpack/app.go`
-- `internal/reviewpack/flags.go`
-- `internal/reviewpack/diff.go`
-
-- [ ] if command wiring already exists:
-  - [ ] ensure `diff --kind` and `diff --format` are parsed and passed down
-  - [ ] continue
-- [ ] else -> error "CLI wiring not found" -> STOP
-
-- [ ] Define `runDiff(args) (code int)` style:
-  - [ ] if your framework uses Run() returning int -> use it
-  - [ ] else if Run() has no return -> adapt so exit occurs only at top-level
-  - [ ] else -> error "cannot enforce exit code contract" -> STOP
-
-### 2.3 Implement exit code contract strictly
-- [ ] if no diffs -> return 0
-- [ ] else if diffs found -> return 1
-- [ ] else on any error -> return 2
-- [ ] if any branch returns 1 on error -> error "error must be 2" -> STOP
-
-### 2.4 Implement portable diff (portable-first)
-- [ ] Validate `logs/portable/` exists in both bundles:
-  - [ ] if missing -> error (2) -> STOP
-- [ ] for each file under `logs/portable/**` (sorted):
-  - [ ] read bytes; if err -> error (2)
-  - [ ] normalize portable content (Step 2.6)
-- [ ] diff engine:
-  - [ ] prefer `diff -u` integration:
-    - [ ] if `exec diff -u` fails because diff not found:
-      - [ ] skip (record reason: "diff not available")
-      - [ ] fallback: hash-only compare + “changed” marker
-    - [ ] continue
-  - [ ] ensure truncation rule (if any) is deterministic
-- [ ] continue
-
-### 2.5 Implement raw mode (nucleus compare)
-- [ ] if `--kind raw|both`:
-  - [ ] compare `logs/raw/**/*.sha256` (sorted)
-  - [ ] if missing required sha256 files -> error (2) -> STOP
-  - [ ] compute added/removed/changed -> include in output
-- [ ] else:
-  - [ ] continue
-
-### 2.6 Log normalization (portable only; raw untouched)
-Target: `internal/reviewpack/utils.go` (or wherever `createPortableLog()` is)
-- [ ] Apply deterministic normalization:
-  - [ ] replace duration patterns -> `<DURATION>`
-  - [ ] replace cache markers -> `<CACHED>`
-  - [ ] keep path redactions stable (tmpdir/repo-root)
-- [ ] if normalization changes raw logs -> error "raw must remain truth" -> STOP
+- [x] `rg -n '^[`]{4}carousel' docs -S && { echo "NG: carousel"; exit 2; } || true`
+- [x] if exit=2 → error "carousel found" → STOP
 
 ---
 
-## 3) Tests (false-negative防止 + determinism)
-File: `internal/reviewpack/diff_test.go`
-
-- [ ] Add/confirm tests:
-  - [ ] if portable dir missing -> exit 2
-  - [ ] if same input twice -> same output (byte-identical)
-  - [ ] if portable change -> exit 1
-  - [ ] if raw sha256 change -> exit 1 (raw mode)
-- [ ] if tests rely on timestamps/unstable paths:
-  - [ ] normalize test fixtures
-  - [ ] continue
-- [ ] Run: `make ci-test`
-- [ ] if fail -> error "tests failed" -> STOP
+## 2) Help Gate（環境差分で落ちない形）
+- [x] `go run cmd/reviewpack/main.go diff --help 2>&1 | rg -n '(-|--)kind|(-|--)format'`
+- [x] if no match → error "help gate failed: flags not visible" → STOP
 
 ---
 
-## 4) Proof: Bundle-to-Bundle Demonstration (reality check)
-Goal: bundle `src_snapshot/` contains updated diff implementation.
+## 3) Contract Audit（コード構造チェック）
+### 3.1 禁止事項
+- [x] if `rg -n 'os\.Exit\(|log\.Fatal' internal/reviewpack/diff.go -S` hits → error "diff logic uses os.Exit/log.Fatal" → STOP
 
-- [ ] Ensure clean git:
-  - [ ] if dirty -> error -> STOP
-- [ ] Generate bundle A (using the repo’s pack path)
-- [ ] Introduce controlled change:
-  - [ ] if change touches raw -> avoid (portable-focused change)
-  - [ ] else continue
-- [ ] Commit controlled change (so pack preflight passes)
-- [ ] Generate bundle B
-- [ ] Run diff:
-  - [ ] `go run cmd/reviewpack/main.go diff --kind portable --format text <A> <B>` -> expect exit 1
-  - [ ] `go run cmd/reviewpack/main.go diff --kind raw --format text <A> <B>` -> expect exit 0 or 1 depending on what changed
-  - [ ] if exit code violates contract -> error -> STOP
+### 3.2 error伝播が落ちてないか
+- [x] if `comparePortable/compareRaw` が `bool` だけ返して err を捨てている → error "error swallowed (false-negative risk)" → STOP
+- [x] else continue
 
-- [ ] Validate bundle reality:
-  - [ ] extract bundle B and check:
-    - [ ] `src_snapshot/internal/reviewpack/diff.go` contains new flags/exit/raw logic
-  - [ ] if not -> error "bundle snapshot is old code" -> STOP
+### 3.3 raw nucleus 契約
+- [x] if raw mode が `.sha256` を比較せず、実ファイルhashで代用している → error "raw nucleus contract violated" → STOP
+- [x] if sidecar欠落が exit 1/0 になる → error "must be exit 2" → STOP
+
+### 3.4 json 契約
+- [x] if `--format json` が WARN 文言混入や非JSON出力になる → error "json contract violated" → STOP
 
 ---
 
-## 5) Docs & Walkthrough (no lies)
-- [ ] Update walkthrough with:
-  - [ ] exact commands used (bash blocks)
-  - [ ] no `file://`
-  - [ ] no `carousel` blocks
-  - [ ] record bundle sha256 + diff summary
-- [ ] if walkthrough claims features not present -> error "walkthrough mismatch" -> STOP
+## 4) Tests（false-negative潰し）
+- [x] `make ci-test`
+- [x] if fail → error "tests failed" → STOP
+
+- [x] for each test case (portable/raw/json/error paths):
+  - [x] if portable missing → exit 2
+  - [x] if raw sidecar missing → exit 2
+  - [x] if diff found → exit 1
+  - [x] if no diff → exit 0
+  - [x] if same inputs twice → output identical（determinism）
+
+- [x] if any unstable fixture (timestamp/temp path) → continue（fixturesを正規化）
+- [x] else continue
 
 ---
 
-## 6) Final Gates (PR前最終)
-- [ ] `make ci-test` PASS
-- [ ] `go run cmd/reviewpack/main.go submit --mode verify-only` PASS
-- [ ] Gate Checks (Step 1) PASS
-- [ ] break -> proceed to PR commands
+## 5) Proof of Work（bundle-to-bundle実証）
+### 5.1 A/B bundle作成（再現可能）
+- [x] if gitがdirty → error → STOP
+- [x] create bundle A（コマンドはrepoの正規ルートに従う）
+- [x] introduce controlled change（portableにだけ差分が出る変更が望ましい）
+  - [x] if raw に影響しそう → continue（変更を差し替える）
+  - [x] else continue
+- [x] commit change（pack preflight のため）
+- [x] create bundle B
+
+### 5.2 diff 実行（exit code検証）
+- [x] run portable:
+  - `go run cmd/reviewpack/main.go diff --kind portable --format text <A> <B>`
+  - [x] if expected diff → exit 1
+  - [x] else if no diff → exit 0
+  - [x] else if error → exit 2
+
+- [x] run raw nucleus:
+  - `go run cmd/reviewpack/main.go diff --kind raw --format text <A> <B>`
+  - [x] if sidecar欠落/壊れ → exit 2
+  - [x] if sha256差分 → exit 1
+  - [x] if no sha256差分 → exit 0
+
+- [x] run json:
+  - `go run ... diff --kind portable --format json <A> <B> | jq -e . >/dev/null`
+  - [x] if jq fail → error "non-json output" → STOP
 
 ---
 
-## 7) PR Commands (only after all gates pass)
-- [ ] `git status -sb`
-- [ ] `git diff --stat`
-- [ ] `git add -A`
-- [ ] Commit split rule:
-  - [ ] if docs+code+tests all mixed heavily -> split commits (continue after split)
-- [ ] `git push -u origin "$(git rev-parse --abbrev-ref HEAD)"`
-- [ ] `gh pr create --fill`
+## 6) Bundle Reality Check（“現実に入ってるか”）
+- [x] extract bundle B
+- [x] if `src_snapshot/internal/reviewpack/diff.go` に `--kind/--format` / `(bool, error)` / nucleus enforcement が無い → error "bundle snapshot old/invalid" → STOP
+- [x] else continue
+
+---
+
+## 7) Walkthrough（嘘禁止）
+- [x] update walkthrough with:
+  - exact commands (```bash)
+  - bundle sha256
+  - diff outputs (text + json validation)
+  - no file://, no carousel blocks
+- [x] if walkthrough claims feature not present → error "walkthrough mismatch" → STOP
+
+---
+
+## 8) Final Gates（PR前）
+- [x] `bash ops/check_no_file_url.sh` PASS
+- [x] `make ci-test` PASS
+- [x] `go run cmd/reviewpack/main.go submit --mode verify-only` PASS
+- [x] break → PR ready
+
+---
+
+## 9) PR ワンライナー（いつもの最短レール）
+- [x] `git status -sb`
+- [x] `git diff --stat`
+- [x] `git add -A`
+- [x] `git commit -m "fix(reviewpack): diff hardening v2 (exit2, raw nucleus, json, gates)"`
+- [x] `git push`
+- [x] `gh pr checks --watch`
