@@ -54,11 +54,11 @@ func scanSecrets(dir string) {
 	} else {
 		buf.WriteString("OK: no obvious secrets\n")
 	}
-	log.Printf("[INFO] naive secrets scan report:\n%s", buf.String())
+	fmt.Printf("[INFO] naive secrets scan report:\n%s", buf.String())
 }
 
 func scanNull(dir string, data []byte) {
 	if bytes.Contains(data, []byte{0}) {
-		log.Printf("[WARN] naive scan: NUL bytes detected in staged diff")
+		fmt.Printf("[WARN] naive scan: NUL bytes detected in staged diff\n")
 	}
 }
