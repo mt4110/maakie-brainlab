@@ -16,6 +16,10 @@ This provides immediate feedback on what changed in the submission bundle.
 4. **Integration**: Inject the delta reporting steps into the `Verify Pack` workflow.
 5. **Summary**: The delta report is written to `.local/ci/pack_delta/summary.md` and appended to the
    main CI summary to prevent overwrites.
+6. **Audit Quality Hardening**:
+   - Explicitly checks for `git fetch` failure.
+   - Strictly enforces a "one-bundle-only" rule to prevent ambiguity in comparison.
+   - Any violation of these checks results in a system error (EC=2), recorded in `pack_delta`.
 
 ## Exit Code Contract
 
