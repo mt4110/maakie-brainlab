@@ -1,4 +1,4 @@
-# S16-03 TASK — Ambi Precision Command Template (Degre Fast Model v1)
+# S16-03 TASK — Ambi Precision Command Template (デグレ Fast Model v1)
 
 ## Safety Snapshot
 - [ ] `bash -lc 'cd "$(git rev-parse --show-toplevel)"; git status -sb'`
