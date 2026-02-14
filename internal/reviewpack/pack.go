@@ -97,10 +97,11 @@ func packToTar(args []string) string {
 
 	// 6. Documentation & Specifications
 	writeVersionAndSpec(packDir)
+	writeContractV1(packDir)
 	writeReadme(packDir)
 	writeVerifyScript(packDir)
 	kindPath := filepath.Join(packDir, "review_pack_v1")
-	if err := os.WriteFile(kindPath, []byte("1\n"), 0644); err != nil {
+	if err := os.WriteFile(kindPath, []byte(packVersionV2), 0644); err != nil {
 		log.Fatalf(msgFatalWrite, kindPath, err)
 	}
 

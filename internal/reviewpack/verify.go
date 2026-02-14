@@ -41,7 +41,14 @@ func runVerify(args []string) {
 
 	fmt.Printf("=== VERIFY: %s ===\n", verifyRoot)
 
-	// 1. Checksums coverage
+	// 1. Read PACK_VERSION and coverage
+	versionFile := filepath.Join(verifyRoot, filePackVersion)
+	vBytes, err := os.ReadFile(versionFile)
+	if err != nil {
+		log.Fatalf("[FAIL] No %s found: %v", versionFile, err)
+	}
+	version := string(bytes.TrimSpace(vBytes))
+
 	checksumsFile := filepath.Join(verifyRoot, fileChecksums)
 	content, err := os.ReadFile(checksumsFile)
 	if err != nil {
@@ -159,6 +166,14 @@ func runVerify(args []string) {
 	}
 	if !hasUnittest {
 		log.Fatalf("[FAIL] Evidence missing in %s/%s: 'unittest discover'", dirLogsRaw, fileMakeTest)
+	}
+
+	// 5. Version-specific Enforcement (S16-01)
+	if version == "1" {
+		fmt.Println("[INFO] Legacy PACK_VERSION v1: skipping CONTRACT_v1 enforcement")
+	} else {
+		fmt.Printf("[INFO] PACK_VERSION v%s: enforcing AI Contract v1\n", version)
+		verifyContractV1(verifyRoot)
 	}
 
 	fmt.Println("PASS: Verify OK")
