@@ -101,7 +101,7 @@ Top-level JSON object（この形以外は契約違反）：
 
 ## Forbidden（禁止：見つけたら契約違反）
 ### 時刻の捏造（MUST NOT）
-- MUST NOT: `created_at`, `generated_at`, `timestamp`, `now` を IL 内に含める
+- MUST NOT: `created_at`, `generated_at`, `timestamp`, `now` を出力（il/meta/evidence）に含める
   - ※入力 artifact に明示的に存在する値を **コピー**する場合は、S17-02で “例外手続き” を実装するまで v1 では禁止
 
 ### 乱数 / 一意IDの捏造（MUST NOT）
