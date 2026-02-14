@@ -122,5 +122,29 @@ class TestILValidator(unittest.TestCase):
         with self.assertRaises(ValueError):
             ILCanonicalizer.canonicalize({"a": float('nan')})
 
+    def test_reserved_errors_key(self):
+        # top-level errors is forbidden
+        data = {
+            "il": {"val": 1},
+            "meta": {"version": "il_contract_v1"},
+            "evidence": {},
+            "errors": []
+        }
+        is_valid, errors = self.validator.validate(data)
+        self.assertFalse(is_valid)
+        self.assertEqual(errors[0]["code"], "E_SCHEMA")
+        self.assertEqual(errors[0]["path"], "/errors")
+
+        # nested errors is forbidden
+        data = {
+            "il": {"val": 1, "errors": "oops"},
+            "meta": {"version": "il_contract_v1"},
+            "evidence": {}
+        }
+        is_valid, errors = self.validator.validate(data)
+        self.assertFalse(is_valid)
+        self.assertEqual(errors[0]["code"], "E_SCHEMA")
+        self.assertEqual(errors[0]["path"], "/il/errors")
+
 if __name__ == "__main__":
     unittest.main()

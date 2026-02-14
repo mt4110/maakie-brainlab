@@ -6,9 +6,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Any, Optional
 
-# Add root to path for il_validator
+# Add src to path for il_validator
 ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "src"))
 from il_validator import ILValidator, ILCanonicalizer
 
 RED = "\033[91m"

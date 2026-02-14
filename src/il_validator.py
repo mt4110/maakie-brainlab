@@ -42,6 +42,10 @@ class ILValidator:
             self.add_error("E_SCHEMA", "Top-level item must be an object")
             return False, self.errors
 
+        # Check for reserved key "errors" at top level
+        if "errors" in data:
+            self.add_error("E_SCHEMA", "Reserved key 'errors' found in input", path="/errors")
+
         # Required top-level keys
         for key in ["il", "meta", "evidence"]:
             if key not in data:
@@ -79,6 +83,10 @@ class ILValidator:
 
         if isinstance(val, dict):
             for k, v in val.items():
+                if k == "errors" and path != "": # Avoid duplicative reporting for top-level
+                    self.add_error("E_SCHEMA", f"Reserved key 'errors' found in input: {k}", path=f"{path}/{k}")
+                    continue # Do not recurse into client-provided errors
+
                 if k in self.FORBIDDEN_FIELDS:
                     self.add_error("E_FORBIDDEN", f"Forbidden field: {k}", path=f"{path}/{k}")
                 
@@ -92,11 +100,11 @@ class ILValidator:
                 self._validate_recursive(item, f"{path}/{i}")
         
         elif isinstance(val, bool):
-            # bool is forbidden to be treated as int [MUST-3.3] -> E_SCHEMA
+            # bool is forbidden to be treated as int [HARDCORE+] -> E_SCHEMA
             self.add_error("E_SCHEMA", "bool values are forbidden (must use int or string)", path=path)
             
         elif isinstance(val, float):
-            # float is strictly forbidden [MUST-3.3] -> E_SCHEMA
+            # float is strictly forbidden [HARDCORE+] -> E_SCHEMA
             self.add_error("E_SCHEMA", "float values are forbidden (strict integer only)", path=path)
         
         elif type(val) is int:
