@@ -7,23 +7,23 @@
 
 ## Matrix
 
-| Step | Title | Depends On | TouchSet (planned) | Overlap Risk |
-|------|-------|------------|--------------------|--------------|
-| 07   | TBD   | None/TBD   | TBD                | TBD          |
-| 08   | TBD   | None/TBD   | TBD                | TBD          |
-| 09   | TBD   | None/TBD   | TBD                | TBD          |
-| 10   | TBD   | None/TBD   | TBD                | TBD          |
+| Step | Title | Depends On | TouchSet (planned) | Overlap Risk | PR Unit | Gate |
+|------|-------|------------|--------------------|--------------|---------|------|
+| 07   | Design Kickoff | None | docs/ops/S15_07* | No | 1 PR | docs-only |
+| 08   | Impl Split | 07 | docs/ops/S15_08*, MATRIX | No | 1 PR | docs-only |
+| 09   | Impl Part A | 08 | TBD (Code area A) | No | 1 PR | code-change |
+| 10   | Impl Part B | 09 | TBD (Code area B) | No | 1 PR | code-change |
 
 ## Dependency Edges
-- 07 -> (none/TBD)
-- 08 -> (none/TBD)
-- 09 -> (none/TBD)
-- 10 -> (none/TBD)
+- 07 -> (kickoff)
+- 08 -> 07 (doc dependency)
+- 09 -> 08 (rule lock dependency)
+- 10 -> 09 (serial implementation)
 
-## TouchSet Overlap (Yes/No)
-- 07 vs 08: TBD
-- 08 vs 09: TBD
-- 09 vs 10: TBD
+## TouchSet Overlap (Lock)
+- 07 vs 08: docs/ops prefix (isolation by suffix)
+- 08 vs 09: 08 locks the rules for 09
+- 09 vs 10: TBD (Locked in 09 kickoff)
 
 ## Implementation PR Split Decision (Mechanical)
 Decision: 1 PR per step
@@ -32,5 +32,5 @@ Rule:
 - If any dependency edge exists OR any TouchSet overlap => 1 PR per step
 - Else => allow 07+08 and 09+10 bundling
 
-> [!NOTE]
-> Initial decision is "1 PR per step" as all fields are TBD. This will be updated if independence is proven.
+> [!IMPORTANT]
+> S15-08 locks these rules. S15-09/10 TouchSets will be refined but must honor the serial dependency (09 then 10).
