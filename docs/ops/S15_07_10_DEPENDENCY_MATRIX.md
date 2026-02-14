@@ -2,7 +2,7 @@
 
 ## Evidence (discovery commands)
 - ls -la docs/ops | rg "S15[-_](07|08|09|10)"
-- rg "S15-0[7-9]|S15-10" docs/ops/S15_PLAN.md docs/ops/S15_TASK.md
+- rg "S15[-_](07|08|09|10)" docs/ops/S15_PLAN.md docs/ops/S15_TASK.md
 - rg "S15[-_](07|08|09|10)" docs/ops -S
 
 ## Matrix
