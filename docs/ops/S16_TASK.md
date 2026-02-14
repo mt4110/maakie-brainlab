@@ -12,7 +12,7 @@
 - [ ] docs/ops/S16_TASK.md を作成
 
 ## Step 3: Evidence / Gate
-- [ ] reviewpack submit --mode verify-only PASS
+- [ ] go run cmd/reviewpack/main.go submit --mode verify-only PASS
 - [ ] `reviewpack submit` が出力した bundle ファイル名（例: `review_bundle_...tar.gz`）とその SHA256 をセットで記録
 
 ## Step 4: PR
