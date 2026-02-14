@@ -256,6 +256,10 @@ func generatePlaceholderLog(dir string) error {
 	}
 
 	// S15: Support portable output for verification consistency
+	portDir := filepath.Join(dir, dirLogsPortable)
+	if err := ensureDir(portDir); err != nil {
+		return err
+	}
 	portLogPath := filepath.Join(portDir, fileMakeTest)
 	createPortableLog(logPath, portLogPath)
 
