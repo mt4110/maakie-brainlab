@@ -79,8 +79,15 @@ func collectGitInfo(repoRoot, packDir, nCommits string) {
 	if err := os.MkdirAll(rawDir, 0755); err != nil {
 		log.Fatalf(msgFatalMkdir, rawDir, err)
 	}
-	runCmd(repoRoot, "git", "log", "-n", nCommits, "--stat", ">", filepath.Join(rawDir, fileGitLog))
-	runCmd(repoRoot, "git", "diff", "HEAD~"+nCommits, "HEAD", ">", filepath.Join(rawDir, fileGitDiff))
+	logPath := filepath.Join(rawDir, fileGitLog)
+	runCmd(repoRoot, "git", "log", "-n", nCommits, "--stat", ">", logPath)
+	sha10, _ := fileSha256(logPath)
+	_ = os.WriteFile(logPath+".sha256", []byte(sha10+"\n"), 0644)
+
+	diffPath := filepath.Join(rawDir, fileGitDiff)
+	runCmd(repoRoot, "git", "diff", "HEAD~"+nCommits, "HEAD", ">", diffPath)
+	sha11, _ := fileSha256(diffPath)
+	_ = os.WriteFile(diffPath+".sha256", []byte(sha11+"\n"), 0644)
 }
 
 func scanSecrets(dir string) {

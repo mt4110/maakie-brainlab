@@ -151,7 +151,7 @@ func createPortableLog(src, dst string) {
 	// 1. Durations (handle tabs and spaces)
 	reDuration := regexp.MustCompile(`\s*\b[0-9.]+s\b`)
 	s = reDuration.ReplaceAllString(s, " <DURATION>")
-	
+
 	// 2. Build cache hits
 	s = strings.ReplaceAll(s, "(cached)", "<CACHED>")
 
@@ -201,7 +201,6 @@ func writePortableRules(dir string) {
 	}
 }
 
-
 func min(a, b int) int {
 	if a < b {
 		return a
@@ -221,6 +220,8 @@ func runSelfVerify(dir string) {
 	if err := os.WriteFile(logPath, buf.Bytes(), 0644); err != nil {
 		log.Fatalf(msgFatalWrite, logPath, err)
 	}
+	sha, _ := fileSha256(logPath)
+	_ = os.WriteFile(logPath+".sha256", []byte(sha+"\n"), 0644)
 }
 
 // ensureDir is a testable helper for MkdirAll. Returns error instead of Fatal.
@@ -234,7 +235,7 @@ func ensureDir(dir string) error {
 // generatePlaceholderLog writes a standard skip-test placeholder log.
 func generatePlaceholderLog(dir string) error {
 	placeholderLog := fmt.Sprintf("# [INFO] skip-test is active for baseline generation\n# markers for audit:\n+ go test ./...\n+ unittest discover\n[SKIP] tests skipped by flag\n")
-	
+
 	rawDir := filepath.Join(dir, dirLogsRaw)
 	if err := ensureDir(rawDir); err != nil {
 		return err
@@ -250,7 +251,7 @@ func generatePlaceholderLog(dir string) error {
 		return err
 	}
 	createPortableLog(logPath, filepath.Join(portDir, fileMakeTest))
-	
+
 	sha, err := fileSha256(logPath)
 	if err != nil {
 		return err
@@ -259,7 +260,7 @@ func generatePlaceholderLog(dir string) error {
 	if err := os.WriteFile(shaPath, []byte(sha+"\n"), 0644); err != nil {
 		return fmt.Errorf("write %s: %w", shaPath, err)
 	}
-	
+
 	writePortableRules(portDir)
 	return nil
 }

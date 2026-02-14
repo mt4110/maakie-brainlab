@@ -10,6 +10,7 @@
 - `internal/reviewpack/verify.go`, `internal/reviewpack/evidence.go`, `internal/reviewpack/utils.go`
 - 変更対象:
   - `runVerify` に `10_git_log.txt` / `30_make_test.log` / `40_self_verify.log` の存在チェックを追加
+  - rawログおよび `30_make_test.log` は同名 `.sha256` サイドカーを必須とする（10/11/40）
   - Evidence marker の判定条件を厳格化（全ての必須ログが PASS していることを確認）
 
 ## Inputs (Source of Truth)
