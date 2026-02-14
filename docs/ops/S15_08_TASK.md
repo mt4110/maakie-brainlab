@@ -1,4 +1,4 @@
-# S15-08 TASK — Fill TBD + Lock Dependencies + PR Slicing Rules
+# S15-08 TASK — Lock Dependencies + PR Slicing Rules
 
 ## 0) 前提確認（止まる勇気）
 - [ ] git fetch -p origin を実行
@@ -9,14 +9,14 @@
 - [ ] test -f docs/ops/S15_07_10_DEPENDENCY_MATRIX.md を確認
 - [ ] 確定：docs/ops/S15_07_10_DEPENDENCY_MATRIX.md を採用
 
-## 2) S15_08_PLAN の TBD を全消し
-- [ ] S15_08_PLAN.md 内の TBD が 0件 (rg -n "TBD" docs/ops/S15_08_PLAN.md)
+## 2) S15_08_PLAN の 確定
+- [ ] S15_08_PLAN.md 内が全確定済み (rg -n "TBD" docs/ops/S15_08_PLAN.md)
 - [ ] PR分割ルール（原則/例外/例外判定）が 機械的に書かれている
 - [ ] DependsOn / Touch / NoTouch / Gate の確定方針が書かれている
 - [ ] Done条件が “検証可能” な形で書かれている
 
-## 3) S15_08_TASK の TBD を全消し
-- [ ] S15_08_TASK.md 内の TBD が 0件 (rg -n "TBD" docs/ops/S15_08_TASK.md)
+## 3) S15_08_TASK の 確定
+- [ ] S15_08_TASK.md 内が全確定済み (rg -n "TBD" docs/ops/S15_08_TASK.md)
 - [ ] 手順が 順序固定（並べ替え不要で実行できる）
 - [ ] skip に has 必ず1行理由 を残すルールが入っている
 - [ ] error は その場で終了 のルールが入っている
