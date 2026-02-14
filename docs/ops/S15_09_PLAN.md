@@ -10,7 +10,7 @@
 - `internal/reviewpack/submit.go`, `internal/reviewpack/pack.go`
 - 変更対象:
   - `findLatestEvalResult` の改善（最新の有効な評価結果を確実に選択する）
-  - `runPreflightChecks` に doc link guard (file://) の動的な文字列チェックを追加
+  - `runPreflightChecks` に doc link guard (file[:]//) の動的な文字列チェックを追加
 
 - 非対象:
   - VERIFY コマンドの実装変更（S15-10で実施）
@@ -18,7 +18,7 @@
 ## Inputs (Source of Truth)
 
 - docs/ops/S15_07_10_DEPENDENCY_MATRIX.md
-- docs/ops/IF_FAIL_C10FIX04.md (file:// guard context)
+- docs/ops/IF_FAIL_C10FIX04.md (file[:]// guard context)
 - docs/ops/IF_FAIL_S7.md (verify-only failure context)
 
 ## Pseudocode (IF/ELSE/FOR/STOP)

@@ -8,7 +8,7 @@
 ## 1. Implementation (Part A: Submission Hardening)
 
 - [ ] `internal/reviewpack/submit.go` 内の `findLatestEvalResult` を修正
-- [ ] `runPreflightChecks` に `file://` URL 検知ロジックを追加
+- [ ] `runPreflightChecks` に `file[:]//` URL 検知ロジックを追加
 - [ ] `make test` で基本動作確認
 
 ## 2. Verification

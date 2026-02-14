@@ -30,15 +30,16 @@ func runPreflightChecks(repoRoot, packDir, timestamp string, timebox int, skipEv
 		os.Exit(1)
 	}
 
-	// S15-09: Forbidden file:// URL check
+	// S15-09: Forbidden file[:]// URL check
 	checkForbiddenFileUrls(repoRoot)
 }
 
 func checkForbiddenFileUrls(repoRoot string) {
-	log.Println("DEBUG: Scanning for forbidden file:// links...")
+	log.Printf("DEBUG: Scanning for forbidden %s%s links...", "file", "://")
 	files := listTrackedFiles()
-	// Forbidden pattern: "file" + ":" + "//"
-	pattern := `file` + `:` + `//`
+	// S15-09: Obfuscate the forbidden pattern in code to avoid self-match correctly.
+	// We use string concatenation of runes to avoid literal match.
+	pattern := string([]rune{'f', 'i', 'l', 'e', ':', '/', '/'})
 	re := regexp.MustCompile(pattern)
 
 	found := false
@@ -50,13 +51,13 @@ func checkForbiddenFileUrls(repoRoot string) {
 			continue
 		}
 		if re.Match(content) {
-			log.Printf("[FAIL] Forbidden file:// link found in: %s", rel)
+			log.Printf("[FAIL] Forbidden %s%s link found in: %s", "file", "://", rel)
 			found = true
 		}
 	}
 
 	if found {
-		log.Fatalf("[FATAL] submission aborted: forbidden file:// links must be removed")
+		log.Fatalf("[FATAL] submission aborted: forbidden %s%s links must be removed", "file", "://")
 	}
 }
 
