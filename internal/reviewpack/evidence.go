@@ -62,8 +62,12 @@ func checkForbiddenFileUrls(repoRoot string) {
 }
 
 func collectGitInfo(repoRoot, packDir, nCommits string) {
-	runCmd(repoRoot, "git", "log", "-n", nCommits, "--stat", ">", filepath.Join(packDir, fileGitLog))
-	runCmd(repoRoot, "git", "diff", "HEAD~"+nCommits, "HEAD", ">", filepath.Join(packDir, fileGitDiff))
+	rawDir := filepath.Join(packDir, dirLogsRaw)
+	if err := os.MkdirAll(rawDir, 0755); err != nil {
+		log.Fatalf(msgFatalMkdir, rawDir, err)
+	}
+	runCmd(repoRoot, "git", "log", "-n", nCommits, "--stat", ">", filepath.Join(rawDir, fileGitLog))
+	runCmd(repoRoot, "git", "diff", "HEAD~"+nCommits, "HEAD", ">", filepath.Join(rawDir, fileGitDiff))
 }
 
 func scanSecrets(dir string) {

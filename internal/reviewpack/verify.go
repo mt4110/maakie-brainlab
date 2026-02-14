@@ -111,11 +111,19 @@ func runVerify(args []string) {
 		os.Exit(1)
 	}
 
-	// 4. Evidence Marker Check (logs/raw/30_make_test.log)
+	// 4. Evidence Marker Check (logs/raw/30_make_test.log + others)
+	// S15-10 Hardening: check for mandatory logs
+	for _, f := range []string{fileGitLog, fileMakeTest, fileSelfVerify} {
+		p := filepath.Join(verifyRoot, dirLogsRaw, f)
+		if _, err := os.Stat(p); os.IsNotExist(err) {
+			log.Fatalf("[FAIL] Missing mandatory evidence log: %s/%s", dirLogsRaw, f)
+		}
+	}
+
 	testLogPath := filepath.Join(verifyRoot, dirLogsRaw, fileMakeTest)
 	logBytes, err := os.ReadFile(testLogPath)
 	if err != nil {
-		log.Fatalf("[FAIL] Missing test evidence log: %s/%s", dirLogsRaw, fileMakeTest)
+		log.Fatalf("[FAIL] Could not read test evidence log: %s/%s", dirLogsRaw, fileMakeTest)
 	}
 
 	hasGoTest := false
