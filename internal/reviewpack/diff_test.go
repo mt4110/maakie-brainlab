@@ -25,12 +25,12 @@ func TestDiff(t *testing.T) {
 
 	createTestBundle(t, bundleA, map[string]string{
 		"review_pack/logs/portable/test.log": "line1\nline2\n",
-		"review_pack/PACK_VERSION":           "1\n",
+		"review_pack/PACK_VERSION":           "2\n",
 	})
 
 	createTestBundle(t, bundleB, map[string]string{
 		"review_pack/logs/portable/test.log": "line1\nline2changed\n",
-		"review_pack/PACK_VERSION":           "1\n",
+		"review_pack/PACK_VERSION":           "2\n",
 	})
 
 	rootA := filepath.Join(tmpDir, "rootA")
@@ -152,15 +152,15 @@ func TestRunDiffExitCodes(t *testing.T) {
 
 	createTestBundle(t, bundleA, map[string]string{
 		"review_pack/logs/portable/test.log": "line1\n",
-		"review_pack/PACK_VERSION":           "1\n",
+		"review_pack/PACK_VERSION":           "2\n",
 	})
 	createTestBundle(t, bundleB, map[string]string{
 		"review_pack/logs/portable/test.log": "line1\n",
-		"review_pack/PACK_VERSION":           "1\n",
+		"review_pack/PACK_VERSION":           "2\n",
 	})
 	createTestBundle(t, bundleC, map[string]string{
 		"review_pack/logs/portable/test.log": "line1changed\n",
-		"review_pack/PACK_VERSION":           "1\n",
+		"review_pack/PACK_VERSION":           "2\n",
 	})
 
 	// Case 0: No diff

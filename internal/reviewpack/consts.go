@@ -20,6 +20,7 @@ const (
 	fileManifest      = "MANIFEST.tsv"
 	fileChecksums     = "CHECKSUMS.sha256"
 	filePackVersion   = "PACK_VERSION"
+	fileContractV1    = "CONTRACT_v1"
 	fileSpec          = "SPEC.md"
 	fileLatestJsonl   = "eval/results/latest.jsonl"
 	extTarGz          = ".tar.gz"
@@ -33,4 +34,7 @@ const (
 	msgFatalMkdir  = "[FATAL] mkdir %s: %v"
 	msgFatalWrite  = "[FATAL] write %s: %v"
 	codeBlockBash  = "```bash"
+
+	packVersionV1 = "1\n"
+	packVersionV2 = "2\n"
 )

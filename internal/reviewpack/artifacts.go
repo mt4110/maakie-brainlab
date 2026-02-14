@@ -15,9 +15,9 @@ import (
 )
 
 func writeVersionAndSpec(dir string) {
-	// S4-05
-	versionPath := filepath.Join(dir, "PACK_VERSION")
-	if err := os.WriteFile(versionPath, []byte("1\n"), 0644); err != nil {
+	// S4-05: S16-01: Bump to V2
+	versionPath := filepath.Join(dir, filePackVersion)
+	if err := os.WriteFile(versionPath, []byte(packVersionV2), 0644); err != nil {
 		log.Fatalf(msgFatalWrite, versionPath, err)
 	}
 

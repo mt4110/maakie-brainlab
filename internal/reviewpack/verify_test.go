@@ -41,10 +41,8 @@ func TestVerifyMandatoryLogsSubprocess(t *testing.T) {
 			_ = os.MkdirAll(rawDir, 0755)
 
 			// Setup standard files
-			_ = os.WriteFile(filepath.Join(packDir, "review_pack_v1"), []byte("1"), 0644)
-
-			// Setup standard files
-			_ = os.WriteFile(filepath.Join(packDir, "review_pack_v1"), []byte("1"), 0644)
+			_ = os.WriteFile(filepath.Join(packDir, filePackVersion), []byte("1\n"), 0644)
+			_ = os.WriteFile(filepath.Join(packDir, "review_pack_v1"), []byte("1\n"), 0644)
 
 			var checksumLines []string
 			
@@ -58,7 +56,8 @@ func TestVerifyMandatoryLogsSubprocess(t *testing.T) {
 				checksumLines = append(checksumLines, fmt.Sprintf("%x %s", h.Sum(nil), relPath))
 			}
 
-			addFile("review_pack_v1", []byte("1"), 0644)
+			addFile(filePackVersion, []byte("1\n"), 0644)
+			addFile("review_pack_v1", []byte("1\n"), 0644)
 
 			logs := []string{"10_git_log.txt", "30_make_test.log", "40_self_verify.log"}
 			for _, f := range logs {
