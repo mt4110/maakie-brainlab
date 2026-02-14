@@ -8,8 +8,8 @@
 ## 1. Implementation (Part B: Verification Hardening)
 
 - [ ] `internal/reviewpack/verify.go` の修正
-- [ ] `logs/raw/10_git_log.txt` と `logs/raw/40_self_verify.log` の存在チェックを実装
-- [ ] Evidence marker 判定の強化（hasGoTest, hasUnittest, etc）
+- [ ] `logs/raw/10_git_log.txt` / `logs/raw/30_make_test.log` / `logs/raw/40_self_verify.log` の存在チェックを実装
+- [ ] Evidence marker 判定の強化（必須ログが揃っていることを確認）
 
 ## 2. Verification (Final Gate)
 
