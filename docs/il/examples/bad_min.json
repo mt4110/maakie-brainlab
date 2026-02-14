@@ -1,0 +1,11 @@
+{
+    "evidence": {
+        "hashes": {}
+    },
+    "il": {
+        "op": "noop"
+    },
+    "meta": {
+        "version": "il_contract_v0"
+    }
+}

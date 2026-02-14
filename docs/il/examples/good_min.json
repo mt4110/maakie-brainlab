@@ -1,0 +1,13 @@
+{
+    "evidence": {
+        "hashes": {},
+        "notes": "minimal good example"
+    },
+    "il": {
+        "op": "noop"
+    },
+    "meta": {
+        "generator": "human",
+        "version": "il_contract_v1"
+    }
+}
