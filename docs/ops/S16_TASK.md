@@ -13,7 +13,7 @@
 
 ## Step 3: Evidence / Gate
 - [ ] reviewpack submit --mode verify-only PASS
-- [ ] review_bundle の SHA256 を記録
+- [ ] `reviewpack submit` が出力した bundle ファイル名（例: `review_bundle_...tar.gz`）とその SHA256 をセットで記録
 
 ## Step 4: PR
 - [ ] 1PRで完走（docs+gate証拠まで）
