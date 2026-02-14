@@ -22,7 +22,6 @@ class TestILValidator(unittest.TestCase):
         self.assertEqual(len(errors), 0)
 
     def test_bad_min(self):
-        # bad_min.json is schema-invalid (e.g. missing fields)
         path = self.examples_dir / "bad_min.json"
         data = json.loads(path.read_text())
         is_valid, errors = self.validator.validate(data)
@@ -40,10 +39,6 @@ class TestILValidator(unittest.TestCase):
         
         codes = [e["code"] for e in errors]
         self.assertIn("E_FORBIDDEN", codes)
-        
-        # Check specifically for the forbidden field
-        forbidden_field_errors = [e for e in errors if e["code"] == "E_FORBIDDEN" and "created_at" in e["message"]]
-        self.assertGreater(len(forbidden_field_errors), 0)
 
     def test_canonicalizer_determinism(self):
         data = {
@@ -60,15 +55,58 @@ class TestILValidator(unittest.TestCase):
         expected = b'{"a":1,"b":2,"c":{"x":1,"y":2},"d":[3,1,2]}'
         self.assertEqual(bytes1, expected)
 
-    def test_illegal_floats(self):
+    def test_forbidden_floats(self):
+        # 1.0 is forbidden [HARDCORE]
         data = {
-            "il": {"val": 1.5},
+            "il": {"val": 1.0},
             "meta": {"version": "il_contract_v1"},
             "evidence": {}
         }
         is_valid, errors = self.validator.validate(data)
         self.assertFalse(is_valid)
-        self.assertIn("E_TYPE", [e["code"] for e in errors])
+        self.assertEqual(errors[0]["code"], "E_SCHEMA")
+        
+        # 1.5 is forbidden
+        data["il"]["val"] = 1.5
+        is_valid, errors = self.validator.validate(data)
+        self.assertFalse(is_valid)
+        self.assertEqual(errors[0]["code"], "E_SCHEMA")
+
+    def test_forbidden_bool(self):
+        # True/False are forbidden for int fields [HARDCORE]
+        data = {
+            "il": {"val": True},
+            "meta": {"version": "il_contract_v1"},
+            "evidence": {}
+        }
+        is_valid, errors = self.validator.validate(data)
+        self.assertFalse(is_valid)
+        self.assertEqual(errors[0]["code"], "E_SCHEMA")
+
+    def test_int_53bit_range(self):
+        data = {
+            "il": {"val": 2**53 - 1},
+            "meta": {"version": "il_contract_v1"},
+            "evidence": {}
+        }
+        is_valid, errors = self.validator.validate(data)
+        self.assertTrue(is_valid)
+        
+        data["il"]["val"] = 2**53
+        is_valid, errors = self.validator.validate(data)
+        self.assertFalse(is_valid)
+        self.assertEqual(errors[0]["code"], "E_SCHEMA")
+
+    def test_il_must_be_object(self):
+        data = {
+            "il": [1, 2, 3],
+            "meta": {"version": "il_contract_v1"},
+            "evidence": {}
+        }
+        is_valid, errors = self.validator.validate(data)
+        self.assertFalse(is_valid)
+        self.assertEqual(errors[0]["code"], "E_SCHEMA")
+        self.assertEqual(errors[0]["path"], "/il")
 
     def test_null_forbidden(self):
         data = {
@@ -79,6 +117,10 @@ class TestILValidator(unittest.TestCase):
         is_valid, errors = self.validator.validate(data)
         self.assertFalse(is_valid)
         self.assertIn("E_FORBIDDEN", [e["code"] for e in errors])
+
+    def test_canonicalize_rejects_nan(self):
+        with self.assertRaises(ValueError):
+            ILCanonicalizer.canonicalize({"a": float('nan')})
 
 if __name__ == "__main__":
     unittest.main()

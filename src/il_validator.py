@@ -4,7 +4,7 @@ from typing import Dict, Any, List, Optional, Tuple
 
 class ILValidator:
     """
-    Validates IL items against Contract v1 rules.
+    Validates IL items against Contract v1 rules [HARDCORE].
     """
     
     FORBIDDEN_FIELDS = {
@@ -14,6 +14,9 @@ class ILValidator:
     
     FORBIDDEN_KEY_PATTERN = re.compile(r"[^A-Za-z0-9_./-]")
 
+    # Normalized error codes per Contract v1
+    # E_SCHEMA | E_FORBIDDEN | E_AMBIGUOUS | E_MISSING_ARTIFACT | E_NONDETERMINISTIC | E_UNSUPPORTED
+    
     def __init__(self):
         self.errors = []
 
@@ -56,6 +59,10 @@ class ILValidator:
         if "evidence" in data and not isinstance(data["evidence"], dict):
             self.add_error("E_SCHEMA", "evidence must be an object", path="/evidence")
 
+        # il shape check [MUST-3]
+        if "il" in data and not isinstance(data["il"], dict):
+            self.add_error("E_SCHEMA", "il must be an object", path="/il")
+
         # Recursive validation for forbidden fields, nulls, and types
         self._validate_recursive(data, "")
 
@@ -66,6 +73,7 @@ class ILValidator:
 
     def _validate_recursive(self, val: Any, path: str):
         if val is None:
+            # null is forbidden [MUST-3.3] -> E_FORBIDDEN
             self.add_error("E_FORBIDDEN", "null values are forbidden", path=path)
             return
 
@@ -83,43 +91,40 @@ class ILValidator:
             for i, item in enumerate(val):
                 self._validate_recursive(item, f"{path}/{i}")
         
+        elif isinstance(val, bool):
+            # bool is forbidden to be treated as int [MUST-3.3] -> E_SCHEMA
+            self.add_error("E_SCHEMA", "bool values are forbidden (must use int or string)", path=path)
+            
         elif isinstance(val, float):
-            # Float is allowed only if it's actually an integer (no fractional part)
-            if not val.is_integer():
-                self.add_error("E_TYPE", f"Floating point numbers are forbidden: {val}", path=path)
+            # float is strictly forbidden [MUST-3.3] -> E_SCHEMA
+            self.add_error("E_SCHEMA", "float values are forbidden (strict integer only)", path=path)
+        
+        elif type(val) is int:
             # Check 53-bit range
             if abs(val) > (2**53 - 1):
-                self.add_error("E_TYPE", f"Number out of 53-bit range: {val}", path=path)
-        
-        elif isinstance(val, int):
-            if abs(val) > (2**53 - 1):
-                self.add_error("E_TYPE", f"Number out of 53-bit range: {val}", path=path)
+                self.add_error("E_SCHEMA", f"Number out of 53-bit range: {val}", path=path)
         
         elif isinstance(val, str):
             if "\r" in val:
                 self.add_error("E_SCHEMA", "CR characters are forbidden in strings", path=path)
-            if not val and path.split("/")[-1] != "notes": # Allow empty notes, but generally discouraged
-                # Contract says: "MUST NOT: empty string を “欠落の代替” に使わない"
-                # This is tricky to enforce without knowing context, but we'll flag it if it's the whole value
-                pass
 
 class ILCanonicalizer:
     """
-    Serializes IL items into canonical JSON bytes.
+    Serializes IL items into canonical JSON bytes [HARDCORE].
     """
     
     @staticmethod
     def canonicalize(data: Dict[str, Any]) -> bytes:
         """
         Produces compact, sorted-key, UTF-8 JSON bytes without trailing newline.
+        Enforces allow_nan=False for absolute safety.
         """
-        # json.dumps with sort_keys=True, separators=(',', ':') handles most rules
-        # ensure_ascii=False ensures non-ASCII content is not escaped as \uXXXX (UTF-8 required)
         compact_json = json.dumps(
             data,
             sort_keys=True,
             ensure_ascii=False,
-            separators=(',', ':')
+            separators=(',', ':'),
+            allow_nan=False
         )
         return compact_json.encode("utf-8")
 

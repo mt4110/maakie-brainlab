@@ -99,5 +99,21 @@ class TestSatelliteNormalize(unittest.TestCase):
         # Should still be 2 (valid ones), ignoring bad ones
         self.assertEqual(len(lines), 2)
 
+    def test_import_contract(self):
+        """Test that satellite.normalize can be run from root with correct PYTHONPATH."""
+        import subprocess
+        import os
+        
+        # We need to use the actual project root for this test to be meaningful
+        env = os.environ.copy()
+        env["PYTHONPATH"] = f"{ROOT / 'src'}:{ROOT}"
+        
+        # Run normalize.py as a module
+        cmd = [sys.executable, "-m", "satellite.normalize", "--help"]
+        res = subprocess.run(cmd, env=env, capture_output=True, text=True)
+        
+        self.assertEqual(res.returncode, 0, f"Subprocess failed: {res.stderr}")
+        self.assertIn("usage: normalize.py", res.stdout)
+
 if __name__ == "__main__":
     unittest.main()

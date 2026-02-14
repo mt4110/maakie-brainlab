@@ -4,7 +4,7 @@
 .PHONY: ai-smoke ai-verify
 
 PY?=.venv/bin/python
-PYENV=PYTHONPATH=.
+PYENV=PYTHONPATH=./src:.
 
 server-start:
 	bash ./infra/llama-server.start.sh

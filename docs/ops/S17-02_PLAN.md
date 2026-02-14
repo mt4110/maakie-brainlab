@@ -1,112 +1,74 @@
-# S17-02 PLAN — IL validator / canonicalizer (Contract v1)
+# S17-02 PLAN — IL validator / canonicalizer (Contract v1) [HARDCORE]
 
-## 0. 現状 / 前提（SOT）
-- SOT: `docs/il/IL_CONTRACT_v1.md` と `docs/il/il.schema.json` が唯一の基準。
-- 例（fixtures）:
-  - `docs/il/examples/good_min.json` … PASS 期待
-  - `docs/il/examples/bad_min.json` … FAIL 期待
-  - `docs/il/examples/bad_forbidden_timestamp.json` … FAIL 期待
-- 目的: 下流（pipeline / eval）が “悩まない” ために、OK/NG を機械的に判定できる IL 検証と正規化を実装する。
+## 0. SOT（唯一の基準）
+- Contract: `docs/il/IL_CONTRACT_v1.md`
+- Schema: `docs/il/il.schema.json`（少なくともJSONとしてparse可能であること）
+- Fixtures:
+  - `docs/il/examples/good_min.json` … PASS
+  - `docs/il/examples/bad_min.json` … FAIL
+  - `docs/il/examples/bad_forbidden_timestamp.json` … FAIL（schema PASSでも contract FAIL）
 
-## 1. 目的（Goal）
-IL Contract v1 に対して以下を提供する:
+## 1. Goal（目的）
+LLM出力を検証可能な中間言語（IL）として扱うために、以下を実装し「下流が悩まない」世界を作る。
 
-1) **validator**  
-- IL item の妥当性チェック（必須/型/禁止フィールド/フォーマット/追加プロパティ等）
-- **失敗時の errors 形式を Contract に固定**（空配列禁止などを含む）
+1) validator
+- Contract v1 に対する検証（必須/型/禁止フィールド/禁止キー/数値/Null禁止）
+- Failure時は `errors` を必ず出し length>=1（ContractのSuccess/Failure規約）
 
-2) **canonicalizer**  
-- IL item を “安定な表現” に正規化（canonical JSON / JSONL）
-- 同一入力 → 同一出力（再現性100%）
+2) canonicalizer
+- 同一入力→同一出力（canonical JSON / JSONL）
+- JSONとして不正な値（NaN/Infinityなど）を排除
 
-3) **統合**  
-- 既存 normalize / pipeline に最小差分で組み込み、下流が validator/canonicalizer を必ず通る導線にする。
+3) integration（導線は1本）
+- `src/satellite/normalize.py` に統合し、pipelineが必ず validator/canonicalizer を通る
 
-## 2. 非目的（Non-Goals）
-- IL v2 など新バージョン策定はしない（Contract v1 を実装するだけ）
-- 大規模な依存追加やリファクタはしない（最小差分・最短導線）
-- 例外で握りつぶす挙動は作らない（必ず errors で説明する）
+## 2. Non-Goals（やらない）
+- IL v2策定はしない
+- 下流evalロジックの拡張はしない（S17-xxで扱う）
 
-## 3. 設計原則（壊れないための縛り）
-- **決定論**: 同一入力 → 同一出力（canonical JSON）
-- **責務分離**: validator と canonicalizer は概念的に別（同一モジュール内でも関数/層は分ける）
-- **SOT固定**: Contract + schema が真。コードは追従。
-- **エラーは仕様**: 下流のUX。迷わせない。
-- **依存は最小**: 既存依存を優先。追加するなら理由を docs に残す。
+## 3. MUST（規約：ここが炉心）
+### 3.1 Import/Execution Contract（環境依存禁止）
+- 公式のPythonモジュールルートは `./src`
+- `make test` / `make sat-collect` / `make sat-normalize` は repo root から一発で動く
+- `PYENV` は `PYTHONPATH=./src:.` を含む（`PYTHONPATH=.` 単独は禁止）
 
-## 4. インタフェース（内部APIの“形”だけ先に固定）
-※ 実際の関数名/配置は repo の既存スタイルに合わせる（勝手に新ルールを作らない）
+### 3.2 errors の code 集合固定（Contract準拠）
+`errors[].code` は次のみ：
+- `E_SCHEMA|E_FORBIDDEN|E_AMBIGUOUS|E_MISSING_ARTIFACT|E_NONDETERMINISTIC|E_UNSUPPORTED`
+※独自コード禁止（E_TYPE等）
 
-### 4.1 validate (概念)
-入力: IL item（dict相当）  
-出力:
-- OK: （成功を示す値。errors は Contract に従う）
-- NG: Contract準拠の errors（必ず非空）
+### 3.3 数値（厳密整数のみ）
+- floatは全てFAIL（1.0/1e3含む）
+- boolをint扱いしない
+- intは53-bit範囲のみ
 
-### 4.2 canonicalize (概念)
-前提: validate を通った item のみ対象（validate失敗は canonicalize しない）  
-出力: canonical JSON 表現（以下の規則で固定）
+### 3.4 Top-level shape
+- top-levelはobject
+- 必須キー: `il`,`meta`,`evidence`
+- `il` は object 必須（list/string禁止）
+- meta.version は `il_contract_v1` 必須
 
-## 5. canonical JSON 規則（決定論の芯）
-- JSONシリアライズは以下を固定:
-  - キー順: 辞書キーを常にソート
-  - 区切り: 余計な空白なし（例: `,` と `:` の後にスペースなし）
-  - 改行: JSONL は 1行1item、末尾 `\n` 固定
-- 配列順: **入力順を保持**（Contract が別途指定していない限り勝手に並べ替えない）
-- 数値/文字列: 仕様があるなら Contract に従う（無ければ “そのまま”）
-- 禁止フィールド:
-  - 基本方針: validator で FAIL。canonicalizer は “削って帳尻合わせ” しない。
-  - 例: `bad_forbidden_timestamp.json` は FAIL すること。
+### 3.5 canonical JSON 規格
+- `json.dumps(... sort_keys=True, separators=(',',':'), ensure_ascii=False, allow_nan=False)`
+- JSONLは改行1つ、CRLF禁止
 
-## 6. errors 仕様（Contract v1 に完全追従）
-- errors は “下流がそのまま表示・集計できる” 構造にする
-- 最重要: **FAIL のとき errors は必ず非空**（空配列を返さない）
-- エラーの順序も決定論にする:
-  - 例: `(path, code, message)` の昇順でソート（※実フィールド名は Contract に合わせる）
-- 実装前に Contract を読んで “errors 形” を抜き出して docs に固定する（このPlanの Step 1 でやる）
-
-## 7. 実装配置（最終は探索して確定）
-候補:
-- Python 実装があるなら `src/...` の既存 “normalize/pipeline” 近傍に入れる
-- 新規ディレクトリを増やすより、既存の文脈へ最小追加（長期破綻しにくい）
-
-## 8. テスト方針（fixtures が根拠）
-- `good_min.json` → PASS
-- `bad_min.json` → FAIL（errors 非空）
-- `bad_forbidden_timestamp.json` → FAIL（errors 非空）
-- canonical JSON が安定:
-  - 同じ入力を2回canonicalizeして同一文字列になる
-  - “キー順” と “空白” が規則通り
-
-## 9. 受け入れ条件（Acceptance）
+##  Acceptence（受け入れ条件）
+### Gates（必須）
 - `make test` PASS
 - `go run cmd/reviewpack/main.go submit --mode verify-only` PASS
-- fixtures の期待が満たされる
-- エラー順序が決定論（テストで固定できる）
-- 依存追加をした場合、その理由と範囲が docs に残っている
 
-## 10. 実装ステップ（分岐つき / STOPつき疑似コード）
-### Step A: 入口特定（最重要）
-IF IL の生成/normalize 入口が見つからない:
-  STOP（推測で追加しない。rg結果を evidence として残す）
-ELSE:
-  continue
+### Behavior（根拠つき）
+- `good_min.json` → PASS（errors省略）
+- `bad_min.json` → FAIL（errors length>=1）
+- `bad_forbidden_timestamp.json` → FAIL（errors length>=1）
+- float（1.0/1e3/NaN/Inf相当）は FAIL
+- `il` が object 以外（list/string）は FAIL
+- canonical JSON/JSONL が決定論（キー順、区切り固定、NaN禁止）
 
-### Step B: Contract抽出
-- Contract と schema から errors 形式・禁止フィールド・必須制約を抽出し、コードのTODOを “仕様固定” に変換する
-
-### Step C: validator
-- schema 検証 + Contract固有ルール（禁止フィールド等）
-- errors の形と順序を固定
-
-### Step D: canonicalizer
-- validate を通った item のみ canonicalize
-- 決定論のための JSON 出力規則をコードで固定
-
-### Step E: pipeline統合
-- normalize/pipeline の “出口1箇所” に差し込む（導線を増やさない）
-
-### Step F: Gate
-- make test
-- reviewpack submit verify-only
-- git status clean
+## 5. Files（編集対象の実パス）
+- `Makefile`（PYENV / sat-* 実行契約）
+- `src/il_validator.py`（validator/canonicalizerの炉心）
+- `src/satellite/normalize.py`（導線1本の統合点）
+- `tests/test_il_validator.py`（Contractルールの固定）
+- `tests/test_satellite_normalize.py`（統合後の正しさ固定）
+- `docs/ops/S17-02_PLAN.md` / `docs/ops/S17-02_TASK.md`（SOT更新）
