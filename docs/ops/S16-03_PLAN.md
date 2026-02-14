@@ -1,4 +1,4 @@
-# S16-03 PLAN — Ambi Precision Command Template (Degre Fast Model v1)
+# S16-03 PLAN — Ambi Precision Command Template (デグレ Fast Model v1)
 
 ## Goal
 あんびちゃそが「毎回同じ型」で動くようにする。
