@@ -89,3 +89,11 @@
 - [ ] git commit -m "ci(s15): build reviewpack and use it for baseline pack-delta"
 - [ ] git push
 - [ ] CI で Final Aggregation が PASS になること（pack_delta=2 が消える）
+
+## Future Steps (S15-07..10)
+- [ ] [S15_07_KICKOFF_TASK.md](S15_07_KICKOFF_TASK.md)
+- [ ] [S15_07_10_DEPENDENCY_MATRIX.md](S15_07_10_DEPENDENCY_MATRIX.md)
+- [ ] [S15_07_TASK.md](S15_07_TASK.md)
+- [ ] [S15_08_TASK.md](S15_08_TASK.md)
+- [ ] [S15_09_TASK.md](S15_09_TASK.md)
+- [ ] [S15_10_TASK.md](S15_10_TASK.md)
