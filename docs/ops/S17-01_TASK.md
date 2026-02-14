@@ -10,6 +10,7 @@
 - [ ] Create `docs/il/il.schema.json`
 - [ ] Create `docs/il/examples/good_min.json`
 - [ ] Create `docs/il/examples/bad_min.json`
+- [ ] Create `docs/il/examples/bad_forbidden_timestamp.json`
 
 ## IL_CONTRACT_v1.md の必須章（抜けたらERROR）
 - [ ] Purpose / Terms
@@ -27,7 +28,8 @@
 
 ## Examples の必須
 - [ ] GOOD は keys ソート済み、禁止要素なし
-- [ ] BAD は明确な違反（例：`-0` / unsorted key / forbidden timestamp）
+- [ ] BAD は明確な違反（例：`-0` / unsorted key / forbidden timestamp）
+
 
 ## Gates（clean tree）
 - [ ] `make test`

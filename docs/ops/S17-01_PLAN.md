@@ -59,6 +59,8 @@ LLM を “ILコンパイラ” として扱うための契約（入出力・正
 - `docs/il/il.schema.json`
 - `docs/il/examples/good_min.json`
 - `docs/il/examples/bad_min.json`
+- `docs/il/examples/bad_forbidden_timestamp.json`
+
 
 ## Examples（最低限）
 - GOOD: schema PASS、canonicalize して安定
