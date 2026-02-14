@@ -98,11 +98,21 @@ func runMake(dir, logName string, cmdArgs []string, timeoutSec int, failCode int
 	_ = rawLogFile.Close()
 
 	// Post-processing: Portable Log and SHA256
-	createPortableLog(rawLogPath, filepath.Join(portDir, logName))
-	sha, _ := fileSha256(rawLogPath)
-	shaPath := rawLogPath + ".sha256"
-	if err := os.WriteFile(shaPath, []byte(sha+"\n"), 0644); err != nil {
-		log.Fatalf(msgFatalWrite, shaPath, err)
+	portLogPath := filepath.Join(portDir, logName)
+	createPortableLog(rawLogPath, portLogPath)
+	
+	// SHA256 for Raw
+	shaRaw, _ := fileSha256(rawLogPath)
+	shaRawPath := rawLogPath + ".sha256"
+	if err := os.WriteFile(shaRawPath, []byte(shaRaw+"\n"), 0644); err != nil {
+		log.Fatalf(msgFatalWrite, shaRawPath, err)
+	}
+
+	// SHA256 for Portable (S16-01)
+	shaPort, _ := fileSha256(portLogPath)
+	shaPortPath := portLogPath + ".sha256"
+	if err := os.WriteFile(shaPortPath, []byte(shaPort+"\n"), 0644); err != nil {
+		log.Fatalf(msgFatalWrite, shaPortPath, err)
 	}
 	writePortableRules(portDir)
 
@@ -246,19 +256,27 @@ func generatePlaceholderLog(dir string) error {
 	}
 
 	// S15: Support portable output for verification consistency
-	portDir := filepath.Join(dir, dirLogsPortable)
-	if err := ensureDir(portDir); err != nil {
-		return err
-	}
-	createPortableLog(logPath, filepath.Join(portDir, fileMakeTest))
+	portLogPath := filepath.Join(portDir, fileMakeTest)
+	createPortableLog(logPath, portLogPath)
 
-	sha, err := fileSha256(logPath)
+	// SHA256 for Raw
+	shaRaw, err := fileSha256(logPath)
 	if err != nil {
 		return err
 	}
-	shaPath := logPath + ".sha256"
-	if err := os.WriteFile(shaPath, []byte(sha+"\n"), 0644); err != nil {
-		return fmt.Errorf("write %s: %w", shaPath, err)
+	shaRawPath := logPath + ".sha256"
+	if err := os.WriteFile(shaRawPath, []byte(shaRaw+"\n"), 0644); err != nil {
+		return fmt.Errorf("write %s: %w", shaRawPath, err)
+	}
+
+	// SHA256 for Portable (S16-01)
+	shaPort, err := fileSha256(portLogPath)
+	if err != nil {
+		return err
+	}
+	shaPortPath := portLogPath + ".sha256"
+	if err := os.WriteFile(shaPortPath, []byte(shaPort+"\n"), 0644); err != nil {
+		return fmt.Errorf("write %s: %w", shaPortPath, err)
 	}
 
 	writePortableRules(portDir)
