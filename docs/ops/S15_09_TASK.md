@@ -1,18 +1,22 @@
-# S15-09 TASK: TBD
+# S15-09 TASK (S15-09/10 - 1PR)
 
-## C0: Preflight
-- [ ] confirm branch and clean status
-- [ ] capture baseline pointers (HEAD sha etc)
+## 0. Preflight
 
-## C1: Implementation Steps (ordered)
-- [ ] TBD
-- [ ] TBD
+- [ ] bash -lc 'cd "$(git rev-parse --show-toplevel)"; git status -sb'
+- [ ] check branch: s15-09-10-fixpack-v1
 
-## C2: Verification
-- [ ] run relevant tests / gates (TBD)
-- [ ] record evidence artifact paths (TBD)
+## 1. Implementation (Part A: Submission Hardening)
 
-## C3: Finish
-- [ ] commit with scoped message
-- [ ] push branch
-- [ ] PR body includes evidence + risks + rollback note
+- [ ] `internal/reviewpack/submit.go` 内の `findLatestEvalResult` を修正
+- [ ] `runPreflightChecks` に `file://` URL 検知ロジックを追加
+- [ ] `make test` で基本動作確認
+
+## 2. Verification
+
+- [ ] bash -lc 'set -euo pipefail; cd "$(git rev-parse --show-toplevel)"; make test'
+- [ ] bash -lc 'set -euo pipefail; cd "$(git rev-parse --show-toplevel)"; go run cmd/reviewpack/main.go submit --mode verify-only'
+- [ ] 成功観測点: PASS: Verify OK が出力されること
+
+## 3. Evidence
+
+- [ ] 実行コマンドと結果をTask末尾に記録

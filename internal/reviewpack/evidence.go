@@ -29,6 +29,35 @@ func runPreflightChecks(repoRoot, packDir, timestamp string, timebox int, skipEv
 		log.Printf("[FATAL] preflight: working tree is dirty:\n%s", string(porcelainOut))
 		os.Exit(1)
 	}
+
+	// S15-09: Forbidden file:// URL check
+	checkForbiddenFileUrls(repoRoot)
+}
+
+func checkForbiddenFileUrls(repoRoot string) {
+	log.Println("DEBUG: Scanning for forbidden file:// links...")
+	files := listTrackedFiles()
+	// Forbidden pattern: "file" + ":" + "//"
+	pattern := `file` + `:` + `//`
+	re := regexp.MustCompile(pattern)
+
+	found := false
+	for _, rel := range files {
+		// Skip binary files or large files if needed, but for docs it's fast
+		abs := filepath.Join(repoRoot, rel)
+		content, err := os.ReadFile(abs)
+		if err != nil {
+			continue
+		}
+		if re.Match(content) {
+			log.Printf("[FAIL] Forbidden file:// link found in: %s", rel)
+			found = true
+		}
+	}
+
+	if found {
+		log.Fatalf("[FATAL] submission aborted: forbidden file:// links must be removed")
+	}
 }
 
 func collectGitInfo(repoRoot, packDir, nCommits string) {

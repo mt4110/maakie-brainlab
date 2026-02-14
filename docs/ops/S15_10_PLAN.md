@@ -1,28 +1,37 @@
-# S15-10: TBD
+# S15-10 PLAN (S15-09/10 - 1PR)
 
 ## Goal
-- TBD
 
-## Non-Goals
-- TBD
+- S15-10 を完了する（このPRで S15-09/10 を close）
+- VERIFY コマンドの緊密化（Part B: Verification Hardening）
 
-## TouchSet (planned changes)
-- TBD (list directories/files; be explicit)
+## Scope
 
-## Dependencies
-- Depends on: (None | S15-0X)
-- Reason:
-  - TBD
+- `internal/reviewpack/verify.go`, `internal/reviewpack/diff.go`
+- 変更対象:
+  - `runVerify` に `10_git_log.txt` と `40_self_verify.log` の存在チェックを追加
+  - Evidence marker の判定条件を厳格化（全ての必須ログが PASS していることを確認）
 
-## Acceptance Criteria
-- [ ] TBD
-- [ ] TBD
+## Inputs (Source of Truth)
 
-## Evidence Plan (deterministic)
-- Commands:
-  - TBD
-- Expected:
-  - TBD
+- docs/ops/S15_07_10_DEPENDENCY_MATRIX.md
+- docs/ops/IF_FAIL_S7.md (Verification failure contexts)
 
-## Risks / Notes
-- TBD
+## Pseudocode
+
+- IF S15-09 gate 未達: ERROR → STOP（順序を守る）
+
+- FOR each log in [10_git_log.txt, 40_self_verify.log]:
+  - IF log missing in logs/raw/:
+    - ERROR: missing mandatory evidence log → STOP
+  - ELSE:
+    - validate content (ensure no fatal markers)
+    - CONTINUE
+
+- IF introduces non-determinism: ERROR → STOP
+
+## Exit Criteria
+
+- make test PASS
+- reviewpack submit --mode verify-only PASS
+- Evidence が残る
