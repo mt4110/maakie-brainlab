@@ -85,6 +85,12 @@ func findLatestEvalResult(repoRoot string) (string, string, error) {
 
 	absPath := filepath.Join(resultsDir, latest)
 	relPath := filepath.Join("eval/results", latest)
+
+	// S15-09/10: Validate ONLY the latest to avoid silent fallback to stale results.
+	if err := validateJsonlLooksOk(absPath); err != nil {
+		return absPath, relPath, fmt.Errorf("latest result %s is invalid: %w", latest, err)
+	}
+
 	return absPath, relPath, nil
 }
 

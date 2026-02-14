@@ -11,8 +11,8 @@
 |------|-------|------------|--------------------|--------------|---------|------|
 | 07   | Design Kickoff | None | docs/ops/S15_07* | No | 1 PR | docs-only |
 | 08   | Impl Split | 07 | docs/ops/S15_08*, MATRIX | No | 1 PR | docs-only |
-| 09   | Impl Part A | 08 | Pending (Code area A) | No | 1 PR | code-change |
-| 10   | Impl Part B | 09 | Pending (Code area B) | No | 1 PR | code-change |
+| 09   | Impl Part A | 08 | internal/reviewpack/submit.go | No | 1 PR | code-change |
+| 10   | Impl Part B | 09 | internal/reviewpack/verify.go | No | 1 PR | code-change |
 
 ## Dependency Edges
 - 07 -> (kickoff)

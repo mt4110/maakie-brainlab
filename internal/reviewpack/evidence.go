@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strings"
 )
 
 func runPreflightChecks(repoRoot, packDir, timestamp string, timebox int, skipEval bool, mode string, skipTest bool) {
@@ -29,11 +30,64 @@ func runPreflightChecks(repoRoot, packDir, timestamp string, timebox int, skipEv
 		log.Printf("[FATAL] preflight: working tree is dirty:\n%s", string(porcelainOut))
 		os.Exit(1)
 	}
+
+	// S15-09: Forbidden file[:]// URL check
+	checkForbiddenFileUrls(repoRoot)
+}
+
+func checkForbiddenFileUrls(repoRoot string) {
+	log.Printf("DEBUG: Scanning for forbidden %s%s links...", "file", "://")
+	files := listTrackedFiles()
+	// S15-09: Obfuscate the forbidden pattern in code to avoid self-match correctly.
+	// We use string concatenation of runes to avoid literal match.
+	pattern := string([]rune{'f', 'i', 'l', 'e', ':', '/', '/'})
+	re := regexp.MustCompile(pattern)
+
+	found := false
+	for _, rel := range files {
+		// S15-09/10 Optimization: Narrow scan to text-like files to avoid binary blobs
+		ext := strings.ToLower(filepath.Ext(rel))
+		isText := false
+		for _, t := range []string{".md", ".go", ".txt", ".patch", ".tsv", ".sh", ".py", ".jsonl", ".json", ".yml", ".yaml", ".toml"} {
+			if ext == t {
+				isText = true
+				break
+			}
+		}
+		if !isText {
+			continue
+		}
+
+		abs := filepath.Join(repoRoot, rel)
+		content, err := os.ReadFile(abs)
+		if err != nil {
+			log.Fatalf("[FATAL] failed to read tracked file %s: %v", rel, err)
+		}
+		if re.Match(content) {
+			log.Printf("[FAIL] Forbidden %s%s link found in: %s", "file", "://", rel)
+			found = true
+		}
+	}
+
+	if found {
+		log.Fatalf("[FATAL] submission aborted: forbidden %s%s links must be removed", "file", "://")
+	}
 }
 
 func collectGitInfo(repoRoot, packDir, nCommits string) {
-	runCmd(repoRoot, "git", "log", "-n", nCommits, "--stat", ">", filepath.Join(packDir, fileGitLog))
-	runCmd(repoRoot, "git", "diff", "HEAD~"+nCommits, "HEAD", ">", filepath.Join(packDir, fileGitDiff))
+	rawDir := filepath.Join(packDir, dirLogsRaw)
+	if err := os.MkdirAll(rawDir, 0755); err != nil {
+		log.Fatalf(msgFatalMkdir, rawDir, err)
+	}
+	logPath := filepath.Join(rawDir, fileGitLog)
+	runCmd(repoRoot, "git", "log", "-n", nCommits, "--stat", ">", logPath)
+	sha10, _ := fileSha256(logPath)
+	_ = os.WriteFile(logPath+".sha256", []byte(sha10+"\n"), 0644)
+
+	diffPath := filepath.Join(rawDir, fileGitDiff)
+	runCmd(repoRoot, "git", "diff", "HEAD~"+nCommits, "HEAD", ">", diffPath)
+	sha11, _ := fileSha256(diffPath)
+	_ = os.WriteFile(diffPath+".sha256", []byte(sha11+"\n"), 0644)
 }
 
 func scanSecrets(dir string) {
