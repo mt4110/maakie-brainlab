@@ -53,7 +53,9 @@ Init safety（ゾンビ対策は同一run内の二次防止）:
 - 変更点を audit-friendly に1行で残す。
 
 ## Future Steps (S15-07..10)
-- [S15_07_PLAN.md](file:///Users/takemuramasaki/dev/maakie-brainlab/docs/ops/S15_07_PLAN.md)
-- [S15_08_PLAN.md](file:///Users/takemuramasaki/dev/maakie-brainlab/docs/ops/S15_08_PLAN.md)
-- [S15_09_PLAN.md](file:///Users/takemuramasaki/dev/maakie-brainlab/docs/ops/S15_09_PLAN.md)
-- [S15_10_PLAN.md](file:///Users/takemuramasaki/dev/maakie-brainlab/docs/ops/S15_10_PLAN.md)
+- [S15_07_KICKOFF_PLAN.md](S15_07_KICKOFF_PLAN.md)
+- [S15_07_10_DEPENDENCY_MATRIX.md](S15_07_10_DEPENDENCY_MATRIX.md)
+- [S15_07_PLAN.md](S15_07_PLAN.md)
+- [S15_08_PLAN.md](S15_08_PLAN.md)
+- [S15_09_PLAN.md](S15_09_PLAN.md)
+- [S15_10_PLAN.md](S15_10_PLAN.md)
