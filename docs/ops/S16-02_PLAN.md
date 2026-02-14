@@ -42,6 +42,7 @@ PHASE 4: Update S16 Index (S16_PLAN / S16_TASK)
   - S16のマイルストーン（S16-00..03）を固定で明記
   - 進捗表記ルールを追記
 
+
 PHASE 5: Gates + Evidence
   - make test PASS
   - reviewpack submit --mode verify-only PASS
