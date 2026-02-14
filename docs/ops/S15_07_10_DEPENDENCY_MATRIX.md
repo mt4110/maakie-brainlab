@@ -11,8 +11,8 @@
 |------|-------|------------|--------------------|--------------|---------|------|
 | 07   | Design Kickoff | None | docs/ops/S15_07* | No | 1 PR | docs-only |
 | 08   | Impl Split | 07 | docs/ops/S15_08*, MATRIX | No | 1 PR | docs-only |
-| 09   | Impl Part A | 08 | TBD (Code area A) | No | 1 PR | code-change |
-| 10   | Impl Part B | 09 | TBD (Code area B) | No | 1 PR | code-change |
+| 09   | Impl Part A | 08 | Pending (Code area A) | No | 1 PR | code-change |
+| 10   | Impl Part B | 09 | Pending (Code area B) | No | 1 PR | code-change |
 
 ## Dependency Edges
 - 07 -> (kickoff)
@@ -23,7 +23,7 @@
 ## TouchSet Overlap (Lock)
 - 07 vs 08: docs/ops prefix (isolation by suffix)
 - 08 vs 09: 08 locks the rules for 09
-- 09 vs 10: TBD (Locked in 09 kickoff)
+- 09 vs 10: Pending (Locked in 09 kickoff)
 
 ## Implementation PR Split Decision (Mechanical)
 Decision: 1 PR per step
