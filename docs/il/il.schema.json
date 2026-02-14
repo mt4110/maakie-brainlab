@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "IL Contract v1",
+  "type": "object",
+  "required": ["il", "meta", "evidence"],
+  "properties": {
+    "il": { "type": "object" },
+    "meta": {
+      "type": "object",
+      "required": ["version"],
+      "properties": {
+        "version": { "type": "string", "const": "il_contract_v1" },
+        "generator": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "evidence": {
+      "type": "object",
+      "properties": {
+        "hashes": { "type": "object" },
+        "notes": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "errors": {
+      "type": "array",
+      "items": { "type": "object" }
+    }
+  },
+  "additionalProperties": false
+}
