@@ -25,6 +25,7 @@ normalize/pipeline が機械的に OK/NG を判定できるようにする。
 - Pythonモジュールルートは `./src`
 - repo root から `make test` / sat-* が一発で動く
 - `PYTHONPATH=./src:.` を満たす
+- import契約の優先順位：**最終責任は Makefile（`PYTHONPATH=./src:.`）**。`src/satellite/normalize.py` の `sys.path.insert` は保険（実行方法/CWD差の事故防止）であり、競合したら Makefile 契約に合わせる。
 
 ### 3.2 Contract固定（曖昧さの芽を潰す）
 - `errors` は予約語：入力に現れた時点で FAIL（どこに出ても）
@@ -72,3 +73,4 @@ normalize/pipeline が機械的に OK/NG を判定できるようにする。
 ## 6. Delivery（運用）
 - 1PRでS17-02を閉じる（コミットは刻んでOK）
 - bundle SHA256 は 1つに固定（食い違い禁止）
+- PR本文に貼る SHA256 は「貼る直前にローカルで再計算して確定値にする」。例：`shasum -a 256 "$(ls -1t review_bundle_*.tar.gz | head -n 1)"`（`sha256sum` がある環境なら置き換え可）

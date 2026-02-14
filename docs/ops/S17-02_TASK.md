@@ -10,6 +10,7 @@
 
 ## MUST（炉心ルール：妥協禁止）
 - 実行契約：Pythonモジュールルートは `./src`。repo root から一発で動く（テストだけ通る禁止）
+- import契約の優先順位：**最終責任は Makefile（`PYTHONPATH=./src:.`）**。`src/satellite/normalize.py` の `sys.path.insert` は保険（実行方法/CWD差の事故防止）であり、競合したら Makefile 契約に合わせる。
 - `errors` は予約語：入力に現れた時点で FAIL（トップ/ネスト問わず）
 - 数値：厳密整数のみ（float全拒否、boolをint扱い禁止、53-bit範囲のみ）
 - top-level `il` は object 必須
@@ -183,6 +184,7 @@ STOP:
 ## Step 11: Gate（真実の確定）
 - [x] `make test`
 - [x] `go run cmd/reviewpack/main.go submit --mode verify-only`
+- [ ] PR本文に貼る前に SHA256 を再計算して一致確認：`shasum -a 256 "$(ls -1t review_bundle_*.tar.gz | head -n 1)"`（出力が reviewpack の SHA256 行と一致すること）
 - [x] `git status -sb`（clean確認）
 
 STOP:
@@ -211,3 +213,4 @@ DONE条件:
 - [ ] CI green
 - [ ] reviewpack verify-only PASS
 - [ ] bundle SHA256 を PR本文/ログ/メモで 1つに固定（食い違い禁止）
+- [ ] PR本文に貼る bundle SHA256 は、貼る直前にローカルで再計算して確定値として貼る（例：`shasum -a 256 "$(ls -1t review_bundle_*.tar.gz | head -n 1)"`。`sha256sum` がある環境なら置き換え可）
