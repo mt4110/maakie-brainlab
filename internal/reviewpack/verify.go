@@ -115,8 +115,11 @@ func runVerify(args []string) {
 	// S15-10 Hardening: check for mandatory logs
 	for _, f := range []string{fileGitLog, fileMakeTest, fileSelfVerify} {
 		p := filepath.Join(verifyRoot, dirLogsRaw, f)
-		if _, err := os.Stat(p); os.IsNotExist(err) {
-			log.Fatalf("[FAIL] Missing mandatory evidence log: %s/%s", dirLogsRaw, f)
+		if _, err := os.Stat(p); err != nil {
+			if os.IsNotExist(err) {
+				log.Fatalf("[FAIL] Missing mandatory evidence log: %s/%s", dirLogsRaw, f)
+			}
+			log.Fatalf("[FAIL] Unable to access mandatory evidence log %s/%s: %v", dirLogsRaw, f, err)
 		}
 	}
 

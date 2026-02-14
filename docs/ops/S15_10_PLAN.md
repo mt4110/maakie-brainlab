@@ -7,7 +7,7 @@
 
 ## Scope
 
-- `internal/reviewpack/verify.go`, `internal/reviewpack/diff.go`
+- `internal/reviewpack/verify.go`, `internal/reviewpack/evidence.go`, `internal/reviewpack/utils.go`
 - 変更対象:
   - `runVerify` に `10_git_log.txt` / `30_make_test.log` / `40_self_verify.log` の存在チェックを追加
   - Evidence marker の判定条件を厳格化（全ての必須ログが PASS していることを確認）

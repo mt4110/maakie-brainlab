@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strings"
 )
 
 func runPreflightChecks(repoRoot, packDir, timestamp string, timebox int, skipEval bool, mode string, skipTest bool) {
@@ -44,11 +45,23 @@ func checkForbiddenFileUrls(repoRoot string) {
 
 	found := false
 	for _, rel := range files {
-		// Skip binary files or large files if needed, but for docs it's fast
+		// S15-09/10 Optimization: Narrow scan to text-like files to avoid binary blobs
+		ext := strings.ToLower(filepath.Ext(rel))
+		isText := false
+		for _, t := range []string{".md", ".go", ".txt", ".patch", ".tsv", ".sh", ".py", ".jsonl", ".json", ".yml", ".yaml", ".toml"} {
+			if ext == t {
+				isText = true
+				break
+			}
+		}
+		if !isText {
+			continue
+		}
+
 		abs := filepath.Join(repoRoot, rel)
 		content, err := os.ReadFile(abs)
 		if err != nil {
-			continue
+			log.Fatalf("[FATAL] failed to read tracked file %s: %v", rel, err)
 		}
 		if re.Match(content) {
 			log.Printf("[FAIL] Forbidden %s%s link found in: %s", "file", "://", rel)

@@ -71,18 +71,12 @@ func findLatestEvalResult(repoRoot string) (string, string, error) {
 			continue
 		}
 		if strings.HasSuffix(name, ".jsonl") {
-			// S15-09: Basic validation check before adding to candidates
-			absPath := filepath.Join(resultsDir, name)
-			if err := validateJsonlLooksOk(absPath); err == nil {
-				candidates = append(candidates, name)
-			} else {
-				log.Printf("[WARN] skipping invalid result %s: %v", name, err)
-			}
+			candidates = append(candidates, name)
 		}
 	}
 
 	if len(candidates) == 0 {
-		return "", "", fmt.Errorf("no valid .jsonl files found in %s (excluding latest.jsonl)", resultsDir)
+		return "", "", fmt.Errorf("no .jsonl files found in %s (excluding latest.jsonl)", resultsDir)
 	}
 
 	// Sort by name (timestamp assumption: YYYYMMDD-HHMMSS...)
@@ -91,6 +85,12 @@ func findLatestEvalResult(repoRoot string) (string, string, error) {
 
 	absPath := filepath.Join(resultsDir, latest)
 	relPath := filepath.Join("eval/results", latest)
+
+	// S15-09/10: Validate ONLY the latest to avoid silent fallback to stale results.
+	if err := validateJsonlLooksOk(absPath); err != nil {
+		return absPath, relPath, fmt.Errorf("latest result %s is invalid: %w", latest, err)
+	}
+
 	return absPath, relPath, nil
 }
 
