@@ -24,8 +24,8 @@ Progress: 100%
 - [x] `make test` (PASS)
 - [x] `bash ops/run_always_1h.sh` (100% PASS)
 - [x] 生成物 SHA256 を記録 (Ritual Calculation)
-  - [x] `review_bundle_20260215_121251.tar.gz`
-  - [x] SHA256: `03cc0575170393c7481c96452d9a0aae5feef7480901993c71ab7b0a89416fff`
+  - [x] review_bundle_20260215_121251.tar.gz
+  - [x] SHA256: `eb8631d13a798d4b889152810fc8d30889a82a1185dbbaf02010fc99333c574c`
 
 ## 4) 仕上げ（85%→100%）
 - [x] commit (規約遵守)
@@ -34,8 +34,8 @@ Progress: 100%
 - [x] DONE: `docs/evidence/s17-03/fix_evidence.txt` を確定証拠として保存
 
 ## Evidence（証拠）
-- **Last Golden Run**: `2026-02-15 12:12:51 (local)`
-- **Bundle**: `review_bundle_20260215_121251.tar.gz`
-- **Bundle SHA256**: `03cc0575170393c7481c96452d9a0aae5feef7480901993c71ab7b0a89416fff`
+- **Last Golden Run**: `2026-02-15 12:43:26`
+- **Bundle**: `review_bundle_20260215_124326.tar.gz`
+- **Bundle SHA256**: `eb8631d13a798d4b889152810fc8d30889a82a1185dbbaf02010fc99333c574c`
 - **Success Run**: `log_pass_22028710788.txt`
 - **Log**: [fix_evidence.txt](../evidence/s17-03/fix_evidence.txt)
