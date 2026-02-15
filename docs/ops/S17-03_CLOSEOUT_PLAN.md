@@ -7,8 +7,8 @@
 - require `git status -sb` clean OR commit first
 
 ## P1: Hygiene invariant
-- if `rg('file://', docs, ops, .github, internal)` hits > 0:
-    - error("forbidden file:// exists; must obfuscate/remove")
+- if `rg('file:/{2}', docs, ops, .github, internal)` hits > 0:
+    - error("forbidden file:/{2} exists; must obfuscate/remove")
 
 ## P2: Canonical must live ONLY in PR body
 - deny := [chosen canonical commit/bundle/sha OR legacy canonical tokens]

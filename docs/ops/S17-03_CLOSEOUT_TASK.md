@@ -6,7 +6,7 @@
 - [ ] `git status -sb` (Check: clean)
 
 ## 1) Hygiene
-- [ ] `rg -n "file://" docs ops .github internal` (Check: 0 hits)
+- [ ] `rg -n "file:/{2}" docs ops .github internal` (Check: 0 hits)
 - [ ] hits>0 の場合：該当箇所を `[FILE_URI]` or `file:/{2}` に置換 → 再チェック
 
 ## 2) Canonical leakage check
