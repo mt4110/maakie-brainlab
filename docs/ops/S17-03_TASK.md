@@ -16,31 +16,31 @@
 - [x] 失敗ログ保存: `docs/evidence/s17-03/log_failed_22027626252.txt`
 
 ## Step 2: 作業ブランチ（main を汚さない）
-- [ ] git switch main
-- [ ] git pull --ff-only
-- [ ] git fetch -p origin
-- [ ] git switch -c s17-03-run-always-1h-fix-v1
+- [x] git switch main
+- [x] git pull --ff-only
+- [x] git fetch -p origin
+- [x] git switch -c s17-03-run-always-1h-fix-v1
 
 ## Step 3: ローカル再現（まず repo のスクリプトを信じる）
-- [ ] ローカル実行: `bash ops/run_always_1h.sh`
-- [ ] IF（ローカル再現しない）→ CI-only差分を証拠化
+- [x] ローカル実行: `bash ops/run_always_1h.sh`
+- [x] IF（ローカル再現しない）→ CI-only差分を証拠化
 
 ## Step 4: 最小修正（変更面積を最小に）
-- [ ] 診断ログ追加
-- [ ] 修正適用
-- [ ] 再発防止策
+- [x] 診断ログ追加
+- [x] 修正適用
+- [x] 再発防止策
 
 ## Step 5: Gate（嘘をつかない）
-- [ ] make test
-- [ ] go run cmd/reviewpack/main.go submit --mode verify-only
-- [ ] git status -sb（意図した差分だけか確認）
+- [x] make test
+- [x] go run cmd/reviewpack/main.go submit --mode verify-only
+- [x] git status -sb（意図した差分だけか確認）
 
 ## Step 6: Docs更新（Plan/Task + 必要なら runbook）
-- [ ] docs/ops/S17-03_PLAN.md 追記
-- [ ] docs/ops/S17-03_TASK.md 追記
+- [x] docs/ops/S17-03_PLAN.md 追記
+- [x] docs/ops/S17-03_TASK.md 追記
 
 ## Step 7: コミット → PR
-- [ ] git add -A
-- [ ] git commit -m "fix(s17-03): stabilize scheduled run_always_1h and harden diagnostics"
-- [ ] git push -u origin s17-03-run-always-1h-fix-v1
+- [x] git add -A
+- [x] git commit -m "fix(s17-03): stabilize scheduled run_always_1h and harden diagnostics"
+- [x] git push -u origin s17-03-run-always-1h-fix-v1
 - [ ] gh pr create --fill
