@@ -2,10 +2,12 @@
 # .githooks/pre-commit
 # AI Text Guard — Hygiene Capsule (auto-fix + verify)
 #
-# Goals:
-# - Keep forbidden trigger tokens out of tracked repo files.
-# - Auto-fix before commit, then verify.
-# - NEVER stage unrelated changes outside the hygiene scope.
+# Contract:
+# - Run the fixer, then run the checker.
+# - Stage ONLY the fixer's outputs inside the capsule scope.
+# - Never touch (re-stage) whatever you already staged outside that scope.
+# - Fail closed when the capsule scope is "mixed" (has unstaged diffs), because
+#   auto-fix + restage would clobber partial-staging.
 #
 # Escape hatch (use sparingly; leaves an obvious trace in your shell history):
 #   SKIP_AI_TEXT_GUARD=1 git commit ...
@@ -17,7 +19,7 @@ if [ "${SKIP_AI_TEXT_GUARD:-}" = "1" ]; then
   exit 0
 fi
 
-ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
+ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
 if [ -z "$ROOT" ]; then
   # Not a git repo (or git unavailable) — do nothing.
   exit 0
@@ -31,10 +33,24 @@ if [ ! -f "$FIXER" ]; then
   exit 1
 fi
 
-# Snapshot what the user already staged (preserve intent)
-STAGED_BEFORE="$(git diff --cached --name-only)"
+# The only paths this capsule is allowed to auto-stage.
+SCOPE=(docs ops .github internal .githooks)
+
+echo "== 0) Preflight (fail closed on mixed scope) =="
+UNSTAGED_IN_SCOPE="$(git diff --name-only -- "${SCOPE[@]}" 2>/dev/null || true)"
+if [ -n "$UNSTAGED_IN_SCOPE" ]; then
+  echo "[FATAL] Unstaged changes exist inside capsule scope."
+  echo "This would risk clobbering partial-staging. Resolve first:"
+  echo "  - stage them, or stash them, then retry commit"
+  echo ""
+  printf "%s\n" "$UNSTAGED_IN_SCOPE"
+  exit 1
+fi
 
 echo "== 1) Auto-fix =="
+# Snapshot *which files are already dirty* before the fixer runs.
+DIRTY_BEFORE="$(git diff --name-only 2>/dev/null || true)"
+
 bash "$FIXER" --fix
 rc=$?
 if [ $rc -ne 0 ]; then
@@ -42,35 +58,44 @@ if [ $rc -ne 0 ]; then
   exit $rc
 fi
 
-# Hygiene scope (the only paths the capsule may auto-stage)
-# NOTE: we list them as git pathspecs (no forbidden trigger tokens here).
-echo "== 2) Re-stage (staged-before + fixed-in-scope) =="
-FIXED_IN_SCOPE="$(git diff --name-only -- docs ops .github internal .githooks 2>/dev/null)"
+echo "== 2) Stage fixer outputs (scope only) =="
+# Stage ONLY what the fixer changed within scope.
+# (Because scope was clean preflight, these are fixer-only diffs.)
+STAGE_OK=1
+while IFS= read -r -d '' f; do
+  [ -n "$f" ] || continue
+  if ! git add -- "$f"; then
+    echo "[FATAL] failed to stage: $f"
+    STAGE_OK=0
+  fi
+done < <(git diff --name-only -z -- "${SCOPE[@]}" 2>/dev/null || true)
 
-# Re-stage:
-# - whatever was staged before
-# - plus whatever the fixer changed inside the hygiene scope
-CANDIDATES="$(printf "%s\n%s\n" "$STAGED_BEFORE" "$FIXED_IN_SCOPE" | awk 'NF && !seen[$0]++')"
-if [ -n "$CANDIDATES" ]; then
-  printf "%s\n" "$CANDIDATES" | while IFS= read -r f; do
-    [ -n "$f" ] || continue
-    if ! git add -- "$f"; then
-      echo "[FATAL] failed to stage: $f"
-      exit 1
-    fi
-  done
+if [ $STAGE_OK -ne 1 ]; then
+  exit 1
 fi
 
-# Guardrail: fixer must NOT modify anything outside the scope.
-OTHER="$(git diff --name-only | awk '!/^(docs\/|ops\/|\.github\/|internal\/|\.githooks\/)/')"
-if [ -n "$OTHER" ]; then
-  echo "[FATAL] auto-fix modified files outside capsule scope:"
-  printf "%s\n" "$OTHER"
+echo "== 3) Guardrail: fixer must not touch outside scope =="
+DIRTY_AFTER="$(git diff --name-only 2>/dev/null || true)"
+
+# NEW = after - before (set difference)
+# We use comm to find lines in after that are not in before
+# Pre-requisite: inputs must be sorted
+NEW_DIRTY="$(comm -13 \
+  <(printf "%s\n" "$DIRTY_BEFORE" | LC_ALL=C sort -u) \
+  <(printf "%s\n" "$DIRTY_AFTER"  | LC_ALL=C sort -u) \
+  | sed '/^$/d' || true
+)"
+
+# Check if any new dirty file is outside scope
+NEW_OUTSIDE="$(printf "%s\n" "$NEW_DIRTY" | grep -Ev '^(docs/|ops/|\.github/|internal/|\.githooks/)' || true)"
+if [ -n "$NEW_OUTSIDE" ]; then
+  echo "[FATAL] auto-fix made new edits outside capsule scope:"
+  printf "%s\n" "$NEW_OUTSIDE"
   echo "Resolve manually or expand capsule scope intentionally."
   exit 1
 fi
 
-echo "== 3) Final check =="
+echo "== 4) Final check =="
 bash "$FIXER" --check
 rc=$?
 if [ $rc -ne 0 ]; then

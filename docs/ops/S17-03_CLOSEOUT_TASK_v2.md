@@ -5,19 +5,24 @@
 
 ## 1) Hygiene Capsule (NO forbidden token in tracked files)
 - [ ] `FORBID="$(printf '%s%s' 'file' '://')"`
-- [ ] `rg -n "$FORBID" docs ops .github internal` (Check: 0 hits)
+- [ ] `rg -n "$FORBID" docs ops .github internal .githooks` (Check: 0 hits)
 - [ ] hits > 0 の場合:
   - [ ] `bash ops/finalize_clean.sh --fix`
-  - [ ] `git add -u`
-  - [ ] `rg -n "$FORBID" docs ops .github internal` (Check: 0 hits)
+  - [ ] `git add -- docs ops .github internal .githooks`
+  - [ ] `rg -n "$FORBID" docs ops .github internal .githooks` (Check: 0 hits)
 
 ## 2) Canonical Capsule
 - [ ] tracked docs は PR body の Canonical Ritual を参照している (Check)
 - [ ] tracked docs に canonical tuple（commit/bundle/sha の固定値）が直書きされていない (Check)
 
 ## 3) Gates
-- [ ] `make test` (PASS)
-- [ ] `go run cmd/reviewpack/main.go submit --mode verify-only` (PASS)
+- [x] `make test` (PASS)
+- [x] `go run cmd/reviewpack/main.go submit --mode verify-only` (PASS)
+
+## 4) Commit Hardened Capsule
+- [ ] `git add -- docs ops .github internal .githooks`
+- [ ] `git commit -m "fix(hooks): harden pre-commit hygiene capsule (scope-only staging)"`
+- [ ] `git push`
 
 ## 4) PR Body Update (Human Action)
 - [ ] PR #51 の Canonical Ritual を「現在のHEAD + そのHEADでのverify-only 1回分」に更新
