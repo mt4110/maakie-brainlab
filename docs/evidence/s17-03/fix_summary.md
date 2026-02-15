@@ -28,3 +28,21 @@ This canonical tuple (commit + bundle + sha256) is the only authoritative refere
 - [run_22028710788.json](run_22028710788.json)
 
 Historical context is preserved, but only the canonical tuple above is used for PR ritual and audit claims.
+
+## Final Closeout (Canonical Fixation: Stop Infinite Drift)
+
+### Canonical (Single Source of Truth)
+- Commit: `0310890`
+- Review Bundle: `review_bundle_20260215_135256.tar.gz`
+- SHA256: `7f444f689d06e2acd830c4cbafc17f26a111ff0c1616b5df6580f096bedd2587`
+
+### Historical (Demoted)
+- `review_bundle_20260215_121251.tar.gz` / `03cc0575...` は過去ログとして保持（Canonical ではない）。
+
+### Why this ends drift
+- verify-only 実行は bundle 名/sha が変動し得る（観測）。
+- Canonical は commit 固定とし、観測結果で更新しない。
+- これにより “最新出力を canonical にする” 方式の無限更新ループを停止した。
+
+### Hygiene
+- repo tracked files 内の `file://` を禁止し、発見時は `[FILE_URI]` に無害化。

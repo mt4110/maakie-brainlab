@@ -24,3 +24,27 @@ ops/run_always_1h.sh fails fast when require_signature_in_ci=true and S6_SIGNING
 Historical (NOT canonical; retained as reference only)
 Older bundle/SHA references (e.g., 03cc... / review_bundle_20260215_121251.tar.gz) are historical snapshots.
 They must not be treated as canonical after commit 0310890 introduced additional hardening changes.
+
+[FINALIZE] Canonical Fixation (Stop Infinite Drift)
+
+Problem:
+- “Canonical Reference” が 121251/03cc... と、最新の verify-only 実行（135256/7f44...）で不一致となり、更新するたびに無限ドリフトが発生していた。
+
+Decision:
+- Canonical は “commit固定” とする（観測で更新しない）。
+- Canonical:
+  - Commit: 0310890
+  - Bundle: review_bundle_20260215_135256.tar.gz
+  - SHA256: 7f444f689d06e2acd830c4cbafc17f26a111ff0c1616b5df6580f096bedd2587
+- 121251/03cc... は Historical（過去証跡）へ降格。
+
+Fix:
+- docs/ops/* および PR 本文の “Canonical Ritual” を上記 Canonical に統一。
+- verify-only で生成される新しい bundle は Observation と明記し、Canonical を更新しない。
+- hygiene: repo tracked files 内の file:// をすべて [FILE_URI] に無害化。
+
+Result:
+- Hygiene scan: PASS (no file:// in tracked docs/ops/.github/internal)
+- make test: PASS
+- reviewpack submit --mode verify-only: PASS
+- Zero-Contradiction: PASS (Canonical と観測の役割分離によりドリフト停止)

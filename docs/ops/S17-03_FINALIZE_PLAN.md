@@ -1,28 +1,79 @@
-# PLAN: S17-03 FINALIZE Canonical Audit
+# PLAN: S17-03 Final Audit Closeout (Canonical Fixation)
 Status: IN_PROGRESS
 Owner: ambi
 Progress: 0%
 
 ## Goal
-- Resolve infinite drift by pinning the canonical reference to the latest commit `0310890` and bundle `135256`.
-- Close PR #51 with zero contradictions.
+- S17-03 の「無限ドリフト」を停止し、監査矛盾ゼロで closeout する。
+- Canonical を「commit固定」にし、以後の verify-only 生成物は Observation（観測）として扱う。
 
-## Canonical Definition (Single Source of Truth)
-- Commit: `03108902475ec622596da49e060422e285ae4564`
-- Bundle: `review_bundle_20260215_135256.tar.gz`
-- SHA256: `7f444f689d06e2acd830c4cbafc17f26a111ff0c1616b5df6580f096bedd2587`
-- **History**: `03cc...` / `121251` is demoted to HISTORIAL/REFERENCE status.
+## Canonical (Single Source of Truth)
+- Commit: 0310890
+- Review Bundle: review_bundle_20260215_135256.tar.gz
+- SHA256: 7f444f689d06e2acd830c4cbafc17f26a111ff0c1616b5df6580f096bedd2587
 
-## Invariants
-- `docs/ops/S17-03_TASK.md` uses CANONICAL.
-- `docs/evidence/s17-03/fix_summary.md` uses CANONICAL.
-- `docs/evidence/s17-03/fix_evidence.txt` uses CANONICAL.
-- `[FILE_URI]` count in repo is 0.
-- `run_always_1h.yml` uses materialized secrets for signing.
+## Historical (Demoted; NOT Canonical)
+- 121251 / 03cc... は過去の状態として残す（参考ログ）。
+- “Canonical” として引用・ピン留めしてはならない。
 
-## Plan Pseudocode
-1. **Safety Snapshot**: Ensure we are on commit `0310890`.
-2. **Canonical Replacement**: Replace all `03cc...` with `7f444f...` (except in historical sections).
-3. **Guard**: Verify CI workflow logic (`secrets.S6_SIGNING_KEY_B64`).
-4. **Gate**: Run `make test` and `verify-only`.
-5. **Stop Condition**: Any `[FILE_URI] remaining or canonical mismatch -> ERROR.
+## Invariants (Zero-Contradiction Contract)
+- repo 内（git tracked）の docs/ / ops/ / .github/ / internal/ に `file://` が存在してはならない。
+- “Canonical” と明記する場所は必ず上記 Canonical の3点（commit/bundle/sha）を使う。
+- verify-only を実行すると bundle 名/sha は変わり得る。これは Observation であり Canonical を更新してはならない。
+- 「通った」事実は Gate の PASS として記録し、Canonical の更新とは切り離す。
+
+## Plan Pseudocode (Ambi v1)
+### P0: Snapshot
+- repo_root := `cd "$(git rev-parse --show-toplevel)"`
+- branch := `git rev-parse --abbrev-ref HEAD`
+- if branch == "main": error("do not finalize on main")
+- require git status clean OR explicitly commit before gates
+
+### P1: Hygiene (file URI ban)
+- paths := ["docs", "docs/ops", "ops", ".github", "internal"]
+- for p in paths:
+  - if exists(p):
+    - hits := rg('file://', p)
+    - if hits > 0:
+      - error("forbidden file:// found; must obfuscate to [FILE_URI] or remove")
+  - else:
+    - skip("path missing: " + p)
+
+### P2: Canonical Drift Sweep (stop infinite drift)
+- deny_terms := [
+  "review_bundle_20260215_121251.tar.gz",
+  "03cc0575170393c7481c96452d9a0aae5feef7480901993c71ab7b0a89416fff"
+]
+- allow_terms_in := ["docs/evidence/s17-03/log_*", "docs/evidence/s17-03/run_*.json"]  # historical evidence only
+- for term in deny_terms:
+  - hits := rg(term, "docs", "ops", ".github")
+  - if hits > 0:
+    - if all hits are under allow_terms_in:
+      - continue
+    - else:
+      - error("legacy canonical leaked into non-evidence docs: " + term)
+
+### P3: Canonical Pin Updates
+- Update these to Canonical:
+  - docs/ops/S17-03_TASK.md (canonical block)
+  - docs/ops/S17-03_FINALIZE_PLAN.md (this file)
+  - docs/ops/S17-03_FINALIZE_TASK.md
+  - docs/evidence/s17-03/fix_evidence.txt
+  - docs/evidence/s17-03/fix_summary.md
+  - WALKTHROUGH.md (canonical audit note)
+  - PR #51 body (Canonical Ritual block)
+
+### P4: Gates (truthful, reproducible)
+- Run:
+  - `make test`
+  - `go run cmd/reviewpack/main.go submit --mode verify-only`
+- Note:
+  - verify-only output bundle name/sha is Observation
+  - Canonical is NOT updated by this run
+
+### P5: Done
+- if all gates PASS and rg('file://') == 0 and drift sweep PASS:
+  - mark FINALIZE_TASK as DONE (100%)
+  - update PR body ritual
+- else:
+  - error("closeout blocked; fix failures first")

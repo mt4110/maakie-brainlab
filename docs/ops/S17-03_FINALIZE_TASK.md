@@ -1,32 +1,51 @@
-# TASK: S17-03 FINALIZE Canonical Audit
-Status: DONE
+# TASK: S17-03 Final Audit Closeout (Canonical Fixation)
+Status: IN_PROGRESS
 Owner: ambi
-Progress: 100%
+Progress: 0%
 
-## 0) Snapshot (Must be Clean)
-- [x] cd "$(git rev-parse --show-toplevel)"
-- [x] git status -sb (Check: clean)
-- [x] git rev-parse HEAD (Check: 03108902475ec622596da49e060422e285ae4564) (If mismatch: error)
+## Canonical (must not change)
+- Commit: 0310890
+- Bundle: review_bundle_20260215_135256.tar.gz
+- SHA256: 7f444f689d06e2acd830c4cbafc17f26a111ff0c1616b5df6580f096bedd2587
 
-## 1) Canonical Fixation (135256 / 7f444f...)
-- [x] Update `docs/ops/S17-03_TASK.md` to canonical (0310890 / 135256 / 7f444f...)
-- [x] Update `docs/ops/S17-03_RETROFIX_TASK.md` to canonical (0310890 / 135256 / 7f444f...)
-- [x] Update `docs/evidence/s17-03/fix_summary.md` (remove contradictions, set canonical)
-- [x] Update `docs/evidence/s17-03/fix_evidence.txt` (separate canonical/historical)
-- [x] Update/Create `docs/reviewpack/WALKTHROUGH.md` with final canonical paragraph
-- [x] Update `.github/workflows/run_always_1h.yml` comments/if-condition (secrets based)
+## 0) Snapshot (0%→10%)
+- [ ] repo_root := `cd "$(git rev-parse --show-toplevel)"`
+- [ ] branch := `git rev-parse --abbrev-ref HEAD` (Check: != main)
+- [ ] `git status -sb` (Check: clean OR commit explicitly before gates)
 
-## 2) Gate (Zero Tolerance)
-- [x] `rg -n '[FILE_URI]' .` (Must be 0 hits)
-- [x] `make test` (Must PASS)
-- [x] `go run cmd/reviewpack/main.go submit --mode verify-only` (Must PASS)
-- [x] `rg -n '03cc0575|review_bundle_20260215_121251'`
-    - If found in historical section: SKIP
-    - If found elsewhere: ERROR
+## 1) Hygiene: file:// ban (10%→25%)
+- [ ] `rg -n 'file://' docs ops .github internal` (Check: 0 hits)
+- [ ] If hits > 0: replace each `file://...` → `[FILE_URI]` (1 line reason in commit)
+- [ ] Re-run the rg check (must be 0)
 
-## 3) Final Ritual (Push & PR)
-- [x] git add -A
-- [x] git commit -m "docs(s17-03): finalize canonical refs to 0310890 / 135256 / 7f444f"
-- [x] git push
-- [x] Update PR #51 body with canonical `135256` ritual
-- [x] Verify PR body via `gh pr view 51`
+## 2) Drift Sweep: legacy canonical must not leak (25%→40%)
+- [ ] `rg -n 'review_bundle_20260215_121251|03cc0575' docs ops .github internal` (Check: 0 hits outside docs/evidence/s17-03/)
+- [ ] If found outside evidence: fix doc text to “Historical” OR remove mention
+- [ ] Re-run (must be clean)
+
+## 3) Canonical Pin: update all canonical blocks (40%→70%)
+- [ ] Update `docs/ops/S17-03_TASK.md` canonical block to commit 0310890 / bundle 135256 / sha 7f444f...
+- [ ] Ensure `docs/ops/S17-03_FINALIZE_PLAN.md` contains no file:// and matches canonical
+- [ ] Ensure `docs/ops/S17-03_FINALIZE_TASK.md` contains no file:// and matches canonical
+- [ ] Update:
+  - [ ] `docs/evidence/s17-03/fix_evidence.txt`
+  - [ ] `docs/evidence/s17-03/fix_summary.md`
+  - [ ] `WALKTHROUGH.md`
+  (All must state: verify-only outputs are Observation; canonical is commit-fixed)
+
+## 4) Commit & PR body ritual (70%→85%)
+- [ ] `git diff`
+- [ ] `git add -A`
+- [ ] `git commit -m "docs(s17-03): finalize canonical fixation (0310890/135256)"`
+- [ ] `git push`
+- [ ] Update PR #51 body “Canonical Ritual” block (commit/bundle/sha) + note about Observation runs
+
+## 5) Gates (85%→100%)
+- [ ] `make test` (Check: PASS)
+- [ ] `go run cmd/reviewpack/main.go submit --mode verify-only` (Check: PASS)
+- [ ] `git status -sb` (Check: clean)
+- [ ] Mark Status: DONE / Progress: 100%
+
+## Skip / Error rules
+- skip: 1行で理由を書く（例: "skip: no changes needed; rg returned 0 hits"）
+- error: その場で終了（例: "error: file:// detected in tracked docs; must sanitize"）
