@@ -146,5 +146,16 @@ class TestILValidator(unittest.TestCase):
         self.assertEqual(errors[0]["code"], "E_SCHEMA")
         self.assertEqual(errors[0]["path"], "/il/errors")
 
+    def test_unexpected_top_level_key(self):
+        data = {
+            "il": {"uid": "u1", "title": "t"},
+            "meta": {"version": "il_contract_v1"},
+            "evidence": {},
+            "extra": 1,
+        }
+        ok, errors = self.validator.validate(data)
+        self.assertFalse(ok)
+        self.assertTrue(any(e.get("code") == "E_SCHEMA" and e.get("path") == "/extra" for e in errors))
+
 if __name__ == "__main__":
     unittest.main()

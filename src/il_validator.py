@@ -51,6 +51,12 @@ class ILValidator:
             if key not in data:
                 self.add_error("E_SCHEMA", f"Missing required field: {key}")
 
+        # Check for unexpected top-level keys [Contract v1 additionalProperties:false]
+        allowed_top_level_keys = {"il", "meta", "evidence", "errors"}
+        unexpected_keys = set(data.keys()) - allowed_top_level_keys
+        for key in sorted(unexpected_keys):
+            self.add_error("E_SCHEMA", f"Unexpected top-level field: {key}", path=f"/{key}")
+
         # Meta version check
         meta = data.get("meta")
         if isinstance(meta, dict):
@@ -83,15 +89,16 @@ class ILValidator:
 
         if isinstance(val, dict):
             for k, v in val.items():
-                if k == "errors" and path != "": # Avoid duplicative reporting for top-level
-                    self.add_error("E_SCHEMA", f"Reserved key 'errors' found in input: {k}", path=f"{path}/{k}")
+                if k == "errors":
+                    if path != "": # validate() already reports for top-level /errors
+                        self.add_error("E_SCHEMA", f"Reserved key 'errors' found in input: {k}", path=f"{path}/{k}")
                     continue # Do not recurse into client-provided errors
 
                 if k in self.FORBIDDEN_FIELDS:
                     self.add_error("E_FORBIDDEN", f"Forbidden field: {k}", path=f"{path}/{k}")
                 
                 if self.FORBIDDEN_KEY_PATTERN.search(k):
-                    self.add_error("E_SCHEMA", f"Key contains forbidden characters: {k}", path=path)
+                    self.add_error("E_SCHEMA", f"Key contains forbidden characters: {k}", path=f"{path}/{k}")
                 
                 self._validate_recursive(v, f"{path}/{k}")
         
