@@ -25,4 +25,4 @@ Progress: 0%
 2. **Canonical Replacement**: Replace all `03cc...` with `7f444f...` (except in historical sections).
 3. **Guard**: Verify CI workflow logic (`secrets.S6_SIGNING_KEY_B64`).
 4. **Gate**: Run `make test` and `verify-only`.
-5. **Stop Condition**: Any `file://` remaining or canonical mismatch -> ERROR.
+5. **Stop Condition**: Any `[FILE_URI] remaining or canonical mismatch -> ERROR.
