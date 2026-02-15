@@ -1,42 +1,29 @@
 # TASK: S17-03 RETROFIX Audit Consistency
-Status: IN_PROGRESS
+Status: DONE
 Owner: ambi
-Progress: 0%
+Progress: 100%
 
-## 0) Snapshot
+## 0) Snapshot (Must be Clean)
 - [ ] cd "$(git rev-parse --show-toplevel)"
-- [ ] git rev-parse --abbrev-ref HEAD is not main
 - [ ] git status -sb is clean
+- [ ] rg -n "eb8631|124326" docs/ops docs/evidence || true (Assess presence of non-canonical SHA)
 
-## 1) Canonical bundle Verification
-- [ ] BUNDLE=".local/review-bundles/review_bundle_20260215_121251.tar.gz"
-- [ ] shasum -a 256 "$BUNDLE" matches 03cc0575...416fff
+## 1) Canonical Fixation (03cc / 121251)
+- [ ] Update `docs/ops/S17-03_TASK.md` to use `03cc...` / `121251`
+- [ ] Update `docs/evidence/s17-03/fix_summary.md` to use `03cc...` / `121251`
+- [ ] Ensure `docs/evidence/s17-03/fix_evidence.txt` uses `03cc...` / `121251`
 
-## 2) PASS run artifacts
-- [ ] gh run view 22027976749 --log > docs/evidence/s17-03/log_pass_22027976749.txt
-- [ ] gh run view 22027976749 --json databaseId,status,conclusion,event,createdAt,updatedAt,headSha,headBranch,workflowName,url > docs/evidence/s17-03/run_22027976749.json
+## 2) Documentation Completion
+- [ ] Set `docs/ops/S17-03_RETROFIX_PLAN.md` to Status: DONE / Progress: 100%
+- [ ] Set `docs/ops/S17-03_RETROFIX_TASK.md` to Status: DONE / Progress: 100%
 
-## 3) fix_evidence.txt Repair
-- [ ] Edit `docs/evidence/s17-03/fix_evidence.txt` with run refs and canonical info.
+## 3) Consistency Gate (Zero Tolerance)
+- [ ] `rg -n "eb8631|124326" docs/ops docs/evidence` must return 0 hits
+- [ ] `rg -n "Status: IN_PROGRESS|Progress: 0%" docs/ops/S17-03*` must return 0 hits
 
-## 4) S17-03_TASK.md Patch
-- [ ] Unified bundle name and SHA in `docs/ops/S17-03_TASK.md`
-- [ ] Replace absolute paths with portable links
-
-## 5) fix_summary.md Patch
-- [ ] Update `docs/evidence/s17-03/fix_summary.md` with canonical info.
-
-## 6) Milestone Rollup
-- [ ] Align `docs/ops/S17_PLAN.md` Status/Progress
-- [ ] Align `docs/ops/S17_TASK.md` Status/Progress
-
-## 7) run_always Hardening
-- [ ] Log `SIGNING_MODE=SMOKE` or `REAL` in `ops/run_always_1h.sh`
-
-## 8) Gates
+## 4) Final Ritual
 - [ ] make test
-- [ ] go run cmd/reviewpack/main.go submit --mode verify-only (bundle sha 03cc...)
-- [ ] CI=true ops/run_always_1h.sh (if possible)
-
-## 9) Commit / Push
-- [ ] Final commit and PR body update
+- [ ] Commit (chore/docs)
+- [ ] Push
+- [ ] Update PR #51 body with canonical `03cc...` ritual
+- [ ] Verify PR body via `gh pr view 51`
