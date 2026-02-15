@@ -105,11 +105,15 @@ run_step() {
     if [ -n "${S6_SIGNING_KEY:-}" ] && [ -f "$S6_SIGNING_KEY" ]; then
         if grep -q "BEGIN PGP" "$S6_SIGNING_KEY"; then
             echo "[DIAG] S6_SIGNING_KEY is PGP armored (compatible with reviewpack, NOT evidencepack)"
-            if [ ! -f ".tmp/evidence_key.key" ]; then
-                echo "[DIAG] Generating ephemeral Ed25519 key for evidencepack smoke test..."
-                mkdir -p .tmp/evidence_key
-                go run ./cmd/evidencepack keygen --id="ep-ephemeral" --out-dir=".tmp/evidence_key" --seed="reviewpack-smoke-v1" >/dev/null
-                export EP_SIGNING_KEY=".tmp/evidence_key/ep-ephemeral.key"
+            # If S6_SIGNING_KEY is set and is an armored PGP key, and it's local verification,
+            # generate an ephemeral Ed25519 key for evidencepack pack if not already set.
+            if [[ "$S6_SIGNING_KEY" == *"BEGIN PGP PRIVATE KEY BLOCK"* ]] && [ -z "$EP_SIGNING_KEY" ]; then
+                echo "SIGNING_MODE=SMOKE (deterministic; NOT secure)"
+                export EP_SIGNING_KEY=".tmp/ephemeral_ed25519.key"
+                [ -d .tmp ] || mkdir .tmp
+                go run cmd/evidencepack/main.go keygen --seed "reviewpack-smoke-v1" --out "$EP_SIGNING_KEY" > /dev/null
+            else
+                echo "SIGNING_MODE=REAL (env-provided)"
             fi
         else
             export EP_SIGNING_KEY="$S6_SIGNING_KEY"

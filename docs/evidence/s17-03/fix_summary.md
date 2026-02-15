@@ -18,16 +18,10 @@
 
 ### Artifacts
 - [Log Directory](.)
+- **Canonical Bundle**: `review_bundle_20260215_121251.tar.gz`
+- **Definitive SHA256**: `03cc0575170393c7481c96452d9a0aae5feef7480901993c71ab7b0a89416fff`
 - 00_preflight.log
-- 99_cleanup.log
-- doc_links.log
-- repo_guard.log
-- review_bundle.log
-- s5_evidence_pack.log
-- s7_evidence.log
-- seed_eval.log
-- verify_bundle.log
-- verify_evidence.log
+... (truncated logs)
 
 ### Next Action
 No action required. (Ready for evidence)

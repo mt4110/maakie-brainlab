@@ -4,7 +4,7 @@ Owner: ambi
 Progress: 100%
 
 ## 0) Safety Snapshot（0%→10%）
-- [x] repo_root を取得（`/Users/takemuramasaki/dev/maakie-brainlab`）
+- [x] repo_root := `cd "$(git rev-parse --show-toplevel)"`
 - [x] 現在ブランチ確認（`s17-03-run-always-1h-fix-v1`）
 - [x] git status -sb（clean 確認済み）
 - [x] 必要コマンド存在確認（git/go/shasum 確認済み）
@@ -24,8 +24,8 @@ Progress: 100%
 - [x] `make test` (PASS)
 - [x] `bash ops/run_always_1h.sh` (100% PASS)
 - [x] 生成物 SHA256 を記録 (Ritual Calculation)
-  - [x] `review_bundle_20260215_115105.tar.gz`
-  - [x] SHA256: `1dd0d757852b52bf7b6127fa167eaa81a09c6f4cd65ed1492ba46abd83320615`
+  - [x] `review_bundle_20260215_121251.tar.gz`
+  - [x] SHA256: `03cc0575170393c7481c96452d9a0aae5feef7480901993c71ab7b0a89416fff`
 
 ## 4) 仕上げ（85%→100%）
 - [x] commit (規約遵守)
@@ -34,6 +34,8 @@ Progress: 100%
 - [x] DONE: `docs/evidence/s17-03/fix_evidence.txt` を確定証拠として保存
 
 ## Evidence（証拠）
-- **Last Golden Run**: `2026-02-15 11:28:45 (local)`
-- **Bundle SHA256**: `1db7a19...` (Actual shasum calculation in PR body)
+- **Last Golden Run**: `2026-02-15 12:12:51 (local)`
+- **Bundle**: `review_bundle_20260215_121251.tar.gz`
+- **Bundle SHA256**: `03cc0575170393c7481c96452d9a0aae5feef7480901993c71ab7b0a89416fff`
+- **Success Run**: `log_pass_22028710788.txt`
 - **Log**: [fix_evidence.txt](../evidence/s17-03/fix_evidence.txt)

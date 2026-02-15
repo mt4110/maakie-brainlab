@@ -1,5 +1,5 @@
 # PLAN: S17 Milestone - IL-as-LLM Contract v1
-Status: ACTIVE
+Status: DONE
 Owner: ambi
 Progress: 100%
 

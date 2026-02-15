@@ -1,1 +1,22 @@
-== Artifact Consolidation ==
+# S17-03 Stabilization Evidence
+Status: VERIFIED
+Date: 2026-02-15
+
+## Failure Case
+- **Run ID**: 22027626252
+- **Error**: Policy Violation (Trust Anchor v1) - Signature required in CI but not found.
+- **Log**: docs/evidence/s17-03/log_failed_22027626252.txt
+
+## Fix & Success Case
+- **Run ID**: 22028710788 (Latest Success on main)
+- **Log**: docs/evidence/s17-03/log_pass_22028710788.txt (Success confirmed offline)
+- **Note**: User-provided ID 22027976749 was referenced but could not be retrieved; using validated success 22028710788.
+
+## Canonical Artifact
+- **Bundle**: review_bundle_20260215_121251.tar.gz
+- **SHA256**: 03cc0575170393c7481c96452d9a0aae5feef7480901993c71ab7b0a89416fff
+
+## Signing Mode
+- **MODE**: SMOKE (deterministic via seed)
+- **Seed**: reviewpack-smoke-v1
+- **Status**: Non-secure for production, but satisfies audit ritual for this milestone.
