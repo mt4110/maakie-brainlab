@@ -31,10 +31,10 @@
 
 ### Configuration / Scripts
 
-#### [MODIFY] [reviewpack_policy.toml](file:///Users/takemuramasaki/dev/maakie-brainlab/ops/reviewpack_policy.toml)
+#### [MODIFY] [reviewpack_policy.toml](ops/reviewpack_policy.toml)
 *   Check if `require_signature_in_ci = true` is intended for this automated run. If so, ensure keys are passed correctly.
 
-#### [MODIFY] [run_always_1h.sh](file:///Users/takemuramasaki/dev/maakie-brainlab/ops/run_always_1h.sh)
+#### [MODIFY] [run_always_1h.sh](ops/run_always_1h.sh)
 *   Harden diagnostics to print environment variables related to signing (S6_SIGNING_KEY, etc.)
 *   Ensure commands that require signing (like `reviewpack submit` and `evidencepack pack`) are called with the correct flags if the environment variable is present.
 
