@@ -1,0 +1,618 @@
+run-always-1h	Run Always 1h (Script)	﻿2026-02-15T01:36:57.4152964Z ##[group]Run bash ops/run_always_1h.sh
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.4153355Z [36;1mbash ops/run_always_1h.sh[0m
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.4206970Z shell: /usr/bin/bash -e {0}
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.4207214Z env:
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.4207491Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.14/x64
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.4207942Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.14/x64/lib/pkgconfig
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.4208375Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.4208765Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.4209147Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.4209514Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.14/x64/lib
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.4209842Z   KEYDIR: /tmp/tmp.Lz1lqOIzKm
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.4210113Z   S6_SIGNING_KEY: /tmp/tmp.Lz1lqOIzKm/privkey.asc
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.4210424Z   S6_VERIFY_KEY: /tmp/tmp.Lz1lqOIzKm/pubkey.asc
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.4210694Z ##[endgroup]
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.4339525Z ops/run_always_1h.sh: line 17: .local/run-always/.last_run_dir: No such file or directory
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.4419294Z == Preflight (Local) ==
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.4554768Z [OK] working tree clean
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.4557885Z == Init CI (Local) ==
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.4605959Z == Step: seed_eval ==
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.4660387Z [OK] Seeded eval/results/ci.jsonl
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.4675850Z [OK] Seeded eval/results/latest.jsonl
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.4691134Z total 48
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.4693672Z drwxr-xr-x 2 runner runner  4096 Feb 15 01:36 .
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.4698264Z drwxr-xr-x 4 runner runner  4096 Feb 15 01:36 ..
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.4698931Z -rw-r--r-- 1 runner runner 20315 Feb 15 01:36 ci.jsonl
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.4699620Z -rw-r--r-- 1 runner runner 20315 Feb 15 01:36 latest.jsonl
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.4702531Z == Step: s5_evidence_pack ==
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.4739565Z bash ops/s5_pack.sh
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.4826714Z [CHECK] Scanning for forbidden file[:]// links...
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.4848690Z [INFO] targets:
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.4849785Z  - docs
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.4851671Z  - .github
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.4852025Z  - ./README.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.4852374Z  - ./SPEC.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.4943933Z [OK] No forbidden file[:]// links found.
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.4975590Z [S5] Mode: verify-only (Skipping run-eval)
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.4978617Z [S5] Running Gate-1...
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.5279497Z [S5] Target result: eval/results/latest.jsonl
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.5294154Z [S5] Staging dir: /tmp/s5_stage.uZVwbq
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.5588822Z [S5] Signing pack with key: /tmp/tmp.Lz1lqOIzKm/privkey.asc
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.6589732Z Signed .local/reviewpack_artifacts/evidence_pack_20260215T013657Z.tar.gz -> .local/reviewpack_artifacts/evidence_pack_20260215T013657Z.tar.gz.asc
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.6624605Z [S5] Signature created: .local/reviewpack_artifacts/evidence_pack_20260215T013657Z.tar.gz.asc
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.6669763Z 
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.6674639Z === S5 Review Pack Created ===
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.6681481Z HEAD: 7978b37534f53fb4c0876a8b549e00e31ff6db19
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.6694458Z PACK: .local/reviewpack_artifacts/evidence_pack_20260215T013657Z.tar.gz
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.6696906Z SHA:  8b65a54f5c922f32cd6985b3f8a3bf6c70872119a278e91206aad93a0be902d5
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.6698079Z LOG:  .local/reviewpack_artifacts/gate1.20260215T013657Z.log
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.6699423Z HISTORY: /home/runner/work/maakie-brainlab/maakie-brainlab/.local/reviewpack_artifacts/SUBMIT_HISTORY.sha256
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.6700995Z RESULT_SRC: eval/results/latest.jsonl
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.6713981Z PRVERIFY_LOG: n/a
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:57.6740197Z == Step: review_bundle ==
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:58.5314945Z === SUBMIT (strict / verify-only) ===
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:58.5315800Z 2026/02/15 01:36:58 [PHASE_START] packToTarForSubmit
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:58.5338934Z === review_pack (S7 Run Always) ===
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:58.5341043Z Target : review_bundle_20260215_013658.tar.gz
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:58.5341902Z Timebox: 300s
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:58.5343620Z Mode   : verify-only
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:58.5345498Z Work   : /tmp/reviewpack-317518317/review_bundle_20260215_013658
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:58.5347228Z 2026/02/15 01:36:58 DEBUG: Starting preflight checks...
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:58.5380267Z 2026/02/15 01:36:58 DEBUG: Checking git status --porcelain...
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:58.5410966Z 2026/02/15 01:36:58 DEBUG: Scanning for forbidden  links...
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:58.5556268Z [INFO] naive secrets scan report:
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:58.5557227Z secret scan: naive patterns
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:36:58.5558852Z OK: no obvious secrets
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.7837159Z [INFO] verify-only: reusing eval/results/ci.jsonl (sha=fa3bce30a9b6ff35fe02f39481a66375e6b2843715f8091117ff943f05dbf04f)
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.7838238Z 2026/02/15 01:37:04 DEBUG: Creating src_snapshot...
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8544959Z [INFO] Created legacy copy: review_pack_20260215_013658.tar.gz
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8595873Z 2026/02/15 01:37:04 [PHASE_END]   packToTarForSubmit (6.328319439s)
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8600209Z PACK:   review_bundle_20260215_013658.tar.gz
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8600986Z SHA256: 9179f7ee4153aa429ee47fd6259028a423ac89e2aea40af4f875d3b3716bad65
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8799075Z === CHECK: checksums + verify (host) ===
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8800206Z === VERIFY: /tmp/reviewpack-verify-3157717517/review_bundle ===
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8813879Z [OK] 00_meta.txt
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8814277Z [OK] 01_status.txt
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8814653Z [OK] 31_make_run_eval.log
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8815044Z [OK] CONTRACT_v1
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8815417Z [OK] MANIFEST.tsv
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8815767Z [OK] PACK_VERSION
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8816104Z [OK] README.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8816416Z [OK] SPEC.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8816716Z [OK] VERIFY.sh
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8817080Z [OK] logs/portable/30_make_test.log
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8817577Z [OK] logs/portable/30_make_test.log.sha256
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8818146Z [OK] logs/portable/rules-v1.json
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8818599Z [OK] logs/raw/10_git_log.txt
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8819000Z [OK] logs/raw/10_git_log.txt.sha256
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8819479Z [OK] logs/raw/11_git_diff.patch
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8819935Z [OK] logs/raw/11_git_diff.patch.sha256
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8820409Z [OK] logs/raw/30_make_test.log
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8820850Z [OK] logs/raw/30_make_test.log.sha256
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8821294Z [OK] logs/raw/40_self_verify.log
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8821688Z [OK] logs/raw/40_self_verify.log.sha256
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8822104Z [OK] review_pack_v1
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8822446Z [OK] src_snapshot/.cspell.json
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8823043Z [OK] src_snapshot/.env.example
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8823461Z [OK] src_snapshot/.githooks/pre-commit
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8823916Z [OK] src_snapshot/.github/workflows/ci.yml
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8824422Z [OK] src_snapshot/.github/workflows/eval_run.yml
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8824998Z [OK] src_snapshot/.github/workflows/eval_strict.yml
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8825612Z [OK] src_snapshot/.github/workflows/evidence_verify.yml
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8826258Z [OK] src_snapshot/.github/workflows/run_always_1h.yml
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8826873Z [OK] src_snapshot/.github/workflows/test.yml
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8827457Z [OK] src_snapshot/.github/workflows/verify_pack.yml
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8827988Z [OK] src_snapshot/.gitignore
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8828454Z [OK] src_snapshot/.golangci-lint-version
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8828948Z [OK] src_snapshot/.golangci.yml
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8829404Z [OK] src_snapshot/.markdownlint-cli2.jsonc
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8829883Z [OK] src_snapshot/Makefile
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8830592Z [OK] src_snapshot/README.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8831000Z [OK] src_snapshot/SPEC.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8831454Z [OK] src_snapshot/cmd/evidencepack/audit.go
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8832019Z [OK] src_snapshot/cmd/evidencepack/audit_test.go
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8832588Z [OK] src_snapshot/cmd/evidencepack/bundle.go
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8833353Z [OK] src_snapshot/cmd/evidencepack/bundle_test.go
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8833930Z [OK] src_snapshot/cmd/evidencepack/chain.go
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8834490Z [OK] src_snapshot/cmd/evidencepack/chain_test.go
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8835302Z [OK] src_snapshot/cmd/evidencepack/crypto.go
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8835857Z [OK] src_snapshot/cmd/evidencepack/crypto_test.go
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8840033Z [OK] src_snapshot/cmd/evidencepack/gc.go
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8841223Z [OK] src_snapshot/cmd/evidencepack/health.go
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8842277Z [OK] src_snapshot/cmd/evidencepack/health_test.go
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8845154Z [OK] src_snapshot/cmd/evidencepack/keygen.go
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8846414Z [OK] src_snapshot/cmd/evidencepack/kinds.go
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8846980Z [OK] src_snapshot/cmd/evidencepack/kinds_test.go
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8847554Z [OK] src_snapshot/cmd/evidencepack/ls.go
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8848094Z [OK] src_snapshot/cmd/evidencepack/main.go
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8848656Z [OK] src_snapshot/cmd/evidencepack/main_test.go
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8849222Z [OK] src_snapshot/cmd/evidencepack/pack.go
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8849762Z [OK] src_snapshot/cmd/evidencepack/policy.go
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8850325Z [OK] src_snapshot/cmd/evidencepack/policy_test.go
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8850971Z [OK] src_snapshot/cmd/evidencepack/testhelpers_test.go
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8851568Z [OK] src_snapshot/cmd/evidencepack/verify.go
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8852090Z [OK] src_snapshot/cmd/gopsign/main.go
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8852594Z [OK] src_snapshot/cmd/reviewpack/main.go
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8853302Z [OK] src_snapshot/cmd/reviewpack/review_pack.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8853828Z [OK] src_snapshot/cspell.json
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8854322Z [OK] src_snapshot/docs/evidence/AUDIT_CHAIN_v1.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8854899Z [OK] src_snapshot/docs/evidence/CONTRACT_v1.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8855530Z [OK] src_snapshot/docs/evidence/PROVENANCE_BUNDLE_v1.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8856133Z [OK] src_snapshot/docs/evidence/RETENTION.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8856646Z [OK] src_snapshot/docs/evidence/RUNBOOK.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8857240Z [OK] src_snapshot/docs/evidence/SIGNING_CONTRACT_v1.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8857841Z [OK] src_snapshot/docs/evidence/TAXONOMY.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8858412Z [OK] src_snapshot/docs/evidence/WALKTHROUGH_S8_00.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8859121Z [OK] src_snapshot/docs/evidence/WALKTHROUGH_TRUST_ANCHOR_V1.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8862256Z [OK] src_snapshot/docs/evidence/s15-06/eval_record_20260213T103815Z.jsonl
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8863237Z [OK] src_snapshot/docs/evidence/s15-06/eval_record_20260213T103847Z.jsonl
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8864034Z [OK] src_snapshot/docs/evidence/s15-06/eval_record_20260213T104948Z.jsonl
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8864878Z [OK] src_snapshot/docs/evidence/s15-06/eval_verify-only_20260213T103830Z.jsonl
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8865741Z [OK] src_snapshot/docs/evidence/s15-06/eval_verify-only_20260213T103854Z.jsonl
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8866600Z [OK] src_snapshot/docs/evidence/s15-06/eval_verify-only_20260213T104948Z.jsonl
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8867285Z [OK] src_snapshot/docs/il/IL_CONTRACT_v1.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8867884Z [OK] src_snapshot/docs/il/examples/bad_forbidden_timestamp.json
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8868502Z [OK] src_snapshot/docs/il/examples/bad_min.json
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8869041Z [OK] src_snapshot/docs/il/examples/good_min.json
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8869567Z [OK] src_snapshot/docs/il/il.schema.json
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8923330Z [OK] src_snapshot/docs/ops/CI_REQUIRED_CHECKS.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8923973Z [OK] src_snapshot/docs/ops/EVIDENCE_PACK_SPEC.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8924549Z [OK] src_snapshot/docs/ops/IF_FAIL_C10FIX04.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8925066Z [OK] src_snapshot/docs/ops/IF_FAIL_S7.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8925872Z [OK] src_snapshot/docs/ops/LINT_RAMP_PLAN.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8926393Z [OK] src_snapshot/docs/ops/PR_WORKFLOW.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8926895Z [OK] src_snapshot/docs/ops/RUN_ALWAYS.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8927419Z [OK] src_snapshot/docs/ops/S15-06_ACCEPTANCE.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8927942Z [OK] src_snapshot/docs/ops/S15-06_PLAN.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8928417Z [OK] src_snapshot/docs/ops/S15-06_TASK.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8928894Z [OK] src_snapshot/docs/ops/S15_02_PLAN.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8929370Z [OK] src_snapshot/docs/ops/S15_02_TASK.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8930088Z [OK] src_snapshot/docs/ops/S15_03_PLAN.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8930568Z [OK] src_snapshot/docs/ops/S15_03_TASK.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8931043Z [OK] src_snapshot/docs/ops/S15_04_PLAN.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8931519Z [OK] src_snapshot/docs/ops/S15_04_TASK.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8931994Z [OK] src_snapshot/docs/ops/S15_05_PLAN.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8932460Z [OK] src_snapshot/docs/ops/S15_05_TASK.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8933925Z [OK] src_snapshot/docs/ops/S15_07_10_DEPENDENCY_MATRIX.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8934570Z [OK] src_snapshot/docs/ops/S15_07_KICKOFF_PLAN.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8935318Z [OK] src_snapshot/docs/ops/S15_07_KICKOFF_TASK.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8935842Z [OK] src_snapshot/docs/ops/S15_07_PLAN.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8936322Z [OK] src_snapshot/docs/ops/S15_07_TASK.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8936967Z [OK] src_snapshot/docs/ops/S15_08_PLAN.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8937442Z [OK] src_snapshot/docs/ops/S15_08_TASK.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8937979Z [OK] src_snapshot/docs/ops/S15_09_PLAN.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8938741Z [OK] src_snapshot/docs/ops/S15_09_TASK.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8939221Z [OK] src_snapshot/docs/ops/S15_10_PLAN.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8939695Z [OK] src_snapshot/docs/ops/S15_10_TASK.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8942357Z [OK] src_snapshot/docs/ops/S15_PLAN.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8943068Z [OK] src_snapshot/docs/ops/S15_TASK.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8943557Z [OK] src_snapshot/docs/ops/S16-01_PLAN.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8944042Z [OK] src_snapshot/docs/ops/S16-01_TASK.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8944528Z [OK] src_snapshot/docs/ops/S16-02_PLAN.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8945000Z [OK] src_snapshot/docs/ops/S16-02_TASK.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8945481Z [OK] src_snapshot/docs/ops/S16-03_PLAN.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8945952Z [OK] src_snapshot/docs/ops/S16-03_TASK.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8946469Z [OK] src_snapshot/docs/ops/S16_PLAN.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8946856Z [OK] src_snapshot/docs/ops/S16_TASK.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8947287Z [OK] src_snapshot/docs/ops/S17-00_PLAN.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8947777Z [OK] src_snapshot/docs/ops/S17-00_TASK.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8948261Z [OK] src_snapshot/docs/ops/S17-01_PLAN.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8948730Z [OK] src_snapshot/docs/ops/S17-01_TASK.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8949193Z [OK] src_snapshot/docs/ops/S17_PLAN.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8949667Z [OK] src_snapshot/docs/ops/S17_TASK.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8950209Z [OK] src_snapshot/docs/ops/S5-02-review-pack.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8950793Z [OK] src_snapshot/docs/ops/S7_PLAN.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8951273Z [OK] src_snapshot/docs/ops/S8_PLAN.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8951732Z [OK] src_snapshot/docs/ops/S8_TASK.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8952197Z [OK] src_snapshot/docs/ops/S9_PLAN.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8952945Z [OK] src_snapshot/docs/ops/S9_TASK.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8953459Z [OK] src_snapshot/docs/pr_templates/s5.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8953962Z [OK] src_snapshot/docs/reviewpack/TASK.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8954492Z [OK] src_snapshot/docs/reviewpack/WALKTHROUGH.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8955039Z [OK] src_snapshot/docs/rules/AI_TEXT_GUARD.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8955595Z [OK] src_snapshot/docs/rules/CHECKLIST-GATE-1.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8956119Z [OK] src_snapshot/docs/rules/GATE-1.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8956609Z [OK] src_snapshot/eval/fixtures/latest.jsonl
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8957107Z [OK] src_snapshot/eval/questions.jsonl
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8957608Z [OK] src_snapshot/eval/results/latest.jsonl
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8958092Z [OK] src_snapshot/eval/run_eval.py
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8958553Z [OK] src_snapshot/eval/run_eval.py.bak
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8959211Z [OK] src_snapshot/flake.lock
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8959615Z [OK] src_snapshot/flake.nix
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8960005Z [OK] src_snapshot/go.mod
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8960384Z [OK] src_snapshot/go.sum
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8960784Z [OK] src_snapshot/infra/llama-server.env
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8961294Z [OK] src_snapshot/infra/llama-server.env.bak
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8961846Z [OK] src_snapshot/infra/llama-server.start.sh
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8962432Z [OK] src_snapshot/infra/llama-server.status.sh
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8963425Z [OK] src_snapshot/infra/llama-server.stop.sh
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8963952Z [OK] src_snapshot/infra/run-llama-server.sh
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8964477Z [OK] src_snapshot/internal/reviewpack/app.go
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8965020Z [OK] src_snapshot/internal/reviewpack/artifacts.go
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8965603Z [OK] src_snapshot/internal/reviewpack/consts.go
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8966225Z [OK] src_snapshot/internal/reviewpack/contract_v1.go
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8966946Z [OK] src_snapshot/internal/reviewpack/contract_v1_test.go
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8967537Z [OK] src_snapshot/internal/reviewpack/diff.go
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8968083Z [OK] src_snapshot/internal/reviewpack/diff_test.go
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8968629Z [OK] src_snapshot/internal/reviewpack/evidence.go
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8969171Z [OK] src_snapshot/internal/reviewpack/flags.go
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8969668Z [OK] src_snapshot/internal/reviewpack/fs.go
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8970271Z [OK] src_snapshot/internal/reviewpack/mkdir_fail_fast_test.go
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8970907Z [OK] src_snapshot/internal/reviewpack/mkdir_test.go
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8971492Z [OK] src_snapshot/internal/reviewpack/pack.go
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8972038Z [OK] src_snapshot/internal/reviewpack/repo.go
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8972614Z [OK] src_snapshot/internal/reviewpack/repo_test.go
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8973536Z [OK] src_snapshot/internal/reviewpack/reprocheck.go
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8974137Z [OK] src_snapshot/internal/reviewpack/submit.go
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8974686Z [OK] src_snapshot/internal/reviewpack/ui.go
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8975201Z [OK] src_snapshot/internal/reviewpack/utils.go
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8975749Z [OK] src_snapshot/internal/reviewpack/verify.go
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8976324Z [OK] src_snapshot/internal/reviewpack/verify_test.go
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8976851Z [OK] src_snapshot/mise.toml
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8977285Z [OK] src_snapshot/ops/VERIFY_EVIDENCE.sh
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8977789Z [OK] src_snapshot/ops/chaos_simulator.sh
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8978287Z [OK] src_snapshot/ops/check_no_file_url.sh
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8978777Z [OK] src_snapshot/ops/ci/.keep
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8979194Z [OK] src_snapshot/ops/ci/README.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8979663Z [OK] src_snapshot/ops/ci/verify_pack_ci.sh
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8980147Z [OK] src_snapshot/ops/diff_pack.sh
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8980641Z [OK] src_snapshot/ops/evidence_retention.json
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8981170Z [OK] src_snapshot/ops/finalize_clean.sh
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8981645Z [OK] src_snapshot/ops/gate1.sh
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8982138Z [OK] src_snapshot/ops/keys/reviewpack/README.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8982922Z [OK] src_snapshot/ops/patches/20260204_eval_s1_s2.patch
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8983536Z [OK] src_snapshot/ops/reviewpack_policy.toml
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8984052Z [OK] src_snapshot/ops/run_always_1h.sh
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8984516Z [OK] src_snapshot/ops/s5_pack.sh
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8984951Z [OK] src_snapshot/ops/s5_verify_pack.sh
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8985441Z [OK] src_snapshot/ops/s6_verify_pack.sh
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8985926Z [OK] src_snapshot/ops/seed_eval_results.sh
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8986528Z [OK] src_snapshot/ops/smoke_evidencepack.sh
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8987028Z [OK] src_snapshot/ops/verify_pack.sh
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8987503Z [OK] src_snapshot/prompts/rag.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8987929Z [OK] src_snapshot/prompts/system.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8988329Z [OK] src_snapshot/pyproject.toml
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8988768Z [OK] src_snapshot/requirements.txt
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8989284Z [OK] src_snapshot/satellite/prompts/default/v1.txt
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8990125Z [OK] src_snapshot/satellite/prompts/example/v1.txt
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8990757Z [OK] src_snapshot/satellite/rules/example.toml
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8991389Z [OK] src_snapshot/satellite/sources/example.toml
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8991945Z [OK] src_snapshot/scripts/ingest.sh
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8992414Z [OK] src_snapshot/src/ask.py
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8993120Z [OK] src_snapshot/src/build_index.py
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8993608Z [OK] src_snapshot/src/local_llm.py
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8994094Z [OK] src_snapshot/src/satellite/__init__.py
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8994833Z [OK] src_snapshot/src/satellite/collect.py
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8995345Z [OK] src_snapshot/src/satellite/manifest.py
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8995871Z [OK] src_snapshot/src/satellite/normalize.py
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8996405Z [OK] src_snapshot/tests/fixtures/rss_sample.xml
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8996934Z [OK] src_snapshot/tests/test_ask_terms.py
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8997526Z [OK] src_snapshot/tests/test_eval_artifacts_determinism.py
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8998124Z [OK] src_snapshot/tests/test_eval_logic.py
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8998660Z [OK] src_snapshot/tests/test_satellite_collect.py
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8999240Z [OK] src_snapshot/tests/test_satellite_manifest.py
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.8999825Z [OK] src_snapshot/tests/test_satellite_normalize.py
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.9000365Z [OK] src_snapshot/uv.lock
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.9000821Z [INFO] PACK_VERSION v2: enforcing AI Contract v1
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.9001317Z PASS: Verify OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.9001746Z === CHECK: Gate-1 verify-only (pack-contained) ===
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.9204458Z OK: verified ✅
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.9204959Z SUBMIT: review_bundle_20260215_013658.tar.gz
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.9205711Z SHA256: 9179f7ee4153aa429ee47fd6259028a423ac89e2aea40af4f875d3b3716bad65
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.9306845Z == Step: verify_evidence ==
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.9386530Z bash ops/verify_pack.sh ".local/reviewpack_artifacts/evidence_pack_20260215T013657Z.tar.gz"
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.9407874Z [verify_pack] Verifying: .local/reviewpack_artifacts/evidence_pack_20260215T013657Z.tar.gz
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.9412562Z [verify_pack] Signature found: .local/reviewpack_artifacts/evidence_pack_20260215T013657Z.tar.gz.asc
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.9416343Z [verify_pack] Verifying with GPG...
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.9478017Z gpg: directory '/home/runner/.gnupg' created
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.9483488Z gpg: keybox '/home/runner/.gnupg/pubring.kbx' created
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.9498765Z gpg: Signature made Sun Feb 15 01:36:57 2026 UTC
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.9500136Z gpg:                using RSA key E5EF99B4D094EE56
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.9501217Z gpg: Can't check signature: No public key
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.9505053Z [WARN] GPG verification failed (missing key?)
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:04.9506431Z [verify_pack] Verifying with gopsign (Key: /tmp/tmp.Lz1lqOIzKm/pubkey.asc)...
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0223434Z Signature Verified
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0238235Z [PASS] Signature Verified (gopsign)
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0290555Z [verify_pack] Detected: Evidence Pack (v1)
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0328449Z === Evidence Pack Verification ===
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0328976Z Root: /tmp/verify_pack.OyMgzn
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0343566Z Verifying integrity...
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0395129Z ./VERIFY_EVIDENCE.sh: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0396223Z ./docs/rules/AI_TEXT_GUARD.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0397165Z ./docs/rules/CHECKLIST-GATE-1.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0397896Z ./docs/rules/GATE-1.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0399339Z ./eval/results/latest.jsonl: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0399779Z ./evidence_pack_v1: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0400138Z ./ops/gate1.sh: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0400509Z [OK] All files verified.
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0405175Z === VERIFIED ===
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0444080Z == Step: verify_bundle ==
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0502624Z bash ops/verify_pack.sh "review_bundle_20260215_013658.tar.gz"
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0522650Z [verify_pack] Verifying: review_bundle_20260215_013658.tar.gz
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0710546Z [verify_pack] Detected: Review Pack (v1) at review_bundle
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0742251Z === VERIFY (legacy wrapper) ===
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0773562Z 00_meta.txt: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0775515Z 01_status.txt: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0777017Z 31_make_run_eval.log: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0777436Z CONTRACT_v1: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0777784Z MANIFEST.tsv: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0778130Z PACK_VERSION: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0778462Z README.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0778771Z SPEC.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0779078Z VERIFY.sh: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0779417Z logs/portable/30_make_test.log: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0779914Z logs/portable/30_make_test.log.sha256: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0780800Z logs/portable/rules-v1.json: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0781233Z logs/raw/10_git_log.txt: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0781636Z logs/raw/10_git_log.txt.sha256: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0787221Z logs/raw/11_git_diff.patch: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0788996Z logs/raw/11_git_diff.patch.sha256: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0789510Z logs/raw/30_make_test.log: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0789959Z logs/raw/30_make_test.log.sha256: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0790469Z logs/raw/40_self_verify.log: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0790939Z logs/raw/40_self_verify.log.sha256: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0791399Z review_pack_v1: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0791789Z src_snapshot/.cspell.json: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0792227Z src_snapshot/.env.example: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0792901Z src_snapshot/.githooks/pre-commit: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0793423Z src_snapshot/.github/workflows/ci.yml: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0793989Z src_snapshot/.github/workflows/eval_run.yml: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0794594Z src_snapshot/.github/workflows/eval_strict.yml: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0795262Z src_snapshot/.github/workflows/evidence_verify.yml: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0795911Z src_snapshot/.github/workflows/run_always_1h.yml: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0796502Z src_snapshot/.github/workflows/test.yml: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0797081Z src_snapshot/.github/workflows/verify_pack.yml: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0797628Z src_snapshot/.gitignore: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0798101Z src_snapshot/.golangci-lint-version: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0798604Z src_snapshot/.golangci.yml: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0799086Z src_snapshot/.markdownlint-cli2.jsonc: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0799603Z src_snapshot/Makefile: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0800023Z src_snapshot/README.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0800434Z src_snapshot/SPEC.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0831076Z ##[error]src_snapshot/cmd/evidencepack/audit.go: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0842583Z ##[error]src_snapshot/cmd/evidencepack/audit_test.go: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0844841Z ##[error]src_snapshot/cmd/evidencepack/bundle.go: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0846531Z ##[error]src_snapshot/cmd/evidencepack/bundle_test.go: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0847951Z ##[error]src_snapshot/cmd/evidencepack/chain.go: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0849510Z ##[error]src_snapshot/cmd/evidencepack/chain_test.go: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0851178Z ##[error]src_snapshot/cmd/evidencepack/crypto.go: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0853037Z ##[error]src_snapshot/cmd/evidencepack/crypto_test.go: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0854719Z ##[error]src_snapshot/cmd/evidencepack/gc.go: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0856294Z ##[error]src_snapshot/cmd/evidencepack/health.go: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0857842Z ##[error]src_snapshot/cmd/evidencepack/health_test.go: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0859396Z ##[error]src_snapshot/cmd/evidencepack/keygen.go: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0860885Z ##[error]src_snapshot/cmd/evidencepack/kinds.go: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0862468Z ##[error]src_snapshot/cmd/evidencepack/kinds_test.go: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0864428Z ##[error]src_snapshot/cmd/evidencepack/ls.go: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0865983Z ##[error]src_snapshot/cmd/evidencepack/main.go: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0867648Z ##[error]src_snapshot/cmd/evidencepack/main_test.go: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0869169Z ##[error]src_snapshot/cmd/evidencepack/pack.go: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0870685Z ##[error]src_snapshot/cmd/evidencepack/policy.go: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0872246Z ##[error]src_snapshot/cmd/evidencepack/policy_test.go: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0874273Z ##[error]src_snapshot/cmd/evidencepack/testhelpers_test.go: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0876238Z ##[error]src_snapshot/cmd/evidencepack/verify.go: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0877706Z ##[error]src_snapshot/cmd/gopsign/main.go: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0879124Z ##[error]src_snapshot/cmd/reviewpack/main.go: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0880421Z src_snapshot/cmd/reviewpack/review_pack.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0880972Z src_snapshot/cspell.json: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0881486Z src_snapshot/docs/evidence/AUDIT_CHAIN_v1.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0882074Z src_snapshot/docs/evidence/CONTRACT_v1.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0882927Z src_snapshot/docs/evidence/PROVENANCE_BUNDLE_v1.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0883793Z src_snapshot/docs/evidence/RETENTION.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0884355Z src_snapshot/docs/evidence/RUNBOOK.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0884949Z src_snapshot/docs/evidence/SIGNING_CONTRACT_v1.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0885541Z src_snapshot/docs/evidence/TAXONOMY.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0886115Z src_snapshot/docs/evidence/WALKTHROUGH_S8_00.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0886794Z src_snapshot/docs/evidence/WALKTHROUGH_TRUST_ANCHOR_V1.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0887609Z src_snapshot/docs/evidence/s15-06/eval_record_20260213T103815Z.jsonl: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0888456Z src_snapshot/docs/evidence/s15-06/eval_record_20260213T103847Z.jsonl: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0889301Z src_snapshot/docs/evidence/s15-06/eval_record_20260213T104948Z.jsonl: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0891615Z src_snapshot/docs/evidence/s15-06/eval_verify-only_20260213T103830Z.jsonl: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0892558Z src_snapshot/docs/evidence/s15-06/eval_verify-only_20260213T103854Z.jsonl: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0893682Z src_snapshot/docs/evidence/s15-06/eval_verify-only_20260213T104948Z.jsonl: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0894420Z src_snapshot/docs/il/IL_CONTRACT_v1.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0895074Z src_snapshot/docs/il/examples/bad_forbidden_timestamp.json: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0895746Z src_snapshot/docs/il/examples/bad_min.json: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0896318Z src_snapshot/docs/il/examples/good_min.json: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0896878Z src_snapshot/docs/il/il.schema.json: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0897424Z src_snapshot/docs/ops/CI_REQUIRED_CHECKS.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0898002Z src_snapshot/docs/ops/EVIDENCE_PACK_SPEC.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0898563Z src_snapshot/docs/ops/IF_FAIL_C10FIX04.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0899089Z src_snapshot/docs/ops/IF_FAIL_S7.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0899600Z src_snapshot/docs/ops/LINT_RAMP_PLAN.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0900124Z src_snapshot/docs/ops/PR_WORKFLOW.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0900622Z src_snapshot/docs/ops/RUN_ALWAYS.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0901173Z src_snapshot/docs/ops/S15-06_ACCEPTANCE.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0901715Z src_snapshot/docs/ops/S15-06_PLAN.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0902216Z src_snapshot/docs/ops/S15-06_TASK.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0902895Z src_snapshot/docs/ops/S15_02_PLAN.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0903407Z src_snapshot/docs/ops/S15_02_TASK.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0903897Z src_snapshot/docs/ops/S15_03_PLAN.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0904401Z src_snapshot/docs/ops/S15_03_TASK.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0904911Z src_snapshot/docs/ops/S15_04_PLAN.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0905404Z src_snapshot/docs/ops/S15_04_TASK.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0905907Z src_snapshot/docs/ops/S15_05_PLAN.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0906393Z src_snapshot/docs/ops/S15_05_TASK.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0906961Z src_snapshot/docs/ops/S15_07_10_DEPENDENCY_MATRIX.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0907587Z src_snapshot/docs/ops/S15_07_KICKOFF_PLAN.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0908162Z src_snapshot/docs/ops/S15_07_KICKOFF_TASK.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0908709Z src_snapshot/docs/ops/S15_07_PLAN.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0909203Z src_snapshot/docs/ops/S15_07_TASK.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0909698Z src_snapshot/docs/ops/S15_08_PLAN.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0910190Z src_snapshot/docs/ops/S15_08_TASK.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0910675Z src_snapshot/docs/ops/S15_09_PLAN.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0911174Z src_snapshot/docs/ops/S15_09_TASK.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0911667Z src_snapshot/docs/ops/S15_10_PLAN.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0912362Z src_snapshot/docs/ops/S15_10_TASK.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0913158Z src_snapshot/docs/ops/S15_PLAN.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0913662Z src_snapshot/docs/ops/S15_TASK.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0914152Z src_snapshot/docs/ops/S16-01_PLAN.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0914657Z src_snapshot/docs/ops/S16-01_TASK.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0915155Z src_snapshot/docs/ops/S16-02_PLAN.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0915649Z src_snapshot/docs/ops/S16-02_TASK.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0916147Z src_snapshot/docs/ops/S16-03_PLAN.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0916943Z src_snapshot/docs/ops/S16-03_TASK.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0917435Z src_snapshot/docs/ops/S16_PLAN.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0917927Z src_snapshot/docs/ops/S16_TASK.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0918415Z src_snapshot/docs/ops/S17-00_PLAN.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0918920Z src_snapshot/docs/ops/S17-00_TASK.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0919420Z src_snapshot/docs/ops/S17-01_PLAN.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0919917Z src_snapshot/docs/ops/S17-01_TASK.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0920412Z src_snapshot/docs/ops/S17_PLAN.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0920901Z src_snapshot/docs/ops/S17_TASK.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0921424Z src_snapshot/docs/ops/S5-02-review-pack.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0921939Z src_snapshot/docs/ops/S7_PLAN.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0922402Z src_snapshot/docs/ops/S8_PLAN.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0923047Z src_snapshot/docs/ops/S8_TASK.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0923517Z src_snapshot/docs/ops/S9_PLAN.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0923990Z src_snapshot/docs/ops/S9_TASK.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0924493Z src_snapshot/docs/pr_templates/s5.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0925002Z src_snapshot/docs/reviewpack/TASK.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0925549Z src_snapshot/docs/reviewpack/WALKTHROUGH.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0926111Z src_snapshot/docs/rules/AI_TEXT_GUARD.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0926658Z src_snapshot/docs/rules/CHECKLIST-GATE-1.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0927195Z src_snapshot/docs/rules/GATE-1.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0927701Z src_snapshot/eval/fixtures/latest.jsonl: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0928206Z src_snapshot/eval/questions.jsonl: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0928707Z src_snapshot/eval/results/latest.jsonl: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0929206Z src_snapshot/eval/run_eval.py: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0929663Z src_snapshot/eval/run_eval.py.bak: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0930120Z src_snapshot/flake.lock: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0930563Z src_snapshot/flake.nix: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0930955Z src_snapshot/go.mod: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0931316Z src_snapshot/go.sum: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0931720Z src_snapshot/infra/llama-server.env: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0932229Z src_snapshot/infra/llama-server.env.bak: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0933079Z src_snapshot/infra/llama-server.start.sh: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0933621Z src_snapshot/infra/llama-server.status.sh: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0934144Z src_snapshot/infra/llama-server.stop.sh: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0934667Z src_snapshot/infra/run-llama-server.sh: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0935522Z ##[error]src_snapshot/internal/reviewpack/app.go: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0937163Z ##[error]src_snapshot/internal/reviewpack/artifacts.go: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0939035Z ##[error]src_snapshot/internal/reviewpack/consts.go: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0941161Z ##[error]src_snapshot/internal/reviewpack/contract_v1.go: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0943390Z ##[error]src_snapshot/internal/reviewpack/contract_v1_test.go: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0945023Z ##[error]src_snapshot/internal/reviewpack/diff.go: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0946532Z ##[error]src_snapshot/internal/reviewpack/diff_test.go: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0948078Z ##[error]src_snapshot/internal/reviewpack/evidence.go: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0949530Z ##[error]src_snapshot/internal/reviewpack/flags.go: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0950896Z ##[error]src_snapshot/internal/reviewpack/fs.go: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0952434Z ##[error]src_snapshot/internal/reviewpack/mkdir_fail_fast_test.go: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0954650Z ##[error]src_snapshot/internal/reviewpack/mkdir_test.go: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0956681Z ##[error]src_snapshot/internal/reviewpack/pack.go: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0958167Z ##[error]src_snapshot/internal/reviewpack/repo.go: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0959646Z ##[error]src_snapshot/internal/reviewpack/repo_test.go: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0961357Z ##[error]src_snapshot/internal/reviewpack/reprocheck.go: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0963305Z ##[error]src_snapshot/internal/reviewpack/submit.go: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0965011Z ##[error]src_snapshot/internal/reviewpack/ui.go: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0966547Z ##[error]src_snapshot/internal/reviewpack/utils.go: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0968241Z ##[error]src_snapshot/internal/reviewpack/verify.go: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0969720Z ##[error]src_snapshot/internal/reviewpack/verify_test.go: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0971048Z src_snapshot/mise.toml: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0971531Z src_snapshot/ops/VERIFY_EVIDENCE.sh: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0972051Z src_snapshot/ops/chaos_simulator.sh: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0972556Z src_snapshot/ops/check_no_file_url.sh: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0973417Z src_snapshot/ops/ci/.keep: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0973864Z src_snapshot/ops/ci/README.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0974343Z src_snapshot/ops/ci/verify_pack_ci.sh: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0974840Z src_snapshot/ops/diff_pack.sh: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0975335Z src_snapshot/ops/evidence_retention.json: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0975855Z src_snapshot/ops/finalize_clean.sh: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0976329Z src_snapshot/ops/gate1.sh: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0976811Z src_snapshot/ops/keys/reviewpack/README.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0977410Z src_snapshot/ops/patches/20260204_eval_s1_s2.patch: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0978013Z src_snapshot/ops/reviewpack_policy.toml: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0978532Z src_snapshot/ops/run_always_1h.sh: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0979000Z src_snapshot/ops/s5_pack.sh: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0979462Z src_snapshot/ops/s5_verify_pack.sh: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0979957Z src_snapshot/ops/s6_verify_pack.sh: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0980453Z src_snapshot/ops/seed_eval_results.sh: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0980997Z src_snapshot/ops/smoke_evidencepack.sh: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0981506Z src_snapshot/ops/verify_pack.sh: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0981971Z src_snapshot/prompts/rag.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0982425Z src_snapshot/prompts/system.md: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0983201Z src_snapshot/pyproject.toml: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0983660Z src_snapshot/requirements.txt: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0984192Z src_snapshot/satellite/prompts/default/v1.txt: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0984817Z src_snapshot/satellite/prompts/example/v1.txt: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0985418Z src_snapshot/satellite/rules/example.toml: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0986010Z src_snapshot/satellite/sources/example.toml: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0986559Z src_snapshot/scripts/ingest.sh: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0987052Z src_snapshot/src/ask.py: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0987549Z src_snapshot/src/build_index.py: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0988043Z src_snapshot/src/local_llm.py: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0988519Z src_snapshot/src/satellite/__init__.py: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0989051Z src_snapshot/src/satellite/collect.py: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0989565Z src_snapshot/src/satellite/manifest.py: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0990092Z src_snapshot/src/satellite/normalize.py: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0990637Z src_snapshot/tests/fixtures/rss_sample.xml: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0991186Z src_snapshot/tests/test_ask_terms.py: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0991799Z src_snapshot/tests/test_eval_artifacts_determinism.py: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0992409Z src_snapshot/tests/test_eval_logic.py: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0993327Z src_snapshot/tests/test_satellite_collect.py: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0993968Z src_snapshot/tests/test_satellite_manifest.py: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0994606Z src_snapshot/tests/test_satellite_normalize.py: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0995154Z src_snapshot/uv.lock: OK
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0995558Z [OK] Checksums passed.
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0996097Z [INFO] For strict verification (and extra-file detection), run:
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0996871Z   go run ./src_snapshot/cmd/reviewpack/main.go verify .
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.0999007Z == Step: s7_evidence ==
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.5438220Z Created evidence pack: .local/run-always/20260215T013657Z_7978b37/evidence_store/packs/s7demo/evidence_s7demo_20260215T013705.536404634Z_7978b37.tar.gz
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.5448150Z VERIFIED: .local/run-always/20260215T013657Z_7978b37/evidence_store/packs/s7demo/evidence_s7demo_20260215T013705.536404634Z_7978b37.tar.gz
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.5454261Z No signature found (skipped).
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.5459238Z Error: post-pack verification failed: 
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.5461816Z ================================================================================
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.5463238Z POLICY VIOLATION (Trust Anchor v1)
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.5464221Z Policy Path: /home/runner/work/maakie-brainlab/maakie-brainlab/ops/reviewpack_policy.toml
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.5465202Z Mode:        strict (Environment: ci)
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.5466579Z 
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.5466914Z Error: policy violation: signature required in CI but not found
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.5467394Z 
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.5467528Z KeyID:        
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.5467849Z PubKeySHA256: 
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.5468043Z 
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.5468173Z HOW-TO-FIX:
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.5468645Z See docs/evidence/SIGNING_CONTRACT_v1.md for policy recovery.
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.5469085Z 
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.5469388Z Note: KeyID is a label; allowlist is enforced by PubKeySHA256
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.5470053Z ================================================================================
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.5470438Z 
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.5470572Z exit status 1
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.6271568Z VERIFIED: .local/run-always/20260215T013657Z_7978b37/evidence_store/packs/s7demo/evidence_s7demo_20260215T013705.536404634Z_7978b37.tar.gz
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.6277424Z No signature found (skipped).
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.6277880Z Error: 
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.6278303Z ================================================================================
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.6278880Z POLICY VIOLATION (Trust Anchor v1)
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.6279712Z Policy Path: /home/runner/work/maakie-brainlab/maakie-brainlab/ops/reviewpack_policy.toml
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.6280548Z Mode:        strict (Environment: ci)
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.6280866Z 
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.6281195Z Error: policy violation: signature required in CI but not found
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.6282647Z 
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.6283032Z KeyID:        
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.6283516Z PubKeySHA256: 
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.6283723Z 
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.6283855Z HOW-TO-FIX:
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.6284330Z See docs/evidence/SIGNING_CONTRACT_v1.md for policy recovery.
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.6284788Z 
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.6285082Z Note: KeyID is a label; allowlist is enforced by PubKeySHA256
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.6285729Z ================================================================================
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.6286112Z 
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.6286260Z exit status 1
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.6315180Z == Artifact Consolidation ==
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.6387824Z == Step: doc_links ==
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.6447177Z [CHECK] Scanning for forbidden file[:]// links...
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.6471999Z [INFO] targets:
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.6476010Z  - docs
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.6476338Z  - .github
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.6476664Z  - ./README.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.6477016Z  - ./SPEC.md
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.6564449Z [OK] No forbidden file[:]// links found.
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.6588482Z == Cleanup (48 keep) ==
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.6659667Z [INFO] Run count 1 <= 48, no cleanup needed
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.6663545Z == Step: repo_guard ==
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.6705775Z [CHECK] Scanning for forbidden ' patterns...
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.6735960Z [PASS] No forbidden patterns found.
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.6741066Z == Summary ==
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.7097453Z [INFO] Generated summary.md and summary.jsonl
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.7118540Z [FAIL] Failures detected (check .local/run-always/20260215T013657Z_7978b37/summary.md)
+run-always-1h	Run Always 1h (Script)	2026-02-15T01:37:05.7128463Z ##[error]Process completed with exit code 1.

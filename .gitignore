@@ -96,3 +96,6 @@ test_output.txt
 *.resolved
 task.md.resolved
 walkthrough.md.resolved
+
+# Temporary test files
+.tmp/

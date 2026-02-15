@@ -95,6 +95,26 @@ run_step() {
     local name="$1"
     shift
     echo "== Step: $name =="
+    # S17-03 Diagnostics
+    if [ -n "${S6_SIGNING_KEY:-}" ]; then
+        echo "[DIAG] S6_SIGNING_KEY is set (exists: $([ -f "$S6_SIGNING_KEY" ] && echo "YES" || echo "NO"))"
+    else
+        echo "[DIAG] S6_SIGNING_KEY is NOT set"
+    fi
+    # S17-03: EvidencePack Key (Trust Anchor v1 needs Ed25519)
+    if [ -n "${S6_SIGNING_KEY:-}" ] && [ -f "$S6_SIGNING_KEY" ]; then
+        if grep -q "BEGIN PGP" "$S6_SIGNING_KEY"; then
+            echo "[DIAG] S6_SIGNING_KEY is PGP armored (compatible with reviewpack, NOT evidencepack)"
+            if [ ! -f ".tmp/evidence_key.key" ]; then
+                echo "[DIAG] Generating ephemeral Ed25519 key for evidencepack smoke test..."
+                mkdir -p .tmp/evidence_key
+                go run ./cmd/evidencepack keygen --id="ep-ephemeral" --out-dir=".tmp/evidence_key" --seed="reviewpack-smoke-v1" >/dev/null
+                export EP_SIGNING_KEY=".tmp/evidence_key/ep-ephemeral.key"
+            fi
+        else
+            export EP_SIGNING_KEY="$S6_SIGNING_KEY"
+        fi
+    fi
     set +e
     (
         set -euo pipefail
@@ -118,7 +138,11 @@ fi
 run_step "s5_evidence_pack" make s5
 
 # 3.3 Review Bundle
-run_step "review_bundle" go run ./cmd/reviewpack/main.go submit --mode verify-only
+SIGN_ARG=""
+if [ -n "${S6_SIGNING_KEY:-}" ] && [ -f "$S6_SIGNING_KEY" ]; then
+    SIGN_ARG="--sign-key ${S6_SIGNING_KEY}"
+fi
+run_step "review_bundle" go run ./cmd/reviewpack/main.go submit --mode verify-only $SIGN_ARG
 
 # 3.4 Verify Evidence
 run_step "verify_evidence" bash -c 'PACK=$(ls -t .local/reviewpack_artifacts/evidence_pack_*.tar.gz | head -n 1); make verify-pack PACK="$PACK"'
@@ -127,9 +151,13 @@ run_step "verify_evidence" bash -c 'PACK=$(ls -t .local/reviewpack_artifacts/evi
 run_step "verify_bundle" bash -c 'PACK=$(ls -t review_bundle_*.tar.gz | head -n 1); make verify-pack PACK="$PACK"'
 
 # 3.6 S7 Evidence Pack (Crypto Layer v1)
-# Runs pack and verify (unsigned) to ensure tool integrity
+# S17-03: Pass signing key if available
+EVIDENCE_SIGN_ARG=""
+if [ -n "${EP_SIGNING_KEY:-}" ] && [ -f "$EP_SIGNING_KEY" ]; then
+    EVIDENCE_SIGN_ARG="--sign-key ${EP_SIGNING_KEY}"
+fi
 run_step "s7_evidence" bash -c "
-    go run ./cmd/evidencepack pack --kind s7demo --store '${RUN_DIR}/evidence_store' cmd/evidencepack/main.go
+    go run ./cmd/evidencepack pack --kind s7demo --store '${RUN_DIR}/evidence_store' $EVIDENCE_SIGN_ARG cmd/evidencepack/main.go
     LATEST=\$(ls -t '${RUN_DIR}/evidence_store/packs/s7demo/'*.tar.gz | head -n1)
     go run ./cmd/evidencepack verify --pack \"\$LATEST\"
 "

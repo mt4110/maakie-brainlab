@@ -16,11 +16,10 @@ func runSubmit(args []string) {
 
 	fs := flag.NewFlagSet("submit", flag.ExitOnError)
 	timebox := fs.Int("timebox", defaultTimeboxSec, "Timebox in seconds")
-	// Deprecated: existing skip-eval for pack, but for submit we use mode
 	_ = fs.Bool("skip-eval", false, "Deprecated: use --mode verify-only")
 	mode := fs.String("mode", "strict", "submit mode: strict | verify-only")
 	skipTest := fs.Bool("skip-test", false, "skip tests during submission")
-	// nCommits positional
+	signKey := fs.String("sign-key", "", "Path to private key for signing")
 	fs.Parse(args)
 
 	if *mode != "strict" && *mode != "verify-only" {
@@ -32,7 +31,7 @@ func runSubmit(args []string) {
 	}
 
 	// 1. Pack with mode-specific logic
-	tarFile := packToTarForSubmit(fs.Args(), *timebox, *mode, *skipTest)
+	tarFile := packToTarForSubmit(fs.Args(), *timebox, *mode, *skipTest, *signKey)
 	packSha, err := fileSha256(tarFile)
 	if err != nil {
 		log.Fatalf("[FATAL] sha256(%s): %v", tarFile, err)
@@ -72,7 +71,7 @@ func runSubmit(args []string) {
 	fmt.Printf("SHA256: %s\n", packSha)
 }
 
-func packToTarForSubmit(args []string, timebox int, mode string, skipTest bool) string {
+func packToTarForSubmit(args []string, timebox int, mode string, skipTest bool, signKey string) string {
 	defer logPhase("packToTarForSubmit")()
 
 	repoRoot := resolveRepoRoot()
@@ -235,6 +234,13 @@ func packToTarForSubmit(args []string, timebox int, mode string, skipTest bool) 
 
 	// 8-11. Finalize
 	tarFile := finalizePack(packDir, packName, "review_bundle")
+	
+	// Signing (S17-03)
+	if signKey != "" {
+		if err := signFile(signKey, tarFile); err != nil {
+			log.Fatalf("[FATAL] Signing failed: %v", err)
+		}
+	}
 
 	// Legacy Copy
 	legacyName := strings.Replace(packName, "review_bundle", "review_pack", 1) + extTarGz
