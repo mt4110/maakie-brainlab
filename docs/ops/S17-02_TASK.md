@@ -184,7 +184,7 @@ STOP:
 ## Step 11: Gate（真実の確定）
 - [x] `make test`
 - [x] `go run cmd/reviewpack/main.go submit --mode verify-only`
-- [ ] PR本文に貼る前に SHA256 を再計算して一致確認：`shasum -a 256 "$(ls -1t review_bundle_*.tar.gz | head -n 1)"`（出力が reviewpack の SHA256 行と一致すること）
+- [x] PR本文に貼る前に SHA256 を再計算して一致確認：`shasum -a 256 "$(ls -1t review_bundle_*.tar.gz | head -n 1)"`（出力が reviewpack の SHA256 行と一致すること）
 - [x] `git status -sb`（clean確認）
 
 STOP:
