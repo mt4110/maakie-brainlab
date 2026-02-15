@@ -45,15 +45,21 @@ jobs:
           cache-dependency-path: go.sum
 
       # Ephemeral Keys for potential signing (if script supports it)
-      - name: Generate Ephemeral Keys
+      # Materialize Signing Key from Secrets (Fixes Policy Violation)
+      - name: Materialize Signing Key
+        if: ${{ env.S6_SIGNING_KEY_B64 != '' }}
         shell: bash
         run: |
           set -euo pipefail
-          KEYDIR="$(mktemp -d)"
-          echo "KEYDIR=$KEYDIR" >> "$GITHUB_ENV"
-          go run ./cmd/gopsign/main.go -mode=keygen -id="CI Builder" -out-dir "$KEYDIR"
-          echo "S6_SIGNING_KEY=$KEYDIR/privkey.asc" >> "$GITHUB_ENV"
-          echo "S6_VERIFY_KEY=$KEYDIR/pubkey.asc" >> "$GITHUB_ENV"
+          mkdir -p .tmp/keys
+          # Decode base64 secret to file
+          printf '%s' "$S6_SIGNING_KEY_B64" | base64 --decode > .tmp/keys/s6_signing_key.asc
+          chmod 600 .tmp/keys/s6_signing_key.asc
+          # Export path to env
+          echo "S6_SIGNING_KEY=$PWD/.tmp/keys/s6_signing_key.asc" >> "$GITHUB_ENV"
+          # Also derive verify key if possible, or assume public key is handled by policy
+        env:
+          S6_SIGNING_KEY_B64: ${{ secrets.S6_SIGNING_KEY_B64 }}
 
       - name: Run Always 1h (Script)
         run: |

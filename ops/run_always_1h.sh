@@ -100,6 +100,11 @@ run_step() {
         echo "[DIAG] S6_SIGNING_KEY is set (exists: $([ -f "$S6_SIGNING_KEY" ] && echo "YES" || echo "NO"))"
     else
         echo "[DIAG] S6_SIGNING_KEY is NOT set"
+        # Fail Fast in CI (Strict Mode requirement)
+        if [ "${GITHUB_ACTIONS:-}" = "true" ]; then
+            echo "[FATAL] CI (Strict) requires S6_SIGNING_KEY. Check 'Materialize Signing Key' step."
+            exit 1
+        fi
     fi
     # S17-03: EvidencePack Key (Trust Anchor v1 needs Ed25519)
     if [ -n "${S6_SIGNING_KEY:-}" ] && [ -f "$S6_SIGNING_KEY" ]; then
