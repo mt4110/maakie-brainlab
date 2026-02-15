@@ -31,3 +31,17 @@
 - [ ] `make test` (PASS)
 - [ ] verify-only (PASS)
 - [ ] merge
+
+## Pre-commit が止めたときの復旧（Fail Closed）
+※ このカプセルは「混ざった状態」を許さない設計です。落ち着いて順番にほどく。
+
+- **スコープ内（docs/ ops/ .github/ internal/ .githooks）に未ステージ変更がある**  
+  → `git add -u -- docs ops .github internal .githooks` で揃えるか、`git stash -u` で退避。
+
+- **スコープ外に未ステージ変更がある**  
+  → 先に `git add -u -- :/` で全部ステージするか、`git stash -u` で退避。  
+  （※カプセルはワークツリー安定性を優先して止まります）
+
+- **Fix がスコープ外を触って止まった**  
+  → いったん `git status -sb` で汚れを確認 → 必要なら `git restore --worktree -- :/` で戻す。  
+  その後 `bash ops/finalize_clean.sh --fix` を単独実行して、どこを触ったかを観察してから方針を決める。

@@ -29,6 +29,15 @@ fi
 
 cd "$ROOT" || exit 0
 
+GITDIR="$(git rev-parse --git-dir 2>/dev/null || true)"
+if [ -n "$GITDIR" ]; then
+  if [ -f "$GITDIR/MERGE_HEAD" ] || [ -f "$GITDIR/CHERRY_PICK_HEAD" ] || [ -f "$GITDIR/REVERT_HEAD" ] || [ -d "$GITDIR/rebase-apply" ] || [ -d "$GITDIR/rebase-merge" ]; then
+    echo "[FATAL] git operation in progress (merge/rebase/cherry-pick/revert)."
+    echo "Finish it (or abort) before committing."
+    exit 1
+  fi
+fi
+
 FIXER="ops/finalize_clean.sh"
 if [ ! -f "$FIXER" ]; then
   echo "[FATAL] missing $FIXER"
