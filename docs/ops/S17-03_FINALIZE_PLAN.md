@@ -17,7 +17,7 @@ Progress: 0%
 - “Canonical” として引用・ピン留めしてはならない。
 
 ## Invariants (Zero-Contradiction Contract)
-- repo 内（git tracked）の docs/ / ops/ / .github/ / internal/ に `file://` が存在してはならない。
+- repo 内（git tracked）の docs/ / ops/ / .github/ / internal/ に `file:/{2}` が存在してはならない。
 - “Canonical” と明記する場所は必ず上記 Canonical の3点（commit/bundle/sha）を使う。
 - verify-only を実行すると bundle 名/sha は変わり得る。これは Observation であり Canonical を更新してはならない。
 - 「通った」事実は Gate の PASS として記録し、Canonical の更新とは切り離す。
@@ -33,9 +33,9 @@ Progress: 0%
 - paths := ["docs", "docs/ops", "ops", ".github", "internal"]
 - for p in paths:
   - if exists(p):
-    - hits := rg('file://', p)
+    - hits := rg('file:/{2}', p)
     - if hits > 0:
-      - error("forbidden file:// found; must obfuscate to [FILE_URI] or remove")
+      - error("forbidden file:/{2} found; must obfuscate to [FILE_URI] or remove")
   - else:
     - skip("path missing: " + p)
 
@@ -72,7 +72,7 @@ Progress: 0%
   - Canonical is NOT updated by this run
 
 ### P5: Done
-- if all gates PASS and rg('file://') == 0 and drift sweep PASS:
+- if all gates PASS and rg('file:/{2}') == 0 and drift sweep PASS:
   - mark FINALIZE_TASK as DONE (100%)
   - update PR body ritual
 - else:

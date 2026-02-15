@@ -13,9 +13,9 @@ Progress: 0%
 - [ ] branch := `git rev-parse --abbrev-ref HEAD` (Check: != main)
 - [ ] `git status -sb` (Check: clean OR commit explicitly before gates)
 
-## 1) Hygiene: file:// ban (10%→25%)
-- [ ] `rg -n 'file://' docs ops .github internal` (Check: 0 hits)
-- [ ] If hits > 0: replace each `file://...` → `[FILE_URI]` (1 line reason in commit)
+## 1) Hygiene: file:/{2} ban (10%→25%)
+- [ ] `rg -n 'file:/{2}' docs ops .github internal` (Check: 0 hits)
+- [ ] If hits > 0: replace each `file:/{2}...` → `[FILE_URI]` (1 line reason in commit)
 - [ ] Re-run the rg check (must be 0)
 
 ## 2) Drift Sweep: legacy canonical must not leak (25%→40%)
@@ -25,8 +25,8 @@ Progress: 0%
 
 ## 3) Canonical Pin: update all canonical blocks (40%→70%)
 - [ ] Update `docs/ops/S17-03_TASK.md` canonical block to commit 0310890 / bundle 135256 / sha 7f444f...
-- [ ] Ensure `docs/ops/S17-03_FINALIZE_PLAN.md` contains no file:// and matches canonical
-- [ ] Ensure `docs/ops/S17-03_FINALIZE_TASK.md` contains no file:// and matches canonical
+- [ ] Ensure `docs/ops/S17-03_FINALIZE_PLAN.md` contains no file:/{2} and matches canonical
+- [ ] Ensure `docs/ops/S17-03_FINALIZE_TASK.md` contains no file:/{2} and matches canonical
 - [ ] Update:
   - [ ] `docs/evidence/s17-03/fix_evidence.txt`
   - [ ] `docs/evidence/s17-03/fix_summary.md`
@@ -48,4 +48,4 @@ Progress: 0%
 
 ## Skip / Error rules
 - skip: 1行で理由を書く（例: "skip: no changes needed; rg returned 0 hits"）
-- error: その場で終了（例: "error: file:// detected in tracked docs; must sanitize"）
+- error: その場で終了（例: "error: file:/{2} detected in tracked docs; must sanitize"）

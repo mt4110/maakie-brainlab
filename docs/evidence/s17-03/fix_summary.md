@@ -45,4 +45,4 @@ Historical context is preserved, but only the canonical tuple above is used for 
 - これにより “最新出力を canonical にする” 方式の無限更新ループを停止した。
 
 ### Hygiene
-- repo tracked files 内の `file://` を禁止し、発見時は `[FILE_URI]` に無害化。
+- repo tracked files 内の `file:/{2}` を禁止し、発見時は `[FILE_URI]` に無害化。

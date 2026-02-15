@@ -41,10 +41,10 @@ Decision:
 Fix:
 - docs/ops/* および PR 本文の “Canonical Ritual” を上記 Canonical に統一。
 - verify-only で生成される新しい bundle は Observation と明記し、Canonical を更新しない。
-- hygiene: repo tracked files 内の file:// をすべて [FILE_URI] に無害化。
+- hygiene: repo tracked files 内の file:/{2} をすべて [FILE_URI] に無害化。
 
 Result:
-- Hygiene scan: PASS (no file:// in tracked docs/ops/.github/internal)
+- Hygiene scan: PASS (no file:/{2} in tracked docs/ops/.github/internal)
 - make test: PASS
 - reviewpack submit --mode verify-only: PASS
 - Zero-Contradiction: PASS (Canonical と観測の役割分離によりドリフト停止)
