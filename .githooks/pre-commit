@@ -1,16 +1,83 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # .githooks/pre-commit
-# Enforce AI Text Guard
+# AI Text Guard — Hygiene Capsule (auto-fix + verify)
+#
+# Goals:
+# - Keep forbidden trigger tokens out of tracked repo files.
+# - Auto-fix before commit, then verify.
+# - NEVER stage unrelated changes outside the hygiene scope.
+#
+# Escape hatch (use sparingly; leaves an obvious trace in your shell history):
+#   SKIP_AI_TEXT_GUARD=1 git commit ...
 
-echo "== Pre-commit: AI Text Guard (Auto-Fixing) =="
+echo "== Pre-commit: AI Text Guard (Capsule) =="
 
-# 1. Attempt auto-fix
-bash ops/finalize_clean.sh --fix
+if [ "${SKIP_AI_TEXT_GUARD:-}" = "1" ]; then
+  echo "[WARN] SKIP_AI_TEXT_GUARD=1 (guard skipped)"
+  exit 0
+fi
 
-# 2. Re-stage any modified files
-# We use git add -u to update tracked files that were modified by the fix
-git add -u
+ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
+if [ -z "$ROOT" ]; then
+  # Not a git repo (or git unavailable) — do nothing.
+  exit 0
+fi
 
-# 3. Final Check (Verification)
-# If fix failed or didn't catch something, this will fail the commit
-bash ops/finalize_clean.sh --check
+cd "$ROOT" || exit 0
+
+FIXER="ops/finalize_clean.sh"
+if [ ! -f "$FIXER" ]; then
+  echo "[FATAL] missing $FIXER"
+  exit 1
+fi
+
+# Snapshot what the user already staged (preserve intent)
+STAGED_BEFORE="$(git diff --cached --name-only)"
+
+echo "== 1) Auto-fix =="
+bash "$FIXER" --fix
+rc=$?
+if [ $rc -ne 0 ]; then
+  echo "[FATAL] auto-fix failed (exit=$rc)"
+  exit $rc
+fi
+
+# Hygiene scope (the only paths the capsule may auto-stage)
+# NOTE: we list them as git pathspecs (no forbidden trigger tokens here).
+echo "== 2) Re-stage (staged-before + fixed-in-scope) =="
+FIXED_IN_SCOPE="$(git diff --name-only -- docs ops .github internal .githooks 2>/dev/null)"
+
+# Re-stage:
+# - whatever was staged before
+# - plus whatever the fixer changed inside the hygiene scope
+CANDIDATES="$(printf "%s\n%s\n" "$STAGED_BEFORE" "$FIXED_IN_SCOPE" | awk 'NF && !seen[$0]++')"
+if [ -n "$CANDIDATES" ]; then
+  printf "%s\n" "$CANDIDATES" | while IFS= read -r f; do
+    [ -n "$f" ] || continue
+    if ! git add -- "$f"; then
+      echo "[FATAL] failed to stage: $f"
+      exit 1
+    fi
+  done
+fi
+
+# Guardrail: fixer must NOT modify anything outside the scope.
+OTHER="$(git diff --name-only | awk '!/^(docs\/|ops\/|\.github\/|internal\/|\.githooks\/)/')"
+if [ -n "$OTHER" ]; then
+  echo "[FATAL] auto-fix modified files outside capsule scope:"
+  printf "%s\n" "$OTHER"
+  echo "Resolve manually or expand capsule scope intentionally."
+  exit 1
+fi
+
+echo "== 3) Final check =="
+bash "$FIXER" --check
+rc=$?
+if [ $rc -ne 0 ]; then
+  echo "[FATAL] check failed (exit=$rc)"
+  echo "Tip: run: bash $FIXER --fix && bash $FIXER --check"
+  exit $rc
+fi
+
+echo "[OK] AI Text Guard"
+exit 0
