@@ -64,19 +64,19 @@ class TestSatelliteNormalize(unittest.TestCase):
         items = [json.loads(line) for line in lines]
         
         # Check Sorting (UID ascending)
-        self.assertTrue(items[0]["uid"] < items[1]["uid"])
+        self.assertLess(items[0]["il"]["uid"], items[1]["il"]["uid"])
         
         # Check Fields (Item 1)
         # Find item1 by link
-        i1 = next(i for i in items if i["canonical_url"] == "http://example.com/1")
-        self.assertEqual(i1["title"], "Title 1")
-        self.assertEqual(i1["text"], "Text 1")
-        self.assertEqual(i1["published_at"], "2023-10-06T12:00:00")
-        self.assertTrue(i1["raw_ref"].endswith("item1.json"))
+        i1 = next(i for i in items if i["il"]["canonical_url"] == "http://example.com/1")
+        self.assertEqual(i1["il"]["title"], "Title 1")
+        self.assertEqual(i1["il"]["text"], "Text 1")
+        self.assertEqual(i1["il"]["published_at"], "2023-10-06T12:00:00")
+        self.assertTrue(i1["il"]["raw_ref"].endswith("item1.json"))
         
         # Check Fields (Item 2 - missing date)
-        i2 = next(i for i in items if i["canonical_url"] == "http://example.com/2")
-        self.assertIsNone(i2["published_at"])
+        i2 = next(i for i in items if i["il"]["canonical_url"] == "http://example.com/2")
+        self.assertNotIn("published_at", i2["il"])
         
         # Check Determinism (Run Again)
         norm.run()
@@ -98,6 +98,22 @@ class TestSatelliteNormalize(unittest.TestCase):
         lines = output_path.read_text("utf-8").strip().split("\n")
         # Should still be 2 (valid ones), ignoring bad ones
         self.assertEqual(len(lines), 2)
+
+    def test_import_contract(self):
+        """Test that satellite.normalize can be run from root with correct PYTHONPATH."""
+        import subprocess
+        import os
+        
+        # We need to use the actual project root for this test to be meaningful
+        env = os.environ.copy()
+        env["PYTHONPATH"] = f"{ROOT / 'src'}:{ROOT}"
+        
+        # Run normalize.py as a module
+        cmd = [sys.executable, "-m", "satellite.normalize", "--help"]
+        res = subprocess.run(cmd, env=env, capture_output=True, text=True)
+        
+        self.assertEqual(res.returncode, 0, f"Subprocess failed: {res.stderr}")
+        self.assertIn("usage: normalize.py", res.stdout)
 
 if __name__ == "__main__":
     unittest.main()
