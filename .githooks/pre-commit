@@ -2,14 +2,18 @@
 # .githooks/pre-commit
 # AI Text Guard — Hygiene Capsule (auto-fix + verify)
 #
-# Contract:
-# - Run the checker first; if OK, do nothing.
+# Contract (v4.2):
+# - Run the checker first; if OK, do nothing (fast path).
 # - If NOT OK, run the fixer, then re-check.
 # - Stage ONLY tracked fixer outputs inside the capsule scope.
 # - Fail closed when:
 #     * capsule scope has unstaged diffs (partial-staging risk)
 #     * anything outside scope has unstaged diffs (keep worktree stable)
-#     * fixer touches outside scope or creates untracked files in scope
+#     * untracked files exist outside scope (fixer could create junk outside)
+#     * fixer touches outside scope (auto-revert worktree changes outside scope)
+#     * fixer creates untracked files in scope
+# - Rebase/Merge safety: during sensitive git ops, guard is skipped (exit 0)
+#   to avoid interfering with conflict resolution flows.
 #
 # Escape hatch (use sparingly; leaves an obvious trace in your shell history):
 #   SKIP_AI_TEXT_GUARD=1 git commit ...
@@ -31,10 +35,13 @@ cd "$ROOT" || exit 0
 
 GITDIR="$(git rev-parse --git-dir 2>/dev/null || true)"
 if [ -n "$GITDIR" ]; then
-  if [ -f "$GITDIR/MERGE_HEAD" ] || [ -f "$GITDIR/CHERRY_PICK_HEAD" ] || [ -f "$GITDIR/REVERT_HEAD" ] || [ -d "$GITDIR/rebase-apply" ] || [ -d "$GITDIR/rebase-merge" ]; then
-    echo "[FATAL] git operation in progress (merge/rebase/cherry-pick/revert)."
-    echo "Finish it (or abort) before committing."
-    exit 1
+  if [ -f "$GITDIR/MERGE_HEAD" ] \
+    || [ -f "$GITDIR/CHERRY_PICK_HEAD" ] \
+    || [ -f "$GITDIR/REVERT_HEAD" ] \
+    || [ -d "$GITDIR/rebase-apply" ] \
+    || [ -d "$GITDIR/rebase-merge" ]; then
+    echo "[WARN] git operation in progress (merge/rebase/cherry-pick/revert). guard skipped."
+    exit 0
   fi
 fi
 
@@ -68,6 +75,17 @@ if [ -n "$UNSTAGED_OUTSIDE" ]; then
   echo "  - stage them, or stash them, then retry commit"
   echo ""
   printf "%s\n" "$UNSTAGED_OUTSIDE"
+  exit 1
+fi
+
+# C) Worktree stability: refuse untracked files outside scope (not ignored).
+UNTRACKED_OUTSIDE="$(git ls-files --others --exclude-standard 2>/dev/null | grep -Ev '^(docs/|ops/|\.github/|internal/|\.githooks/)' || true)"
+if [ -n "$UNTRACKED_OUTSIDE" ]; then
+  echo "[FATAL] Untracked files exist outside capsule scope."
+  echo "Auto-fix must run on a stable worktree. Resolve first:"
+  echo "  - add them (if intended), or delete/stash them, then retry commit"
+  echo ""
+  printf "%s\n" "$UNTRACKED_OUTSIDE"
   exit 1
 fi
 

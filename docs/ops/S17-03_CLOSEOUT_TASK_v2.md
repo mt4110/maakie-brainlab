@@ -10,6 +10,11 @@
   - [ ] `git add -u -- docs ops .github internal .githooks`
   - [ ] `bash ops/finalize_clean.sh --check` (Check: PASS)
 
+## Rebase/Merge Safety
+- merge / rebase / cherry-pick / revert などの **敏感操作中はガードをスキップ（exit 0）**します。
+  - 理由: 競合解消フローに介入して “止める/書き換える” のが一番危険だから。
+  - ふだんの通常 commit では従来どおり **check→fix→check** の自動化が動きます。
+
 ## 2) Canonical Capsule
 - [ ] tracked docs は PR body の Canonical Ritual を参照している (Check)
 - [ ] tracked docs に canonical tuple（commit/bundle/sha の固定値）が直書きされていない (Check)
