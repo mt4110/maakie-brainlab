@@ -24,8 +24,7 @@ Progress: 100%
 - [x] `make test` (PASS)
 - [x] `bash ops/run_always_1h.sh` (100% PASS)
 - [x] 生成物 SHA256 を記録 (Ritual Calculation)
-  - [x] review_bundle_20260215_135256.tar.gz
-  - [x] SHA256: `7f444f689d06e2acd830c4cbafc17f26a111ff0c1616b5df6580f096bedd2587`
+  - [x] Canonical: See PR body Ritual (to prevent drift)
 
 ## 4) 仕上げ（85%→100%）
 - [x] commit (規約遵守)
@@ -35,7 +34,6 @@ Progress: 100%
 
 ## Evidence（証拠）
 - **Last Golden Run**: `2026-02-15 12:12:51 (local)`
-- **Bundle**: `review_bundle_20260215_135256.tar.gz`
-- **Bundle SHA256**: `7f444f689d06e2acd830c4cbafc17f26a111ff0c1616b5df6580f096bedd2587`
+- **Canonical Bundle**: See PR body Ritual (to prevent drift)
 - **Success Run**: `log_pass_22028710788.txt`
 - **Log**: [fix_evidence.txt](../evidence/s17-03/fix_evidence.txt)

@@ -3,9 +3,7 @@
 This folder exists to reconcile audit consistency for S17-03 and preserve offline-verifiable PASS evidence.
 
 ## Canonical (Single Source of Truth)
-- **Commit**: `03108902475ec622596da49e060422e285ae4564` (short: `0310890`)
-- **Review Bundle**: `review_bundle_20260215_135256.tar.gz`
-- **Bundle SHA256**: `7f444f689d06e2acd830c4cbafc17f26a111ff0c1616b5df6580f096bedd2587`
+- **See PR Body "Canonical Ritual" block** (to prevent infinite drift)
 
 This canonical tuple (commit + bundle + sha256) is the only authoritative reference for PR #51.
 
@@ -32,9 +30,7 @@ Historical context is preserved, but only the canonical tuple above is used for 
 ## Final Closeout (Canonical Fixation: Stop Infinite Drift)
 
 ### Canonical (Single Source of Truth)
-- Commit: `0310890`
-- Review Bundle: `review_bundle_20260215_135256.tar.gz`
-- SHA256: `7f444f689d06e2acd830c4cbafc17f26a111ff0c1616b5df6580f096bedd2587`
+- **See PR Body "Canonical Ritual" block** (to prevent infinite drift)
 
 ### Historical (Demoted)
 - `review_bundle_20260215_121251.tar.gz` / `03cc0575...` は過去ログとして保持（Canonical ではない）。

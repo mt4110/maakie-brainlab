@@ -4,9 +4,7 @@ Owner: ambi
 Progress: 0%
 
 ## Canonical (must not change)
-- Commit: 0310890
-- Bundle: review_bundle_20260215_135256.tar.gz
-- SHA256: 7f444f689d06e2acd830c4cbafc17f26a111ff0c1616b5df6580f096bedd2587
+- **See PR Body "Canonical Ritual" block** (to prevent infinite drift)
 
 ## 0) Snapshot (0%→10%)
 - [ ] repo_root := `cd "$(git rev-parse --show-toplevel)"`

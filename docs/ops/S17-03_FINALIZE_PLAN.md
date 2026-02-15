@@ -8,9 +8,7 @@ Progress: 0%
 - Canonical を「commit固定」にし、以後の verify-only 生成物は Observation（観測）として扱う。
 
 ## Canonical (Single Source of Truth)
-- Commit: 0310890
-- Review Bundle: review_bundle_20260215_135256.tar.gz
-- SHA256: 7f444f689d06e2acd830c4cbafc17f26a111ff0c1616b5df6580f096bedd2587
+- **See PR Body "Canonical Ritual" block** (to prevent infinite drift)
 
 ## Historical (Demoted; NOT Canonical)
 - 121251 / 03cc... は過去の状態として残す（参考ログ）。
