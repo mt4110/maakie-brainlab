@@ -3,11 +3,13 @@
 # AI Text Guard — Hygiene Capsule (auto-fix + verify)
 #
 # Contract:
-# - Run the fixer, then run the checker.
-# - Stage ONLY the fixer's outputs inside the capsule scope.
-# - Never touch (re-stage) whatever you already staged outside that scope.
-# - Fail closed when the capsule scope is "mixed" (has unstaged diffs), because
-#   auto-fix + restage would clobber partial-staging.
+# - Run the checker first; if OK, do nothing.
+# - If NOT OK, run the fixer, then re-check.
+# - Stage ONLY tracked fixer outputs inside the capsule scope.
+# - Fail closed when:
+#     * capsule scope has unstaged diffs (partial-staging risk)
+#     * anything outside scope has unstaged diffs (keep worktree stable)
+#     * fixer touches outside scope or creates untracked files in scope
 #
 # Escape hatch (use sparingly; leaves an obvious trace in your shell history):
 #   SKIP_AI_TEXT_GUARD=1 git commit ...
@@ -33,10 +35,12 @@ if [ ! -f "$FIXER" ]; then
   exit 1
 fi
 
-# The only paths this capsule is allowed to auto-stage.
+# The only paths this capsule is allowed to touch / stage.
 SCOPE=(docs ops .github internal .githooks)
 
-echo "== 0) Preflight (fail closed on mixed scope) =="
+echo "== 0) Preflight (fail closed) =="
+
+# A) Partial-staging risk: scope must not be mixed (unstaged diffs).
 UNSTAGED_IN_SCOPE="$(git diff --name-only -- "${SCOPE[@]}" 2>/dev/null || true)"
 if [ -n "$UNSTAGED_IN_SCOPE" ]; then
   echo "[FATAL] Unstaged changes exist inside capsule scope."
@@ -47,10 +51,26 @@ if [ -n "$UNSTAGED_IN_SCOPE" ]; then
   exit 1
 fi
 
-echo "== 1) Auto-fix =="
-# Snapshot *which files are already dirty* before the fixer runs.
-DIRTY_BEFORE="$(git diff --name-only 2>/dev/null || true)"
+# B) Safety: keep the rest of the worktree stable while auto-fixing.
+UNSTAGED_OUTSIDE="$(git diff --name-only 2>/dev/null | grep -Ev '^(docs/|ops/|\.github/|internal/|\.githooks/)' || true)"
+if [ -n "$UNSTAGED_OUTSIDE" ]; then
+  echo "[FATAL] Unstaged changes exist outside capsule scope."
+  echo "Auto-fix must run on a stable worktree. Resolve first:"
+  echo "  - stage them, or stash them, then retry commit"
+  echo ""
+  printf "%s\n" "$UNSTAGED_OUTSIDE"
+  exit 1
+fi
 
+echo "== 1) Check (fast path) =="
+bash "$FIXER" --check
+rc=$?
+if [ $rc -eq 0 ]; then
+  echo "[OK] AI Text Guard (no changes needed)"
+  exit 0
+fi
+
+echo "== 2) Auto-fix =="
 bash "$FIXER" --fix
 rc=$?
 if [ $rc -ne 0 ]; then
@@ -58,44 +78,38 @@ if [ $rc -ne 0 ]; then
   exit $rc
 fi
 
-echo "== 2) Stage fixer outputs (scope only) =="
-# Stage ONLY what the fixer changed within scope.
-# (Because scope was clean preflight, these are fixer-only diffs.)
-STAGE_OK=1
-while IFS= read -r -d '' f; do
-  [ -n "$f" ] || continue
-  if ! git add -- "$f"; then
-    echo "[FATAL] failed to stage: $f"
-    STAGE_OK=0
-  fi
-done < <(git diff --name-only -z -- "${SCOPE[@]}" 2>/dev/null || true)
-
-if [ $STAGE_OK -ne 1 ]; then
-  exit 1
-fi
-
 echo "== 3) Guardrail: fixer must not touch outside scope =="
-DIRTY_AFTER="$(git diff --name-only 2>/dev/null || true)"
-
-# NEW = after - before (set difference)
-# We use comm to find lines in after that are not in before
-# Pre-requisite: inputs must be sorted
-NEW_DIRTY="$(comm -13 \
-  <(printf "%s\n" "$DIRTY_BEFORE" | LC_ALL=C sort -u) \
-  <(printf "%s\n" "$DIRTY_AFTER"  | LC_ALL=C sort -u) \
-  | sed '/^$/d' || true
-)"
-
-# Check if any new dirty file is outside scope
-NEW_OUTSIDE="$(printf "%s\n" "$NEW_DIRTY" | grep -Ev '^(docs/|ops/|\.github/|internal/|\.githooks/)' || true)"
-if [ -n "$NEW_OUTSIDE" ]; then
-  echo "[FATAL] auto-fix made new edits outside capsule scope:"
-  printf "%s\n" "$NEW_OUTSIDE"
-  echo "Resolve manually or expand capsule scope intentionally."
+OTHER="$(git diff --name-only 2>/dev/null | grep -Ev '^(docs/|ops/|\.github/|internal/|\.githooks/)' || true)"
+if [ -n "$OTHER" ]; then
+  echo "[FATAL] auto-fix modified files outside capsule scope:"
+  printf "%s\n" "$OTHER"
+  echo "[INFO] reverting those worktree changes (restore from index)..."
+  printf "%s\n" "$OTHER" | while IFS= read -r f; do
+    [ -n "$f" ] || continue
+    git restore --worktree -- "$f" 2>/dev/null || git checkout -- "$f" 2>/dev/null || true
+  done
   exit 1
 fi
 
-echo "== 4) Final check =="
+echo "== 4) Guardrail: fixer must not create untracked files in scope =="
+UNTRACKED_IN_SCOPE="$(git ls-files --others --exclude-standard -- "${SCOPE[@]}" 2>/dev/null || true)"
+if [ -n "$UNTRACKED_IN_SCOPE" ]; then
+  echo "[FATAL] auto-fix created untracked files in capsule scope:"
+  printf "%s\n" "$UNTRACKED_IN_SCOPE"
+  echo "Stage them manually if intended, or adjust the fixer."
+  exit 1
+fi
+
+echo "== 5) Stage fixer outputs (tracked, scope only) =="
+# Stage tracked modifications + deletions in scope, without adding new files.
+git add -u -- "${SCOPE[@]}"
+rc=$?
+if [ $rc -ne 0 ]; then
+  echo "[FATAL] failed to stage fixer outputs in scope (exit=$rc)"
+  exit $rc
+fi
+
+echo "== 6) Final check =="
 bash "$FIXER" --check
 rc=$?
 if [ $rc -ne 0 ]; then
