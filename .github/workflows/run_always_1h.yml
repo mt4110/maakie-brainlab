@@ -2,14 +2,12 @@ name: Run Always 1h
 
 on:
   schedule:
-    - cron: '0 * * * *' # Hourly
+    - cron: "0 * * * *" # Hourly
   workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
-
-
 
 permissions:
   contents: read
@@ -29,8 +27,8 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-          cache: 'pip'
+          python-version: "3.11"
+          cache: "pip"
 
       - name: Create venv & Install Deps
         run: |
@@ -47,12 +45,12 @@ jobs:
       # Ephemeral Keys for potential signing (if script supports it)
       # Materialize Signing Key from Secrets (Fixes Policy Violation)
       - name: Materialize Signing Key
-        if: ${{ env.S6_SIGNING_KEY_B64 != '' }}
+        if: ${{ secrets.S6_SIGNING_KEY_B64 != '' }}
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p .tmp/keys
-          # Decode base64 secret to file
+          # Decode base64 secret to file (using printf to prevent trailing newline)
           printf '%s' "$S6_SIGNING_KEY_B64" | base64 --decode > .tmp/keys/s6_signing_key.asc
           chmod 600 .tmp/keys/s6_signing_key.asc
           # Export path to env

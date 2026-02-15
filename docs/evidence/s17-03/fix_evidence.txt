@@ -1,22 +1,26 @@
-# S17-03 Stabilization Evidence
-Status: VERIFIED
-Date: 2026-02-15
+S17-03 Retro-Fixpack Evidence (Canonical)
 
-## Failure Case
-- **Run ID**: 22027626252
-- **Error**: Policy Violation (Trust Anchor v1) - Signature required in CI but not found.
-- **Log**: docs/evidence/s17-03/log_failed_22027626252.txt
+CANONICAL (single source of truth)
+Commit: 03108902475ec622596da49e060422e285ae4564 (short: 0310890)
+Review Bundle: review_bundle_20260215_135256.tar.gz
+Bundle SHA256: 7f444f689d06e2acd830c4cbafc17f26a111ff0c1616b5df6580f096bedd2587
 
-## Fix & Success Case
-- **Run ID**: 22028710788 (Latest Success on main)
-- **Log**: docs/evidence/s17-03/log_pass_22028710788.txt (Success confirmed offline)
-- **Note**: User-provided ID 22027976749 was referenced but could not be retrieved; using validated success 22028710788.
+PASS artifacts (saved for offline audit)
+docs/evidence/s17-03/log_pass_22027976749.txt
+docs/evidence/s17-03/log_pass_22028710788.txt
+docs/evidence/s17-03/run_22028710788.json
+docs/evidence/s17-03/log_failed_22027626252.txt
+docs/evidence/s17-03/run_22027626252.json
 
-## Canonical Artifact
-- **Bundle**: review_bundle_20260215_121251.tar.gz
-- **SHA256**: 03cc0575170393c7481c96452d9a0aae5feef7480901993c71ab7b0a89416fff
+CI signing key injection (hardening)
+Workflow materializes signing key from secret:
+.github/workflows/run_always_1h.yml uses secret S6_SIGNING_KEY_B64 and writes:
+.tmp/ci_signing_key (0600)
+exports S6_SIGNING_KEY=.tmp/ci_signing_key via $GITHUB_ENV
 
-## Signing Mode
-- **MODE**: SMOKE (deterministic via seed)
-- **Seed**: reviewpack-smoke-v1
-- **Status**: Non-secure for production, but satisfies audit ritual for this milestone.
+Script enforces strict CI signing:
+ops/run_always_1h.sh fails fast when require_signature_in_ci=true and S6_SIGNING_KEY is missing.
+
+Historical (NOT canonical; retained as reference only)
+Older bundle/SHA references (e.g., 03cc... / review_bundle_20260215_121251.tar.gz) are historical snapshots.
+They must not be treated as canonical after commit 0310890 introduced additional hardening changes.

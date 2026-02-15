@@ -8,10 +8,10 @@ Progress: 100%
 - [ ] git status -sb is clean
 - [ ] rg -n "eb8631|124326" docs/ops docs/evidence || true (Assess presence of non-canonical SHA)
 
-## 1) Canonical Fixation (03cc / 121251)
-- [ ] Update `docs/ops/S17-03_TASK.md` to use `03cc...` / `121251`
-- [ ] Update `docs/evidence/s17-03/fix_summary.md` to use `03cc...` / `121251`
-- [ ] Ensure `docs/evidence/s17-03/fix_evidence.txt` uses `03cc...` / `121251`
+## 1) Canonical Fixation (0310890 / 135256)
+- [ ] Update `docs/ops/S17-03_TASK.md` to use `135256` / `7f444f...`
+- [ ] Update `docs/evidence/s17-03/fix_summary.md` to use `135256` / `7f444f...`
+- [ ] Ensure `docs/evidence/s17-03/fix_evidence.txt` uses `135256` / `7f444f...`
 
 ## 2) Documentation Completion
 - [ ] Set `docs/ops/S17-03_RETROFIX_PLAN.md` to Status: DONE / Progress: 100%
@@ -25,5 +25,5 @@ Progress: 100%
 - [ ] make test
 - [ ] Commit (chore/docs)
 - [ ] Push
-- [ ] Update PR #51 body with canonical `03cc...` ritual
+- [ ] Update PR #51 body with canonical `135256` ritual
 - [ ] Verify PR body via `gh pr view 51`
