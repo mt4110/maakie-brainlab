@@ -1,29 +1,27 @@
-# S17 TASK（00→03固定）
+# TASK: S17 Milestone - IL-as-LLM Contract v1
+Status: DONE
+Owner: ambi
+Progress: 100%
 
-## Safety Snapshot（必須）
-- [ ] `cd "$(git rev-parse --show-toplevel)"; git status -sb`
-- [ ] `git rev-parse --abbrev-ref HEAD`
-- [ ] `git log -1 --oneline --decorate`
+## 0) Safety Snapshot（0%→10%）
+- [x] repo_root を取得
+- [x] git status -sb 
+- [x] 必要コマンド存在確認（gh/git/go）
 
-## S17-00 Kickoff
-- [ ] `docs/ops/S17_PLAN.md` を作成（目的/非ゴール/用語/成果物/ゲート/進捗定義）
-- [ ] `docs/ops/S17_TASK.md` を作成（00→03順序固定）
-- [ ] `docs/ops/S17-00_PLAN.md` を作成（分岐/停止条件）
-- [ ] `docs/ops/S17-00_TASK.md` を作成（チェック順序固定）
+## 1) 探索（Paths / Branch / Files）(10%→25%)
+- [x] docs_home を探索して確定
+- [x] milestone 構成の確認
 
-## S17-01 Contract Spec（設計）
-- [ ] `docs/ops/S17-01_PLAN.md` を作成（契約面/正規化/エラー/例/受け入れ）
-- [ ] `docs/ops/S17-01_TASK.md` を作成（GOOD/BAD例まで含める順序固定）
-- [ ] （S17-01で）`docs/il/IL_CONTRACT_v1.md` を作成
-- [ ] （S17-01で）`docs/il/il.schema.json` を作成
-- [ ] （S17-01で）`docs/il/examples/` を追加（GOOD/BAD最低1つずつ）
+## 2) 実装（各フェーズ）(25%→85%)
+- [x] S17-00: Kickoff
+- [x] S17-01: Contract Spec
+- [x] S17-02: Validator Implement
+- [x] S17-03: reviewpack Integration & Stabilization
 
-## Gates（clean tree 前提）
-- [ ] `make test`
-- [ ] `go run cmd/reviewpack/main.go submit --mode verify-only`
+## 3) Gate & Rituals（85%→100%）
+- [x] `make test` PASS
+- [x] `verify-only` PASS (Ritual SHA256 含む)
+- [x] Ambi Ultra-Precise Design v1 への書類レトロフィット
 
-## Commit / Push / PR
-- [ ] `git add docs/ops/S17*.md docs/ops/S17-*.md docs/il/*`
-- [ ] `git commit -m "chore(docs): kickoff S17 IL Contract v1 (milestones + spec skeleton)"`
-- [ ] `git push -u origin HEAD`
-- [ ] `gh pr create --base main --head "$(git rev-parse --abbrev-ref HEAD)" --fill`
+## 4) 仕上げ
+- [x] DONE: S17 milestone closes with all artifacts ritualized.

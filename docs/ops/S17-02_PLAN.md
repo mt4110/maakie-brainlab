@@ -1,76 +1,66 @@
-# S17-02 PLAN — IL validator / canonicalizer (Contract v1) [HARDCORE+]
+# PLAN: S17-02 IL validator / canonicalizer (Contract v1) [HARDCORE+]
+Status: DONE
+Owner: ambi
+Progress: 100%
 
-## 0. SOT（唯一の基準）
-- Contract: `docs/il/IL_CONTRACT_v1.md`
-- Schema: `docs/il/il.schema.json`（JSONとしてparse可能であること）
-- Fixtures:
-  - `docs/il/examples/good_min.json` … PASS
-  - `docs/il/examples/bad_min.json` … FAIL
-  - `docs/il/examples/bad_forbidden_timestamp.json` … FAIL（schema PASS/contract FAIL）
+## Goal（目的）
+- IL Contract v1 に対する強固な検証器 (validator) と正規化器 (canonicalizer) を実装する。
+- 数値の厳密性、予約語 `errors` の排除、および決定論的な JSON シリアライズを保証する。
 
-## 1. Goal（目的）
-IL Contract v1 に対して検証器（validator）と正規化器（canonicalizer）を実装し、
-normalize/pipeline が機械的に OK/NG を判定できるようにする。
+## Non-Goal（やらないこと）
+- IL v2 の策定。
+- 下流評価ロジックの拡張（別フェーズに分離）。
 
-- validator：必須/型/禁止フィールド/禁止キー/数値/予約語/Null禁止を固定
-- canonicalizer：同一入力→同一出力（canonical JSON / JSONL）
-- integration：`src/satellite/normalize.py` に統合し、導線は1本
+## Inputs（入力）
+- Repo: `git rev-parse --show-toplevel`
+- Target branch: `s17-02-il-validator-v1` (Merged)
+- Target files:
+    - `src/il_validator.py`
+    - `src/satellite/normalize.py`
+    - `tests/test_il_validator.py`
 
-## 2. Non-Goals（やらない）
-- IL v2策定
-- 下流評価ロジックの拡張（別Sに分離）
+## Outputs（出力）
+- Code changes: `il_validator.py` (HARDCORE+ implementation).
+- Evidence: `reviewpack submit --mode verify-only`
+- PR: #50 (Merged)
 
-## 3. Design（設計）
-### 3.1 Execution Contract（環境依存禁止）
-- Pythonモジュールルートは `./src`
-- repo root から `make test` / sat-* が一発で動く
-- `PYTHONPATH=./src:.` を満たす
-- import契約の優先順位：**最終責任は Makefile（`PYTHONPATH=./src:.`）**。`src/satellite/normalize.py` の `sys.path.insert` は保険（実行方法/CWD差の事故防止）であり、競合したら Makefile 契約に合わせる。
+## Invariants（絶対に壊さないもの）
+- Determinism: 同一入力に対して常に同一の canonical JSON を生成すること。
+- Auditability: `errors` コードを Contract v1 集合に限定すること。
+- Safety: `errors` 配下への再帰的バリデーションを禁止し、ノイズ増殖を防ぐこと。
 
-### 3.2 Contract固定（曖昧さの芽を潰す）
-- `errors` は予約語：入力に現れた時点で FAIL（どこに出ても）
-- 数値は厳密整数のみ
-  - float 全拒否（1.0, 1e3 も禁止）
-  - bool を int 扱いしない
-  - 53-bit safe integer のみ
-- `il` は object 必須
+## Stop Conditions（停止条件）
+- error: `errors` キーが入力の任意の位置に存在する。
+- error: 数値が float, bool, または 53-bit 範囲外である。
+- error: `il` フィールドが object 以外。
 
-### 3.3 Error code（集合固定）
-`errors[].code` は Contract集合のみ（独自追加禁止）：
-- `E_SCHEMA`
-- `E_FORBIDDEN`
-- `E_AMBIGUOUS`
-- `E_MISSING_ARTIFACT`
-- `E_NONDETERMINISTIC`
-- `E_UNSUPPORTED`
+## Plan Pseudocode（疑似コード）
+### P0: Safety Snapshot
+- `repo_root` 取得。
+- `git status` 確認。
 
-### 3.4 Canonical JSON（規格固定）
-- `json.dumps(..., sort_keys=True, separators=(',',':'), ensure_ascii=False, allow_nan=False)`
-- JSONLは 1行=1レコード、改行はLF固定
+### P1: Resolve Paths
+- `VALIDATOR_PY = "src/il_validator.py"`
+- `NORMALIZE_PY = "src/satellite/normalize.py"`
+- 実在確認後、パスを記録。
 
-## 4. Acceptance（受け入れ条件）
-### Gates（必須）
-- `make test` PASS
-- `go run cmd/reviewpack/main.go submit --mode verify-only` PASS
+### P2: Implement (HARDCORE+)
+- `ILValidator`:
+    - for key in data: if key == "errors" -> add_error(E_SCHEMA).
+    - _validate_recursive: 予約語 `"errors"` 検出でノイズ防止のため `continue`。
+    - type(val) is int (no bool/float) + 53-bit range check.
+- `ILCanonicalizer`:
+    - `json.dumps(..., sort_keys=True, separators=(',',':'), allow_nan=False)`.
+- `normalize.py`:
+    - `sys.path.insert(0, str(ROOT / "src"))` による import 契約固定。
 
-### Behavior（根拠）
-- good fixture：PASS（errorsは出さない）
-- bad fixtures：FAIL（errors length>=1）
-- `errors` キーが入力に存在：FAIL（E_SCHEMA）
-- float / bool / 53-bit超過：FAIL
-- `il` が object 以外：FAIL
-- canonical JSON/JSONL が決定論で固定
+### P3: Gates
+- `make test` PASS。
+- `verify-only` PASS。
 
-## 5. Files（編集対象の実パス）
-- `Makefile`
-- `src/il_validator.py`
-- `src/satellite/normalize.py`
-- `tests/test_il_validator.py`
-- `tests/test_satellite_normalize.py`
-- `docs/ops/S17-02_PLAN.md`
-- `docs/ops/S17-02_TASK.md`
+### P4: Commit/PR
+- PR #50 本文への SHA256  rituals 記録。
 
-## 6. Delivery（運用）
-- 1PRでS17-02を閉じる（コミットは刻んでOK）
-- bundle SHA256 は 1つに固定（食い違い禁止）
-- PR本文に貼る SHA256 は「貼る直前にローカルで再計算して確定値にする」。例：`shasum -a 256 "$(ls -1t review_bundle_*.tar.gz | head -n 1)"`（`sha256sum` がある環境なら置き換え可）
+## Dead-Angle Check（死角チェック）
+- 「既に存在」する `errors` キーが下流に混乱を招かないか？ → 入力段階で即 FAIL させる設計で排除。
+- import 先が CWD によって揺れないか？ → `sys.path` を `src` に固定して解決。
