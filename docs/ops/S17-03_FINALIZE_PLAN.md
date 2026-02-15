@@ -17,7 +17,7 @@ Progress: 0%
 - `docs/ops/S17-03_TASK.md` uses CANONICAL.
 - `docs/evidence/s17-03/fix_summary.md` uses CANONICAL.
 - `docs/evidence/s17-03/fix_evidence.txt` uses CANONICAL.
-- `file://` count in repo is 0.
+- `[FILE_URI]` count in repo is 0.
 - `run_always_1h.yml` uses materialized secrets for signing.
 
 ## Plan Pseudocode

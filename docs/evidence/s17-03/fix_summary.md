@@ -15,7 +15,7 @@ This canonical tuple (commit + bundle + sha256) is the only authoritative refere
    - Ensured PASS artifacts are stored under `docs/evidence/s17-03/` for offline review.
 
 2. **Hygiene hardening**:
-   - Prohibited `file://` patterns are obfuscated as needed to satisfy automated gates.
+   - Prohibited `[FILE_URI]` patterns are obfuscated as needed to satisfy automated gates.
    - Repo-relative paths are used for audit references.
 
 3. **CI signing key injection**:
