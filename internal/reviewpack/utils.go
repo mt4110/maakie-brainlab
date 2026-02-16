@@ -100,7 +100,7 @@ func runMake(dir, logName string, cmdArgs []string, timeoutSec int, failCode int
 	// Post-processing: Portable Log and SHA256
 	portLogPath := filepath.Join(portDir, logName)
 	createPortableLog(rawLogPath, portLogPath)
-	
+
 	// SHA256 for Raw
 	shaRaw, _ := fileSha256(rawLogPath)
 	shaRawPath := rawLogPath + ".sha256"

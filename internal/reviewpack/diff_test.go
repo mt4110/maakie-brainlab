@@ -41,7 +41,7 @@ func TestDiff(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(rootB, "logs/portable"), 0755); err != nil {
 		t.Fatal(err)
 	}
-	
+
 	if err := os.WriteFile(filepath.Join(rootA, "logs/portable/test.log"), []byte("line1\nline2\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
@@ -88,9 +88,13 @@ func TestCompareRaw(t *testing.T) {
 	}
 
 	diffs, err := walkRaw(rootA)
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	diffsB, err := walkRaw(rootB)
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if len(diffs) == 0 || len(diffsB) == 0 {
 		t.Errorf("walkRaw returned empty map")

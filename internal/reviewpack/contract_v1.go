@@ -9,9 +9,9 @@ import (
 
 // ContractV1 defines the schema for CONTRACT_v1 file.
 type ContractV1 struct {
-	ContractVersion          int      `json:"contract_version"`
-	PackVersion              string   `json:"pack_version"`
-	RequiredPaths            []string `json:"required_paths"`
+	ContractVersion           int      `json:"contract_version"`
+	PackVersion               string   `json:"pack_version"`
+	RequiredPaths             []string `json:"required_paths"`
 	PortableLogRequiresSha256 bool     `json:"portable_log_requires_sha256"`
 }
 

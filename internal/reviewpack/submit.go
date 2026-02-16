@@ -234,7 +234,7 @@ func packToTarForSubmit(args []string, timebox int, mode string, skipTest bool, 
 
 	// 8-11. Finalize
 	tarFile := finalizePack(packDir, packName, "review_bundle")
-	
+
 	// Signing (S17-03)
 	if signKey != "" {
 		if err := signFile(signKey, tarFile); err != nil {

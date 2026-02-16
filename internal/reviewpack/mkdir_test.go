@@ -9,7 +9,7 @@ import (
 
 func TestMkdirAllHardeningFailFast(t *testing.T) {
 	tmpDir := t.TempDir()
-	
+
 	// Create a regular file that will block directory creation
 	blocker := filepath.Join(tmpDir, "blocker")
 	if err := os.WriteFile(blocker, []byte("I am a file"), 0644); err != nil {

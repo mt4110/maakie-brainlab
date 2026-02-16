@@ -122,12 +122,12 @@ func runCreate(base string) error {
 
 	// 6. Execute gh pr create
 	ghArgs := []string{"pr", "create", "--base", base, "--head", current, "--title", title, "--body-file", tmpFile.Name()}
-	
+
 	ghCmd := exec.Command("gh", ghArgs...)
 	ghCmd.Stdout = os.Stdout
 	ghCmd.Stderr = os.Stderr
 	ghCmd.Stdin = os.Stdin
-	
+
 	if err := ghCmd.Run(); err != nil {
 		return fmt.Errorf("gh pr create failed: %w", err)
 	}
@@ -158,7 +158,7 @@ func prepareBody(base string) string {
 	// Inject Evidence
 	// Find latest bundle
 	bundlePath := findLatestBundle()
-	
+
 	evidenceSection := "## Evidence"
 	if !strings.Contains(body, evidenceSection) {
 		body += "\n\n" + evidenceSection + "\n"
@@ -167,16 +167,16 @@ func prepareBody(base string) string {
 	// Prepare injection lines
 	headSHA, _ := gitOutput("rev-parse", "HEAD")
 	timestamp := time.Now().UTC().Format(time.RFC3339)
-	
+
 	injection := []string{
 		fmt.Sprintf("- HeadSHA: `%s`", headSHA),
 		fmt.Sprintf("- GeneratedAt: `%s`", timestamp),
 	}
-	
+
 	if bundlePath != "" {
 		baseName := filepath.Base(bundlePath)
 		injection = append(injection, fmt.Sprintf("- Bundle: `%s`", baseName))
-		
+
 		// Calc SHA256 of bundle
 		if sum, err := sha256File(bundlePath); err == nil {
 			injection = append(injection, fmt.Sprintf("- SHA256: `%s`", sum))
@@ -187,7 +187,7 @@ func prepareBody(base string) string {
 
 	// Inject under ## Evidence
 	body = insertAfter(body, "## Evidence", strings.Join(injection, "\n"))
-	
+
 	if strings.TrimSpace(body) == "" {
 		return fmt.Sprintf("Minimal Body\n\nHeadSHA: %s\nRun: (auto)", headSHA)
 	}
@@ -220,7 +220,9 @@ func findLatestBundle() string {
 			root := ".local"
 			if _, err := os.Stat(root); err == nil {
 				filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-					if err != nil { return nil }
+					if err != nil {
+						return nil
+					}
 					if !info.IsDir() && (strings.Contains(info.Name(), "review_bundle") || strings.Contains(info.Name(), "review_pack")) && strings.HasSuffix(info.Name(), ".tar.gz") {
 						if info.ModTime().After(latestTime) {
 							latestTime = info.ModTime()
@@ -232,7 +234,7 @@ func findLatestBundle() string {
 			}
 			continue
 		}
-		
+
 		matches, _ := filepath.Glob(p)
 		for _, m := range matches {
 			info, err := os.Stat(m)

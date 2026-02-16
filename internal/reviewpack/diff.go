@@ -15,11 +15,11 @@ import (
 )
 
 type DiffResult struct {
-	Kind     string            `json:"kind"`
-	Summary  DiffSummary       `json:"summary"`
-	Added    []string          `json:"added"`
-	Removed  []string          `json:"removed"`
-	Modified []string          `json:"modified"`
+	Kind     string      `json:"kind"`
+	Summary  DiffSummary `json:"summary"`
+	Added    []string    `json:"added"`
+	Removed  []string    `json:"removed"`
+	Modified []string    `json:"modified"`
 }
 
 type DiffSummary struct {
@@ -483,5 +483,6 @@ func diffLines(a, b []string) {
 		}
 	}
 }
+
 // intentional change for diff
 // intentional change v2

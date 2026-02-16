@@ -31,9 +31,9 @@ func TestMkdirFailFastSubprocess(t *testing.T) {
 
 	cmd := exec.Command(os.Args[0], "-test.run=TestMkdirFailFastSubprocess")
 	cmd.Env = append(os.Environ(), "BE_HELPER_PROCESS=1", "BLOCKER_PATH="+target)
-	
+
 	out, err := cmd.CombinedOutput()
-	
+
 	if err == nil {
 		t.Errorf("expected process to fail (exit code 1), but it succeeded. Output:\n%s", string(out))
 	}
@@ -57,12 +57,12 @@ func helperProcessMain() {
 	if target == "" {
 		os.Exit(0)
 	}
-	
+
 	// Trigger the fail-fast behavior
 	// copyFile(src, dst) calls os.MkdirAll(filepath.Dir(dst), 0755)
 	// If filepath.Dir(target) is a file, it should fail.
 	copyFile("/dev/null", target)
-	
+
 	// Should never reach here because copyFile calls log.Fatalf
 	os.Exit(0)
 }

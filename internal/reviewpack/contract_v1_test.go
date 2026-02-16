@@ -33,13 +33,13 @@ func TestVerifyContractV1(t *testing.T) {
 	writeFile(filepath.Join(root, dirLogsPortable, "test.log.sha256"), "hash")
 
 	// Should pass (no exit)
-	// Since verifyContractV1 calls os.Exit(1) on failure, we might want to wrap it or 
+	// Since verifyContractV1 calls os.Exit(1) on failure, we might want to wrap it or
 	// change it to return an error for better testability.
-	// But according to the project style (log.Fatal), we'll keep it as is and 
+	// But according to the project style (log.Fatal), we'll keep it as is and
 	// maybe just test the positive case here, or use a subprocess for negative cases.
-	
+
 	// Positive Case
-	verifyContractV1(root) 
+	verifyContractV1(root)
 	t.Log("Positive case passed")
 }
 
@@ -52,7 +52,7 @@ func TestVerifyContractV1_Failures(t *testing.T) {
 		}
 		defer os.RemoveAll(tmpDir)
 		setup(tmpDir)
-		
+
 		// We could use a helper to run this in a subprocess if we really want to check os.Exit
 		// but let's just do a few quick checks if we can refactor verifyContractV1 to return error.
 	}

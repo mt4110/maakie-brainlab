@@ -45,7 +45,7 @@ func TestVerifyMandatoryLogsSubprocess(t *testing.T) {
 			_ = os.WriteFile(filepath.Join(packDir, "review_pack_v1"), []byte("1\n"), 0644)
 
 			var checksumLines []string
-			
+
 			// Helper to add file and checksum
 			addFile := func(relPath string, content []byte, mode os.FileMode) {
 				p := filepath.Join(packDir, relPath)
@@ -65,7 +65,7 @@ func TestVerifyMandatoryLogsSubprocess(t *testing.T) {
 					continue
 				}
 				rel := filepath.Join(dirLogsRaw, f)
-				
+
 				content := []byte("data")
 				if f == "30_make_test.log" {
 					content = []byte("+ go test ./...\n+ unittest discover\n")

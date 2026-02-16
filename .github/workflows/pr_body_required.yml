@@ -10,93 +10,18 @@ jobs:
       pull-requests: write
       contents: read
     steps:
-      - uses: actions/github-script@v7
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
-          script: |
-            const pr = context.payload.pull_request;
-            if (pr.head.repo.full_name !== context.repo.owner + '/' + context.repo.repo) {
-              core.info('Fork PR detected. Skipping body check due to permissions.');
-              return;
-            }
+          fetch-depth: 1
 
-            const sentinel = 'PR_BODY_TEMPLATE_v1:';
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: "go.mod"
 
-            const getTemplate = async () => {
-              try {
-                const res = await github.rest.repos.getContent({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  path: '.github/pull_request_template.md',
-                  ref: pr.base.sha,
-                });
-                if (!res || !res.data || !res.data.content) {
-                   return '';
-                }
-                const enc = res.data.encoding || 'base64';
-                return Buffer.from(res.data.content, enc).toString('utf8');
-              } catch (e) {
-                core.warning('Failed to fetch pull_request_template.md: ' + e);
-                return '';
-              }
-            };
-
-            const cleanBody = (raw) => {
-              if (!raw) return '';
-              return raw
-                .split('\n')
-                .filter((line) => !line.trim().startsWith(sentinel))
-                .join('\n')
-                .trim();
-            };
-
-            let currentBody = pr.body || '';
-            let cleaned = cleanBody(currentBody);
-            let needsUpdate = false;
-
-            // Rule 1: Remove sentinel if present
-            if (currentBody !== cleaned) {
-               core.info('Sentinel detected in body (prefix match). Removing...');
-               needsUpdate = true;
-               currentBody = cleaned;
-            }
-
-            // Rule 2: If empty, fill from template (clean)
-            if (currentBody.length === 0) {
-              core.info('Body is empty. Fetching template...');
-              const rawTpl = await getTemplate();
-              const filled = cleanBody(rawTpl);
-              
-              if (filled.length > 0) {
-                 currentBody = filled;
-                 needsUpdate = true;
-              } else {
-                 core.info('Template unavailable or empty. Falling back to minimal body.');
-                 currentBody = `Minimal Body\n\nHeadSHA: ${pr.head.sha}\nRun: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-                 needsUpdate = true;
-              }
-            }
-
-            // Final check: ensure trailing newline
-            if (currentBody.slice(-1) !== '\n') {
-                currentBody += '\n';
-                if (!needsUpdate) { 
-                    // only mark update if content length changed structurally
-                    // but strict equality comparison `currentBody !== cleaned` handles this if we are careful 
-                    // actually if we just added newline to `currentBody` and it wasn't there, it IS an update.
-                    if (pr.body !== currentBody) {
-                        needsUpdate = true;
-                    }
-                }
-            }
-
-            if (needsUpdate) {
-               await github.rest.pulls.update({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  pull_number: pr.number,
-                  body: currentBody + '\n', // ensure trailing newline
-               });
-               core.info('PR body updated successfully.');
-            } else {
-               core.info('PR body satisfies requirements.');
-            }
+      - name: Run PR Body Fix logic (Go)
+        if: github.actor != 'github-actions[bot]' || github.event_name != 'pull_request_target'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: go run ./cmd/prbodyfix
