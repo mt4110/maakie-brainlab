@@ -7,7 +7,7 @@
 - [x] 60% Run artifacts writer implemented (local)
 - [x] 80% Taxonomy wiring + summary aggregation
 - [x] 90% Gates pass
-- 100% PR merged
+- [x] 100% PR merged (Ready for PR)
 
 ## C0: Safety Snapshot
 - [x] `git status -sb` clean（dirtyなら commit 先）
