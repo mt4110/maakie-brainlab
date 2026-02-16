@@ -7,15 +7,28 @@ import (
 // Sentinel is the prefix marker for lines to be removed.
 const Sentinel = "PR_BODY_TEMPLATE_v1:"
 
-// Clean removes lines starting with the sentinel, preserving indentation for others, and trims the result.
+// Clean removes lines starting with the sentinel (including HTML comments),
+// preserving indentation for others, and trims the result.
 func Clean(body string) string {
 	lines := strings.Split(body, "\n")
 	var keep []string
 	for _, line := range lines {
-		// Logic matches JS: .filter((line) => !line.trim().startsWith(sentinel))
-		if strings.HasPrefix(strings.TrimSpace(line), Sentinel) {
+		trimmed := strings.TrimSpace(line)
+
+		// 1. Direct match
+		if strings.HasPrefix(trimmed, Sentinel) {
 			continue
 		}
+
+		// 2. HTML comment match: <!-- PR_BODY_TEMPLATE_v1: ... -->
+		if strings.HasPrefix(trimmed, "<!--") {
+			// Remove "<!--" and trim again
+			commentContent := strings.TrimSpace(strings.TrimPrefix(trimmed, "<!--"))
+			if strings.HasPrefix(commentContent, Sentinel) {
+				continue
+			}
+		}
+
 		keep = append(keep, line)
 	}
 	result := strings.Join(keep, "\n")

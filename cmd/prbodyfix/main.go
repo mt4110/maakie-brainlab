@@ -84,8 +84,8 @@ func main() {
 	// 3. Logic
 	currentBody := pr.Body
 	cleaned := prbodyfix.Clean(currentBody)
-	needsUpdate := (currentBody != cleaned)
-	if needsUpdate {
+	
+	if currentBody != cleaned {
 		log.Println("Sentinel detected or body unclean. Cleaning...")
 		currentBody = cleaned
 	}
@@ -102,7 +102,6 @@ func main() {
 		filled := prbodyfix.Clean(tpl)
 		if len(filled) > 0 {
 			currentBody = filled
-			needsUpdate = true
 			log.Println("Used template.")
 		} else {
 			log.Println("Template unavailable or empty. Using minimal body.")
@@ -113,15 +112,13 @@ func main() {
 			runId := os.Getenv("GITHUB_RUN_ID")
 			currentBody = fmt.Sprintf("Minimal Body\n\nHeadSHA: %s\nRun: %s/%s/actions/runs/%s",
 				pr.Head.SHA, serverUrl, repoEnv, runId)
-			needsUpdate = true
 		}
 	}
 
-	// 5. Trailing Newline
+	// 5. Trailing Newline & Idempotency Check
 	finalBody := prbodyfix.EnsureTrailingNewline(currentBody)
-	if finalBody != pr.Body {
-		needsUpdate = true
-	}
+	
+	needsUpdate := (finalBody != pr.Body)
 
 	// 6. Update if needed
 	if needsUpdate {

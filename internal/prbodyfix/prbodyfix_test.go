@@ -73,22 +73,17 @@ func TestEnsureTrailingNewline(t *testing.T) {
 			want:  "foo\n",
 		},
 		{
-			name:  "non-empty string returns empty (logic choice)", // Spec implies ensure newline on FINAL body which is presumed non-empty. 
-			// If Clean returns empty, we might not call EnsureTrailingNewline immediately or we expect minimalist body. 
-			// verification: "trailing newline guarantee" usually applies to the file content. 
-			// If input is "", EnsureTrailingNewline("") -> "" or "\n"? 
-			// Let's assume for now it handles non-empty. For empty, maybe "\n" is safer for a file?
-			// But Clean() returns non-empty string for empty body.
-			// Let's stick to the prompt "trailing newline 保証". 
-			// If I have a body "foo", it becomes "foo\n". 
-			// If I have "", maybe it stays ""? Or "\n"?
-			// The workflow ensures "minimal body" if empty. So EnsureTrailingNewline will likely receive non-empty.
-			// Let's test "foo" -> "foo\n".
-			input: "bar",
-			want:  "bar\n",
+			name:  "preserves multiple trailing newlines",
+			input: "foo\n\n",
+			want:  "foo\n\n",
+		},
+		{
+			name:  "empty string returns empty",
+			input: "",
+			want:  "",
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := EnsureTrailingNewline(tt.input); got != tt.want {
