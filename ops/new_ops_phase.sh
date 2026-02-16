@@ -1,6 +1,14 @@
 #!/usr/bin/env bash
 
 PHASE_ID="$1"
+
+# S18-02: PHASE_ID sanitize (v1)
+case "$PHASE_ID" in
+  "" ) echo "ERROR: PHASE_ID required" >&2; exit 2 ;;
+  .* ) echo "ERROR: invalid PHASE_ID (must not start with '.')" >&2; exit 2 ;;
+  *"/"* ) echo "ERROR: invalid PHASE_ID (must not contain '/')" >&2; exit 2 ;;
+  *".."* ) echo "ERROR: invalid PHASE_ID (must not contain '..')" >&2; exit 2 ;;
+esac
 TITLE="$2"
 
 if [ -z "$PHASE_ID" ] || [ -z "$TITLE" ]; then
@@ -57,7 +65,9 @@ write_one () {
     exit 5
   fi
 
-  mv "$TMP" "$OUT"
+  # S18-02: truthful write (v1)
+  if [ -z "$TMP" ] || ! test -s "$TMP"; then echo "ERROR: write failed: $OUT" >&2; rm -f "$TMP"; exit 1; fi
+  if ! mv "$TMP" "$OUT"; then echo "ERROR: mv failed: $TMP -> $OUT" >&2; rm -f "$TMP"; exit 1; fi
   echo "OK: wrote ${OUT}"
 }
 

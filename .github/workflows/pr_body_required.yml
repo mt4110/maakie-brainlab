@@ -1,0 +1,19 @@
+name: PR Body Required
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+
+permissions:
+  pull-requests: read
+
+jobs:
+  body_required:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const body = (context.payload.pull_request && context.payload.pull_request.body) ? context.payload.pull_request.body : "";
+            if (body.trim().length === 0) {
+              core.setFailed("PR body is empty. Fill the description before merge.");
+            }
