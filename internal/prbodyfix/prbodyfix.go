@@ -22,7 +22,7 @@ func Clean(body string) string {
 	return strings.TrimSpace(result)
 }
 
-// EnsureTrailingNewline ensures the string ends with exactly one newline if it is not empty.
+// EnsureTrailingNewline ensures the string ends with at least one newline if it is not empty.
 func EnsureTrailingNewline(s string) string {
 	if s == "" {
 		return ""
