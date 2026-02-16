@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 # S20-03: Use new dataset location and run output location
 DATASETS_DIR = ROOT / "data" / "eval" / "datasets"
 RUNS_DIR = ROOT / ".local" / "rag_eval" / "runs"
-DEFAULT_DATASET_ID = "seed-mini-v0001"
+DEFAULT_DATASET_ID = "rag-eval-wall-v1__seed-mini__v0001"
 STORE_DIR = ROOT / ".local" / "aiwork"
 
 # S20-03: Frozen Failure Codes (EVAL_SPEC v1)

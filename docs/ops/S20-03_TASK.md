@@ -4,9 +4,9 @@
 - [x] 0% Start
 - [x] 10% Plan/Task fixed
 - [x] 30% Dataset skeleton added (repo)
-- 60% Run artifacts writer implemented (local)
-- 80% Taxonomy wiring + summary aggregation
-- 90% Gates pass
+- [x] 60% Run artifacts writer implemented (local)
+- [x] 80% Taxonomy wiring + summary aggregation
+- [x] 90% Gates pass
 - 100% PR merged
 
 ## C0: Safety Snapshot
@@ -19,21 +19,21 @@
 - [x] `dataset_id` は凍結ルール（kebab + vNNNN）に沿う
 
 ## C2: Run artifacts writer (local / fixed outputs)
-- [ ] `.local/rag_eval/runs/<run_id>/` を生成
-- [ ] 必須ファイル: `run.meta.json`, `results.jsonl`, `summary.json`
-- [ ] 推奨ファイル: `command.txt`（実行コマンドを1行保存）
+- [x] `.local/rag_eval/runs/<run_id>/` を生成
+- [x] 必須ファイル: `run.meta.json`, `results.jsonl`, `summary.json`
+- [x] 推奨ファイル: `command.txt`（実行コマンドを1行保存）
 
 ## C3: Failure taxonomy wiring (fixed labels)
-- [ ] `results.jsonl` に `status` と `failure_code` を必ず出す
-- [ ] `summary.json` に `failure_code` 集計を出す（名称は凍結）
-- [ ] “1ケース=1 failure_code” を維持（v1は単純集計）
+- [x] `results.jsonl` に `status` と `failure_code` を必ず出す
+- [x] `summary.json` に `failure_code` 集計を出す（名称は凍結）
+- [x] “1ケース=1 failure_code” を維持（v1は単純集計）
 
 ## C4: ROADMAP update
 - [x] `docs/ops/ROADMAP.md` の S20 セクションに S20-03 を追記
 
 ## C5: Gates
-- [ ] `go test ./...`
-- [ ] `go run cmd/reviewpack/main.go submit --mode verify-only`
+- [x] `go test ./...`
+- [x] `go run cmd/reviewpack/main.go submit --mode verify-only`
 
 ## C6: PR
 - [ ] `git push -u origin HEAD`
