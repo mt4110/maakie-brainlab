@@ -14,10 +14,9 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-)
 
-// Sentinel line prefix to strip from template
-const SENTINEL_PREFIX = "PR_BODY_TEMPLATE_v1:"
+	"reviewpack/internal/prbodyfix"
+)
 
 func main() {
 	var baseBranch string
@@ -144,16 +143,8 @@ func prepareBody(base string) string {
 		template = "## Summary\n(auto)\n\n## Evidence\n"
 	}
 
-	// Strip sentinel by line prefix
-	lines := strings.Split(template, "\n")
-	var cleaned []string
-	for _, l := range lines {
-		if strings.HasPrefix(strings.TrimSpace(l), SENTINEL_PREFIX) {
-			continue
-		}
-		cleaned = append(cleaned, l)
-	}
-	body := strings.Join(cleaned, "\n")
+	// Strip sentinel by line prefix using shared logic
+	body := prbodyfix.Clean(template)
 
 	// Inject Evidence
 	// Find latest bundle
