@@ -15,7 +15,7 @@ jobs:
             const pr = context.payload.pull_request;
             const body = (pr && pr.body) ? pr.body : '';
             const trimmed = body.trim();
-            const sentinel = 'PR_BODY_TEMPLATE_v1';
+            const sentinel = 'PR_BODY_TEMPLATE_v1:';
 
             if (trimmed.length === 0) {
               core.setFailed('PR body is empty. Fill the description before merge.');
