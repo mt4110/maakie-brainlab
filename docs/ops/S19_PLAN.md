@@ -1,38 +1,15 @@
-# DETERMINISTIC_PLAN_TEMPLATE (v1)
+# S19 Plan — PR Body Fixer (S19-01 + S19-02)
+
+## Status
+Done (merged)
 
 ## Goal
-- {{GOAL_ONE_LINE}}
+PR本文（Body）の整形・自動修正を安定化し、PR儀式の一部として再現性ある状態にする。
 
-## Invariants (Must Hold)
-- Planは分岐と停止条件（嘘をつかない）
-- Canonicalは1回だけ固定（以降はObservations）
-- skipは理由1行、errorはその場で停止
-- 編集対象は実パス固定（探索→確定→記録）
+## Result (facts)
+- S19-02 merged ✅（PR #59）
+- main で `go test ./...` PASS ✅
+- main で `go run cmd/reviewpack/main.go submit --mode verify-only` PASS ✅
 
-## Inputs (SOT)
-- {{SOT_PATHS}}
-
-## Outputs (Deliverables)
-- {{DELIVERABLES}}
-
-## Gates
-- make test PASS
-- go run cmd/reviewpack/main.go submit --mode verify-only PASS
-
-## Phase 0 — Scope Definition (STOP条件つき)
-- if scope missing:
-  - error: "scope missing; define explicitly before coding"
-
-## Phase 1 — Define Deliverables
-- Deliverable A: {{A}}
-- Deliverable B: {{B}}
-
-## Phase 2 — Implementation
-- smallest safe steps + local gates
-
-## Phase 3 — Final Gate & Canonical Pin (single)
-- pin once: commit / bundle / sha256
-- note: future verify-only outputs are Observations
-
-## Phase 4 — PR Ritual
-- Canonical block is written exactly once
+## Known Debt (now resolved by S20)
+- S19_PLAN / S19_TASK がテンプレのままだと「全体図どれ？」で迷子になる → S20で入口（ROADMAP）を追加し固定する
