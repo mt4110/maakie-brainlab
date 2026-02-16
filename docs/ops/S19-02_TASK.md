@@ -6,5 +6,5 @@
 - [x] Step 3: Replace CI logic (`cmd/prbodyfix`, `.github/workflows/pr_body_required.yml`) <!-- id: 3 -->
 - [x] Step 4: Unify local logic (`cmd/prkit`) <!-- id: 4 -->
 - [x] Step 5: Verify (Gates) <!-- id: 5 -->
-- [/] Step 6: Commit & Push <!-- id: 6 -->
-- [ ] Step 7: Close superseding PR <!-- id: 7 -->
+- [x] Step 6: Commit & Push <!-- id: 6 -->
+- [x] Step 7: Close superseding PR <!-- id: 7 -->
