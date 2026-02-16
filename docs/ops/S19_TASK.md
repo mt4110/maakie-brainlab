@@ -1,27 +1,12 @@
-# DETERMINISTIC_TASK_TEMPLATE (v1)
+# S19 Task — PR Body Fixer
 
-## Safety Snapshot
-- [ ] cd repo root
-- [ ] git fetch -p origin
-- [ ] git status -sb (dirty/ahead -> STOP)
+## Completed
+- [x] S19-01 done
+- [x] S19-02 done（PR #59 merged）
+- [x] main gate re-run PASS
+  - [x] `go test ./...`
+  - [x] `go run cmd/reviewpack/main.go submit --mode verify-only`
 
-## 0) Scope
-- [ ] scope 1文
-- [ ] scope根拠パス1行
-- [ ] missing -> ERROR STOP
+## Notes
+- このSは実質完了。ただし docs がテンプレ残骸だと迷子が再発するため、S20で入口（ROADMAP）と合わせて固定する。
 
-## 1) Branch
-- [ ] create/switch (skip理由1行)
-
-## 2) Files (path fixed)
-- [ ] PLAN/TASK 実パス固定
-- [ ] template copy
-- [ ] PLAN/TASK に Scope/Deliverables/Gates/STOP を確定
-
-## 3) Local Gates
-- [ ] make test
-- [ ] reviewpack submit --mode verify-only
-
-## 4) Canonical Pin (single)
-- [ ] commit / bundle / sha256
-- [ ] PR本文 Canonical を1回だけ更新
