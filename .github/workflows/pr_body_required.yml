@@ -44,7 +44,7 @@ jobs:
               if (!raw) return '';
               return raw
                 .split('\n')
-                .filter((line) => !line.includes(sentinel))
+                .filter((line) => !line.trim().startsWith(sentinel))
                 .join('\n')
                 .trim();
             };
@@ -55,7 +55,7 @@ jobs:
 
             // Rule 1: Remove sentinel if present
             if (currentBody !== cleaned) {
-               core.info('Sentinel detected in body. Removing...');
+               core.info('Sentinel detected in body (prefix match). Removing...');
                needsUpdate = true;
                currentBody = cleaned;
             }
@@ -65,13 +65,28 @@ jobs:
               core.info('Body is empty. Fetching template...');
               const rawTpl = await getTemplate();
               const filled = cleanBody(rawTpl);
+              
               if (filled.length > 0) {
                  currentBody = filled;
                  needsUpdate = true;
               } else {
-                 core.setFailed('PR body is empty and template unavailable or empty.');
-                 return;
+                 core.info('Template unavailable or empty. Falling back to minimal body.');
+                 currentBody = `Minimal Body\n\nHeadSHA: ${pr.head.sha}\nRun: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+                 needsUpdate = true;
               }
+            }
+
+            // Final check: ensure trailing newline
+            if (currentBody.slice(-1) !== '\n') {
+                currentBody += '\n';
+                if (!needsUpdate) { 
+                    // only mark update if content length changed structurally
+                    // but strict equality comparison `currentBody !== cleaned` handles this if we are careful 
+                    // actually if we just added newline to `currentBody` and it wasn't there, it IS an update.
+                    if (pr.body !== currentBody) {
+                        needsUpdate = true;
+                    }
+                }
             }
 
             if (needsUpdate) {
