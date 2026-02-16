@@ -23,3 +23,5 @@
 
 ## Phases (Additions)
 - S18-01: Phase Scaffold Generator v1 — scope pinned; implementation allowed
+
+- S18-02: Hardening — new_ops_phase.sh truthful write + PHASE_ID sanitize (scope pinned; implementation allowed)

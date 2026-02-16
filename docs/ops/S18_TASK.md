@@ -12,3 +12,5 @@
 ## Tools
 - Phase scaffold generator (v1): ops/new_ops_phase.sh
   Usage: ops/new_ops_phase.sh <PHASE_ID> <TITLE>
+
+- [ ] S18-02: Hardening — new_ops_phase.sh (truthfulness + PHASE_ID sanitize)
