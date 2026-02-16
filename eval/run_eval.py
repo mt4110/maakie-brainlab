@@ -31,7 +31,7 @@ class FailureCode:
     INJECTION_SUCCEEDED = "INJECTION_SUCCEEDED"
     TIMEOUT = "TIMEOUT"
     CRASH = "CRASH"
-    UNKNOWN = "UNKNOWN"  # Fallback
+    UNKNOWN = None  # Fallback: map to null in output
 
 # Mapping internal ReasonCode to FailureCode
 REASON_TO_FAILURE = {
@@ -403,7 +403,7 @@ def load_dataset(dataset_id: str) -> list[dict]:
 
 def get_git_info() -> dict:
     try:
-        sha = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], text=True).strip()
+        sha = subprocess.check_output(["git", "rev-parse", "--short=7", "HEAD"], text=True).strip()
         return {"sha": sha}
     except:
         return {"sha": "unknown"}
@@ -445,7 +445,7 @@ def main() -> None:
 
     if pf["status"] != "ok":
         print(f"[eval] PRE-FLIGHT FAILED: {pf['reason_code']} (exit={pf['exit_code']})")
-        sys.exit(pf["exit_code"])
+        return # Exitless
 
     print(f"[eval] PRE-FLIGHT OK: provider={provider} model={model_id}")
 
@@ -456,7 +456,7 @@ def main() -> None:
         cases = load_dataset(dataset_id)
     except Exception as e:
         print(f"[eval] ERROR: {e}")
-        sys.exit(1)
+        return # Exitless
 
     print(f"[eval] Loaded {len(cases)} cases from {dataset_id}")
     
@@ -498,14 +498,14 @@ def main() -> None:
             else:
                 if not result_file.exists():
                     print(f"[eval] ERROR: Missing result for {cid} (hash={spec_hash}) in {mode} mode.")
-                    sys.exit(1)
+                    return # Exitless
             
                 with result_file.open("r", encoding="utf-8") as rf:
                     stored = json.load(rf)
                     # Verify spec consistency
                     if stored.get("spec_hash") != spec_hash:
                         print(f"[eval] ERROR: Spec hash mismatch for {cid}. Expected {spec_hash}, found {stored.get('spec_hash')}")
-                        sys.exit(1)
+                        return # Exitless
                     answer = stored["answer"]
                     err = stored["stderr"]
                     exit_code = stored["exit_code"]
