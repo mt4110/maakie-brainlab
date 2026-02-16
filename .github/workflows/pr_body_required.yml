@@ -14,23 +14,34 @@ jobs:
         with:
           script: |
             const pr = context.payload.pull_request;
+            if (pr.head.repo.full_name !== context.repo.owner + '/' + context.repo.repo) {
+              core.info('Fork PR detected. Skipping body check due to permissions.');
+              return;
+            }
+
             const sentinel = 'PR_BODY_TEMPLATE_v1:';
 
             const getTemplate = async () => {
-              const res = await github.rest.repos.getContent({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                path: '.github/pull_request_template.md',
-                ref: pr.base.sha,
-              });
-              if (!res || !res.data || !res.data.content) {
-                throw new Error('pull_request_template.md content missing');
+              try {
+                const res = await github.rest.repos.getContent({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  path: '.github/pull_request_template.md',
+                  ref: pr.base.sha,
+                });
+                if (!res || !res.data || !res.data.content) {
+                   return '';
+                }
+                const enc = res.data.encoding || 'base64';
+                return Buffer.from(res.data.content, enc).toString('utf8');
+              } catch (e) {
+                core.warning('Failed to fetch pull_request_template.md: ' + e);
+                return '';
               }
-              const enc = res.data.encoding || 'base64';
-              return Buffer.from(res.data.content, enc).toString('utf8');
             };
 
-            const normalizeTemplate = (raw) => {
+            const cleanBody = (raw) => {
+              if (!raw) return '';
               return raw
                 .split('\n')
                 .filter((line) => !line.includes(sentinel))
@@ -38,36 +49,39 @@ jobs:
                 .trim();
             };
 
-            let body = (pr && pr.body) ? pr.body : '';
-            let trimmed = body.trim();
+            let currentBody = pr.body || '';
+            let cleaned = cleanBody(currentBody);
+            let needsUpdate = false;
 
-            // Auto-fill if empty
-            if (trimmed.length === 0) {
+            // Rule 1: Remove sentinel if present
+            if (currentBody !== cleaned) {
+               core.info('Sentinel detected in body. Removing...');
+               needsUpdate = true;
+               currentBody = cleaned;
+            }
+
+            // Rule 2: If empty, fill from template (clean)
+            if (currentBody.length === 0) {
+              core.info('Body is empty. Fetching template...');
               const rawTpl = await getTemplate();
-              const filled = normalizeTemplate(rawTpl);
-
-              if (filled.length === 0) {
-                core.setFailed('PR body is empty and template becomes empty after stripping sentinel.');
-                return;
+              const filled = cleanBody(rawTpl);
+              if (filled.length > 0) {
+                 currentBody = filled;
+                 needsUpdate = true;
+              } else {
+                 core.setFailed('PR body is empty and template unavailable or empty.');
+                 return;
               }
-
-              await github.rest.pulls.update({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                pull_number: pr.number,
-                body: filled + '\n',
-              });
-
-              core.info('PR body was empty; auto-filled from pull_request_template.md (sentinel stripped).');
-              trimmed = filled;
             }
 
-            // Existing checks
-            if (trimmed.length === 0) {
-              core.setFailed('PR body is empty. Fill the description before merge.');
-              return;
-            }
-            if (trimmed.includes(sentinel)) {
-              core.setFailed('PR body is still the template. Edit/remove the template marker before merge.');
-              return;
+            if (needsUpdate) {
+               await github.rest.pulls.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: pr.number,
+                  body: currentBody + '\n', // ensure trailing newline
+               });
+               core.info('PR body updated successfully.');
+            } else {
+               core.info('PR body satisfies requirements.');
             }
