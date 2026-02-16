@@ -14,3 +14,8 @@
   Usage: ops/new_ops_phase.sh <PHASE_ID> <TITLE>
 
 - [ ] S18-02: Hardening — new_ops_phase.sh (truthfulness + PHASE_ID sanitize)
+
+- S18-03: PR body template + enforce edited body
+  - Create/Update template + workflow
+  - Run gates
+  - Create PR
