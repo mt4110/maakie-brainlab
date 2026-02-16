@@ -63,7 +63,7 @@ RAG/プロンプト/検索パラメータを触り始めても、結果が「気
 - 「何を変えたら何が変わったか」が証拠（ログ/差分）として残る設計になっている
 - eval の固定セットと実行の出力先が決まっている（再実行できる）
 - injection方針が明文化され、最低限の検知が可能
-- docs に `file://` や `/Users/` を混ぜない
+- docs に file URL（fileスキーム） や ユーザHOME絶対パス を混ぜない
 - `go test ./...` PASS
 - `go run cmd/reviewpack/main.go submit --mode verify-only` PASS
 

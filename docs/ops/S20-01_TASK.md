@@ -12,7 +12,7 @@
 
 ## C0: Safety Snapshot
 - [ ] `git status -sb` clean
-- [ ] `git grep -n "file://\|/Users/" -- docs/ops || true`
+- [ ] `git grep -n "file URL（fileスキーム）\|ユーザHOME絶対パス" -- docs/ops || true`
 
 ## C1: Create reserved spec paths (薄くてOK、でも作る)
 - [ ] `mkdir -p docs/ops/rag`
