@@ -13,7 +13,11 @@ __pycache__/
 *.pid
 
 # generated / bulky (keep out of git)
-data
+data/*
+!data/eval/
+data/eval/*
+!data/eval/datasets/
+!data/eval/datasets/**
 index
 logs
 models
