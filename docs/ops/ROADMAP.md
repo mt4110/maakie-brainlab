@@ -46,6 +46,7 @@
 - 実行: `docs/ops/S19_TASK.md`
 
 ### S20 — WIP（このPR）
+- Phase: `docs/ops/S20-02_PLAN.md` / `docs/ops/S20-02_TASK.md`
 - Phase: `docs/ops/S20-01_PLAN.md` / `docs/ops/S20-01_TASK.md`
 - 全体図: `docs/ops/S20_PLAN.md`
 - 実行: `docs/ops/S20_TASK.md`
