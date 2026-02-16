@@ -32,7 +32,6 @@ docs/ops に「入口（地図）」を1枚置き、以後 “どこを見れば
 - ROADMAP.md が入口として機能し、参照起点が1つになる
 - ROADMAP.md のリンクが実在ファイルに向く（壊れていない）
 - S19_PLAN / S19_TASK が実態に合っている（S19-02 merged / main gate PASS を明記）
-- `file://` を混ぜない
 - `go test ./...` PASS
 - `go run cmd/reviewpack/main.go submit --mode verify-only` PASS
 

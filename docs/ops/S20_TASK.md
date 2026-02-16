@@ -10,7 +10,6 @@
 
 ## C0: Safety Snapshot
 - [ ] `git status -sb` clean
-- [ ] `git grep -n "file://\|/Users/" -- docs/ops || true`（混入チェック）
 
 ## C1: Add ROADMAP入口
 - [ ] `docs/ops/ROADMAP.md` を追加（入口・凡例・シリーズ俯瞰）
