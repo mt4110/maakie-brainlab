@@ -20,3 +20,6 @@
 ## Gates
 - make test PASS
 - go run cmd/reviewpack/main.go submit --mode verify-only PASS
+
+## Phases (Additions)
+- S18-01: Phase Scaffold Generator v1 — scope pinned; implementation allowed
