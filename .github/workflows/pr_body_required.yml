@@ -3,17 +3,25 @@ on:
   pull_request:
     types: [opened, edited, synchronize, reopened, ready_for_review]
 
-permissions:
-  pull-requests: read
-
 jobs:
   body_required:
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
     steps:
       - uses: actions/github-script@v7
         with:
           script: |
-            const body = (context.payload.pull_request && context.payload.pull_request.body) ? context.payload.pull_request.body : "";
-            if (body.trim().length === 0) {
-              core.setFailed("PR body is empty. Fill the description before merge.");
+            const pr = context.payload.pull_request;
+            const body = (pr && pr.body) ? pr.body : '';
+            const trimmed = body.trim();
+            const sentinel = 'PR_BODY_TEMPLATE_v1';
+
+            if (trimmed.length === 0) {
+              core.setFailed('PR body is empty. Fill the description before merge.');
+              return;
+            }
+            if (trimmed.includes(sentinel)) {
+              core.setFailed('PR body is still the template. Edit/remove the template marker before merge.');
+              return;
             }

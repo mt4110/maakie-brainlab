@@ -25,3 +25,7 @@
 - S18-01: Phase Scaffold Generator v1 — scope pinned; implementation allowed
 
 - S18-02: Hardening — new_ops_phase.sh truthful write + PHASE_ID sanitize (scope pinned; implementation allowed)
+
+- S18-03: PR body template + enforce edited body
+  - docs/ops/S18-03_PLAN.md
+  - docs/ops/S18-03_TASK.md
