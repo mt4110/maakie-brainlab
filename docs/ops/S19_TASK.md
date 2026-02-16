@@ -8,5 +8,4 @@
   - [x] `go run cmd/reviewpack/main.go submit --mode verify-only`
 
 ## Notes
-- このSは実質完了。ただし docs がテンプレ残骸だと迷子が再発するため、S20で入口（ROADMAP）と合わせて固定する。
-
+- S19 は実質完了。docs がテンプレ残骸だと迷子が再発するため、S20で ROADMAP を入口として固定する。
