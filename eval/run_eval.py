@@ -477,7 +477,8 @@ def mock_ask(question_data: dict, spec_hash: str) -> tuple[int, str, str]:
     q_type = question_data.get("type", "normal")
     if q_type == "negative_control":
         # For negative control, we expect "Unknown" and NO sources/evidence.
-        answer = "結論:\n- 参照できる根拠が見つかりません。\n\n参照:\n- なし"
+        # However, to pass format checks and avoid mixed hallucination on "根拠なし", we provide minimal valid structure.
+        answer = "結論:\n- 参照できる根拠が見つかりません。\n\n根拠:\n- 参照できる根拠が見つかりません。\n\n参照:\n- なし"
         return 0, answer, ""
     
     expected_source = question_data.get("expected_source", "mock_source.md")
@@ -490,7 +491,7 @@ def mock_ask(question_data: dict, spec_hash: str) -> tuple[int, str, str]:
     else:
         evidence_str = "- [MOCK] Evidence found."
 
-    answer = f"結論:\n- [MOCK] Success for {spec_hash}\n{evidence_str}\n\n参照:\n- {expected_source}"
+    answer = f"結論:\n- [MOCK] Success for {spec_hash}\n\n根拠:\n{evidence_str}\n- [MOCK] Success for {spec_hash}\n\n参照:\n- {expected_source}"
     return 0, answer, ""
 
 
@@ -626,7 +627,7 @@ def main() -> None:
             # S20-03: Quick hack for replay mode to use the old store structure or skip
             # Since we are moving to runs/, replay logic needs to be rethought.
             if mode == "verify-only":
-                answer = "結論:\n- [MOCK] Verified\n\n参照:\n- verify.md"
+                answer = "結論:\n- [MOCK] Verified\n\n根拠:\n- [MOCK] Verified\n\n参照:\n- verify.md"
                 exit_code = 0
                 err = ""
             else:
@@ -676,6 +677,7 @@ def main() -> None:
         # Analysis Logic
         res = analyze_result({
             "type": c.get("tags", ["normal"])[0], # Adapt for legacy logic
+            "query": query, # P0 Fix: Propagate query for mixed hallucination check
             "expected_source": c["expectation"].get("expected_source"),
             "expected_evidence": c["expectation"].get("expected_evidence")
         }, answer, exit_code, err)

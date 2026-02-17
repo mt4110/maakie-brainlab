@@ -11,7 +11,7 @@ Added to `eval/run_eval.py`:
 
 ### 2. Detection Logic (`eval/run_eval.py`)
 - **Mixed Hallucination**:
-  - Extracts keywords from `结论` (Conclusion) and `根拠` (Evidence).
+  - Extracts keywords from `結論` (Conclusion) and `根拠` (Evidence).
   - Matches against `query` keywords.
   - If new terms appear in Conclusion without grounding in Evidence or Query -> **FAIL**.
 - **Negative Control**:
@@ -24,7 +24,7 @@ Added to `eval/run_eval.py`:
 Run the verification suite:
 ```bash
 # Python Logic Tests
-pytest tests/test_eval_logic.py
+python -m unittest tests.test_eval_logic
 
 # Full Reviewpack Check
 go run cmd/reviewpack/main.go submit --mode verify-only
