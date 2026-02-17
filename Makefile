@@ -3,7 +3,7 @@
 .PHONY: server-start server-stop server-status log ingest ask
 .PHONY: ai-smoke ai-verify
 
-PY?=.venv/bin/python
+PY=.venv/bin/python
 PYENV=PYTHONPATH=./src:.
 
 server-start:
@@ -41,9 +41,9 @@ ci: ci-test
 	$(PYENV) $(PY) -m compileall src eval
 
 bootstrap:
-	python3 -m venv .venv
-	.venv/bin/pip install --upgrade pip
-	.venv/bin/pip install -e .
+	# S20-08: Canonical bootstrap via uv (using system python only to install uv)
+	python3 -m pip install uv
+	python3 -m uv sync
 
 # S4 Satellite Pipeline
 sat-collect:

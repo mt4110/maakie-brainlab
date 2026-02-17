@@ -60,12 +60,11 @@ jobs:
 
       - name: Create venv & Install Deps
         run: |
-          python -m venv .venv
-          .venv/bin/pip install -r requirements.txt
+          make bootstrap
           # Diagnostics
           .venv/bin/python -c "import feedparser; print('feedparser ok')"
-          echo "pip freeze (head):"
-          .venv/bin/pip freeze | head -n 40
+          echo "uv pip freeze (head):"
+          uv pip freeze | head -n 40
 
       - name: Set up Go
         uses: actions/setup-go@v4
@@ -184,7 +183,7 @@ jobs:
             echo "python=$(python -V 2>&1 || true)"
             echo "venv_python=$(.venv/bin/python -V 2>&1 || echo 'missing')"
             echo "pip freeze:"
-            .venv/bin/pip freeze | head -n 20
+            uv pip freeze | head -n 20
             echo
             echo "== ci_out tree =="
             ls -R ci_out || true
