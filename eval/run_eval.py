@@ -283,6 +283,12 @@ def apply_type_constraints(
 
     # Normal case
     if mixed_candidates:
+        # P1.5 Fix: Crash Protection.
+        # If it already crashed/failed infrastructure checks, return that reason immediately.
+        # Do not let "mixed content" mask a crash.
+        if fail_reason_code == ReasonCode.ASK_EXIT_NONZERO:
+            return fail_reason_code
+
         # P0 Fix: Only flag MIXED if it was otherwise passing.
         # Do not overwrite CRASH/ASK_EXIT_NONZERO/CONTEXT_EMPTY.
         if fail_reason_code is None:
@@ -343,7 +349,7 @@ def analyze_result(
         if not mentions_unknown:
             conc_text = "\n".join(conclusion_lines)
             kws = get_keywords(conc_text)
-            q_keywords = get_keywords(question.get("query", ""))
+            q_keywords = get_keywords(question.get("query", "") or "")
             diff = [k for k in kws if k not in q_keywords]
             if diff:
                 mixed_candidates.extend(diff)
