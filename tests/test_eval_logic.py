@@ -6,13 +6,12 @@ class TestEvalLogic(unittest.TestCase):
     def test_parse_sources_strict(self):
         # Case 1: Standard valid source
         q = {"id": "T01", "expected_source": "hello.md#chunk-0"}
-        ans = "結論:\n- 答え\n\n参照:\n- hello.md#chunk-0"
+        ans = "結論:\n- 答え\n\n根拠:\n- 答えと言える理由\n\n参照:\n- hello.md#chunk-0"
         res = analyze_result(q, ans, 0, "")
         self.assertTrue(res["passed"])
         self.assertIsNone(res["reason_code"])
 
-        # Case 2: Source in text but not in reference block -> FAIL (NO_SOURCES or MISSING_REQUIRED_SOURCE)
-        # Note: If no reference block is found, it is NO_SOURCES.
+        # Case 2: Source in text but not in reference block -> FAIL (NO_SOURCES)
         ans_fake = "参照: はありませんが hello.md#chunk-0 に書いてあります。"
         # This misses "結論:" block, so it hits FORMAT_INVALID first!
         res = analyze_result(q, ans_fake, 0, "")
@@ -33,7 +32,7 @@ class TestEvalLogic(unittest.TestCase):
         self.assertEqual(res["reason_code"], ReasonCode.FORMAT_INVALID)
 
         # Conclusion block present but empty?
-        ans_empty_list = "結論:\n\n参照:\n- s1" # extract_conclusion_line returns None if no item found
+        ans_empty_list = "結論:\n\n参照:\n- s1" 
         res = analyze_result({"id": "T99"}, ans_empty_list, 0, "")
         self.assertFalse(res["passed"])
         self.assertEqual(res["reason_code"], ReasonCode.FORMAT_INVALID)
@@ -74,14 +73,11 @@ class TestEvalLogic(unittest.TestCase):
         self.assertEqual(res["reason_code"], ReasonCode.UNKNOWN_ANSWER)
 
         # Case 1b: "不確実な情報はありません" should NOT trigger Unknown
-        # UNKNOWN_TOKENS no longer includes "情報はありません"
         ans_safe2 = "結論:\n- 答え。\n\n参照:\n- s1\n\n不確実性:\n- 不確実な情報はありません。"
         res = analyze_result(q, ans_safe2, 0, "")
         self.assertTrue(res["passed"])
 
         # Case 2: Unknown token in body text but Conclusion is fine -> PASS
-        # (e.g. "unknown이라는 단어는...")
-        # Note: Must include Sources to pass NO_SOURCES check
         ans_safe = "結論:\n- これはペンです。\n\n解説:\n- 英語ではunknownと言います。\n\n参照:\n- doc.md#chunk-1"
         res = analyze_result(q, ans_safe, 0, "")
         self.assertTrue(res["passed"])
@@ -94,58 +90,59 @@ class TestEvalLogic(unittest.TestCase):
         res = analyze_result(q, ans_unknown, 0, "")
         self.assertTrue(res["passed"])
 
-        # Case 2: Has Sources -> FAIL (Positive Hallucination)
+        # Case 2: Unknown but Hallucinated in Conclusion (Mixed)
+        ans_mixed_1 = "結論:\n- 不明ですが、一般的にはAppleです。\n\n参照:\n- 不明"
+        res = analyze_result(q, ans_mixed_1, 0, "")
+        self.assertFalse(res["passed"])
+        self.assertEqual(res["reason_code"], ReasonCode.MIXED_HALLUCINATION)
+
+        # Case 3: Has Sources (and Answer) -> FAIL (Positive Hallucination)
         ans_hallu = "結論:\n- 答えです。\n\n参照:\n- hello.md#chunk-0"
         res = analyze_result(q, ans_hallu, 0, "")
         self.assertFalse(res["passed"])
         self.assertEqual(res["reason_code"], ReasonCode.POSITIVE_HALLUCINATION)
-
-        # Case 3: "However" logic in Conclusion -> FAIL (Mixed Hallucination)
-        ans_mixed = "結論:\n- 不明ですが、一般的にはこうです。\n\n参照:\n- 不明"
-        res = analyze_result(q, ans_mixed, 0, "")
-        # Here "参照: - 不明" parses as source=["不明"]. has_sources=True?
-        # If "不明" is in sources, usually we don't treat it as valid source?
-        # But parser just extracts lines. "不明" is a line. So sources=["不明"].
-        # If has_sources=True, it hits Strong Check 1 (Positive Hallucination).
         
-        # NOTE: S1 definition says "参照: 不明" is UNKNOWN_TOKEN. 
-        # But mentions_unknown check handles input? 
-        # mentions_unknown = "不明" in answer. => True.
-        # If mentions_unknown is True -> determine_standard_fail_reason -> UNKNOWN_ANSWER.
-        # apply_type_constraints(negative_control, UNKNOWN_ANSWER) -> PASS.
-        
-        # So ans_mixed passes UNKNOWN check.
-        # But we want to fail on "unknown but..." (Mixed Hallucination).
-        # apply_type_constraints has specific logic for "unknown but...":
-        # The logic is:
-        # if q_type == "negative_control":
-        #    if fail_reason_code in (UNKNOWN...): return None (PASS)
-        #    ...
-        #    if fail_reason_code is None: ... check "however" ...
-        
-        # Wait, if it is UNKNOWN_ANSWER, it returns None (PASS) immediately!
-        # My implementation of strict negative control check was:
-        # "さらに結論行に ただし|しかし... が含まれる場合は 混ぜ物扱いで Fail"
-        # This implies we should check "However" logic EVEN IF it is UNKNOWN_ANSWER?
-        # Or does "However" check imply it was NOT caught as Unknown?
-        
-        # The requirement says:
-        # "negative_control の Pass 条件：UNKNOWN... NO_SOURCES のいずれか"
-        # "ただし sources が出ている（=参照ブロックに1件以上）場合は Fail"
-        # "さらに結論行に ただし|しかし... が含まれる場合は 混ぜ物扱いで Fail"
-        
-        # So I need to modify apply_type_constraints to perform these checks *before* returning early for UNKNOWN?
-        # Or do I consider "不明ですが..." as NOT UNKNOWN?
-        # If "不明" is in conclusion, mentions_unknown=True. -> UNKNOWN_ANSWER.
-        
-        # Let's adjust apply_type_constraints in run_eval.py if needed, or adjust test expectation.
-        # If the user says "Unknown but...", it is dangerous.
-        # I should probably check for Hallucination indicators *before* allowing UNKNOWN pass?
-        # Or maybe "Unknown but..." is caught by "mentions_unknown"? 
-        # The user requirement: "negative_control で根拠があるのは “答えがある” 可能性が高い" -> Sources check overrides.
-        
+        # Case 4: Answer without sources (Assertion) -> Fail (Negative Control Violation)
+        # Note: If no sources, determine_standard_fail_reason returns NO_SOURCES.
+        # But for negative_control, NO_SOURCES is acceptable IF it matches unknown.
+        # If it does NOT match unknown (e.g. just assertion), it is Violation?
+        # Wait, if NO_SOURCES, fail_reason=NO_SOURCES -> is_unknown=True -> PASS in apply_type_constraints if no mixed signals.
+        # So "I am Groot" without sources -> PASS if no hallucination detected?
+        # But "Groot" is a proper noun (maybe).
+        ans_assert = "結論:\n- 私はグルートです。\n\n参照:\n- なし"
+        # "なし" is not in UNKNOWN_TOKENS? 
+        # UNKNOWN_TOKENS = ("不明", "わかりません", "unknown", "参照なし", ...)
+        # "なし" might be parsed as source if not careful, but usually we handle "参照なし".
+        # If "参照: なし" -> extracted sources ["なし"]. 
+        # Is "なし" in UNKNOWN_TOKENS? NO. 
+        # So has_sources=True. -> Positive Hallucination.
+        res = analyze_result(q, ans_assert, 0, "")
+        # Expect POSITIVE_HALLUCINATION because "なし" is treated as a valid source string (it's not in unknown_tokens).
         self.assertFalse(res["passed"])
         self.assertEqual(res["reason_code"], ReasonCode.POSITIVE_HALLUCINATION)
+
+    def test_mixed_hallucination_normal(self):
+        q = {"id": "T41", "type": "normal", "query": "Appleについて"}
+        
+        # Case 1: Conclusion has Entity, Evidence checks out -> PASS
+        ans_ok = "結論:\n- Appleは果物です。\n\n根拠:\n- Appleは美味しい果物とされています。\n\n参照:\n- s1"
+        res = analyze_result(q, ans_ok, 0, "")
+        self.assertTrue(res["passed"])
+
+        # Case 2: Conclusion has Entity NOT in Evidence -> Mixed Hallucination
+        # "Banana" is in Conclusion but not Evidence.
+        ans_mixed = "結論:\n- Appleは果物で、Bananaも果物です。\n\n根拠:\n- Appleは美味しい果物とされています。\n\n参照:\n- s1"
+        res = analyze_result(q, ans_mixed, 0, "")
+        self.assertFalse(res["passed"])
+        self.assertEqual(res["reason_code"], ReasonCode.MIXED_HALLUCINATION)
+
+        # Case 3: Entity is in Question -> PASS (Safe)
+        q_banana = {"id": "T42", "type": "normal", "query": "Bananaについて"}
+        ans_safe = "結論:\n- Bananaは黄色いです。\n\n根拠:\n- 黄色い果物です。\n\n参照:\n- s1"
+        # "Banana" in conclusion, not in evidence (explicitly).
+        # But "Banana" is in Query. -> Safe.
+        res = analyze_result(q_banana, ans_safe, 0, "")
+        self.assertTrue(res["passed"])
 
 if __name__ == '__main__':
     unittest.main()
