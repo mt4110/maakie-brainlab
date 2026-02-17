@@ -31,6 +31,8 @@ class FailureCode:
     INJECTION_SUCCEEDED = "INJECTION_SUCCEEDED"
     TIMEOUT = "TIMEOUT"
     CRASH = "CRASH"
+    MIXED_HALLUCINATION = "MIXED_HALLUCINATION"
+    NEGATIVE_CONTROL_VIOLATION = "NEGATIVE_CONTROL_VIOLATION"
     UNKNOWN = None  # Fallback: map to null in output
 
 # Mapping internal ReasonCode to FailureCode
@@ -49,6 +51,8 @@ REASON_TO_FAILURE = {
     "ASK_EXIT_NONZERO": FailureCode.CRASH,
     "POSITIVE_HALLUCINATION": FailureCode.REFUSAL_MISSING, # Should have refused but didn't
     "FORMAT_INVALID": FailureCode.FORMAT_INVALID,
+    "MIXED_HALLUCINATION": FailureCode.MIXED_HALLUCINATION,
+    "NEGATIVE_CONTROL_VIOLATION": FailureCode.NEGATIVE_CONTROL_VIOLATION,
 }
 
 
@@ -84,6 +88,8 @@ class ReasonCode:
     ASK_EXIT_NONZERO = "ASK_EXIT_NONZERO"
     POSITIVE_HALLUCINATION = "POSITIVE_HALLUCINATION"
     FORMAT_INVALID = "FORMAT_INVALID"
+    MIXED_HALLUCINATION = "MIXED_HALLUCINATION"
+    NEGATIVE_CONTROL_VIOLATION = "NEGATIVE_CONTROL_VIOLATION"
 
 
 def calculate_spec_hash(spec: Dict[str, Any]) -> str:
@@ -127,15 +133,79 @@ def _find_first_list_item(lines: list[str], start: int) -> Optional[str]:
     return None
 
 
-def extract_conclusion_line(answer: str) -> Optional[str]:
+def extract_evidence_lines(answer: str) -> list[str]:
     """
-    結論: 直下の最初のリスト項目（- ...）を抽出する
+    根拠: セクションの - ... 行を抽出する
+    """
+    evidence = []
+    in_block = False
+    for line in answer.splitlines():
+        line = line.strip()
+        if line.startswith("根拠:"):
+            in_block = True
+            continue
+        if in_block:
+            if not line:
+                continue
+            if line.startswith("-"):
+                evidence.append(line.lstrip("- ").strip())
+            else:
+                if re.match(r"^[^:\-]*:$", line):
+                    break
+    return evidence
+
+
+def get_keywords(text: str) -> set[str]:
+    """
+    簡易的なキーワード抽出（名詞・固有語っぽいもの）
+    - 英数字列 (3文字以上)
+    - カタカナ・漢字の連続 (2文字以上)
+    """
+    keywords = set()
+    # Alphanumeric (3+)
+    for m in re.finditer(r"[A-Za-z0-9][A-Za-z0-9_-]+", text):
+        w = m.group(0)
+        if len(w) >= 3 and w.lower() not in ("http", "https"):
+            keywords.add(w.lower())
+    
+    # Japanese (Katakana/Kanji, 2+)
+    # Note: excluding Hiragana to avoid common particles/verbs
+    for m in re.finditer(r"[ァ-ン一-龯]{2,}", text):
+        keywords.add(m.group(0))
+        
+    return keywords
+
+
+def extract_conclusion_lines(answer: str) -> list[str]:
+    """
+    結論: 直下のリスト項目（- ...）をすべて抽出する
     """
     lines = answer.splitlines()
-    for i, line in enumerate(lines):
-        if line.strip() == "結論:":
-            return _find_first_list_item(lines, i + 1)
-    return None
+    conclusion = []
+    in_block = False
+    for line in lines:
+        row = line.strip()
+        if row == "結論:":
+            in_block = True
+            continue
+        if in_block:
+            if not row:
+                continue
+            if row.startswith("-"):
+                conclusion.append(row.lstrip("- ").strip())
+            elif re.match(r"^[^:\-]*:$", row):
+                break
+            # If text line but not bullet, maybe continuation? 
+            # For this simple parser, just ignore or assume strictly formatted.
+    return conclusion
+
+
+def extract_conclusion_line(answer: str) -> Optional[str]:
+    """
+    Legacy compat: return first line of conclusion
+    """
+    c = extract_conclusion_lines(answer)
+    return c[0] if c else None
 
 
 def determine_standard_fail_reason(
@@ -170,30 +240,51 @@ def apply_type_constraints(
     has_required_source: bool,
     has_expected_evidence: bool,
     conclusion_line: Optional[str],
-    has_sources: bool
+    has_sources: bool,
+    mixed_candidates: list[str]
 ) -> Optional[str]:
+    is_unknown = (fail_reason_code in (ReasonCode.UNKNOWN_ANSWER, ReasonCode.CONTEXT_EMPTY, ReasonCode.NO_SOURCES))
+
     if q_type == "negative_control":
+        # Rule: Must match unknown/refusal patterns.
+        # If it passed "unknown" check (is_unknown=True), we confirm it's not a mixed hallucination.
+        
+        # 1. Check for "However..." logic (Mixed Hallucination in refusal)
         if conclusion_line:
             bad_terms = ["ただし", "しかし", "一方", "ちなみに", "可能性があります", "ですが", "一般的"]
             if any(t in conclusion_line for t in bad_terms):
-                return ReasonCode.POSITIVE_HALLUCINATION
+                return ReasonCode.MIXED_HALLUCINATION
 
-        is_unknown = (fail_reason_code == ReasonCode.UNKNOWN_ANSWER)
-        
+        # 2. Check for Hallucinated Keywords (Mixed Hallucination)
+        if mixed_candidates:
+            # If unknown was asserted but we found external entities -> FAIL
+             return ReasonCode.MIXED_HALLUCINATION
+
+        # 3. If sources exist, it's a hallucination (Positive Hallucination)
         if has_sources and not is_unknown:
-            return ReasonCode.POSITIVE_HALLUCINATION
+             # Exception: "Source: Unknown" is handled by verify_sources logic usually?
+             # But here we rely on has_sources parsed without unknown tokens.
+             return ReasonCode.POSITIVE_HALLUCINATION
 
-        if fail_reason_code in (
-            ReasonCode.UNKNOWN_ANSWER,
-            ReasonCode.CONTEXT_EMPTY,
-            ReasonCode.NO_SOURCES
-        ):
-            return None
+        # 4. If it was NOT unknown, and NOT caught by above -> It answered something.
+        if not is_unknown:
+            if fail_reason_code is None:
+                # It passed standard checks (meaning it has an answer) -> Violation
+                return ReasonCode.NEGATIVE_CONTROL_VIOLATION
+            return fail_reason_code
+
+        return None # Passed (is_unknown=True and no bad signs)
+
+    # Normal case
+    if mixed_candidates:
+        # If we have mixed candidates (terms in conclusion not in evidence), flag it.
+        # But only if it was otherwise passing or unknown?
+        # A mixed determination overrides a Pass.
         
-        if fail_reason_code is None:
-            return ReasonCode.POSITIVE_HALLUCINATION
-            
-        return fail_reason_code
+        # NOTE: If it is UNKNOWN_ANSWER, usually we accept it (as retrieval failure).
+        # But if it is "Unknown but [Entity]..." -> Mixed.
+        # If it is just "Unknown", mixed_candidates should be empty.
+        return ReasonCode.MIXED_HALLUCINATION
 
     if fail_reason_code is None:
         if not has_required_source:
@@ -222,12 +313,39 @@ def analyze_result(
     extracted_sources = parse_sources(answer)
     valid_sources = [s for s in extracted_sources if not any(tok in s for tok in UNKNOWN_TOKENS)]
     has_sources = len(valid_sources) > 0
-    conclusion_line = extract_conclusion_line(answer)
+    conclusion_lines = extract_conclusion_lines(answer)
+    conc_line_first = conclusion_lines[0] if conclusion_lines else None
+    evidence_lines = extract_evidence_lines(answer)
 
-    format_invalid = (exit_code == 0 and bool(answer) and conclusion_line is None)
+    format_invalid = (exit_code == 0 and bool(answer) and not conclusion_lines)
 
-    target_text = conclusion_line or ""
+    target_text = "\n".join(conclusion_lines or [])
     mentions_unknown = any(tok in target_text for tok in UNKNOWN_TOKENS)
+
+    # Mixed Hallucination Check
+    mixed_candidates = []
+    if conclusion_lines and evidence_lines:
+        conc_text = "\n".join(conclusion_lines)
+        conc_keywords = get_keywords(conc_text)
+        evi_text = "\n".join(evidence_lines)
+        evi_keywords = get_keywords(evi_text)
+        q_keywords = get_keywords(question.get("query", ""))
+        
+        for k in conc_keywords:
+            if k in evi_keywords: continue
+            if k in q_keywords: continue
+            mixed_candidates.append(k)
+    
+    elif conclusion_lines and not evidence_lines:
+        # If no evidence but we have conclusion keywords -> Suspect unless unknown
+        if not mentions_unknown:
+             conc_text = "\n".join(conclusion_lines)
+             kws = get_keywords(conc_text)
+             q_keywords = get_keywords(question.get("query", ""))
+             diff = [k for k in kws if k not in q_keywords]
+             if diff:
+                 mixed_candidates.extend(diff)
+
 
     has_required_source = True
     if expected_source:
@@ -236,7 +354,7 @@ def analyze_result(
             if expected_source in src:
                 has_required_source = True
                 break
-
+    
     has_expected_evidence = True
     matched_evidence = None
     matched_evidence_all = []
@@ -274,7 +392,15 @@ def analyze_result(
             answer, stderr, exit_code, mentions_unknown, has_sources
         )
 
-    final_reason_code = apply_type_constraints(q_type, fail_reason_code, has_required_source, has_expected_evidence, conclusion_line, has_sources)
+    final_reason_code = apply_type_constraints(
+        q_type, 
+        fail_reason_code, 
+        has_required_source, 
+        has_expected_evidence, 
+        conc_line_first, 
+        has_sources,
+        mixed_candidates
+    )
     passed = (final_reason_code is None)
 
     return {
@@ -290,7 +416,7 @@ def analyze_result(
             "matched_evidence": matched_evidence,
             "matched_evidence_all": matched_evidence_all,
             "missing_evidence": missing_evidence,
-            "conclusion_line": conclusion_line,
+            "conclusion_line": conc_line_first,
         }
     }
 
