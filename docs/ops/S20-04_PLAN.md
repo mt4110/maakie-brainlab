@@ -28,7 +28,7 @@ else if negative_control が「unknown + 余計な断言」の混入を見逃す
     for each line in answer_text:
       continue  # まず観測ログ（どの行が危険語を含むか）を作る
     detect mixed hallucination:
-      - 結論が unknown 系なのに本文に断言語/一般論/追加説明が混入 -> POSITIVE_HALLUCINATION
+      - 結論が unknown 系なのに本文に断言語/一般論/追加説明が混入 -> MIXED_HALLUCINATION
   catch:
     error("mixed hallucination 検出の実装に失敗。停止")
 

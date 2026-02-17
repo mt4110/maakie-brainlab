@@ -31,6 +31,6 @@ go run cmd/reviewpack/main.go submit --mode verify-only
 ```
 
 ## Results
-- **Python Tests**: Passed (7 tests covering normal, boundary, mixed hallucination, and negative control scenarios).
+- **Python Tests**: Passed (6 tests covering normal, boundary, mixed hallucination, and negative control scenarios).
 - **Go Validate**: Passed.
 - **Reviewpack**: Passed strict checks.

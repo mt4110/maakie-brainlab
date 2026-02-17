@@ -98,6 +98,14 @@ def calculate_spec_hash(spec: Dict[str, Any]) -> str:
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
+
+def _is_section_header(line: str) -> bool:
+    """
+    Check if line is a known section header (whitelist).
+    """
+    return line in ("結論:", "根拠:", "参照:")
+
+
 def parse_sources(answer: str) -> list[str]:
     """
     参照: セクションの - ... 行を抽出する
@@ -115,22 +123,12 @@ def parse_sources(answer: str) -> list[str]:
             if line.startswith("-"):
                 sources.append(line.lstrip("- ").strip())
             else:
-                if re.match(r"^[^:\-]*:$", line):
+                if _is_section_header(line):
                     break
     return sources
 
 
-def _find_first_list_item(lines: list[str], start: int) -> Optional[str]:
-    """Scan lines from start, return the first '- ...' item or None if a new section header is hit."""
-    for j in range(start, len(lines)):
-        after = lines[j].strip()
-        if not after:
-            continue
-        if after.startswith("-"):
-            return after.lstrip("- ").strip()
-        if re.match(r"^[^:\-]*:$", after):
-            return None
-    return None
+# _is_section_header and _find_first_list_item are defined above
 
 
 def extract_evidence_lines(answer: str) -> list[str]:
@@ -150,7 +148,7 @@ def extract_evidence_lines(answer: str) -> list[str]:
             if line.startswith("-"):
                 evidence.append(line.lstrip("- ").strip())
             else:
-                if re.match(r"^[^:\-]*:$", line):
+                if _is_section_header(line):
                     break
     return evidence
 
@@ -193,7 +191,7 @@ def extract_conclusion_lines(answer: str) -> list[str]:
                 continue
             if row.startswith("-"):
                 conclusion.append(row.lstrip("- ").strip())
-            elif re.match(r"^[^:\-]*:$", row):
+            elif _is_section_header(row):
                 break
             # If text line but not bullet, maybe continuation? 
             # For this simple parser, just ignore or assume strictly formatted.
@@ -243,7 +241,6 @@ def apply_type_constraints(
     has_sources: bool,
     mixed_candidates: list[str]
 ) -> Optional[str]:
-    is_unknown = (fail_reason_code in (ReasonCode.UNKNOWN_ANSWER, ReasonCode.CONTEXT_EMPTY, ReasonCode.NO_SOURCES))
 
     if q_type == "negative_control":
         # Rule: Must match unknown/refusal patterns.
@@ -267,24 +264,29 @@ def apply_type_constraints(
              return ReasonCode.POSITIVE_HALLUCINATION
 
         # 4. If it was NOT unknown, and NOT caught by above -> It answered something.
-        if not is_unknown:
+        
+        # P0 Fix: Strict Unknown Check. NO_SOURCES is NOT valid unknown (it's an assertion without source).
+        is_strict_unknown = (fail_reason_code in (ReasonCode.UNKNOWN_ANSWER, ReasonCode.CONTEXT_EMPTY))
+        
+        if not is_strict_unknown:
             if fail_reason_code is None:
                 # It passed standard checks (meaning it has an answer) -> Violation
                 return ReasonCode.NEGATIVE_CONTROL_VIOLATION
+            
+            if fail_reason_code == ReasonCode.NO_SOURCES:
+                # Assertion without sources -> Positive Hallucination
+                return ReasonCode.POSITIVE_HALLUCINATION
+
             return fail_reason_code
 
-        return None # Passed (is_unknown=True and no bad signs)
+        return None # Passed (is_strict_unknown=True and no bad signs)
 
     # Normal case
     if mixed_candidates:
-        # If we have mixed candidates (terms in conclusion not in evidence), flag it.
-        # But only if it was otherwise passing or unknown?
-        # A mixed determination overrides a Pass.
-        
-        # NOTE: If it is UNKNOWN_ANSWER, usually we accept it (as retrieval failure).
-        # But if it is "Unknown but [Entity]..." -> Mixed.
-        # If it is just "Unknown", mixed_candidates should be empty.
-        return ReasonCode.MIXED_HALLUCINATION
+        # P0 Fix: Only flag MIXED if it was otherwise passing.
+        # Do not overwrite CRASH/ASK_EXIT_NONZERO/CONTEXT_EMPTY.
+        if fail_reason_code is None:
+            return ReasonCode.MIXED_HALLUCINATION
 
     if fail_reason_code is None:
         if not has_required_source:
@@ -574,18 +576,6 @@ def main() -> None:
         print(f"[eval] PRE-FLIGHT FAILED: {pf['reason_code']} (exit={pf['exit_code']})")
         return # Exitless
 
-        # 3. If sources exist, it's a hallucination (Positive Hallucination)
-        if has_sources:
-             # Exception: "Source: Unknown" is handled by verify_sources logic usually?
-             # But here we rely on has_sources parsed without unknown tokens.
-             return ReasonCode.POSITIVE_HALLUCINATION
-
-        # 3. If sources exist, it's a hallucination (Positive Hallucination)
-        if has_sources:
-             # Exception: "Source: Unknown" is handled by verify_sources logic usually?
-             # But here we rely on has_sources parsed without unknown tokens.
-             return ReasonCode.POSITIVE_HALLUCINATION
-
     # Load Dataset
     try:
         cases = load_dataset(dataset_id)
@@ -677,7 +667,7 @@ def main() -> None:
         # Analysis Logic
         res = analyze_result({
             "type": c.get("tags", ["normal"])[0], # Adapt for legacy logic
-            "query": query, # P0 Fix: Propagate query for mixed hallucination check
+            "query": query or "", # P0 Fix: Propagate query for mixed hallucination check (None-safe)
             "expected_source": c["expectation"].get("expected_source"),
             "expected_evidence": c["expectation"].get("expected_evidence")
         }, answer, exit_code, err)
