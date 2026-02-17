@@ -7,6 +7,7 @@ import requests
 import subprocess
 import sys
 import time
+import unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, Dict, Any
@@ -155,10 +156,28 @@ def extract_evidence_lines(answer: str) -> list[str]:
 
 
 # P2: Japanese Stopwords (Audit-friendly list)
+# P3 Update: Added inline comments for audit trail.
 JAPANESE_STOPWORDS = {
-    "結論", "根拠", "参照", "答え", "回答", "質問",
-    "以下", "概要", "詳細", "点", "面", "場合", "こと",
-    "もの", "ため", "よう", "際", "時", "一般", "的"
+    "結論",  # Logic artifact (Section header)
+    "根拠",  # Logic artifact (Section header)
+    "参照",  # Logic artifact (Citation marker)
+    "答え",  # Generic phrasing
+    "回答",  # Generic phrasing
+    "質問",  # Generic phrasing
+    "以下",  # Connective
+    "概要",  # Meta-description
+    "詳細",  # Meta-description
+    "点",    # Generic counter/noun (e.g. 重要な点)
+    "面",    # Generic noun
+    "場合",  # Conditional
+    "こと",  # Nominalizer
+    "もの",  # Generic noun
+    "ため",  # Causal
+    "よう",  # Modal
+    "際",    # Temporal
+    "時",    # Temporal
+    "一般",  # Generalization
+    "的",    # Adjectival suffix (rarely standalone but happens)
 }
 
 def get_keywords(text: str) -> set[str]:
@@ -172,6 +191,11 @@ def get_keywords(text: str) -> set[str]:
     if not text:
         return set()
     
+    # P3: NFKC Normalization
+    # Standardize half-width kana to full-width, decompose combined chars, etc.
+    # This prevents "ﾊﾝｶｸ" and "ハンカク" from being treated as different keywords.
+    text = unicodedata.normalize("NFKC", text)
+
     # \u4e00-\u9fff: CJK Unified Ideographs (Common)
     # \u3400-\u4dbf: CJK Extension A
     # \uF900-\uFAFF: CJK Compatibility Ideographs
@@ -203,6 +227,13 @@ def get_keywords(text: str) -> set[str]:
         
         # Filter: http/https (legacy)
         if m.lower() in ("http", "https"):
+            continue
+
+        # P3: Long-Hex Exclusion (Guardrail against SHA/GitSHA noise)
+        # 40 chars or more of just hex digits is likely a hash/ID.
+        # Check if full match is hex and length >= 40.
+        # (Regex matches 0-9a-zA-Z, so we refine here)
+        if len(m) >= 40 and re.fullmatch(r"[0-9a-fA-F]+", m):
             continue
 
         keywords.add(m)

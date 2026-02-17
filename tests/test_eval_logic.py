@@ -179,6 +179,17 @@ class TestEvalLogic(unittest.TestCase):
         self.assertIn("Model", kws)
         self.assertIn("v1", kws) # "v1" might be split depending on regex, let's verify behavior later or basic check
 
+    def test_get_keywords_nfkc(self):
+        from eval.run_eval import get_keywords
+        # NFKC Normalization check
+        # "ﾊﾝｶｸ" (half-width) -> "ハンカク" (full-width)
+        # Regex should match "ハンカク" (Katakana)
+        text_half = "これはﾊﾝｶｸです"
+        kws = get_keywords(text_half)
+        self.assertIn("ハンカク", kws)
+        self.assertNotIn("ﾊﾝｶｸ", kws)
+
+
 
 if __name__ == '__main__':
     unittest.main()

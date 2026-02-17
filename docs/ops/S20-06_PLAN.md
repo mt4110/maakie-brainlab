@@ -18,8 +18,8 @@
   （CIは従来通りでOK。ここは安全側に倒す。）
 
 ## Target Files (must be pinned)
-- まず get_keywords() の実体パスを探索して1つに固定する。
-- stopwords 定義ファイル（現行）も探索して固定する。
+- get_keywords_path: eval/run_eval.py
+- stopwords_path: eval/run_eval.py (inline JAPANESE_STOPWORDS)
 
 ## Spec (proposed defaults)
 ### 1) long-hex exclusion
