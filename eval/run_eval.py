@@ -239,7 +239,7 @@ def apply_type_constraints(
     fail_reason_code: Optional[str],
     has_required_source: bool,
     has_expected_evidence: bool,
-    conclusion_line: Optional[str],
+    conclusion_text: Optional[str],
     has_sources: bool,
     mixed_candidates: list[str]
 ) -> Optional[str]:
@@ -249,10 +249,10 @@ def apply_type_constraints(
         # Rule: Must match unknown/refusal patterns.
         # If it passed "unknown" check (is_unknown=True), we confirm it's not a mixed hallucination.
         
-        # 1. Check for "However..." logic (Mixed Hallucination in refusal)
-        if conclusion_line:
+        # 1. Check for "However..." logic (Mixed Hallucination in refusal) across ALL lines
+        if conclusion_text:
             bad_terms = ["ただし", "しかし", "一方", "ちなみに", "可能性があります", "ですが", "一般的"]
-            if any(t in conclusion_line for t in bad_terms):
+            if any(t in conclusion_text for t in bad_terms):
                 return ReasonCode.MIXED_HALLUCINATION
 
         # 2. Check for Hallucinated Keywords (Mixed Hallucination)
@@ -339,12 +339,12 @@ def analyze_result(
     elif conclusion_lines and not evidence_lines:
         # If no evidence but we have conclusion keywords -> Suspect unless unknown
         if not mentions_unknown:
-             conc_text = "\n".join(conclusion_lines)
-             kws = get_keywords(conc_text)
-             q_keywords = get_keywords(question.get("query", ""))
-             diff = [k for k in kws if k not in q_keywords]
-             if diff:
-                 mixed_candidates.extend(diff)
+            conc_text = "\n".join(conclusion_lines)
+            kws = get_keywords(conc_text)
+            q_keywords = get_keywords(question.get("query", ""))
+            diff = [k for k in kws if k not in q_keywords]
+            if diff:
+                mixed_candidates.extend(diff)
 
 
     has_required_source = True
@@ -397,7 +397,7 @@ def analyze_result(
         fail_reason_code, 
         has_required_source, 
         has_expected_evidence, 
-        conc_line_first, 
+        target_text,  # Pass full text for bad term check
         has_sources,
         mixed_candidates
     )

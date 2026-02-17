@@ -117,6 +117,12 @@ class TestEvalLogic(unittest.TestCase):
         self.assertFalse(res["passed"])
         self.assertEqual(res["reason_code"], ReasonCode.POSITIVE_HALLUCINATION)
 
+        # Case 6: Multi-line Unknown with bad term in 2nd line -> FAIL (Mixed Hallucination) [NEW FIX CHECK]
+        ans_multiline_mixed = "結論:\n- 不明です。\n- しかし、一般的にはペンです。\n\n根拠:\n- 不明\n\n参照:\n- 不明"
+        res = analyze_result(q, ans_multiline_mixed, 0, "")
+        self.assertFalse(res["passed"])
+        self.assertEqual(res["reason_code"], ReasonCode.MIXED_HALLUCINATION)
+
     def test_mixed_hallucination_normal(self):
         q = {"id": "T41", "type": "normal", "query": "Appleについて"}
         
