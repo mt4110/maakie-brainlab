@@ -105,8 +105,15 @@ class TestEvalLogic(unittest.TestCase):
         self.assertEqual(res["reason_code"], ReasonCode.POSITIVE_HALLUCINATION)
         
         # Case 4: Answer without sources (Assertion) -> FAIL (Positive Hallucination)
+        # "参照: なし" parses as having a source "なし", so it hits strict source check.
         ans_assert = "結論:\n- 私はグルートです。\n\n根拠:\n- 私はグルートです。\n\n参照:\n- なし"
         res = analyze_result(q, ans_assert, 0, "")
+        self.assertFalse(res["passed"])
+        self.assertEqual(res["reason_code"], ReasonCode.POSITIVE_HALLUCINATION)
+
+        # Case 5: Unknown but has Sources -> FAIL (Positive Hallucination) [NEW STRICT RULE]
+        ans_unknown_with_src = "結論:\n- 不明です。\n\n参照:\n- hello.md#chunk-0"
+        res = analyze_result(q, ans_unknown_with_src, 0, "")
         self.assertFalse(res["passed"])
         self.assertEqual(res["reason_code"], ReasonCode.POSITIVE_HALLUCINATION)
 

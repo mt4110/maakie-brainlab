@@ -261,7 +261,7 @@ def apply_type_constraints(
              return ReasonCode.MIXED_HALLUCINATION
 
         # 3. If sources exist, it's a hallucination (Positive Hallucination)
-        if has_sources and not is_unknown:
+        if has_sources:
              # Exception: "Source: Unknown" is handled by verify_sources logic usually?
              # But here we rely on has_sources parsed without unknown tokens.
              return ReasonCode.POSITIVE_HALLUCINATION
@@ -573,9 +573,17 @@ def main() -> None:
         print(f"[eval] PRE-FLIGHT FAILED: {pf['reason_code']} (exit={pf['exit_code']})")
         return # Exitless
 
-    print(f"[eval] PRE-FLIGHT OK: provider={provider} model={model_id}")
+        # 3. If sources exist, it's a hallucination (Positive Hallucination)
+        if has_sources:
+             # Exception: "Source: Unknown" is handled by verify_sources logic usually?
+             # But here we rely on has_sources parsed without unknown tokens.
+             return ReasonCode.POSITIVE_HALLUCINATION
 
-    print(f"[eval] PRE-FLIGHT OK: provider={provider} model={model_id}")
+        # 3. If sources exist, it's a hallucination (Positive Hallucination)
+        if has_sources:
+             # Exception: "Source: Unknown" is handled by verify_sources logic usually?
+             # But here we rely on has_sources parsed without unknown tokens.
+             return ReasonCode.POSITIVE_HALLUCINATION
 
     # Load Dataset
     try:
