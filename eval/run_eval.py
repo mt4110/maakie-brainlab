@@ -337,7 +337,7 @@ def analyze_result(
         conc_keywords = get_keywords(conc_text)
         evi_text = "\n".join(evidence_lines)
         evi_keywords = get_keywords(evi_text)
-        q_keywords = get_keywords(question.get("query", ""))
+        q_keywords = get_keywords(question.get("query") or "")
         
         for k in conc_keywords:
             if k in evi_keywords: continue
@@ -349,7 +349,7 @@ def analyze_result(
         if not mentions_unknown:
             conc_text = "\n".join(conclusion_lines)
             kws = get_keywords(conc_text)
-            q_keywords = get_keywords(question.get("query", "") or "")
+            q_keywords = get_keywords(question.get("query") or "")
             diff = [k for k in kws if k not in q_keywords]
             if diff:
                 mixed_candidates.extend(diff)
