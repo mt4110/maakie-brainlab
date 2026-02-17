@@ -158,12 +158,12 @@ class TestEvalLogic(unittest.TestCase):
         self.assertNotIn("点", kws)
 
         # Case 2: Pure digits exclusion
-        # "20240101" -> excluded. "ID" -> included. "ABC" -> included.
+        # "20240101" -> excluded. "ID" -> "id". "ABC" -> "abc".
         text_digits = "20240101 ID:ABC"
         kws = get_keywords(text_digits)
         self.assertNotIn("20240101", kws)
-        self.assertIn("ID", kws)
-        self.assertIn("ABC", kws)
+        self.assertIn("id", kws)
+        self.assertIn("abc", kws)
 
         # Case 3: CJK Extension / Rare Kanji
         # "𠮟責" (Extension B, actually surrogate pair in Python depending on build, but Ext A is target)
@@ -176,8 +176,15 @@ class TestEvalLogic(unittest.TestCase):
         # Mixed check
         text_mixed = "Model-v1"
         kws = get_keywords(text_mixed)
-        self.assertIn("Model", kws)
-        self.assertIn("v1", kws) # "v1" might be split depending on regex, let's verify behavior later or basic check
+        self.assertIn("model", kws)
+        self.assertIn("v1", kws) 
+
+        # P1 Fix: Mixed-script tokenization
+        # "OpenAI社" -> "openai社" (full) AND "openai" (extracted ascii)
+        text_mixed_script = "OpenAI社 GPT4モデル"
+        kws = get_keywords(text_mixed_script)
+        self.assertIn("openai", kws)
+        self.assertIn("gpt4", kws)
 
     def test_get_keywords_nfkc(self):
         from eval.run_eval import get_keywords

@@ -236,7 +236,23 @@ def get_keywords(text: str) -> set[str]:
         if len(m) >= 40 and re.fullmatch(r"[0-9a-fA-F]+", m):
             continue
 
-        keywords.add(m)
+        # P2 Fix: Case-insensitivity (Normalize to lower)
+        # P1 Fix: Mixed-script tokenization (e.g. "OpenAI社" -> "openai")
+        
+        # 1. Add the full token (lowercased)
+        keywords.add(m.lower())
+        
+        # 2. If token contains mixed scripts, extract meaningful ASCII parts
+        # Regex already allowed [a-zA-Z0-9_] combined with CJK.
+        # If we have ASCII parts mixed with CJK, the full token "OpenAI社" is added above (as "openai社").
+        # We ALSO want "openai" to match.
+        # Extract ASCII substrings length >= 3
+        sub_ascii = re.findall(r"[a-zA-Z0-9_]{3,}", m)
+        for s in sub_ascii:
+            # Avoid adding same token if it captures the whole thing (redundant but safe since set)
+            # Apply same constraints (lower, etc)
+            if s.lower() not in ("http", "https"):
+                 keywords.add(s.lower())
     return keywords
 
 

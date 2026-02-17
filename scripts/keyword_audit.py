@@ -55,11 +55,14 @@ def main():
     
     # 3. Stopwords
     audit_case("Stopword_Conclusion", "結論", expected_out=["結論"])
-    audit_case("Stopword_Koto", "こと", expected_out=["こと"])
+    # "こと" is mostly hiragana so regex excludes it before stopword check.
+    # Use a kanji stopword to test stopword logic specifically.
+    audit_case("Stopword_Gaiyo", "概要", expected_out=["概要"])
     
     # 4. Mixed Real World
+    # P2 Update: Expect lowercase keywords
     audit_case("RealWorld", "重要な点はCommit-hash:0123456789abcdef0123456789abcdef01234567です", 
-               expected_in=["重要", "Commit", "hash"], 
+               expected_in=["重要", "commit", "hash"], 
                expected_out=["点", "0123456789abcdef0123456789abcdef01234567"])
 
 if __name__ == "__main__":

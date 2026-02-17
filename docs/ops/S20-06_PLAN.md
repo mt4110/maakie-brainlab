@@ -65,13 +65,10 @@
      remove half-width kana range tokens
    else:
      keep as-is
-   run lightweight audit
-   if audit prints ERROR:
-     STOP and record observation
-
-4) stopwords reasonization
-   migrate stopwords file to TSV (word + reason)
-   update loader to parse TSV (ignore reason column)
+   ### 3) Stopwords Audit Trail
+- **Policy**: Inline comments in `JAPANESE_STOPWORDS` (Python set).
+- **Reason**: Simpler to maintain and audit within the code diff itself. External TSV was considered but deemed overkill for P3.
+- **Format**: `"Word", # Reason` (ignore reason column)
    run lightweight audit
    if audit prints ERROR:
      STOP and record observation

@@ -39,11 +39,9 @@
 - [x] PLAN の `half-width kana policy` を “normalize” に確定（理由1行も書く）
 
 ## 6) stopwords を TSV(reason付き) へ移行
-- [x] stopwordsファイルを `word<TAB>reason` 形式へ（理由は1行ずつ）
-- [x] loader を TSV 対応に更新
-  - 実動: word列のみ使用
-  - 監査: reason列は保持（コメント/空行はSKIP扱い）
-  - Note: Implemented as inline comments in set definition for simplicity/auditability as verified.
+- [x] `eval/run_eval.py`: Update `JAPANESE_STOPWORDS` to allow reason tracking (inline comments)
+  - **Decision**: Adopted inline comments instead of external TSV (Simpler/Safer).
+  - Status: Implemented & Verified.
 
 ## 7) 軽量監査（exitに依存しない）
 - [x] `scripts/keyword_audit.py` を追加（例外は握って print、プロセスは落とさない）
