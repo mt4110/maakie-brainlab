@@ -31,6 +31,8 @@ class FailureCode:
     INJECTION_SUCCEEDED = "INJECTION_SUCCEEDED"
     TIMEOUT = "TIMEOUT"
     CRASH = "CRASH"
+    MIXED_HALLUCINATION = "MIXED_HALLUCINATION"
+    NEGATIVE_CONTROL_VIOLATION = "NEGATIVE_CONTROL_VIOLATION"
     UNKNOWN = None  # Fallback: map to null in output
 
 # Mapping internal ReasonCode to FailureCode
@@ -49,6 +51,8 @@ REASON_TO_FAILURE = {
     "ASK_EXIT_NONZERO": FailureCode.CRASH,
     "POSITIVE_HALLUCINATION": FailureCode.REFUSAL_MISSING, # Should have refused but didn't
     "FORMAT_INVALID": FailureCode.FORMAT_INVALID,
+    "MIXED_HALLUCINATION": FailureCode.MIXED_HALLUCINATION,
+    "NEGATIVE_CONTROL_VIOLATION": FailureCode.NEGATIVE_CONTROL_VIOLATION,
 }
 
 
@@ -84,12 +88,22 @@ class ReasonCode:
     ASK_EXIT_NONZERO = "ASK_EXIT_NONZERO"
     POSITIVE_HALLUCINATION = "POSITIVE_HALLUCINATION"
     FORMAT_INVALID = "FORMAT_INVALID"
+    MIXED_HALLUCINATION = "MIXED_HALLUCINATION"
+    NEGATIVE_CONTROL_VIOLATION = "NEGATIVE_CONTROL_VIOLATION"
 
 
 def calculate_spec_hash(spec: Dict[str, Any]) -> str:
     """Calculate a stable hash for the given specification."""
     canonical = json.dumps(spec, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+
+def _is_section_header(line: str) -> bool:
+    """
+    Check if line is a known section header (whitelist).
+    """
+    return line in ("結論:", "根拠:", "参照:")
 
 
 def parse_sources(answer: str) -> list[str]:
@@ -109,33 +123,87 @@ def parse_sources(answer: str) -> list[str]:
             if line.startswith("-"):
                 sources.append(line.lstrip("- ").strip())
             else:
-                if re.match(r"^[^:\-]*:$", line):
+                if _is_section_header(line):
                     break
     return sources
 
 
-def _find_first_list_item(lines: list[str], start: int) -> Optional[str]:
-    """Scan lines from start, return the first '- ...' item or None if a new section header is hit."""
-    for j in range(start, len(lines)):
-        after = lines[j].strip()
-        if not after:
+# _is_section_header and _find_first_list_item are defined above
+
+
+def extract_evidence_lines(answer: str) -> list[str]:
+    """
+    根拠: セクションの - ... 行を抽出する
+    """
+    evidence = []
+    in_block = False
+    for line in answer.splitlines():
+        line = line.strip()
+        if line.startswith("根拠:"):
+            in_block = True
             continue
-        if after.startswith("-"):
-            return after.lstrip("- ").strip()
-        if re.match(r"^[^:\-]*:$", after):
-            return None
-    return None
+        if in_block:
+            if not line:
+                continue
+            if line.startswith("-"):
+                evidence.append(line.lstrip("- ").strip())
+            else:
+                if _is_section_header(line):
+                    break
+    return evidence
+
+
+def get_keywords(text: str) -> set[str]:
+    """
+    簡易的なキーワード抽出（名詞・固有語っぽいもの）
+    - 英数字列 (3文字以上)
+    - カタカナ・漢字の連続 (2文字以上)
+    """
+    keywords = set()
+    # Alphanumeric (3+)
+    for m in re.finditer(r"[A-Za-z0-9][A-Za-z0-9_-]+", text):
+        w = m.group(0)
+        if len(w) >= 3 and w.lower() not in ("http", "https"):
+            keywords.add(w.lower())
+    
+    # Japanese (Katakana/Kanji, 2+)
+    # Note: excluding Hiragana to avoid common particles/verbs
+    for m in re.finditer(r"[ァ-ン一-龯]{2,}", text):
+        keywords.add(m.group(0))
+        
+    return keywords
+
+
+def extract_conclusion_lines(answer: str) -> list[str]:
+    """
+    結論: 直下のリスト項目（- ...）をすべて抽出する
+    """
+    lines = answer.splitlines()
+    conclusion = []
+    in_block = False
+    for line in lines:
+        row = line.strip()
+        if row == "結論:":
+            in_block = True
+            continue
+        if in_block:
+            if not row:
+                continue
+            if row.startswith("-"):
+                conclusion.append(row.lstrip("- ").strip())
+            elif _is_section_header(row):
+                break
+            # If text line but not bullet, maybe continuation? 
+            # For this simple parser, just ignore or assume strictly formatted.
+    return conclusion
 
 
 def extract_conclusion_line(answer: str) -> Optional[str]:
     """
-    結論: 直下の最初のリスト項目（- ...）を抽出する
+    Legacy compat: return first line of conclusion
     """
-    lines = answer.splitlines()
-    for i, line in enumerate(lines):
-        if line.strip() == "結論:":
-            return _find_first_list_item(lines, i + 1)
-    return None
+    c = extract_conclusion_lines(answer)
+    return c[0] if c else None
 
 
 def determine_standard_fail_reason(
@@ -169,31 +237,62 @@ def apply_type_constraints(
     fail_reason_code: Optional[str],
     has_required_source: bool,
     has_expected_evidence: bool,
-    conclusion_line: Optional[str],
-    has_sources: bool
+    conclusion_text: Optional[str],
+    has_sources: bool,
+    mixed_candidates: list[str]
 ) -> Optional[str]:
+
     if q_type == "negative_control":
-        if conclusion_line:
+        # Rule: Must match unknown/refusal patterns.
+        # If it passed "unknown" check (is_unknown=True), we confirm it's not a mixed hallucination.
+        
+        # 1. Check for "However..." logic (Mixed Hallucination in refusal) across ALL lines
+        if conclusion_text:
             bad_terms = ["ただし", "しかし", "一方", "ちなみに", "可能性があります", "ですが", "一般的"]
-            if any(t in conclusion_line for t in bad_terms):
+            if any(t in conclusion_text for t in bad_terms):
+                return ReasonCode.MIXED_HALLUCINATION
+
+        # 2. Check for Hallucinated Keywords (Mixed Hallucination)
+        if mixed_candidates:
+            # If unknown was asserted but we found external entities -> FAIL
+             return ReasonCode.MIXED_HALLUCINATION
+
+        # 3. If sources exist, it's a hallucination (Positive Hallucination)
+        if has_sources:
+             # Exception: "Source: Unknown" is handled by verify_sources logic usually?
+             # But here we rely on has_sources parsed without unknown tokens.
+             return ReasonCode.POSITIVE_HALLUCINATION
+
+        # 4. If it was NOT unknown, and NOT caught by above -> It answered something.
+        
+        # P0 Fix: Strict Unknown Check. NO_SOURCES is NOT valid unknown (it's an assertion without source).
+        is_strict_unknown = (fail_reason_code in (ReasonCode.UNKNOWN_ANSWER, ReasonCode.CONTEXT_EMPTY))
+        
+        if not is_strict_unknown:
+            if fail_reason_code is None:
+                # It passed standard checks (meaning it has an answer) -> Violation
+                return ReasonCode.NEGATIVE_CONTROL_VIOLATION
+            
+            if fail_reason_code == ReasonCode.NO_SOURCES:
+                # Assertion without sources -> Positive Hallucination
                 return ReasonCode.POSITIVE_HALLUCINATION
 
-        is_unknown = (fail_reason_code == ReasonCode.UNKNOWN_ANSWER)
-        
-        if has_sources and not is_unknown:
-            return ReasonCode.POSITIVE_HALLUCINATION
+            return fail_reason_code
 
-        if fail_reason_code in (
-            ReasonCode.UNKNOWN_ANSWER,
-            ReasonCode.CONTEXT_EMPTY,
-            ReasonCode.NO_SOURCES
-        ):
-            return None
-        
+        return None # Passed (is_strict_unknown=True and no bad signs)
+
+    # Normal case
+    if mixed_candidates:
+        # P1.5 Fix: Crash Protection.
+        # If it already crashed/failed infrastructure checks, return that reason immediately.
+        # Do not let "mixed content" mask a crash.
+        if fail_reason_code == ReasonCode.ASK_EXIT_NONZERO:
+            return fail_reason_code
+
+        # P0 Fix: Only flag MIXED if it was otherwise passing.
+        # Do not overwrite CRASH/ASK_EXIT_NONZERO/CONTEXT_EMPTY.
         if fail_reason_code is None:
-            return ReasonCode.POSITIVE_HALLUCINATION
-            
-        return fail_reason_code
+            return ReasonCode.MIXED_HALLUCINATION
 
     if fail_reason_code is None:
         if not has_required_source:
@@ -222,12 +321,39 @@ def analyze_result(
     extracted_sources = parse_sources(answer)
     valid_sources = [s for s in extracted_sources if not any(tok in s for tok in UNKNOWN_TOKENS)]
     has_sources = len(valid_sources) > 0
-    conclusion_line = extract_conclusion_line(answer)
+    conclusion_lines = extract_conclusion_lines(answer)
+    conc_line_first = conclusion_lines[0] if conclusion_lines else None
+    evidence_lines = extract_evidence_lines(answer)
 
-    format_invalid = (exit_code == 0 and bool(answer) and conclusion_line is None)
+    format_invalid = (exit_code == 0 and bool(answer) and not conclusion_lines)
 
-    target_text = conclusion_line or ""
+    target_text = "\n".join(conclusion_lines or [])
     mentions_unknown = any(tok in target_text for tok in UNKNOWN_TOKENS)
+
+    # Mixed Hallucination Check
+    mixed_candidates = []
+    if conclusion_lines and evidence_lines:
+        conc_text = "\n".join(conclusion_lines)
+        conc_keywords = get_keywords(conc_text)
+        evi_text = "\n".join(evidence_lines)
+        evi_keywords = get_keywords(evi_text)
+        q_keywords = get_keywords(question.get("query") or "")
+        
+        for k in conc_keywords:
+            if k in evi_keywords: continue
+            if k in q_keywords: continue
+            mixed_candidates.append(k)
+    
+    elif conclusion_lines and not evidence_lines:
+        # If no evidence but we have conclusion keywords -> Suspect unless unknown
+        if not mentions_unknown:
+            conc_text = "\n".join(conclusion_lines)
+            kws = get_keywords(conc_text)
+            q_keywords = get_keywords(question.get("query") or "")
+            diff = [k for k in kws if k not in q_keywords]
+            if diff:
+                mixed_candidates.extend(diff)
+
 
     has_required_source = True
     if expected_source:
@@ -236,7 +362,7 @@ def analyze_result(
             if expected_source in src:
                 has_required_source = True
                 break
-
+    
     has_expected_evidence = True
     matched_evidence = None
     matched_evidence_all = []
@@ -274,7 +400,15 @@ def analyze_result(
             answer, stderr, exit_code, mentions_unknown, has_sources
         )
 
-    final_reason_code = apply_type_constraints(q_type, fail_reason_code, has_required_source, has_expected_evidence, conclusion_line, has_sources)
+    final_reason_code = apply_type_constraints(
+        q_type, 
+        fail_reason_code, 
+        has_required_source, 
+        has_expected_evidence, 
+        target_text,  # Pass full text for bad term check
+        has_sources,
+        mixed_candidates
+    )
     passed = (final_reason_code is None)
 
     return {
@@ -290,7 +424,7 @@ def analyze_result(
             "matched_evidence": matched_evidence,
             "matched_evidence_all": matched_evidence_all,
             "missing_evidence": missing_evidence,
-            "conclusion_line": conclusion_line,
+            "conclusion_line": conc_line_first,
         }
     }
 
@@ -351,7 +485,8 @@ def mock_ask(question_data: dict, spec_hash: str) -> tuple[int, str, str]:
     q_type = question_data.get("type", "normal")
     if q_type == "negative_control":
         # For negative control, we expect "Unknown" and NO sources/evidence.
-        answer = "結論:\n- 参照できる根拠が見つかりません。\n\n参照:\n- なし"
+        # However, to pass format checks and avoid mixed hallucination on "根拠なし", we provide minimal valid structure.
+        answer = "結論:\n- 参照できる根拠が見つかりません。\n\n根拠:\n- 参照できる根拠が見つかりません。\n\n参照:\n- なし"
         return 0, answer, ""
     
     expected_source = question_data.get("expected_source", "mock_source.md")
@@ -364,7 +499,7 @@ def mock_ask(question_data: dict, spec_hash: str) -> tuple[int, str, str]:
     else:
         evidence_str = "- [MOCK] Evidence found."
 
-    answer = f"結論:\n- [MOCK] Success for {spec_hash}\n{evidence_str}\n\n参照:\n- {expected_source}"
+    answer = f"結論:\n- [MOCK] Success for {spec_hash}\n\n根拠:\n{evidence_str}\n- [MOCK] Success for {spec_hash}\n\n参照:\n- {expected_source}"
     return 0, answer, ""
 
 
@@ -447,10 +582,6 @@ def main() -> None:
         print(f"[eval] PRE-FLIGHT FAILED: {pf['reason_code']} (exit={pf['exit_code']})")
         return # Exitless
 
-    print(f"[eval] PRE-FLIGHT OK: provider={provider} model={model_id}")
-
-    print(f"[eval] PRE-FLIGHT OK: provider={provider} model={model_id}")
-
     # Load Dataset
     try:
         cases = load_dataset(dataset_id)
@@ -492,7 +623,7 @@ def main() -> None:
             # S20-03: Quick hack for replay mode to use the old store structure or skip
             # Since we are moving to runs/, replay logic needs to be rethought.
             if mode == "verify-only":
-                answer = "結論:\n- [MOCK] Verified\n\n参照:\n- verify.md"
+                answer = "結論:\n- [MOCK] Verified\n\n根拠:\n- [MOCK] Verified\n\n参照:\n- verify.md"
                 exit_code = 0
                 err = ""
             else:
@@ -542,6 +673,7 @@ def main() -> None:
         # Analysis Logic
         res = analyze_result({
             "type": c.get("tags", ["normal"])[0], # Adapt for legacy logic
+            "query": query or "", # P0 Fix: Propagate query for mixed hallucination check (None-safe)
             "expected_source": c["expectation"].get("expected_source"),
             "expected_evidence": c["expectation"].get("expected_evidence")
         }, answer, exit_code, err)
