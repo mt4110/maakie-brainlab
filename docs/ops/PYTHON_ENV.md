@@ -25,7 +25,7 @@ make test
 ### 3. Check Environment Status
 If you suspect environment issues, run the guardrail script:
 ```bash
-python3 scripts/py_env_report.py
+make py-env-report
 ```
 Expected output:
 - `is_venv`: `True` (or consistent with `.venv` path)
@@ -47,5 +47,5 @@ Expected output:
 If `.venv` is broken or behavior is inconsistent:
 1.  Verify you are in the repo root.
 2.  Run `rm -rf .venv`
-3.  Run `make bootstrap`
-4.  Run `python3 scripts/py_env_report.py` to verify.
+3.  Run `make test` to verify basic correctness.
+4.  Run `make py-env-report` to verify.
