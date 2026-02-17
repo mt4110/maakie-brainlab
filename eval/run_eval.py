@@ -153,24 +153,59 @@ def extract_evidence_lines(answer: str) -> list[str]:
     return evidence
 
 
+
+# P2: Japanese Stopwords (Audit-friendly list)
+JAPANESE_STOPWORDS = {
+    "結論", "根拠", "参照", "答え", "回答", "質問",
+    "以下", "概要", "詳細", "点", "面", "場合", "こと",
+    "もの", "ため", "よう", "際", "時", "一般", "的"
+}
+
 def get_keywords(text: str) -> set[str]:
     """
     簡易的なキーワード抽出（名詞・固有語っぽいもの）
-    - 英数字列 (3文字以上)
-    - カタカナ・漢字の連続 (2文字以上)
+    P2 Update:
+    - CJK Extension A (\u3400-\u4DBF) & Compatibility (\uF900-\uFAFF)
+    - Stopwords filtering
+    - Alphanumeric precision (exclude pure digits)
     """
-    keywords = set()
-    # Alphanumeric (3+)
-    for m in re.finditer(r"[A-Za-z0-9][A-Za-z0-9_-]+", text):
-        w = m.group(0)
-        if len(w) >= 3 and w.lower() not in ("http", "https"):
-            keywords.add(w.lower())
+    if not text:
+        return set()
     
-    # Japanese (Katakana/Kanji, 2+)
-    # Note: excluding Hiragana to avoid common particles/verbs
-    for m in re.finditer(r"[ァ-ン一-龯]{2,}", text):
-        keywords.add(m.group(0))
+    # \u4e00-\u9fff: CJK Unified Ideographs (Common)
+    # \u3400-\u4dbf: CJK Extension A
+    # \uF900-\uFAFF: CJK Compatibility Ideographs
+    # \u30a0-\u30ff: Katakana
+    # a-zA-Z0-9_: Alphanumeric
+    # Note: Hiragana is EXCLUDED to function as a natural tokenizer (matching legacy behavior).
+    
+    # Regex designed to capture sequence of relevant chars
+    matches = re.findall(r"[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff\u30a0-\u30ff0-9a-zA-Z_]+", text)
+    
+    keywords = set()
+    for m in matches:
+        if len(m) < 2:  # 1文字はノイズが多いので除外
+            continue
         
+        # Filter: Stopwords
+        if m in JAPANESE_STOPWORDS:
+            continue
+            
+        # Filter: Pure digits (e.g. 20240101)
+        if m.isdigit():
+            continue
+        
+        # Filter: Alphanumeric but no alpha/CJK (e.g. "123_456")
+        # If it's pure ASCII, ensure it has at least one letter
+        if m.isascii():
+            if not re.search(r'[a-zA-Z]', m):
+                continue
+        
+        # Filter: http/https (legacy)
+        if m.lower() in ("http", "https"):
+            continue
+
+        keywords.add(m)
     return keywords
 
 
