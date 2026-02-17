@@ -38,11 +38,10 @@
   - normalize採用理由: 揺れを潰して重複を減らす（RAG的に得）
 - [x] PLAN の `half-width kana policy` を “normalize” に確定（理由1行も書く）
 
-## 6) stopwords の「理由付き」管理方針を固定（P3）
-- [x] 方針: `eval/run_eval.py` の `JAPANESE_STOPWORDS` を唯一の真実にする（外部TSVは作らない）
-- [x] 各語に inline コメントで理由を併記する（git diff が監査ログ）
-  - 例: `"結論",  # Logic artifact (Section header)`
-- [x] NOTE: `word<TAB>reason` TSV+loader 案は検討のみ（必要になったら次フェーズで導入）
+## 6) stopwords を 2列外部ファイル(reason付き) へ移行
+- [x] `eval/run_eval.py`: Update `JAPANESE_STOPWORDS` to allow reason tracking (inline comments)
+  - **Decision**: Adopted inline comments instead of external 2列外部ファイル (Simpler/Safer).
+  - Status: Implemented & Verified.
 
 ## 7) 軽量監査（exitに依存しない）
 - [x] `scripts/keyword_audit.py` を追加（例外は握って print、プロセスは落とさない）
@@ -66,7 +65,7 @@
 - [x] commit1: docs(ops) add S20-06 plan/task
 - [x] commit2: feat(keywords) long-hex exclusion
 - [x] commit3: feat(keywords) half-width kana policy fixed
-- [x] commit4: feat(keywords) stopwords reason TSV + loader
+- [x] commit4: feat(keywords) stopwords reason 外部2列ファイル+読み込み案（却下）
 - [x] commit5: chore(audit) add scripts/keyword_audit.py
 - [x] commit6: docs(ops) update STATUS S20-06 100%
 
