@@ -20,7 +20,7 @@ class TestEvalLogic(unittest.TestCase):
 
         # Case 3: Partial match (file-level expectation vs chunk-level answer)
         q2 = {"id": "T02", "expected_source": "hello.md"}
-        ans2 = "結論:\n- OK\n\n参照:\n- hello.md#chunk-99"
+        ans2 = "結論:\n- OK\n\n根拠:\n- OK\n\n参照:\n- hello.md#chunk-99"
         res = analyze_result(q2, ans2, 0, "")
         self.assertTrue(res["passed"])
 
@@ -44,7 +44,7 @@ class TestEvalLogic(unittest.TestCase):
             "type": "normal", 
             "expected_evidence": ["EvA", "EvB", "EvC"]
         }
-        ans_partial = "結論:\n- ここに EvB があります。\n\n参照:\n- doc.md#chunk-1"
+        ans_partial = "結論:\n- ここに EvB があります。\n\n根拠:\n- EvB\n\n参照:\n- doc.md#chunk-1"
         res = analyze_result(q_normal, ans_partial, 0, "")
         self.assertTrue(res["passed"])
 
@@ -60,7 +60,7 @@ class TestEvalLogic(unittest.TestCase):
         self.assertEqual(res["details"]["missing_evidence"], ["EvA", "EvC"])
 
         # Case 3: Boundary (ALL) - All present
-        ans_full = "結論:\n- EvAとEvBとEvCが揃っています。\n\n参照:\n- doc.md#chunk-1"
+        ans_full = "結論:\n- EvAとEvBとEvCが揃っています。\n\n根拠:\n- EvAとEvBとEvC\n\n参照:\n- doc.md#chunk-1"
         res = analyze_result(q_bound, ans_full, 0, "")
         self.assertTrue(res["passed"])
 
@@ -73,12 +73,13 @@ class TestEvalLogic(unittest.TestCase):
         self.assertEqual(res["reason_code"], ReasonCode.UNKNOWN_ANSWER)
 
         # Case 1b: "不確実な情報はありません" should NOT trigger Unknown
-        ans_safe2 = "結論:\n- 答え。\n\n参照:\n- s1\n\n不確実性:\n- 不確実な情報はありません。"
+        ans_safe2 = "結論:\n- 答え。\n\n根拠:\n- 答え\n\n参照:\n- s1\n\n不確実性:\n- 不確実な情報はありません。"
         res = analyze_result(q, ans_safe2, 0, "")
         self.assertTrue(res["passed"])
 
         # Case 2: Unknown token in body text but Conclusion is fine -> PASS
-        ans_safe = "結論:\n- これはペンです。\n\n解説:\n- 英語ではunknownと言います。\n\n参照:\n- doc.md#chunk-1"
+        # We add '根拠' to avoid Mixed Hallucination on 'unknown', 'ペン', '英語'
+        ans_safe = "結論:\n- これはペンです。\n\n根拠:\n- ペンです。英語ではunknownと言います。\n\n解説:\n- 英語ではunknownと言います。\n\n参照:\n- doc.md#chunk-1"
         res = analyze_result(q, ans_safe, 0, "")
         self.assertTrue(res["passed"])
 
@@ -91,33 +92,21 @@ class TestEvalLogic(unittest.TestCase):
         self.assertTrue(res["passed"])
 
         # Case 2: Unknown but Hallucinated in Conclusion (Mixed)
-        ans_mixed_1 = "結論:\n- 不明ですが、一般的にはAppleです。\n\n参照:\n- 不明"
+        ans_mixed_1 = "結論:\n- 不明ですが、一般的にはAppleです。\n\n根拠:\n- 不明\n\n参照:\n- 不明"
         res = analyze_result(q, ans_mixed_1, 0, "")
         self.assertFalse(res["passed"])
         self.assertEqual(res["reason_code"], ReasonCode.MIXED_HALLUCINATION)
 
         # Case 3: Has Sources (and Answer) -> FAIL (Positive Hallucination)
-        ans_hallu = "結論:\n- 答えです。\n\n参照:\n- hello.md#chunk-0"
+        # We add '根拠' to ensure it's not flagged as Mixed, but as Positive due to sources/control violation.
+        ans_hallu = "結論:\n- 答えです。\n\n根拠:\n- 答えです。\n\n参照:\n- hello.md#chunk-0"
         res = analyze_result(q, ans_hallu, 0, "")
         self.assertFalse(res["passed"])
         self.assertEqual(res["reason_code"], ReasonCode.POSITIVE_HALLUCINATION)
         
-        # Case 4: Answer without sources (Assertion) -> Fail (Negative Control Violation)
-        # Note: If no sources, determine_standard_fail_reason returns NO_SOURCES.
-        # But for negative_control, NO_SOURCES is acceptable IF it matches unknown.
-        # If it does NOT match unknown (e.g. just assertion), it is Violation?
-        # Wait, if NO_SOURCES, fail_reason=NO_SOURCES -> is_unknown=True -> PASS in apply_type_constraints if no mixed signals.
-        # So "I am Groot" without sources -> PASS if no hallucination detected?
-        # But "Groot" is a proper noun (maybe).
-        ans_assert = "結論:\n- 私はグルートです。\n\n参照:\n- なし"
-        # "なし" is not in UNKNOWN_TOKENS? 
-        # UNKNOWN_TOKENS = ("不明", "わかりません", "unknown", "参照なし", ...)
-        # "なし" might be parsed as source if not careful, but usually we handle "参照なし".
-        # If "参照: なし" -> extracted sources ["なし"]. 
-        # Is "なし" in UNKNOWN_TOKENS? NO. 
-        # So has_sources=True. -> Positive Hallucination.
+        # Case 4: Answer without sources (Assertion) -> FAIL (Positive Hallucination)
+        ans_assert = "結論:\n- 私はグルートです。\n\n根拠:\n- 私はグルートです。\n\n参照:\n- なし"
         res = analyze_result(q, ans_assert, 0, "")
-        # Expect POSITIVE_HALLUCINATION because "なし" is treated as a valid source string (it's not in unknown_tokens).
         self.assertFalse(res["passed"])
         self.assertEqual(res["reason_code"], ReasonCode.POSITIVE_HALLUCINATION)
 
