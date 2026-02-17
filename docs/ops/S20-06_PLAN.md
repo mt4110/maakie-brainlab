@@ -33,8 +33,9 @@
 - keep/drop を選ぶ場合は、理由を docs に1行残す
 
 ### 3) stopwords with reason
-- TSV 形式に統一: `word<TAB>reason`
-- loader は word だけを実際のstop判定に使い、reasonは監査ログとして残す
+- **SOT**: stopwords は `eval/run_eval.py` の `JAPANESE_STOPWORDS` を唯一の真実とする（外部TSVは作らない）
+- **Reason保持**: 各語に **inline コメントで理由を併記**する（git diff が監査ログ）
+- **TSV案**: `word<TAB>reason` + loader は「検討したが P3 では採用しない」（必要なら次フェーズで再検討）
 
 ## Pseudocode
 1) Discover & Pin Paths
@@ -65,10 +66,10 @@
      remove half-width kana range tokens
    else:
      keep as-is
-   ### 3) Stopwords Audit Trail
+   # 4) Stopwords Audit Trail
 - **Policy**: Inline comments in `JAPANESE_STOPWORDS` (Python set).
-- **Reason**: Simpler to maintain and audit within the code diff itself. External TSV was considered but deemed overkill for P3.
-- **Format**: `"Word", # Reason` (ignore reason column)
+- **Reason**: Code diff を監査ログにする（TSV案は検討のみ）
+- **Format**: `"Word",  # Reason` (ignore reason column)
    run lightweight audit
    if audit prints ERROR:
      STOP and record observation
