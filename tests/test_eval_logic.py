@@ -146,5 +146,57 @@ class TestEvalLogic(unittest.TestCase):
         res = analyze_result(q_banana, ans_safe, 0, "")
         self.assertTrue(res["passed"])
 
+    def test_get_keywords_precision(self):
+        from eval.run_eval import get_keywords
+        
+        # Case 1: Stopwords exclusion
+        # "結論" and "点" should be removed. "重要" should remain.
+        text_stopwords = "結論: 重要な点はこれです。"
+        kws = get_keywords(text_stopwords)
+        self.assertIn("重要", kws)
+        self.assertNotIn("結論", kws)
+        self.assertNotIn("点", kws)
+
+        # Case 2: Pure digits exclusion
+        # "20240101" -> excluded. "ID" -> "id". "ABC" -> "abc".
+        text_digits = "20240101 ID:ABC"
+        kws = get_keywords(text_digits)
+        self.assertNotIn("20240101", kws)
+        self.assertIn("id", kws)
+        self.assertIn("abc", kws)
+
+        # Case 3: CJK Extension / Rare Kanji
+        # "𠮟責" (Extension B, actually surrogate pair in Python depending on build, but Ext A is target)
+        # Let's use Ext A: 㐂 (U+3402)
+        # Note: Logic excludes length < 2, so we need a 2-char compound.
+        text_cjk = "㐂寿"
+        kws = get_keywords(text_cjk)
+        self.assertIn("㐂寿", kws)
+        
+        # Mixed check
+        text_mixed = "Model-v1"
+        kws = get_keywords(text_mixed)
+        self.assertIn("model", kws)
+        self.assertIn("v1", kws) 
+
+        # P1 Fix: Mixed-script tokenization
+        # "OpenAI社" -> "openai社" (full) AND "openai" (extracted ascii)
+        text_mixed_script = "OpenAI社 GPT4モデル"
+        kws = get_keywords(text_mixed_script)
+        self.assertIn("openai", kws)
+        self.assertIn("gpt4", kws)
+
+    def test_get_keywords_nfkc(self):
+        from eval.run_eval import get_keywords
+        # NFKC Normalization check
+        # "ﾊﾝｶｸ" (half-width) -> "ハンカク" (full-width)
+        # Regex should match "ハンカク" (Katakana)
+        text_half = "これはﾊﾝｶｸです"
+        kws = get_keywords(text_half)
+        self.assertIn("ハンカク", kws)
+        self.assertNotIn("ﾊﾝｶｸ", kws)
+
+
+
 if __name__ == '__main__':
     unittest.main()

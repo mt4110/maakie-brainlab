@@ -48,5 +48,9 @@
 ### S20 — WIP（このPR）
 - Phase: `docs/ops/S20-02_PLAN.md` / `docs/ops/S20-02_TASK.md`
 - Phase: `docs/ops/S20-01_PLAN.md` / `docs/ops/S20-01_TASK.md`
+- Phase: `docs/ops/S20-03_PLAN.md` / `docs/ops/S20-03_TASK.md`
+- Phase: `docs/ops/S20-04_PLAN.md` / `docs/ops/S20-04_TASK.md`
+- Phase: `docs/ops/S20-05_PLAN.md` / `docs/ops/S20-05_TASK.md`
+- Phase: `docs/ops/S20-06_PLAN.md` / `docs/ops/S20-06_TASK.md` (P3 Guardrails)
 - 全体図: `docs/ops/S20_PLAN.md`
 - 実行: `docs/ops/S20_TASK.md`

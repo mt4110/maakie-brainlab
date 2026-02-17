@@ -7,6 +7,7 @@ import requests
 import subprocess
 import sys
 import time
+import unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, Dict, Any
@@ -153,24 +154,105 @@ def extract_evidence_lines(answer: str) -> list[str]:
     return evidence
 
 
+
+# P2: Japanese Stopwords (Audit-friendly list)
+# P3 Update: Added inline comments for audit trail.
+JAPANESE_STOPWORDS = {
+    "結論",  # Logic artifact (Section header)
+    "根拠",  # Logic artifact (Section header)
+    "参照",  # Logic artifact (Citation marker)
+    "答え",  # Generic phrasing
+    "回答",  # Generic phrasing
+    "質問",  # Generic phrasing
+    "以下",  # Connective
+    "概要",  # Meta-description
+    "詳細",  # Meta-description
+    "点",    # Generic counter/noun (e.g. 重要な点)
+    "面",    # Generic noun
+    "場合",  # Conditional
+    "こと",  # Nominalizer
+    "もの",  # Generic noun
+    "ため",  # Causal
+    "よう",  # Modal
+    "際",    # Temporal
+    "時",    # Temporal
+    "一般",  # Generalization
+    "的",    # Adjectival suffix (rarely standalone but happens)
+}
+
 def get_keywords(text: str) -> set[str]:
     """
     簡易的なキーワード抽出（名詞・固有語っぽいもの）
-    - 英数字列 (3文字以上)
-    - カタカナ・漢字の連続 (2文字以上)
+    P2 Update:
+    - CJK Extension A (\u3400-\u4DBF) & Compatibility (\uF900-\uFAFF)
+    - Stopwords filtering
+    - Alphanumeric precision (exclude pure digits)
     """
-    keywords = set()
-    # Alphanumeric (3+)
-    for m in re.finditer(r"[A-Za-z0-9][A-Za-z0-9_-]+", text):
-        w = m.group(0)
-        if len(w) >= 3 and w.lower() not in ("http", "https"):
-            keywords.add(w.lower())
+    if not text:
+        return set()
     
-    # Japanese (Katakana/Kanji, 2+)
-    # Note: excluding Hiragana to avoid common particles/verbs
-    for m in re.finditer(r"[ァ-ン一-龯]{2,}", text):
-        keywords.add(m.group(0))
+    # P3: NFKC Normalization
+    # Standardize half-width kana to full-width, decompose combined chars, etc.
+    # This prevents "ﾊﾝｶｸ" and "ハンカク" from being treated as different keywords.
+    text = unicodedata.normalize("NFKC", text)
+
+    # \u4e00-\u9fff: CJK Unified Ideographs (Common)
+    # \u3400-\u4dbf: CJK Extension A
+    # \uF900-\uFAFF: CJK Compatibility Ideographs
+    # \u30a0-\u30ff: Katakana
+    # a-zA-Z0-9_: Alphanumeric
+    # Note: Hiragana is EXCLUDED to function as a natural tokenizer (matching legacy behavior).
+    
+    # Regex designed to capture sequence of relevant chars
+    matches = re.findall(r"[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff\u30a0-\u30ff0-9a-zA-Z_]+", text)
+    
+    keywords = set()
+    for m in matches:
+        if len(m) < 2:  # 1文字はノイズが多いので除外
+            continue
         
+        # Filter: Stopwords
+        if m in JAPANESE_STOPWORDS:
+            continue
+            
+        # Filter: Pure digits (e.g. 20240101)
+        if m.isdigit():
+            continue
+        
+        # Filter: Alphanumeric but no alpha/CJK (e.g. "123_456")
+        # If it's pure ASCII, ensure it has at least one letter
+        if m.isascii():
+            if not re.search(r'[a-zA-Z]', m):
+                continue
+        
+        # Filter: http/https (legacy)
+        if m.lower() in ("http", "https"):
+            continue
+
+        # P3: Long-Hex Exclusion (Guardrail against SHA/GitSHA noise)
+        # 40 chars or more of just hex digits is likely a hash/ID.
+        # Check if full match is hex and length >= 40.
+        # (Regex matches 0-9a-zA-Z, so we refine here)
+        if len(m) >= 40 and re.fullmatch(r"[0-9a-fA-F]+", m):
+            continue
+
+        # P2 Fix: Case-insensitivity (Normalize to lower)
+        # P1 Fix: Mixed-script tokenization (e.g. "OpenAI社" -> "openai")
+        
+        # 1. Add the full token (lowercased)
+        keywords.add(m.lower())
+        
+        # 2. If token contains mixed scripts, extract meaningful ASCII parts
+        # Regex already allowed [a-zA-Z0-9_] combined with CJK.
+        # If we have ASCII parts mixed with CJK, the full token "OpenAI社" is added above (as "openai社").
+        # We ALSO want "openai" to match.
+        # Extract ASCII substrings length >= 3
+        sub_ascii = re.findall(r"[a-zA-Z0-9_]{3,}", m)
+        for s in sub_ascii:
+            # Avoid adding same token if it captures the whole thing (redundant but safe since set)
+            # Apply same constraints (lower, etc)
+            if s.lower() not in ("http", "https"):
+                 keywords.add(s.lower())
     return keywords
 
 
