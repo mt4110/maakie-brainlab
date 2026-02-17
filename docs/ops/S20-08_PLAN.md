@@ -62,10 +62,9 @@
 - “困ったらこれを見る” を 1 箇所に固定
 
 ## Decision: requirements.txt の扱い
-- Option 1 (推奨・単純): `requirements.txt` を廃止し、`pyproject.toml + uv.lock` に統一
-  - Pros: 導線が 1 本、ブレない
-  - Cons: 依存が重い場合 CI が遅くなる可能性
-- Option 2 (妥協): `requirements.txt` は残すが、生成物として `uv.lock` から毎回生成（手順固定）
+- **DECIDED: Option 1 (推奨・単純)**: `requirements.txt` を廃止し、`pyproject.toml + uv.lock` に統一
+  - Reason: 導線を 1 本化し、ブレをなくすため。CI/Local 完全同一化を優先。
+- Option 2 (Discarded): `requirements.txt` は残すが、生成物として `uv.lock` から毎回生成（手順固定）
   - Pros: CI を軽くしやすい
   - Cons: “生成ルール” が第二の契約になる
 

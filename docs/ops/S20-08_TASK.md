@@ -13,9 +13,8 @@
   - `bash -lc 'ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"; if [ -n "$ROOT" ]; then cd "$ROOT"; rg -n "requirements.txt|python -m venv|\\.venv/bin/python|setup-python" Makefile .github/workflows docs/ops || true; else echo "ERROR: not in git repo"; fi'`
 
 ### 1) Decide the Single Path (設計決定)
-- [ ] Decide `requirements.txt` policy (choose ONE and write it into S20-08_PLAN.md)
-  - Option 1: remove requirements.txt, unify on `pyproject.toml + uv.lock`
-  - Option 2: keep requirements.txt as generated artifact from lock (rule fixed)
+- [x] Decide `requirements.txt` policy (choose ONE and write it into S20-08_PLAN.md)
+  - Selected: Option 1 (remove requirements.txt, unify on `pyproject.toml + uv.lock`)
 
 ### 2) Implement Canonical Bootstrap (小刻み)
 - [ ] Update `Makefile` to enforce canonical python: `./.venv/bin/python`
