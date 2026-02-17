@@ -3,7 +3,7 @@ name: Eval Strict (Self-Hosted)
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 19 * * *' # Nightly (JST 04:00)
+    - cron: "0 19 * * *" # Nightly (JST 04:00)
 
 jobs:
   eval-strict:
@@ -19,13 +19,12 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-          cache: 'pip'
+          python-version: "3.12"
+          cache: "pip"
 
       - name: Create venv & Install Deps
         run: |
-          python -m venv .venv
-          .venv/bin/pip install -r requirements.txt
+          make bootstrap
           # Diagnostics
           .venv/bin/python -c "import feedparser; print('feedparser ok')"
 

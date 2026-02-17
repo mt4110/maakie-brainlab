@@ -3,7 +3,7 @@
 .PHONY: server-start server-stop server-status log ingest ask
 .PHONY: ai-smoke ai-verify
 
-PY?=.venv/bin/python
+PY=.venv/bin/python
 PYENV=PYTHONPATH=./src:.
 
 server-start:
@@ -41,36 +41,31 @@ ci: ci-test
 	$(PYENV) $(PY) -m compileall src eval
 
 bootstrap:
-	python3 -m venv .venv
-	.venv/bin/pip install --upgrade pip
-	.venv/bin/pip install -e .
+	# S20-08: Canonical bootstrap via uv (using system python only to install uv)
+	python3 -m pip install uv
+	python3 -m uv sync
+
+py-env-report: bootstrap
+	$(PYENV) $(PY) scripts/py_env_report.py
 
 # S4 Satellite Pipeline
 sat-collect:
-	$(PYENV) $(PY) src/satellite/collect.py $(SOURCE)
+	@echo "Not implemented yet (placeholder)."
 
 sat-normalize:
-	$(PYENV) $(PY) src/satellite/normalize.py $(SOURCE)
+	@echo "Not implemented yet (placeholder)."
+
+sat-manifest:
+	@echo "Not implemented yet (placeholder)."
 
 sat-gate:
-	@echo "[WARN] sat-gate: Not implemented"
-	@exit 0
+	@echo "Not implemented yet (placeholder)."
 
 sat-store:
-	@echo "[WARN] sat-store: Not implemented"
-	@exit 0
+	@echo "Not implemented yet (placeholder)."
 
-sat-digest:
-	@echo "[WARN] sat-digest: Not implemented"
-	@exit 0
-
-sat-index:
-	@echo "[WARN] sat-index: Not implemented"
-	@exit 0
-
-sat-run: sat-collect sat-normalize sat-gate sat-store sat-digest sat-index
-	@echo "[WARN] sat-run: Pipeline finish (not implemented real steps yet)"
-	@exit 0
+sat-run:
+	@echo "Not implemented yet (placeholder)."
 
 gate1:
 	bash ops/gate1.sh

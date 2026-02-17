@@ -2,14 +2,12 @@ name: Run Always 1h
 
 on:
   schedule:
-    - cron: '0 * * * *' # Hourly
+    - cron: "0 * * * *" # Hourly
   workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
-
-
 
 permissions:
   contents: read
@@ -29,13 +27,11 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-          cache: 'pip'
+          python-version: "3.12"
+          cache: "pip"
 
-      - name: Create venv & Install Deps
-        run: |
-          python -m venv .venv
-          .venv/bin/pip install -r requirements.txt
+      - name: Bootstrap (uv + .venv)
+        run: make bootstrap
 
       - name: Set up Go
         uses: actions/setup-go@v4

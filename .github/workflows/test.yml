@@ -2,7 +2,7 @@ name: Test
 
 on:
   push:
-    branches: [ "main", "s7-*" ]
+    branches: ["main", "s7-*"]
   pull_request:
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -12,37 +12,35 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-        cache: 'pip'
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
 
-    - name: Create venv
-      run: |
-        python -m venv .venv
-        .venv/bin/pip install -r requirements.txt
+      - name: Bootstrap Canonical Environment
+        run: make bootstrap
 
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version-file: go.mod
-        cache: true
-        cache-dependency-path: go.sum
-    
-    - name: Verify dependencies
-      run: go mod verify
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version-file: go.mod
+          cache: true
+          cache-dependency-path: go.sum
 
-    - name: Run Unit Tests
-      run: make test
+      - name: Verify dependencies
+        run: go mod verify
 
-    - name: Run Smoke Test
-      run: make smoke
+      - name: Run Unit Tests
+        run: make test
 
-    - name: Ensure no tracked files changed
-      run: git diff --exit-code
+      - name: Run Smoke Test
+        run: make smoke
 
-    # Linting could be added here (e.g. golangci-lint)
-    - name: Vet
-      run: go vet ./...
+      - name: Ensure no tracked files changed
+        run: git diff --exit-code
+
+      # Linting could be added here (e.g. golangci-lint)
+      - name: Vet
+        run: go vet ./...
