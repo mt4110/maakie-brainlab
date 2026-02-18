@@ -1,0 +1,293 @@
+name: milestone_required
+
+on:
+  pull_request:
+    types:
+      [
+        opened,
+        edited,
+        reopened,
+        synchronize,
+        ready_for_review,
+        labeled,
+        unlabeled,
+      ]
+
+permissions:
+  statuses: write
+  pull-requests: read
+
+jobs:
+  milestone:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Decide (required + advisory)
+        id: decide
+        shell: bash
+        env:
+          EVENT_PATH: ${{ github.event_path }}
+        run: |
+          python3 - <<'PY'
+          import json, os, re
+
+          out_path = os.environ.get("GITHUB_OUTPUT", "")
+          event_path = os.environ.get("EVENT_PATH", "") or os.environ.get("GITHUB_EVENT_PATH", "")
+
+          def write(k, v):
+            if not out_path:
+              print(f"ERROR: missing GITHUB_OUTPUT for {k}")
+              return
+            try:
+              with open(out_path, "a", encoding="utf-8") as f:
+                f.write(f"{k}={v}\n")
+            except Exception as e:
+              print("ERROR: cannot write outputs (non-fatal)")
+              print(str(e))
+
+          # defaults (non-blocking)
+          head_sha = ""
+          required_state = "success"
+          required_desc = "OK: milestone present"
+          advisory_desc = "OK: advisory clean"
+          advisory_warns = []
+
+          try:
+            try:
+              with open(event_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            except Exception as e:
+              required_desc = "SKIP: cannot read event json"
+              advisory_desc = "SKIP: cannot read event json"
+              write("head_sha", head_sha)
+              write("required_state", required_state)
+              write("required_desc", required_desc[:140])
+              write("advisory_desc", advisory_desc[:140])
+              write("advisory_warns", "")
+              print("ERROR: event json read failed (non-fatal)")
+              print(str(e))
+              raise Exception("handled")
+
+            pr = (data or {}).get("pull_request") or {}
+
+            head = pr.get("head") or {}
+            head_sha = (head.get("sha") or "").strip()
+
+            draft = bool(pr.get("draft", False))
+
+            labels = pr.get("labels") or []
+            label_names = []
+            for x in labels:
+              try:
+                name = (x or {}).get("name")
+                if name:
+                  label_names.append(name)
+              except Exception:
+                pass
+
+            has_skip_label = ("no-milestone-ok" in label_names)
+
+            # ---- required milestone presence ----
+            ms = pr.get("milestone")
+            ms_title = ""
+            try:
+              if isinstance(ms, dict):
+                ms_title = (ms.get("title") or "").strip()
+            except Exception:
+              ms_title = ""
+
+            if draft:
+              required_state = "success"
+              required_desc = "SKIP: draft PR"
+            elif has_skip_label:
+              required_state = "success"
+              required_desc = "SKIP: no-milestone-ok label"
+            elif ms_title == "":
+              required_state = "failure"
+              required_desc = "FAIL: missing milestone"
+            else:
+              required_state = "success"
+              required_desc = "OK: milestone present"
+
+            # ---- advisory (template fields) ----
+            body = pr.get("body") or ""
+
+            # Milestone: line (optional; no line => SKIP to avoid noise)
+            m = re.search(r"(?mi)^Milestone:\s*(.*)$", body)
+            if m:
+              v = (m.group(1) or "").strip()
+              if (v == "") or ("<!--" in v) or (v.lower() in ["tbd", "todo"]):
+                advisory_warns.append("Milestone: empty")
+            else:
+              # no line => do not warn
+              pass
+
+            # Exception reason: only when label is used
+            if has_skip_label:
+              r = re.search(r"(?mi)^Exception reason:\s*(.*)$", body)
+              reason = ""
+              if r:
+                reason = (r.group(1) or "").strip()
+              if (not r) or (reason == "") or ("<!--" in reason) or (reason.lower() in ["tbd", "todo"]):
+                advisory_warns.append("Exception reason: empty")
+
+            if draft:
+              advisory_desc = "SKIP: draft PR"
+              advisory_warns = []
+            elif advisory_warns:
+              advisory_desc = "WARN: " + "; ".join(advisory_warns)
+            else:
+              advisory_desc = "OK: advisory clean"
+
+          except Exception:
+            # swallow all
+            pass
+
+          write("head_sha", head_sha)
+          write("required_state", required_state)
+          write("required_desc", (required_desc or "")[:140])
+          write("advisory_desc", (advisory_desc or "")[:140])
+          write("advisory_warns", "; ".join(advisory_warns))
+
+          print(f"OK: head_sha={head_sha}")
+          print(f"OK: required_state={required_state} desc={required_desc}")
+          print(f"OK: advisory_desc={advisory_desc}")
+          PY
+
+      - name: Post status milestone_required (non-blocking job)
+        shell: bash
+        env:
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ steps.decide.outputs.head_sha }}
+          STATE: ${{ steps.decide.outputs.required_state }}
+          DESC: ${{ steps.decide.outputs.required_desc }}
+        run: |
+          python3 - <<'PY'
+          import json, os, urllib.request
+
+          repo = os.environ.get("REPO","")
+          run_id = os.environ.get("RUN_ID","")
+          token = os.environ.get("TOKEN","")
+          sha = os.environ.get("SHA","")
+          state = (os.environ.get("STATE","") or "success").strip()
+          desc = (os.environ.get("DESC","") or "")[:140]
+          context = "milestone_required"
+          target_url = f"https://github.com/{repo}/actions/runs/{run_id}" if repo and run_id else ""
+
+          if not repo or not sha or not token:
+            print("ERROR: missing repo/sha/token (non-fatal)")
+            print(f"repo={repo} sha={sha} token={'set' if token else 'empty'}")
+          else:
+            api = f"https://api.github.com/repos/{repo}/statuses/{sha}"
+            payload = {"state": state, "context": context, "description": desc, "target_url": target_url}
+            body = json.dumps(payload).encode("utf-8")
+            req = urllib.request.Request(api, data=body, method="POST")
+            req.add_header("Authorization", f"token {token}")
+            req.add_header("Accept", "application/vnd.github+json")
+            req.add_header("Content-Type", "application/json")
+            try:
+              with urllib.request.urlopen(req, timeout=20) as resp:
+                print("OK: milestone_required status posted")
+                print(resp.read().decode("utf-8", errors="replace")[:2000])
+            except Exception as e:
+              print("ERROR: status post failed (non-fatal)")
+              print(str(e))
+
+          print("OK: done")
+          PY
+
+      - name: Post status milestone_advisory (success-only)
+        shell: bash
+        env:
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ steps.decide.outputs.head_sha }}
+          DESC: ${{ steps.decide.outputs.advisory_desc }}
+        run: |
+          python3 - <<'PY'
+          import json, os, urllib.request
+
+          repo = os.environ.get("REPO","")
+          run_id = os.environ.get("RUN_ID","")
+          token = os.environ.get("TOKEN","")
+          sha = os.environ.get("SHA","")
+          desc = (os.environ.get("DESC","") or "")[:140]
+
+          context = "milestone_advisory"
+          state = "success"  # FORCE success
+          target_url = f"https://github.com/{repo}/actions/runs/{run_id}" if repo and run_id else ""
+
+          if not repo or not sha or not token:
+            print("ERROR: missing repo/sha/token (non-fatal)")
+            print(f"repo={repo} sha={sha} token={'set' if token else 'empty'}")
+          else:
+            api = f"https://api.github.com/repos/{repo}/statuses/{sha}"
+            payload = {"state": state, "context": context, "description": desc, "target_url": target_url}
+            body = json.dumps(payload).encode("utf-8")
+            req = urllib.request.Request(api, data=body, method="POST")
+            req.add_header("Authorization", f"token {token}")
+            req.add_header("Accept", "application/vnd.github+json")
+            req.add_header("Content-Type", "application/json")
+            try:
+              with urllib.request.urlopen(req, timeout=20) as resp:
+                print("OK: milestone_advisory status posted")
+                print(resp.read().decode("utf-8", errors="replace")[:2000])
+            except Exception as e:
+              print("ERROR: status post failed (non-fatal)")
+              print(str(e))
+
+          print("OK: done")
+          PY
+
+      - name: Job Summary (bold WARN; non-blocking)
+        shell: bash
+        env:
+          SUMMARY: ${{ env.GITHUB_STEP_SUMMARY }}
+          REQUIRED_STATE: ${{ steps.decide.outputs.required_state }}
+          REQUIRED_DESC: ${{ steps.decide.outputs.required_desc }}
+          ADVISORY_DESC: ${{ steps.decide.outputs.advisory_desc }}
+          ADVISORY_WARNS: ${{ steps.decide.outputs.advisory_warns }}
+        run: |
+          python3 - <<'PY'
+          import os
+
+          path = os.environ.get("GITHUB_STEP_SUMMARY","")
+          req_state = os.environ.get("REQUIRED_STATE","")
+          req_desc = os.environ.get("REQUIRED_DESC","")
+          adv_desc = os.environ.get("ADVISORY_DESC","")
+          adv_warns = os.environ.get("ADVISORY_WARNS","")
+
+          lines = []
+          lines.append("## Milestone Discipline Summary")
+          lines.append("")
+          lines.append(f"- milestone_required: `{req_state}` — {req_desc}")
+          lines.append(f"- milestone_advisory: {adv_desc}")
+          lines.append("")
+
+          if adv_warns.strip():
+            for w in [x.strip() for x in adv_warns.split(";") if x.strip()]:
+              lines.append(f"- **WARN:** {w}")
+            lines.append("")
+            lines.append("Action (non-blocking): fill PR template fields or add 1-line exception reason when using `no-milestone-ok`.")
+          else:
+            lines.append("- OK: no advisory warnings")
+          lines.append("")
+          lines.append("Rules (non-blocking):")
+          lines.append("- `milestone_advisory` never blocks merges (success-only)")
+          lines.append("- `milestone_required` posts failure when milestone is missing (not required-check by default)")
+
+          if not path:
+            print("ERROR: GITHUB_STEP_SUMMARY not set (non-fatal)")
+          else:
+            try:
+              with open(path, "a", encoding="utf-8") as f:
+                f.write("\n".join(lines) + "\n")
+              print("OK: summary written")
+            except Exception as e:
+              print("ERROR: cannot write summary (non-fatal)")
+              print(str(e))
+
+          print("OK: done")
+          PY
