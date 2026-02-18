@@ -34,7 +34,7 @@ if (headRef.match(/S(\d+)/) || title.match(/S(\d+)/)) {
 check_git_repo()
 check_pr_number()
 check_milestone_set()
-check_status_success("milestone_required")
+check_checkrun_success("milestone_required")
 check_all_checks_passed()
 if (dry_run) print_ok()
 else merge_pr()

@@ -67,15 +67,15 @@ if [ "$STOP" = "0" ]; then
   fi
 fi
 
-# Must be success: milestone_required
-MS_STATE=""
+# Must be success: milestone_required (check-runs)
+MS_CONCL=""
 if [ "$STOP" = "0" ]; then
-  MS_STATE="$(gh api -H "Accept: application/vnd.github+json" "repos/$NAME/commits/$SHA/status" \
-    --jq '.statuses | map(select(.context=="milestone_required")) | .[0].state // ""' 2>/dev/null || true)"
-  if [ "$MS_STATE" = "success" ]; then
-    echo "OK: status milestone_required=success"
+  MS_CONCL="$(gh api -H "Accept: application/vnd.github+json" "repos/$NAME/commits/$SHA/check-runs?check_name=milestone_required&filter=latest&per_page=1" \
+    --jq '.check_runs[0].conclusion // ""' 2>/dev/null || true)"
+  if [ "$MS_CONCL" = "success" ]; then
+    echo "OK: check_run milestone_required=success"
   else
-    echo "ERROR: status milestone_required not success: state=${MS_STATE:-EMPTY}"
+    echo "ERROR: check_run milestone_required not success: conclusion=${MS_CONCL:-EMPTY}"
     STOP="1"
   fi
 fi
