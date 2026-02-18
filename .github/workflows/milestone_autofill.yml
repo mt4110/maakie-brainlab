@@ -1,0 +1,107 @@
+name: milestone_autofill
+
+on:
+    pull_request:
+        types:
+            - opened
+            - reopened
+            - edited
+
+permissions:
+    contents: read
+    pull-requests: read
+    issues: write
+
+jobs:
+    autofill:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Autofill milestone if missing (truth over payload)
+              uses: actions/github-script@v7
+              continue-on-error: true
+              with:
+                  script: |
+                      const core = require("@actions/core");
+
+                      async function run() {
+                        const owner = context.repo.owner;
+                        const repo = context.repo.repo;
+                        const prNumber = context.payload.pull_request?.number;
+
+                        if (!prNumber) {
+                          core.notice("SKIP: no PR number in payload");
+                          return;
+                        }
+
+                        // Always fetch current PR state (avoid stale payload)
+                        let pr;
+                        try {
+                          pr = (await github.rest.pulls.get({ owner, repo, pull_number: prNumber })).data;
+                        } catch (e) {
+                          core.warning(`ERROR: pulls.get failed (non-fatal): ${e?.message || e}`);
+                          return;
+                        }
+
+                        const current = pr.milestone?.title || "";
+                        const headRef = pr.head?.ref || "";
+                        const title = pr.title || "";
+
+                        if (current) {
+                          core.notice(`SKIP: milestone already set: ${current}`);
+                          return;
+                        }
+
+                        // Infer Sxx from head branch or title: s21-04-... / (S21-04) / S21 ...
+                        const hay = `${headRef} ${title}`;
+                        const mm = hay.match(/(?:^|[^A-Za-z0-9])s(\d{1,2})(?:[-_]\d{2})?(?:[^A-Za-z0-9]|$)/i)
+                                || hay.match(/(?:^|[^A-Za-z0-9])S(\d{1,2})(?:[-_]\d{2})?(?:[^A-Za-z0-9]|$)/);
+
+                        if (!mm) {
+                          core.notice(`SKIP: cannot infer milestone from headRef/title: headRef="${headRef}" title="${title}"`);
+                          return;
+                        }
+
+                        const n = parseInt(mm[1], 10);
+                        if (!Number.isFinite(n) || n <= 0) {
+                          core.notice(`SKIP: invalid inferred milestone number: ${mm[1]}`);
+                          return;
+                        }
+
+                        const want = `S${String(n).padStart(2, "0")}`; // S21 etc.
+
+                        // Find milestone by title (open milestones)
+                        let milestones = [];
+                        try {
+                          milestones = (await github.rest.issues.listMilestones({
+                            owner, repo,
+                            state: "open",
+                            per_page: 100,
+                          })).data || [];
+                        } catch (e) {
+                          core.warning(`ERROR: listMilestones failed (non-fatal): ${e?.message || e}`);
+                          return;
+                        }
+
+                        const target = milestones.find(x => (x.title || "") === want)
+                                    || milestones.find(x => (x.title || "").startsWith(want));
+
+                        if (!target) {
+                          core.notice(`SKIP: milestone not found: want="${want}" (create milestone first)`);
+                          return;
+                        }
+
+                        // Milestone is updated via Issues API (PR is an issue)
+                        try {
+                          await github.rest.issues.update({
+                            owner, repo,
+                            issue_number: prNumber,
+                            milestone: target.number,
+                          });
+                          core.notice(`OK: milestone set: ${want} (#${target.number})`);
+                        } catch (e) {
+                          core.warning(`ERROR: issues.update failed (non-fatal): ${e?.message || e}`);
+                          return;
+                        }
+                      }
+
+                      run().catch(e => core.warning(`ERROR: unexpected (non-fatal): ${e?.message || e}`));
