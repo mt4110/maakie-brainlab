@@ -5,22 +5,22 @@
 
 ## 0) Preflight（安全確認）
 
-- [ ] cd "$(git rev-parse --show-toplevel)"
-- [ ] git status -sb を確認
-- [ ] if working tree dirty → STOP（stash/commit してから）
+- MIGRATED: S21-MIG-S15-0001 (see docs/ops/S21_TASK.md)
+- MIGRATED: S21-MIG-S15-0002 (see docs/ops/S21_TASK.md)
+- MIGRATED: S21-MIG-S15-0003 (see docs/ops/S21_TASK.md)
 
 ## 1) 対象ファイル（実パス確定）
 
-- [ ] WF=".github/workflows/verify_pack.yml" を固定
-- [ ] if test -f "$WF" が false → error STOP（パス違い）
+- MIGRATED: S21-MIG-S15-0004 (see docs/ops/S21_TASK.md)
+- MIGRATED: S21-MIG-S15-0005 (see docs/ops/S21_TASK.md)
 
 ## 2) 対象ブロック特定（探索 for / break / continue）
 
-- [ ] for pat in ["- name: Pack Delta Report", "main-worktree", "pack_delta"]:
-- [ ] rg -n "$pat" "$WF" -n
-- [ ] if hit → break
-- [ ] else continue
-- [ ] if 最後まで hit 0 → error STOP（別workflow/別stepの可能性、勝手に決めない）
+- MIGRATED: S21-MIG-S15-0006 (see docs/ops/S21_TASK.md)
+- MIGRATED: S21-MIG-S15-0007 (see docs/ops/S21_TASK.md)
+- MIGRATED: S21-MIG-S15-0008 (see docs/ops/S21_TASK.md)
+- MIGRATED: S21-MIG-S15-0009 (see docs/ops/S21_TASK.md)
+- MIGRATED: S21-MIG-S15-0010 (see docs/ops/S21_TASK.md)
 
 ## 3) Init CI に 10_status.tsv truncate を追加（任意だが推奨）
 

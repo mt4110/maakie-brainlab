@@ -8,17 +8,17 @@
 
 ## Task
 
-- [ ] [T0] Safety Snapshot（状況固定） <!-- id: T0 -->
-    - [ ] git status -sb が clean である
-    - [ ] ブランチが s19-01-prkit-v1 である
+- MIGRATED: S21-MIG-S19-01-0001 (see docs/ops/S21_TASK.md)
+    - MIGRATED: S21-MIG-S19-01-0002 (see docs/ops/S21_TASK.md)
+    - MIGRATED: S21-MIG-S19-01-0003 (see docs/ops/S21_TASK.md)
 
-- [ ] [T1] 修正：cmd/prkit/main.go を “--fill依存” から脱却 <!-- id: T1 -->
-    - [ ] dirty なら STOP（git status --porcelain）
-    - [ ] diff commits=0 なら STOP（upstream..HEAD）
-    - [ ] title = 最新コミット件名
-    - [ ] body = template読み込み → sentinel(prefix)除去 → evidence 注入 → 最小保証
-    - [ ] gh pr create --title/--body-file を実行
-    - [ ] PR既存なら “作らず PASS” にする
+- MIGRATED: S21-MIG-S19-01-0004 (see docs/ops/S21_TASK.md)
+    - MIGRATED: S21-MIG-S19-01-0005 (see docs/ops/S21_TASK.md)
+    - MIGRATED: S21-MIG-S19-01-0006 (see docs/ops/S21_TASK.md)
+    - MIGRATED: S21-MIG-S19-01-0007 (see docs/ops/S21_TASK.md)
+    - MIGRATED: S21-MIG-S19-01-0008 (see docs/ops/S21_TASK.md)
+    - MIGRATED: S21-MIG-S19-01-0009 (see docs/ops/S21_TASK.md)
+    - MIGRATED: S21-MIG-S19-01-0010 (see docs/ops/S21_TASK.md)
 
 - [ ] [T2] 修正：ops/pr_create.sh を止まらない＋--base が通る形に <!-- id: T2 -->
     - [ ] set -e を削除

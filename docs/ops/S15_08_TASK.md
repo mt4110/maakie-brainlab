@@ -1,22 +1,22 @@
 # S15-08 TASK — Lock Dependencies + PR Slicing Rules
 
 ## 0) 前提確認（止まる勇気）
-- [ ] git fetch -p origin を実行
-- [ ] git status -sb が クリーン
-- [ ] main の S15 docs が存在する（存在確認できない場合は error）
+- MIGRATED: S21-MIG-S15-08-0001 (see docs/ops/S21_TASK.md)
+- MIGRATED: S21-MIG-S15-08-0002 (see docs/ops/S21_TASK.md)
+- MIGRATED: S21-MIG-S15-08-0003 (see docs/ops/S21_TASK.md)
 
 ## 1) 依存マトリクスの実体パス確定（推測禁止）
-- [ ] test -f docs/ops/S15_07_10_DEPENDENCY_MATRIX.md を確認
-- [ ] 確定：docs/ops/S15_07_10_DEPENDENCY_MATRIX.md を採用
+- MIGRATED: S21-MIG-S15-08-0004 (see docs/ops/S21_TASK.md)
+- MIGRATED: S21-MIG-S15-08-0005 (see docs/ops/S21_TASK.md)
 
 ## 2) S15_08_PLAN の 確定
-- [ ] S15_08_PLAN.md 内が全確定済み (rg -n "TBD" docs/ops/S15_08_PLAN.md)
-- [ ] PR分割ルール（原則/例外/例外判定）が 機械的に書かれている
-- [ ] DependsOn / Touch / NoTouch / Gate の確定方針が書かれている
-- [ ] Done条件が “検証可能” な形で書かれている
+- MIGRATED: S21-MIG-S15-08-0006 (see docs/ops/S21_TASK.md)
+- MIGRATED: S21-MIG-S15-08-0007 (see docs/ops/S21_TASK.md)
+- MIGRATED: S21-MIG-S15-08-0008 (see docs/ops/S21_TASK.md)
+- MIGRATED: S21-MIG-S15-08-0009 (see docs/ops/S21_TASK.md)
 
 ## 3) S15_08_TASK の 確定
-- [ ] S15_08_TASK.md 内が全確定済み (rg -n "TBD" docs/ops/S15_08_TASK.md)
+- MIGRATED: S21-MIG-S15-08-0010 (see docs/ops/S21_TASK.md)
 - [ ] 手順が 順序固定（並べ替え不要で実行できる）
 - [ ] skip に has 必ず1行理由 を残すルールが入っている
 - [ ] error は その場で終了 のルールが入っている

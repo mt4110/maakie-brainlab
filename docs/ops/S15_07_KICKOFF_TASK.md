@@ -1,21 +1,21 @@
 # S15-07 kickoff TASK (07-10 design freeze)
 
 ## C0: Preflight
-- [ ] cd repo root
-- [ ] git status clean (or explicitly note dirty reason and STOP)
-- [ ] create branch: s15-07-kickoff-07-10-design-v1
+- MIGRATED: S21-MIG-S15-07-KICKOFF-0001 (see docs/ops/S21_TASK.md)
+- MIGRATED: S21-MIG-S15-07-KICKOFF-0002 (see docs/ops/S21_TASK.md)
+- MIGRATED: S21-MIG-S15-07-KICKOFF-0003 (see docs/ops/S21_TASK.md)
 
 ## C1: Discovery (facts)
-- [ ] list docs/ops for S15-07..10 (name variants)
-- [ ] rg S15-07..10 in S15_PLAN.md / S15_TASK.md
-- [ ] collect titles/intent lines (paste into matrix draft)
+- MIGRATED: S21-MIG-S15-07-KICKOFF-0004 (see docs/ops/S21_TASK.md)
+- MIGRATED: S21-MIG-S15-07-KICKOFF-0005 (see docs/ops/S21_TASK.md)
+- MIGRATED: S21-MIG-S15-07-KICKOFF-0006 (see docs/ops/S21_TASK.md)
 
 ## C2: Create/Normalize docs
-- [ ] ensure kickoff plan/task files exist
-- [ ] ensure dependency matrix file exists
+- MIGRATED: S21-MIG-S15-07-KICKOFF-0007 (see docs/ops/S21_TASK.md)
+- MIGRATED: S21-MIG-S15-07-KICKOFF-0008 (see docs/ops/S21_TASK.md)
 - [ ] for each step (07..10):
-  - [ ] plan exists, aligned to template sections
-  - [ ] task exists, ordered checkboxes + STOP conditions
+  - MIGRATED: S21-MIG-S15-07-KICKOFF-0009 (see docs/ops/S21_TASK.md)
+- MIGRATED: S21-MIG-S15-07-KICKOFF-0010 (see docs/ops/S21_TASK.md)
   - [ ] plan contains TouchSet + Dependencies (explicit)
 
 ## C3: Mechanical decision

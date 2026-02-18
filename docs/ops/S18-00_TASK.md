@@ -1,21 +1,21 @@
 # S18-00 TASK — Deterministic Template Kit Bootstrap (v2)
 
 ## Safety Snapshot (recover-first; avoid unnecessary HALT)
-- [ ] cd repo root:
+- MIGRATED: S21-MIG-S18-0001 (see docs/ops/S21_TASK.md)
   - `cd "$(git rev-parse --show-toplevel)"`
-- [ ] fetch:
+- MIGRATED: S21-MIG-S18-0002 (see docs/ops/S21_TASK.md)
   - `git fetch -p origin`
-- [ ] observe status:
+- MIGRATED: S21-MIG-S18-0003 (see docs/ops/S21_TASK.md)
   - `git status -sb`
-- [ ] if ahead:
-  - [ ] either push:
+- MIGRATED: S21-MIG-S18-0004 (see docs/ops/S21_TASK.md)
+  - MIGRATED: S21-MIG-S18-0005 (see docs/ops/S21_TASK.md)
     - `git push -u origin HEAD`
-  - [ ] OR record reason (1 line) and proceed (no silent continue)
-- [ ] if dirty:
-  - [ ] inspect:
+  - MIGRATED: S21-MIG-S18-0006 (see docs/ops/S21_TASK.md)
+- MIGRATED: S21-MIG-S18-0007 (see docs/ops/S21_TASK.md)
+  - MIGRATED: S21-MIG-S18-0008 (see docs/ops/S21_TASK.md)
     - `git diff --stat`
-  - [ ] resolve to clean (docs-only is preferred):
-    - stage docs if appropriate:
+  - MIGRATED: S21-MIG-S18-0009 (see docs/ops/S21_TASK.md)
+    - MIGRATED: S21-MIG-S18-0010 (see docs/ops/S21_TASK.md)
       - `git add docs/ops docs/ops/meta 2>/dev/null || true`
     - then commit, OR stash, OR revert (choose one)
   - [ ] re-check:

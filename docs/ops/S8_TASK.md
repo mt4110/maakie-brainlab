@@ -2,20 +2,20 @@
 (あんびちゃそ実装タスク：迷子防止の制御構文つき)
 
 ## 0) Preflight (必須)
-- [ ] if `git status --porcelain=v1` が空 ではない:
-      - [ ] error: 「作業ツリーが汚れている。stash/commitしてからやり直し」→ STOP
-- [ ] if 現在ブランチ != main:
-      - [ ] `git switch main`
-- [ ] `git pull --ff-only`
-- [ ] `git fetch origin --prune`
+- MIGRATED: S21-MIG-S8-0001 (see docs/ops/S21_TASK.md)
+- MIGRATED: S21-MIG-S8-0002 (see docs/ops/S21_TASK.md)
+- MIGRATED: S21-MIG-S8-0003 (see docs/ops/S21_TASK.md)
+- MIGRATED: S21-MIG-S8-0004 (see docs/ops/S21_TASK.md)
+- MIGRATED: S21-MIG-S8-0005 (see docs/ops/S21_TASK.md)
+- MIGRATED: S21-MIG-S8-0006 (see docs/ops/S21_TASK.md)
 
 ## 1) ブランチ作成
-- [ ] `git switch -c s8-00-audit-tightening-v1`
+- MIGRATED: S21-MIG-S8-0007 (see docs/ops/S21_TASK.md)
 
 ## 2) 編集対象ファイルパスの確定（勝手に決めない）
-- [ ] `ls -la internal/reviewpack` を実行して存在確認
-- [ ] if `internal/reviewpack` が存在しない:
-      - [ ] error: 「想定ディレクトリが無い。repo構成が違う」→ STOP
+- MIGRATED: S21-MIG-S8-0008 (see docs/ops/S21_TASK.md)
+- MIGRATED: S21-MIG-S8-0009 (see docs/ops/S21_TASK.md)
+- MIGRATED: S21-MIG-S8-0010 (see docs/ops/S21_TASK.md)
 - [ ] `rg -n "go test" -S .` を実行
 - [ ] if ヒット0件:
       - [ ] `rg -n "exec\\.Command\\(\"go\"|\\bgo\\b.*test" -S internal cmd ops .` を実行

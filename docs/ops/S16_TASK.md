@@ -7,20 +7,20 @@
 - [x] Enforce AI Contract V1 (reviewpack main/verify-only)
 
 ## S16-02: Plan/Task Standard
-- [ ] Create/Update: docs/ops/S16-02_PLAN.md
-- [ ] Create/Update: docs/ops/S16-02_TASK.md
-- [ ] Gate (S16-02): `bash -lc 'cd "$(git rev-parse --show-toplevel)"; PAT="$(printf "%c%c%c%c%c%c%c" 102 105 108 101 58 47 47)"; if git ls-files -z | xargs -0 rg -n "$PAT"; then echo "[FAIL] forbidden file URL found" >&2; exit 1; else echo "[OK] none"; fi'`
+- MIGRATED: S21-MIG-S16-0001 (see docs/ops/S21_TASK.md)
+- MIGRATED: S21-MIG-S16-0002 (see docs/ops/S21_TASK.md)
+- MIGRATED: S21-MIG-S16-0003 (see docs/ops/S21_TASK.md)
 
 ## S16-03: Command Template
-- [ ] Create/Update: docs/ops/S16-03_PLAN.md
-- [ ] Create/Update: docs/ops/S16-03_TASK.md
+- MIGRATED: S21-MIG-S16-0004 (see docs/ops/S21_TASK.md)
+- MIGRATED: S21-MIG-S16-0005 (see docs/ops/S21_TASK.md)
 
 ## S16 Final Gate (MUST)
-- [ ] `bash -lc 'set -euo pipefail; cd "$(git rev-parse --show-toplevel)"; make test'`
-- [ ] `bash -lc 'set -euo pipefail; cd "$(git rev-parse --show-toplevel)"; go run cmd/reviewpack/main.go submit --mode verify-only'`
-- [ ] `bash -lc 'cd "$(git rev-parse --show-toplevel)"; PAT="$(printf "%c%c%c%c%c%c%c" 102 105 108 101 58 47 47)"; if git ls-files -z | xargs -0 rg -n "$PAT"; then echo "[FAIL] forbidden file URL found" >&2; exit 1; else echo "[OK] none"; fi'`
+- MIGRATED: S21-MIG-S16-0006 (see docs/ops/S21_TASK.md)
+- MIGRATED: S21-MIG-S16-0007 (see docs/ops/S21_TASK.md)
+- MIGRATED: S21-MIG-S16-0008 (see docs/ops/S21_TASK.md)
 
 ## Final PR Updates
-- [ ] `bash -lc 'cd "$(git rev-parse --show-toplevel)"; git add docs/ops/S16_PLAN.md docs/ops/S16_TASK.md docs/ops/S16-02_PLAN.md docs/ops/S16-02_TASK.md'`
-- [ ] `bash -lc 'cd "$(git rev-parse --show-toplevel)"; git commit -m "chore(docs): lock S16 milestones + fix file-url scan recipe"'`
+- MIGRATED: S21-MIG-S16-0009 (see docs/ops/S21_TASK.md)
+- MIGRATED: S21-MIG-S16-0010 (see docs/ops/S21_TASK.md)
 - [ ] `bash -lc 'cd "$(git rev-parse --show-toplevel)"; git push'`
