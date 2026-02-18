@@ -51,7 +51,8 @@ Policy:
 CI:
 - A workflow posts a commit status with context `milestone_required`.
 - Missing milestone (and no exception label, non-draft) => status `failure`.
-- This check is *not* added to required checks by default (decision later).
+- **Invariant**: Every decision must be written in PR body.
+- **Rule**: Milestone OR (no-milestone-ok + **Non-empty Reason**)
 
 Note:
 - `milestone_advisory` is success-only (WARN is non-blocking) and never blocks merges.
