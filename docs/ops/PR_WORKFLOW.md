@@ -58,6 +58,13 @@ Note:
 - `milestone_advisory` is success-only (WARN is non-blocking) and never blocks merges.
 - `milestone_required` is detection-focused; do NOT add it to required checks by default.
 
+## Milestone hygiene (rerun罠の根絶)
+
+- Milestone を後付け/外ししたときは、`pull_request` の `milestoned` / `demilestoned` で自動再判定される。
+- GitHub Actions の `gh run rerun` は、過去の `pull_request` event payload（化石）を再生することがある。
+  - そのため判定ロジックは event payload に依存しない。
+- 判定は GitHub API を用いて「現在のPR状態（真実）」を取得して行う（truth over payload）。
+
 Recovery: accidental commit on main (local only)
 git switch -c fix/rescue-main-commit
 git push -u origin HEAD
