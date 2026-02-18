@@ -74,3 +74,7 @@ git fetch origin
 git reset --hard origin/main
 
 
+## Milestone Autofill & Merge Guard (S21-04)
+
+- Milestone は `milestone_autofill` が自動付与する（Sxx推測）
+- マージは `ops/pr_merge_guard.sh` 経由（UI mergeは運用禁止）
