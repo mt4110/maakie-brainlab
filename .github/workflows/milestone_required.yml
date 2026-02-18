@@ -1,0 +1,125 @@
+name: Milestone Required (soft via status)
+
+on:
+    pull_request:
+        types:
+            [
+                opened,
+                reopened,
+                synchronize,
+                edited,
+                ready_for_review,
+                labeled,
+                unlabeled,
+            ]
+
+permissions:
+    contents: read
+    pull-requests: read
+    statuses: write
+
+jobs:
+    milestone_required:
+        name: milestone_required
+        runs-on: ubuntu-latest
+        steps:
+            - name: Decide (jq)
+              id: decide
+              shell: bash
+              run: |
+                  EVENT_PATH="${GITHUB_EVENT_PATH:-}"
+                  tmp=""
+
+                  tmp="$(jq -r '.pull_request.draft // false' "$EVENT_PATH" 2>/dev/null || true)"
+                  DRAFT="${tmp:-false}"
+
+                  tmp="$(jq -r '[.pull_request.labels[]?.name] | index("no-milestone-ok") != null' "$EVENT_PATH" 2>/dev/null || true)"
+                  HAS_SKIP_LABEL="${tmp:-false}"
+
+                  tmp="$(jq -r '.pull_request.milestone.title // empty' "$EVENT_PATH" 2>/dev/null || true)"
+                  MS_TITLE="${tmp:-}"
+
+                  tmp="$(jq -r '.pull_request.html_url // empty' "$EVENT_PATH" 2>/dev/null || true)"
+                  PR_URL="${tmp:-}"
+
+                  STATE="success"
+                  DESC="OK: milestone present"
+
+                  if [ "$DRAFT" = "true" ]; then
+                    STATE="success"
+                    DESC="SKIP: draft PR"
+                  elif [ "$HAS_SKIP_LABEL" = "true" ]; then
+                    STATE="success"
+                    DESC="SKIP: no-milestone-ok label"
+                  elif [ -z "$MS_TITLE" ]; then
+                    STATE="failure"
+                    DESC="ERROR: missing milestone (add milestone or label no-milestone-ok)"
+                  else
+                    STATE="success"
+                    DESC="OK: milestone=$MS_TITLE"
+                  fi
+
+                  echo "state=$STATE" >> "$GITHUB_OUTPUT"
+                  printf "description<<__DESC__\n%s\n__DESC__\n" "$DESC" >> "$GITHUB_OUTPUT"
+                  printf "pr_url<<__PR__\n%s\n__PR__\n" "$PR_URL" >> "$GITHUB_OUTPUT"
+                  printf "milestone_title<<__MS__\n%s\n__MS__\n" "$MS_TITLE" >> "$GITHUB_OUTPUT"
+
+                  echo "OK: decided state=$STATE"
+                  echo "$DESC"
+
+            - name: Set commit status (no-exit)
+              shell: bash
+              env:
+                  STATE: ${{ steps.decide.outputs.state }}
+                  DESCRIPTION: ${{ steps.decide.outputs.description }}
+                  PR_URL: ${{ steps.decide.outputs.pr_url }}
+                  MILESTONE_TITLE: ${{ steps.decide.outputs.milestone_title }}
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  python3 - <<'PY'
+                  import json
+                  import os
+                  import urllib.request
+
+                  repo = os.environ.get("GITHUB_REPOSITORY", "")
+                  sha = os.environ.get("GITHUB_SHA", "")
+                  run_id = os.environ.get("GITHUB_RUN_ID", "")
+                  token = os.environ.get("GH_TOKEN", "")
+
+                  state = os.environ.get("STATE", "success") or "success"
+                  desc = os.environ.get("DESCRIPTION", "") or ""
+                  pr_url = os.environ.get("PR_URL", "") or ""
+                  milestone = os.environ.get("MILESTONE_TITLE", "") or ""
+
+                  context = "milestone_required"
+                  target_url = f"https://github.com/{repo}/actions/runs/{run_id}" if repo and run_id else (pr_url or "")
+
+                  if not repo or not sha or not token:
+                    print("ERROR: missing env for status update (repo/sha/token)")
+                    print(f"repo={repo} sha={sha} token={'set' if token else 'empty'}")
+                  else:
+                    api = f"https://api.github.com/repos/{repo}/statuses/{sha}"
+                    payload = {
+                      "state": state,
+                      "context": context,
+                      "description": (desc[:140] if desc else ""),
+                      "target_url": target_url,
+                    }
+                    body = json.dumps(payload).encode("utf-8")
+                    req = urllib.request.Request(api, data=body, method="POST")
+                    req.add_header("Authorization", f"token {token}")
+                    req.add_header("Accept", "application/vnd.github+json")
+                    req.add_header("Content-Type", "application/json")
+
+                    try:
+                      with urllib.request.urlopen(req, timeout=20) as resp:
+                        text = resp.read().decode("utf-8", errors="replace")
+                        print("OK: status updated")
+                        print(text[:4000])
+                    except Exception as e:
+                      print("ERROR: failed to update status (non-fatal)")
+                      print(str(e))
+
+                  print("OK: finished (no-exit)")
+                  print(f"state={state} milestone={milestone}")
+                  PY

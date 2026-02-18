@@ -38,6 +38,21 @@ mkdir -p .local/pr-templates
 cp docs/pr_templates/s5.md .local/pr-templates/<PR>.md
 # edit .local/pr-templates/<PR>.md
 
+
+## Milestone discipline (S20-10)
+
+Purpose: prevent “PR has no milestone” accidents by detection, not by blocking dev flow.
+
+Policy:
+- Default: PR should have a milestone.
+- Exception: if label `no-milestone-ok` is present, milestone check is skipped (PASS).
+- Draft PR: skipped (PASS).
+
+CI:
+- A workflow posts a commit status with context `milestone_required`.
+- Missing milestone (and no exception label, non-draft) => status `failure`.
+- This check is *not* added to required checks by default (decision later).
+
 Recovery: accidental commit on main (local only)
 git switch -c fix/rescue-main-commit
 git push -u origin HEAD

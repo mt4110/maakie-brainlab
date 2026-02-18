@@ -13,6 +13,8 @@ The following checks must pass for any Pull Request targeting `main`.
 | **test** | Test | `pull_request` | Runs `make test` (Go + Python unit tests). |
 | **verify-pack** | Verify Pack | `pull_request` | Ensures clean pack generation and presence of test markers in `30_make_test.log`. |
 
+Note: `milestone_required` exists as a detection check but is NOT required by default (policy decision later).
+
 ## Optional / Aggregator Checks
 
 - **summary**: A job in `CI (Lint & Verify)` that aggregates lint results.
