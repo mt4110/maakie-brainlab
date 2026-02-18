@@ -3,15 +3,14 @@ name: milestone_required
 on:
   pull_request:
     types:
-      [
-        opened,
-        edited,
-        reopened,
-        synchronize,
-        ready_for_review,
-        labeled,
-        unlabeled,
-      ]
+      - opened
+      - reopened
+      - synchronize
+      - edited
+      - labeled
+      - unlabeled
+      - milestoned
+      - demilestoned
 
 permissions:
   statuses: write
@@ -21,17 +20,66 @@ jobs:
   milestone:
     runs-on: ubuntu-latest
     steps:
+      - name: Fetch current PR (truth over payload)
+        id: pr
+        uses: actions/github-script@v7
+        with:
+          script: |
+            try {
+              const prNumber = context.payload.pull_request?.number;
+              if (!prNumber) {
+                core.info("SKIP: pull_request.number missing");
+                core.setOutput("pr_number", "");
+                core.setOutput("milestone_title", "");
+                core.setOutput("is_draft", "false");
+                core.setOutput("has_no_milestone_ok", "false");
+                core.setOutput("head_sha", "");
+                core.setOutput("body", "");
+                return;
+              }
+
+              const res = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber,
+              });
+
+              const pr = res.data;
+              const labels = (pr.labels || []).map(x => (typeof x === "string" ? x : x.name)).filter(Boolean);
+              const hasNoMilestoneOk = labels.includes("no-milestone-ok");
+
+              core.setOutput("pr_number", String(prNumber));
+              core.setOutput("milestone_title", pr.milestone?.title ?? "");
+              core.setOutput("is_draft", pr.draft ? "true" : "false");
+              core.setOutput("has_no_milestone_ok", hasNoMilestoneOk ? "true" : "false");
+              core.setOutput("head_sha", pr.head?.sha ?? "");
+              core.setOutput("body", pr.body ?? "");
+
+              core.info(`OK: pr=${prNumber} draft=${pr.draft ? "true" : "false"} milestone=${pr.milestone?.title ?? ""} no-milestone-ok=${hasNoMilestoneOk ? "true" : "false"}`);
+            } catch (e) {
+              core.warning(`ERROR: failed to fetch current PR: ${String(e)}`);
+              core.setOutput("pr_number", "");
+              core.setOutput("milestone_title", "");
+              core.setOutput("is_draft", "false");
+              core.setOutput("has_no_milestone_ok", "false");
+              core.setOutput("head_sha", "");
+              core.setOutput("body", "");
+            }
+
       - name: Decide (required + advisory)
         id: decide
         shell: bash
         env:
-          EVENT_PATH: ${{ github.event_path }}
+          HEAD_SHA: ${{ steps.pr.outputs.head_sha }}
+          MILESTONE_TITLE: ${{ steps.pr.outputs.milestone_title }}
+          IS_DRAFT: ${{ steps.pr.outputs.is_draft }}
+          HAS_NO_MILESTONE_OK: ${{ steps.pr.outputs.has_no_milestone_ok }}
+          PR_BODY: ${{ steps.pr.outputs.body }}
         run: |
           python3 - <<'PY'
           import json, os, re
 
           out_path = os.environ.get("GITHUB_OUTPUT", "")
-          event_path = os.environ.get("EVENT_PATH", "") or os.environ.get("GITHUB_EVENT_PATH", "")
 
           def write(k, v):
             if not out_path:
@@ -45,56 +93,19 @@ jobs:
               print(str(e))
 
           # defaults (non-blocking)
-          head_sha = ""
+          head_sha = os.environ.get("HEAD_SHA", "").strip()
+          draft = os.environ.get("IS_DRAFT", "false") == "true"
+          has_skip_label = os.environ.get("HAS_NO_MILESTONE_OK", "false") == "true"
+          ms_title = os.environ.get("MILESTONE_TITLE", "").strip()
+          body = os.environ.get("PR_BODY", "")
+
           required_state = "success"
           required_desc = "OK: milestone present"
           advisory_desc = "OK: advisory clean"
           advisory_warns = []
 
           try:
-            try:
-              with open(event_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            except Exception as e:
-              required_desc = "SKIP: cannot read event json"
-              advisory_desc = "SKIP: cannot read event json"
-              write("head_sha", head_sha)
-              write("required_state", required_state)
-              write("required_desc", required_desc[:140])
-              write("advisory_desc", advisory_desc[:140])
-              write("advisory_warns", "")
-              print("ERROR: event json read failed (non-fatal)")
-              print(str(e))
-              raise Exception("handled")
-
-            pr = (data or {}).get("pull_request") or {}
-
-            head = pr.get("head") or {}
-            head_sha = (head.get("sha") or "").strip()
-
-            draft = bool(pr.get("draft", False))
-
-            labels = pr.get("labels") or []
-            label_names = []
-            for x in labels:
-              try:
-                name = (x or {}).get("name")
-                if name:
-                  label_names.append(name)
-              except Exception:
-                pass
-
-            has_skip_label = ("no-milestone-ok" in label_names)
-
-            # ---- required milestone presence ----
-            ms = pr.get("milestone")
-            ms_title = ""
-            try:
-              if isinstance(ms, dict):
-                ms_title = (ms.get("title") or "").strip()
-            except Exception:
-              ms_title = ""
-
+            # required check
             if draft:
               required_state = "success"
               required_desc = "SKIP: draft PR"
@@ -108,20 +119,15 @@ jobs:
               required_state = "success"
               required_desc = "OK: milestone present"
 
-            # ---- advisory (template fields) ----
-            body = pr.get("body") or ""
-
-            # Milestone: line (optional; no line => SKIP to avoid noise)
+            # advisory (template fields)
+            # Milestone: line (optional)
             m = re.search(r"(?mi)^Milestone:\s*(.*)$", body)
             if m:
               v = (m.group(1) or "").strip()
               if (v == "") or ("<!--" in v) or (v.lower() in ["tbd", "todo"]):
                 advisory_warns.append("Milestone: empty")
-            else:
-              # no line => do not warn
-              pass
-
-            # Exception reason: only when label is used
+            
+            # Exception reason
             if has_skip_label:
               r = re.search(r"(?mi)^Exception reason:\s*(.*)$", body)
               reason = ""
@@ -139,7 +145,6 @@ jobs:
               advisory_desc = "OK: advisory clean"
 
           except Exception:
-            # swallow all
             pass
 
           write("head_sha", head_sha)
