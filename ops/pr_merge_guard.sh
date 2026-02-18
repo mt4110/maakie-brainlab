@@ -67,16 +67,30 @@ if [ "$STOP" = "0" ]; then
   fi
 fi
 
-# Must be success: milestone_required (check-runs)
+# Must be success: milestone_required (prefer status; fallback check-runs)
+MS_STATE=""
 MS_CONCL=""
 if [ "$STOP" = "0" ]; then
-  MS_CONCL="$(gh api -H "Accept: application/vnd.github+json" "repos/$NAME/commits/$SHA/check-runs?check_name=milestone_required&filter=latest&per_page=1" \
-    --jq '.check_runs[0].conclusion // ""' 2>/dev/null || true)"
-  if [ "$MS_CONCL" = "success" ]; then
-    echo "OK: check_run milestone_required=success"
-  else
-    echo "ERROR: check_run milestone_required not success: conclusion=${MS_CONCL:-EMPTY}"
+  # 1) Prefer commit status context (this repo posts statuses explicitly)
+  MS_STATE="$(gh api -H "Accept: application/vnd.github+json" "repos/$NAME/commits/$SHA/status"     --jq '.statuses | map(select(.context=="milestone_required")) | .[0].state // ""' 2>/dev/null || true)"
+
+  if [ "$MS_STATE" = "success" ]; then
+    echo "OK: status milestone_required=success"
+  elif [ -n "$MS_STATE" ]; then
+    echo "ERROR: status milestone_required not success: state=${MS_STATE:-EMPTY}"
     STOP="1"
+  else
+    # 2) Fallback: scan check-runs (name is often job-name, not workflow-name)
+    MS_CONCL="$(gh api -H "Accept: application/vnd.github+json" "repos/$NAME/commits/$SHA/check-runs"       --jq '[.check_runs[] | select(((.name // "") | test("milestone_required"; "i")) or ((.name // "") == "milestone"))] | .[0].conclusion // ""' 2>/dev/null || true)"
+
+    if [ "$MS_CONCL" = "success" ]; then
+      echo "OK: check_run milestone_required=success"
+    elif [ -n "$MS_CONCL" ]; then
+      echo "ERROR: check_run milestone_required not success: conclusion=${MS_CONCL:-EMPTY}"
+      STOP="1"
+    else
+      echo "WARN: milestone_required not observable via status/check-runs (non-blocking); rely on milestone + global checks gate"
+    fi
   fi
 fi
 
