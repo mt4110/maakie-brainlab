@@ -20,3 +20,10 @@
 
 # Notes
 - レビュアが見るべきポイント
+
+
+## Milestone (human reminder; advisory is non-blocking)
+
+Milestone: <!-- write milestone title OR write "set in GitHub UI" -->
+
+Exception reason: <!-- 1 line ONLY if using label "no-milestone-ok" -->

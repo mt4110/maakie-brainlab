@@ -53,6 +53,10 @@ CI:
 - Missing milestone (and no exception label, non-draft) => status `failure`.
 - This check is *not* added to required checks by default (decision later).
 
+Note:
+- `milestone_advisory` is success-only (WARN is non-blocking) and never blocks merges.
+- `milestone_required` is detection-focused; do NOT add it to required checks by default.
+
 Recovery: accidental commit on main (local only)
 git switch -c fix/rescue-main-commit
 git push -u origin HEAD
