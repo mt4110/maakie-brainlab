@@ -1,7 +1,7 @@
 # S21-05 PLAN — IL Entry Unification → Canonicalize → Minimal Executor (P0→P1→P2)
 
 ## Progress
-- Current: 99%
+- Current: 99% (Review Ready)
 - Target: 99% when PR open + CI green + guard logs stable
 
 ## Goal (Why)

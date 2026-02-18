@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import argparse
 import json
-import sys
 import traceback
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -125,10 +124,11 @@ def main():
             jsonschema.validate(instance=canonical_data, schema=schema_data)
             log("OK: validation passed (jsonschema)")
         else:
-             # Fallback: minimal checks if jsonschema missing
-            log("SKIP: jsonschema lib not found, performing minimal checks")
-            if "il" not in canonical_data or "meta" not in canonical_data:
-                raise ValueError("missing required top-level fields: il, meta")
+            msg = "jsonschema not installed"
+            log(f"ERROR: {msg}")
+            errors.append(msg)
+            write_guard_report(out_dir, False, errors)
+            return
             
     except Exception as e:
         # Validation failed
@@ -150,12 +150,3 @@ if __name__ == "__main__":
     except Exception as e:
         # Last resort catch-all to ensure 0 exit code
         print(f"ERROR: unhandled exception: {e}")
-        # Try to write guard file if possible
-        try:
-            # We assume nothing about paths here, so maybe just print
-             pass
-        except:
-            pass
-    
-    # Always exit 0
-    sys.exit(0)

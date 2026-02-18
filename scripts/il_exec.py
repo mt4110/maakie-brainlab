@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import argparse
 import json
-import sys
 import traceback
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -130,4 +129,3 @@ if __name__ == "__main__":
         main()
     except Exception as e:
         print(f"ERROR: unhandled exception in executor: {e}")
-    sys.exit(0)
