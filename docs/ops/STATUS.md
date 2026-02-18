@@ -8,7 +8,7 @@
 ## NEXT
 | Item | State | Ref | Next |
 |---|---|---|---|
-| S21-02 | NEXT | docs/ops/S21_PLAN.md | TBD |
+| S21-02 | ACTIVE | docs/ops/S21-02_PLAN.md | S21-02 Setup & Templates |
 
 ## PARKED
 | Item | Reason | Ref |

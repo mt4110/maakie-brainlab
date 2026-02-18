@@ -26,4 +26,4 @@
 
 Milestone: <!-- write milestone title OR write "set in GitHub UI" -->
 
-Exception reason: <!-- 1 line ONLY if using label "no-milestone-ok" -->
+Exception reason: <!-- **NON-EMPTY** 1 line ONLY if using label "no-milestone-ok" -->
