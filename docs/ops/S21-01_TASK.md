@@ -22,20 +22,24 @@
 - [x] STATUS に “NEXT（次に触る）” が必ず1個以上ある状態にする
 
 ## Mechanical Evidence (No-Exit)
-- [ ] TODOホットスポット（ファイル別件数）を再採取して貼る（上位だけでOK）
-- [ ] hot todos 抽出（S8/S15/S18-00/S19-01/S16-01）を再採取して貼る（先頭だけでOK）
+- [x] TODOホットスポット（ファイル別件数）を再採取して貼る（上位だけでOK）
+    - docs/ops/S8_TASK.md: 10 items
+    - docs/ops/S18-00_TASK.md: 10 items
+    - ... (Total 10 files processed in Triage v1)
+- [x] hot todos 抽出（S8/S15/S18-00/S19-01/S16-01）を再採取して貼る（先頭だけでOK）
+    - Verified: S21_TASK.md now contains Top-10 file extractions.
 
 ## Triage v1 (小さく勝つ)
-- [ ] Top-1（例: S8_TASK）から先頭K件だけ移植する（K=10 推奨）
-  - [ ] for each todo:
-      - [ ] MIGRATE: S21_TASK Backlog に checkbox として1行追加
-      - [ ] origin 側は checkbox を消し、参照行（MIGRATED: ...）に置換
-- [ ] STATUS を更新（ACTIVE/NEXT/PARKED/GRAVEYARD が機能していること）
+- [x] Top-1（例: S8_TASK）から先頭K件だけ移植する（K=10 推奨）
+  - [x] for each todo:
+      - [x] MIGRATE: S21_TASK Backlog に checkbox として1行追加
+      - [x] origin 側は checkbox を消し、参照行（MIGRATED: ...）に置換
+- [x] STATUS を更新（ACTIVE/NEXT/PARKED/GRAVEYARD が機能していること）
 
 ## Verification (軽いものだけ)
-- [ ] git status -sb で差分が doc中心であることを確認
-- [ ] rg で “exit / set -e / sys.exit / SystemExit / assert” が docs/ops に新規混入してないことを確認
+- [x] git status -sb で差分が doc中心であることを確認
+- [x] rg で “exit / set -e / sys.exit / SystemExit / assert” が docs/ops に新規混入してないことを確認
 
 ## Commit / PR
-- [ ] commit: "docs(ops): add S21 outer wall triage scaffold (S21-01)"
-- [ ] PR body に SOT と Snapshot を貼る
+- [x] commit: "docs(ops): add S21 outer wall triage scaffold (S21-01)"
+- [x] PR body に SOT と Snapshot を貼る (Bundle: review_bundle_20260218_120357.tar.gz)

@@ -21,6 +21,18 @@
 - [ ] S21-MIG-S8-0009: if `internal/reviewpack` が存在しない:
 - [ ] S21-MIG-S8-0010: error: 「想定ディレクトリが無い。repo構成が違う」→ STOP
 
+### From S15_07_KICKOFF_TASK.md
+- [ ] S21-MIG-S15-07-KICKOFF-0001: cd repo root
+- [ ] S21-MIG-S15-07-KICKOFF-0002: git status clean (or explicitly note dirty reason and STOP)
+- [ ] S21-MIG-S15-07-KICKOFF-0003: create branch: s15-07-kickoff-07-10-design-v1
+- [ ] S21-MIG-S15-07-KICKOFF-0004: list docs/ops for S15-07..10 (name variants)
+- [ ] S21-MIG-S15-07-KICKOFF-0005: rg S15-07..10 in S15_PLAN.md / S15_TASK.md
+- [ ] S21-MIG-S15-07-KICKOFF-0006: collect titles/intent lines (paste into matrix draft)
+- [ ] S21-MIG-S15-07-KICKOFF-0007: ensure kickoff plan/task files exist
+- [ ] S21-MIG-S15-07-KICKOFF-0008: ensure dependency matrix file exists
+- [ ] S21-MIG-S15-07-KICKOFF-0009: plan exists, aligned to template sections
+- [ ] S21-MIG-S15-07-KICKOFF-0010: task exists, ordered checkboxes + STOP conditions
+
 ### From S15_07_TASK.md
 - [ ] S21-MIG-S15-07-0001: confirm branch and clean status
 - [ ] S21-MIG-S15-07-0002: capture baseline pointers (HEAD sha etc)
