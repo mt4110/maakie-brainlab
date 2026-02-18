@@ -1,18 +1,18 @@
 # S15-07 TASK: TBD
 
 ## C0: Preflight
-- [ ] confirm branch and clean status
-- [ ] capture baseline pointers (HEAD sha etc)
+- MIGRATED: S21-MIG-S15-07-0001 (see docs/ops/S21_TASK.md)
+- MIGRATED: S21-MIG-S15-07-0002 (see docs/ops/S21_TASK.md)
 
 ## C1: Implementation Steps (ordered)
 - [ ] TBD
 - [ ] TBD
 
 ## C2: Verification
-- [ ] run relevant tests / gates (TBD)
-- [ ] record evidence artifact paths (TBD)
+- MIGRATED: S21-MIG-S15-07-0003 (see docs/ops/S21_TASK.md)
+- MIGRATED: S21-MIG-S15-07-0004 (see docs/ops/S21_TASK.md)
 
 ## C3: Finish
-- [ ] commit with scoped message
-- [ ] push branch
-- [ ] PR body includes evidence + risks + rollback note
+- MIGRATED: S21-MIG-S15-07-0005 (see docs/ops/S21_TASK.md)
+- MIGRATED: S21-MIG-S15-07-0006 (see docs/ops/S21_TASK.md)
+- MIGRATED: S21-MIG-S15-07-0007 (see docs/ops/S21_TASK.md)

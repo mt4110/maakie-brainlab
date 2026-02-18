@@ -1,20 +1,20 @@
 # S17-01 TASK（IL Contract v1 Spec）
 
 ## Safety Snapshot
-- [ ] `cd "$(git rev-parse --show-toplevel)"; git status -sb`
-- [ ] `git rev-parse --abbrev-ref HEAD`
-- [ ] `git log -1 --oneline --decorate`
+- MIGRATED: S21-MIG-S17-01-0001 (see docs/ops/S21_TASK.md)
+- MIGRATED: S21-MIG-S17-01-0002 (see docs/ops/S21_TASK.md)
+- MIGRATED: S21-MIG-S17-01-0003 (see docs/ops/S21_TASK.md)
 
 ## Spec files（固定パス）
-- [ ] Create `docs/il/IL_CONTRACT_v1.md`
-- [ ] Create `docs/il/il.schema.json`
-- [ ] Create `docs/il/examples/good_min.json`
-- [ ] Create `docs/il/examples/bad_min.json`
-- [ ] Create `docs/il/examples/bad_forbidden_timestamp.json`
+- MIGRATED: S21-MIG-S17-01-0004 (see docs/ops/S21_TASK.md)
+- MIGRATED: S21-MIG-S17-01-0005 (see docs/ops/S21_TASK.md)
+- MIGRATED: S21-MIG-S17-01-0006 (see docs/ops/S21_TASK.md)
+- MIGRATED: S21-MIG-S17-01-0007 (see docs/ops/S21_TASK.md)
+- MIGRATED: S21-MIG-S17-01-0008 (see docs/ops/S21_TASK.md)
 
 ## IL_CONTRACT_v1.md の必須章（抜けたらERROR）
-- [ ] Purpose / Terms
-- [ ] Input / Output schema（人間向け）
+- MIGRATED: S21-MIG-S17-01-0009 (see docs/ops/S21_TASK.md)
+- MIGRATED: S21-MIG-S17-01-0010 (see docs/ops/S21_TASK.md)
 - [ ] Canonicalization rules（決定論）
 - [ ] Forbidden（禁止）
 - [ ] Error/SKIP policy（停止規約）
