@@ -62,6 +62,10 @@ Top-level JSON object（この形以外は契約違反）：
 - MUST NOT: BOM
 - MUST: canonical JSON bytes は **末尾改行なし**
 - MUST: パック内のテキストファイル改行は LF（`\n`）
+- MUST: sort_keys=True
+- MUST: separators=(",", ":") (no spaces)
+- MUST: ensure_ascii=False
+- MUST: allow_nan=False
 
 ### Object / Key Order（MUST）
 - MUST: object keys は **lexicographic ascending**（辞書順）
@@ -88,7 +92,7 @@ Top-level JSON object（この形以外は契約違反）：
 
 ### Numbers（MUST：再現性優先の制限）
 - MUST NOT: NaN / Infinity
-- MUST NOT: `-0`（0に正規化する）
+- MUST: `0.0` に正規化（`-0.0` は禁止・正規化対象）
 - MUST: **整数のみ**（fraction / exponent 禁止）
 - SHOULD: 範囲は signed 53-bit（`[-(2^53-1), +(2^53-1)]`）
   - 小数が必要なら **文字列**で表現し、単位・scale を明記する

@@ -157,5 +157,29 @@ class TestILValidator(unittest.TestCase):
         self.assertFalse(ok)
         self.assertTrue(any(e.get("code") == "E_SCHEMA" and e.get("path") == "/extra" for e in errors))
 
+    def test_canonicalizer_rejects_inf(self):
+        with self.assertRaises(ValueError):
+            ILCanonicalizer.canonicalize({"a": float('inf')})
+        with self.assertRaises(ValueError):
+            ILCanonicalizer.canonicalize({"a": float('-inf')})
+
+    def test_canonicalizer_normalize_zero(self):
+        data = {"a": -0.0, "b": 0.0, "c": [-0.0]}
+        canonical = ILCanonicalizer.canonicalize(data)
+        # Expected: {"a":0.0,"b":0.0,"c":[0.0]}
+        self.assertEqual(canonical, b'{"a":0.0,"b":0.0,"c":[0.0]}')
+
+    def test_canonicalizer_rejects_inf(self):
+        with self.assertRaises(ValueError):
+            ILCanonicalizer.canonicalize({"a": float('inf')})
+        with self.assertRaises(ValueError):
+            ILCanonicalizer.canonicalize({"a": float('-inf')})
+
+    def test_canonicalizer_normalize_zero(self):
+        data = {"a": -0.0, "b": 0.0, "c": [-0.0]}
+        canonical = ILCanonicalizer.canonicalize(data)
+        # Expected: {"a":0.0,"b":0.0,"c":[0.0]}
+        self.assertEqual(canonical, b'{"a":0.0,"b":0.0,"c":[0.0]}')
+
 if __name__ == "__main__":
     unittest.main()
