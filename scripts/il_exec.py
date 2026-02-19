@@ -8,12 +8,27 @@ S21-06: il_exec.py hardening
 """
 import sys
 import json
+import math
 import traceback
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 def log(msg: str):
     print(msg)
+
+def clean_for_json(obj: Any) -> Any:
+    """
+    Recursively replace NaN/Infinity with None for strict JSON compliance.
+    """
+    if isinstance(obj, float):
+        if math.isnan(obj) or math.isinf(obj):
+            return None
+        return obj
+    if isinstance(obj, dict):
+        return {k: clean_for_json(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [clean_for_json(v) for v in obj]
+    return obj
 
 def write_exec_report(out_dir: Path, status: str, details: List[str]):
     """Write exec report. Fail safe."""
@@ -26,16 +41,24 @@ def write_exec_report(out_dir: Path, status: str, details: List[str]):
             out_dir.mkdir(parents=True, exist_ok=True)
             
         path = out_dir / "il.exec.json"
+        
+        # S21-07: Hardening JSON output
+        report_clean = clean_for_json(report)
+        
         with open(path, "w", encoding="utf-8") as f:
-            json.dump(report, f, indent=2, ensure_ascii=False)
+            json.dump(report_clean, f, indent=2, ensure_ascii=False, allow_nan=False)
         log(f"OK: wrote exec report to {path} (status={status})")
     except Exception as e:
         log(f"ERROR: failed to write exec report: {e}")
         # best-effort fallback
         try:
             path_fallback = Path(".") / "il.exec.json"
+            
+            # S21-07: Hardening JSON output (fallback)
+            report_clean = clean_for_json(report)
+            
             with open(path_fallback, "w", encoding="utf-8") as f:
-                json.dump(report, f, indent=2, ensure_ascii=False)
+                json.dump(report_clean, f, indent=2, ensure_ascii=False, allow_nan=False)
             log(f"OK: wrote fallback exec report to {path_fallback}")
         except Exception as e2:
             log(f"ERROR: failed to write fallback exec report: {e2}")
@@ -207,17 +230,42 @@ def main():
             op_args = op_def.get("args")
             
             handler = OPCODES.get(op_name)
+            
+            # S21-07: Log formatting
+            status_prefix = "SKIP"
+            message = ""
+            
             if handler:
                 try:
-                    res = handler(op_args, ctx)
+                    res_raw = handler(op_args, ctx)
+                    # Handlers return "STATUS: message"
+                    if res_raw.startswith("OK:"):
+                        status_prefix = "OK"
+                        message = res_raw[3:].strip()
+                    elif res_raw.startswith("ERROR:"):
+                        status_prefix = "ERROR"
+                        message = res_raw[6:].strip()
+                    elif res_raw.startswith("SKIP:"):
+                        status_prefix = "SKIP"
+                        message = res_raw[5:].strip()
+                    else:
+                        # Fallback if handler breaks contract
+                        status_prefix = "OK"
+                        message = res_raw
                 except Exception as e:
-                    res = f"ERROR: exception in handler {op_name}: {e}"
+                    status_prefix = "ERROR"
+                    message = f"exception in handler {op_name}: {e}"
             else:
-                res = f"SKIP: unknown opcode {op_name}"
+                status_prefix = "SKIP"
+                message = f"unknown opcode {op_name}"
             
-            log(f"[{i}] {op_name}: {res}")
-            results.append(res)
-            details.append(f"[{i}] {op_name}: {res}")
+            # Format: STATUS: [i=N] OP: Message
+            log_line = f"{status_prefix}: [i={i}] {op_name}: {message}"
+            log(log_line)
+            
+            # Keep log lines as results/details
+            results.append(log_line)
+            details.append(log_line)
             
         # 5. Aggregate Status
         final_status = determine_status(results)
