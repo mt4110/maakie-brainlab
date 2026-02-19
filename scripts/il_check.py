@@ -9,8 +9,11 @@ def log(msg):
 
 def run(cmd):
     """Run command, return (rc, stdout, stderr). We don't exit on fail here."""
-    log(f"RUN: {cmd}")
     p = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+    if p.returncode != 0:
+        log(f"ERROR: command failed rc={p.returncode}")
+        if p.stdout: log(f"STDOUT:\n{p.stdout}")
+        if p.stderr: log(f"STDERR:\n{p.stderr}")
     return p.returncode, p.stdout, p.stderr
 
 def check_fixture(name, in_path, expect_can_exec):

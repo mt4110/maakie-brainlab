@@ -126,6 +126,24 @@ STOP条件（ここで止める判断、exitはしない）:
 
 ---
 
+## Fixpack v2: Dependency & CI & Observability
+- [ ] **1) jsonschema 固定**
+  - Check `pyproject.toml` for `jsonschema`.
+  - If missing, add `"jsonschema>=4.0.0"` to `dependencies`.
+  - Run `make bootstrap`.
+  - Verify `.venv/bin/python` exists.
+- [ ] **2) CI Integration**
+  - Add `run: make verify-il` to `.github/workflows/test.yml` (after `make test`).
+- [ ] **3) Observability**
+  - Update `scripts/il_check.py` to print stdout/stderr on error.
+- [ ] **4) Verification**
+  - Run `make verify-il` and check logs for `ERROR:`.
+- [ ] **5) Evidence**
+  - Run `reviewpack submit --mode verify-only`.
+  - Update PR body with new bundle/SHA.
+
+---
+
 ## Closeout (after merge)
 - [ ] 後始末コマンドを実行（落ちない版）
   - see: docs/ops/S21-05_PLAN.md "Aftercare"

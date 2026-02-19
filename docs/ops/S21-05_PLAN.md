@@ -1,8 +1,17 @@
 # S21-05 PLAN — IL Entry Unification → Canonicalize → Minimal Executor (P0→P1→P2)
 
 ## Progress
-- Current: 99% (Review Ready)
+- Current: 99% (Fixpack v2 in progress)
 - Target: 99% when PR open + CI green + guard logs stable
+
+## S21-05 Fixpack v2 (Refinement)
+- **Goal**: Lock `jsonschema` dependency, integrate with CI (`test.yml`), and improve `il_check` observability.
+- **P0**: Preflight check (git repo).
+- **P1**: Pin `jsonschema>=4.0.0` in `pyproject.toml` and bootstrap.
+- **P2**: Add `make verify-il` to `.github/workflows/test.yml`.
+- **P3**: Improve `scripts/il_check.py` to show stdout/stderr on error.
+- **P4**: Verify with `make verify-il` (log analysis).
+- **P5**: Generate fresh evidence with `reviewpack`.
 
 ## Goal (Why)
 P0: IL生成/受け取りの“入口”を1本化し、常時検証することで「壊れたILが実行に進む」を構造的に封じる。  
