@@ -126,21 +126,21 @@ STOP条件（ここで止める判断、exitはしない）:
 
 ---
 
-## Fixpack v2: Dependency & CI & Observability
-- [ ] **1) jsonschema 固定**
-  - Check `pyproject.toml` for `jsonschema`.
-  - If missing, add `"jsonschema>=4.0.0"` to `dependencies`.
-  - Run `make bootstrap`.
-  - Verify `.venv/bin/python` exists.
-- [ ] **2) CI Integration**
-  - Add `run: make verify-il` to `.github/workflows/test.yml` (after `make test`).
-- [ ] **3) Observability**
-  - Update `scripts/il_check.py` to print stdout/stderr on error.
-- [ ] **4) Verification**
-  - Run `make verify-il` and check logs for `ERROR:`.
+## Fixpack v3: Lock & Makefile & Distributed Verify
+- [ ] **1) Dep Lock**
+  - Ensure `jsonschema` in `pyproject.toml`.
+  - Run `python3 -m uv lock` (Heavy).
+- [ ] **2) Makefile Integration**
+  - Add `$(MAKE) verify-il` to `test:` target in `Makefile`.
+- [ ] **3) Cleanup**
+  - Remove unused imports from `scripts/il_check.py`.
+- [ ] **4) Distributed Verification**
+  - `make verify-il`
+  - `go test ./...` (Heavy)
+  - `python -m unittest -v`
+  - `make check-doc-links`
 - [ ] **5) Evidence**
-  - Run `reviewpack submit --mode verify-only`.
-  - Update PR body with new bundle/SHA.
+  - `reviewpack submit --mode verify-only` (Heavy)
 
 ---
 

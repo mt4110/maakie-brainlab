@@ -31,6 +31,8 @@ test:
 	@echo "+ go test -v -count=1 ./..."
 	go test -v -count=1 ./...
 	$(PYENV) $(PY) -m unittest discover -v -s tests -p "test_*.py"
+	@echo "RUN: verify-il (always-on)"
+	$(MAKE) verify-il
 
 ci-test:
 	@echo "+ go test -count=1 -mod=readonly ./... (Strict CI mode)"
