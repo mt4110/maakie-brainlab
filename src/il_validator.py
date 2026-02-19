@@ -134,6 +134,9 @@ class ILCanonicalizer:
         Produces compact, sorted-key, UTF-8 JSON bytes without trailing newline.
         Enforces allow_nan=False for absolute safety.
         """
+        # Normalize -0.0 to 0.0 [contract requirement]
+        data = ILCanonicalizer._normalize_zeros(data)
+
         compact_json = json.dumps(
             data,
             sort_keys=True,
@@ -142,6 +145,17 @@ class ILCanonicalizer:
             allow_nan=False
         )
         return compact_json.encode("utf-8")
+
+    @staticmethod
+    def _normalize_zeros(data: Any) -> Any:
+        if isinstance(data, dict):
+            return {k: ILCanonicalizer._normalize_zeros(v) for k, v in data.items()}
+        elif isinstance(data, list):
+            return [ILCanonicalizer._normalize_zeros(item) for item in data]
+        elif isinstance(data, float):
+            # Normalize -0.0 -> 0.0
+            return 0.0 if data == 0.0 else data
+        return data
 
     @staticmethod
     def to_jsonl_line(data: Dict[str, Any]) -> str:

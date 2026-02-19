@@ -150,24 +150,12 @@ def main():
         # I'll check src/il_validator.py in a separate step? 
         # No, I can just proceed. The user said "use src/il_validator.py".
         
+        # 4. Validate
         validator = ILValidator()
-        # ILValidator.validate returns (is_valid, errors_list)
         is_valid, validation_errors = validator.validate(raw_data)
         
-        # Check for forbidden fields specifically if validator doesn't, 
-        # BUT the plan says "forbidden検出は errors に残す"
-        # If ILValidator does it, good. If not, I might need to add it.
-        # Let's assume ILValidator covers schema. 
-        # We also need to check "forbidden" explicitly if the schema allows them but we want to ban them.
-        # Plan says: "docs/il/IL_CONTRACT_v1.md の forbidden... 検出は guard report に残す"
-        # I will add a manual check for forbidden fields just in case.
-        
+        # Manual forbidden check (meta)
         forbidden_fields = ["created_at", "generated_at", "timestamp", "now", "uuid", "nonce", "random"]
-        
-        # Recursive check for forbidden? Or just in meta? 
-        # The contract usually says forbidden in input generally or specific places?
-        # "forbidden: created_at... " usually implies top-level meta or generally.
-        # I will check `meta` if it exists.
         meta = raw_data.get("meta", {})
         for f in forbidden_fields:
             if f in meta:
@@ -178,59 +166,44 @@ def main():
         
         if validation_errors:
             for ve in validation_errors:
-                # ve is a dict {"code": ..., "message": ...}
                 msg = f"{ve.get('code', 'UNKNOWN')}: {ve.get('message', str(ve))}"
                 log(f"ERROR: validation: {msg}")
                 errors.append(msg)
-        
-        # If errors exist, we can't execute?
-        # Plan: "入力に forbidden があったら... can_execute=false"
-        can_execute = (len(errors) == 0)
-
-        # 5. Canonicalize (Sanitized)
-        # Plan: "canonical出力は sanitized(=forbidden除去)版"
-        # independent of can_execute? 
-        # "canonical生成不能...なら canonicalは SKIP"
-        # If we have validation errors, should we generate canonical?
-        # Usually checking implies if invalid, don't canonicalize?
-        # Plan says: "canonical出力は(best-effortで) forbidden除去版"
-        # "canonical生成不能（NaN/Inf等）なら canonicalは SKIP"
-        
-        # I will attempt canonicalization even if errors exist, 
-        # UNLESS the structure is so bad we can't.
-        
-        # Sanitize first (remove forbidden)
-        # We need a deep copy to sanitize without modifying raw_data if we needed it (we don't)
-        # ILCanonicalizer might handle sanitization? 
-        # Plan says: "canonical出力は sanitized(=forbidden除去)に対して ILCanonicalizer.canonicalize を使って"
-        
-        sanitized_data = raw_data # We'll modify or copy. 
-        # Simple sanitize for meta
-        if "meta" in sanitized_data and isinstance(sanitized_data["meta"], dict):
-            # Create a copy of meta to unlink from raw
-            sanitized_data = dict(raw_data)
-            sanitized_data["meta"] = dict(raw_data["meta"])
-            for f in forbidden_fields:
-                if f in sanitized_data["meta"]:
-                    # We found it (already logged error), now remove it for canonical
-                    del sanitized_data["meta"][f]
-
-        try:
-            # ILCanonicalizer.canonicalize is static and returns bytes
-            canonical_bytes = ILCanonicalizer.canonicalize(sanitized_data)
             
-            canon_path = out_dir_path / "il.canonical.json"
-            with open(canon_path, "wb") as f:
-                f.write(canonical_bytes)
-            log(f"OK: wrote canonical IL to {canon_path}")
-            
-        except Exception as e:
-            msg = f"ERROR: failed to canonicalize: {e}"
-            log(msg)
-            # We don't fail guard report for this, but we record error?
-            # "canonical生成不能...なら canonicalは SKIP, guard report は必ず書く"
-            errors.append(msg)
-            can_execute = False # If canonical fails, we probably shouldn't execute
+            # FAIL -> SKIP canonical
+            log("SKIP: canonical artifacts (validate_fail)")
+            can_execute = False
+        else:
+            # PASS -> Attempt canonicalize
+            try:
+                # Validate passed, so we assume no forbidden fields. 
+                # We canonicalize raw_data directly.
+                canonical_bytes = ILCanonicalizer.canonicalize(raw_data)
+                
+                canon_path = out_dir_path / "il.canonical.json"
+                with open(canon_path, "wb") as f:
+                    f.write(canonical_bytes)
+                    # Write trailing newline [contract requirement for file]
+                    f.write(b"\n")
+                log(f"OK: wrote il.canonical.json")
+                
+                # SHA256 (recommended)
+                import hashlib
+                sha256 = hashlib.sha256(canonical_bytes).hexdigest()
+                sha_path = out_dir_path / "il.canonical.sha256"
+                with open(sha_path, "w", encoding="utf-8") as f:
+                    f.write(sha256 + "\n")
+                
+                can_execute = True
+
+            except Exception as e:
+                msg = f"ERROR: canonicalize failed: {e}"
+                log(msg)
+                log("SKIP: canonical artifacts (canonicalize_fail)")
+                errors.append(msg)
+                can_execute = False # Start safe
+                # Note: If canonicalization fails but validation passed, strictly it's an error in our tool or unexpected data.
+                # So we fail execution.
 
         # 6. Write Report
         write_guard_report(out_dir_path, can_execute, errors)
