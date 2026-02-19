@@ -1,7 +1,7 @@
 # S21-05 PLAN — IL Entry Unification → Canonicalize → Minimal Executor (P0→P1→P2)
 
 ## Progress
-- Current: 99% (Fixpack v3 in progress)
+- Current: 99% (PR #72 created, debugging CI)
 - Target: 99% when PR open + CI green + guard logs stable
 
 ## S21-05 Fixpack v3 (Cleanup & Lock)
