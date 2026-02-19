@@ -31,6 +31,8 @@ test:
 	@echo "+ go test -v -count=1 ./..."
 	go test -v -count=1 ./...
 	$(PYENV) $(PY) -m unittest discover -v -s tests -p "test_*.py"
+	@echo "RUN: verify-il (always-on)"
+	$(MAKE) verify-il
 
 ci-test:
 	@echo "+ go test -count=1 -mod=readonly ./... (Strict CI mode)"
@@ -39,6 +41,11 @@ ci-test:
 
 ci: ci-test
 	$(PYENV) $(PY) -m compileall src eval
+	@echo "+ make verify-il"
+	$(MAKE) verify-il
+
+verify-il:
+	$(PYENV) $(PY) scripts/il_check.py
 
 bootstrap:
 	# S20-08: Canonical bootstrap via uv (using system python only to install uv)

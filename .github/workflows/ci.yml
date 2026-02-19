@@ -25,7 +25,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version-file: 'go.mod'
+          go-version-file: "go.mod"
           cache: false
 
       - name: golangci-lint
@@ -45,8 +45,8 @@ jobs:
         uses: DavidAnson/markdownlint-cli2-action@v22
         continue-on-error: true
         with:
-          config: '.markdownlint-cli2.jsonc'
-          globs: '**/*.md'
+          config: ".markdownlint-cli2.jsonc"
+          globs: "**/*.md"
 
   summary:
     needs: [lint_go, lint_md]
@@ -60,3 +60,17 @@ jobs:
           echo "| --- | --- |" >> $GITHUB_STEP_SUMMARY
           echo "| Lint Go | ${{ needs.lint_go.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Lint Markdown | ${{ needs.lint_md.result }} |" >> $GITHUB_STEP_SUMMARY
+
+      - name: Notify Discord on failure
+        if: failure()
+        uses: tsickert/discord-webhook@v7.0.0
+        with:
+          webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          content: |
+            ERROR: workflow failed
+            repo=${{ github.repository }}
+            workflow=${{ github.workflow }}
+            job=${{ github.job }}
+            ref=${{ github.ref_name }}
+            sha=${{ github.sha }}
+            run=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}

@@ -1,0 +1,14 @@
+{
+  "il": {
+    "opcodes": [
+      { "op": "NOOP", "args": {} },
+      { "op": "SET_VARS", "args": { "foo": "bar" } }
+    ]
+  },
+  "meta": {
+    "version": "il_contract_v1",
+    "generator": "test_fixture",
+    "timestamp": "2023-01-01T00:00:00Z"
+  },
+  "evidence": {}
+}
