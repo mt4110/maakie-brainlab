@@ -1,31 +1,93 @@
 #!/usr/bin/env python3
-import argparse
+"""
+S21-06: il_exec.py hardening
+- No SystemExit / argparse
+- Always write il.exec.json
+- Status aggregation (ERROR > OK > SKIP)
+- Log prefixes: OK:/ERROR:/SKIP:
+"""
+import sys
 import json
 import traceback
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 def log(msg: str):
     print(msg)
 
 def write_exec_report(out_dir: Path, status: str, details: List[str]):
+    """Write exec report. Fail safe."""
     report = {
         "status": status,
         "details": details
     }
-    path = out_dir / "il.exec.json"
     try:
+        if not out_dir.exists():
+            out_dir.mkdir(parents=True, exist_ok=True)
+            
+        path = out_dir / "il.exec.json"
         with open(path, "w", encoding="utf-8") as f:
             json.dump(report, f, indent=2, ensure_ascii=False)
-        log(f"OK: wrote exec report to {path}")
+        log(f"OK: wrote exec report to {path} (status={status})")
     except Exception as e:
         log(f"ERROR: failed to write exec report: {e}")
+        # best-effort fallback
+        try:
+            path_fallback = Path(".") / "il.exec.json"
+            with open(path_fallback, "w", encoding="utf-8") as f:
+                json.dump(report, f, indent=2, ensure_ascii=False)
+            log(f"OK: wrote fallback exec report to {path_fallback}")
+        except Exception as e2:
+            log(f"ERROR: failed to write fallback exec report: {e2}")
+
+def parse_args(argv: List[str]) -> Tuple[Optional[str], Optional[str], Optional[str], List[str]]:
+    """
+    Manual parser.
+    Returns: (il_path, guard_path, out_dir, errors)
+    """
+    il_path = None
+    guard_path = None
+    out_dir = None
+    errors = []
+    
+    i = 0
+    while i < len(argv):
+        arg = argv[i]
+        if arg == "--il":
+            if i + 1 < len(argv):
+                il_path = argv[i+1]
+                i += 1
+            else:
+                errors.append("ERROR: --il requires an argument")
+        elif arg == "--guard":
+            if i + 1 < len(argv):
+                guard_path = argv[i+1]
+                i += 1
+            else:
+                errors.append("ERROR: --guard requires an argument")
+        elif arg == "--out":
+            if i + 1 < len(argv):
+                out_dir = argv[i+1]
+                i += 1
+            else:
+                errors.append("ERROR: --out requires an argument")
+        i += 1
+        
+    if not il_path:
+        errors.append("ERROR: missing required argument: --il")
+    if not guard_path:
+        errors.append("ERROR: missing required argument: --guard")
+    if not out_dir:
+        errors.append("ERROR: missing required argument: --out")
+        
+    return il_path, guard_path, out_dir, errors
+
+# --- Opcode Handlers ---
 
 def opcode_noop(args: Any, ctx: Dict) -> str:
     return "OK: NOOP"
 
 def opcode_set_vars(args: Any, ctx: Dict) -> str:
-    # args: {"key": "val", ...}
     if isinstance(args, dict):
         for k, v in args.items():
             ctx["vars"][k] = v
@@ -33,20 +95,14 @@ def opcode_set_vars(args: Any, ctx: Dict) -> str:
     return "ERROR: SET_VARS args must be dict"
 
 def opcode_search_terms(args: Any, ctx: Dict) -> str:
-    # args: ["term1", "term2"]
     if isinstance(args, list):
-        # We don't actually search in this minimal executor, just log
         return f"OK: SEARCH_TERMS {args}"
     return "ERROR: SEARCH_TERMS args must be list"
 
 def opcode_retrieve(args: Any, ctx: Dict) -> str:
-    # args: {"query": "..."}
-    # Minimal implementation: always SKIP or EMPTY
     return "SKIP: RETRIEVE not connected"
 
 def opcode_answer_draft(args: Any, ctx: Dict) -> str:
-    # args: {"template": "..."}
-    # Minimal: just log
     return "OK: ANSWER_DRAFT prepared"
 
 OPCODES = {
@@ -57,48 +113,94 @@ OPCODES = {
     "ANSWER_DRAFT": opcode_answer_draft,
 }
 
-def main():
-    parser = argparse.ArgumentParser(description="IL Executor: Minimal & Deterministic")
-    parser.add_argument("--il", dest="il_path", required=True, help="Path to canonical IL")
-    parser.add_argument("--guard", dest="guard_path", required=True, help="Path to guard JSON")
-    parser.add_argument("--out", dest="out_dir", required=True, help="Output directory")
-    args = parser.parse_args()
-
-    out_dir = Path(args.out_dir)
-    out_dir.mkdir(parents=True, exist_ok=True)
+def determine_status(results: List[str]) -> str:
+    """
+    Aggregate status:
+    - If ANY result starts with ERROR: -> ERROR
+    - Else if ANY result starts with OK: -> OK
+    - Else -> SKIP (or empty)
+    """
+    has_ok = False
+    for res in results:
+        if res.startswith("ERROR:"):
+            return "ERROR"
+        if res.startswith("OK:"):
+            has_ok = True
     
-    details = []
+    if has_ok:
+        return "OK"
+    return "SKIP"
 
-    # 1. Check Guard
+def main():
+    details = []
+    out_dir_path = Path(".")
+    
     try:
-        with open(args.guard_path, "r", encoding="utf-8") as f:
-            guard = json.load(f)
+        # 1. Parse Args
+        il_file, guard_file, out_dir, arg_errors = parse_args(sys.argv[1:])
         
-        if not guard.get("can_execute"):
-            msg = "SKIP: guard blocks execution"
-            log(msg)
-            write_exec_report(out_dir, "SKIP", [msg])
+        if out_dir:
+            out_dir_path = Path(out_dir)
+            
+        if arg_errors:
+            for err in arg_errors:
+                log(err)
+                details.append(err)
+            write_exec_report(out_dir_path, "ERROR", details)
             return
 
-    except Exception as e:
-        msg = f"ERROR: failed to read guard: {e}"
-        log(msg)
-        write_exec_report(out_dir, "ERROR", [msg])
-        return
+        # 2. Check Guard
+        guard_path = Path(guard_file)
+        if not guard_path.exists():
+            msg = f"ERROR: guard file not found: {guard_path}"
+            log(msg)
+            details.append(msg)
+            write_exec_report(out_dir_path, "ERROR", details)
+            return
+            
+        try:
+            with open(guard_path, "r", encoding="utf-8") as f:
+                guard_data = json.load(f)
+            
+            if not guard_data.get("can_execute"):
+                msg = "SKIP: guard blocks execution (can_execute=false)"
+                log(msg)
+                details.append(msg)
+                write_exec_report(out_dir_path, "SKIP", details)
+                return
+                
+        except Exception as e:
+            msg = f"ERROR: failed to read guard: {e}"
+            log(msg)
+            details.append(msg)
+            write_exec_report(out_dir_path, "ERROR", details)
+            return
 
-    # 2. Read IL
-    try:
-        with open(args.il_path, "r", encoding="utf-8") as f:
-            il_data = json.load(f)
-        
-        # We assume IL structure: {"il": { "opcodes": [...] }, ...}
-        # But schema says "il": { "type": "object" }, so we need to define internal structure for opcodes.
-        # For now, let's assume `il.opcodes` list of `{"op": "NAME", "args": ...}`
-        
+        # 3. Read IL
+        il_path = Path(il_file)
+        if not il_path.exists():
+            msg = f"ERROR: IL file not found: {il_path}"
+            log(msg)
+            details.append(msg)
+            write_exec_report(out_dir_path, "ERROR", details)
+            return
+            
+        try:
+            with open(il_path, "r", encoding="utf-8") as f:
+                il_data = json.load(f)
+        except Exception as e:
+            msg = f"ERROR: failed to read IL: {e}"
+            log(msg)
+            details.append(msg)
+            write_exec_report(out_dir_path, "ERROR", details)
+            return
+            
+        # 4. Execute Opcodes
         il_body = il_data.get("il", {})
         opcodes = il_body.get("opcodes", [])
         
         ctx = {"vars": {}}
+        results = []
         
         for i, op_def in enumerate(opcodes):
             op_name = op_def.get("op")
@@ -106,26 +208,25 @@ def main():
             
             handler = OPCODES.get(op_name)
             if handler:
-                res = handler(op_args, ctx)
-                log(f"[{i}] {op_name}: {res}")
-                details.append(f"[{i}] {op_name}: {res}")
+                try:
+                    res = handler(op_args, ctx)
+                except Exception as e:
+                    res = f"ERROR: exception in handler {op_name}: {e}"
             else:
-                msg = f"SKIP: unknown opcode {op_name}"
-                log(f"[{i}] {msg}")
-                details.append(f"[{i}] {msg}")
+                res = f"SKIP: unknown opcode {op_name}"
+            
+            log(f"[{i}] {op_name}: {res}")
+            results.append(res)
+            details.append(f"[{i}] {op_name}: {res}")
+            
+        # 5. Aggregate Status
+        final_status = determine_status(results)
+        write_exec_report(out_dir_path, final_status, details)
         
     except Exception as e:
-        msg = f"ERROR: execution failed: {e}"
-        log(msg)
-        details.append(msg)
-        write_exec_report(out_dir, "ERROR", details)
-        return
-
-    write_exec_report(out_dir, "OK", details)
-    log("OK: execution finished")
+        log(f"ERROR: unhandled exception in executor: {e}")
+        details.append(f"CRITICAL: {e}")
+        write_exec_report(out_dir_path, "ERROR", details)
 
 if __name__ == "__main__":
-    try:
-        main()
-    except Exception as e:
-        print(f"ERROR: unhandled exception in executor: {e}")
+    main()
