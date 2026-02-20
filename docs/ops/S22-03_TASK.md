@@ -29,38 +29,46 @@
     - 原則：Makefileは薄くして **「常に0で終わるPythonランナー」** を呼ぶ
     - どうしても必要な場面は `|| true` を付与しつつ、`ERROR:` / `OK:` のログをPython側で出す
 
-### Safety rules addendum (S22-03 / Exitless Deterministic Ops)
+### Safety rules addendum (Exitless Deterministic Ops)
 
-- **[MUST] STOPプロトコル（終了コード禁止の代替）**
-  - すべての手順は `STOP="0"` を前提にする
-  - 各ステップは必ず以下の形：
-    - `if [ "$STOP" = "0" ]; then ...; else echo "SKIP: STOP=1 reason=<why>"; fi`
-  - 失敗したら「そのステップの中断」を宣言し、`STOP="1"` にする（以降ステップへ進まない）
-  - **STOPにした理由は必ず1行で残す**（監査ログ用）：`ERROR: <what> / action=STOP`
+**[MUST] 終了コードで制御しない**
 
-- **[MUST] Pythonは "例外封じ込め" が義務**
-  - exit禁止でも例外はプロセスを止めるため、runner/metrics/causal/verifyは必ず：
-    - `try:` 本体
-    - `except Exception as e:` で `print("ERROR: ... err=<e>")`（例外を上に投げない）
-    - 最後に `print("OK: ...")` または `print("ERROR: ...")` を **必ず1行** 出す
-  - `sys.exit / SystemExit / assert` は禁止（既存ルール通り）
-  - 返り値（終了コード）は **常に0でよい**（判定は出力テキストで行う）
+- シェル：`exit` / `return非0` / `set -e` / `set -euo pipefail` / `trap ... EXIT` を使わない
+- Python：`sys.exit` / `raise SystemExit` / `assert` を使わない（失敗時に強制終了し得るため）
+- "失敗" は常に標準出力で表現する：`OK:` / `ERROR:` / `SKIP:`
 
-- **[MUST] 1ターゲット=1責務（CPU/ターミナル保護）**
-  - strong生成 / weak生成 / metrics / causal / verify を **別コマンド**に分割（TASK方針通り）
-  - "固まりそう"なら中断してよいが、必ず `SKIP:` に **中断理由と直前の観測結果**を1行残す
+**[MUST] STOPプロトコル（止まらない、でも次に進まない）**
 
-- **[MUST] Makefileは "止まる罠" を前提に設計**
-  - Makefileは薄く：**「常に0で終わるPythonランナー」**を呼び、判定は `OK:`/`ERROR:` で出す
-  - Makefile側で `&&` 連鎖を作らない（途中で行が止まる）
-  - どうしても必要なら `|| true` を付与し、真実はPythonの最終1行に集約する
+- 各ステップは「次へ進んでよいか」をフラグで制御する（例：`STOP=1`）
+- 失敗したら：
+  - `ERROR: <reason>` を1行出す
+  - `STOP=1` にして以降のステップを実行しない（ただしプロセス自体は落とさない）
+- スキップしたら：
+  - `SKIP: <reason>` を1行出す（未来の監査ログ）
 
-- **[MUST] 監査ログの書式（機械が読む前提）**
-  - 各ステップの最後は必ずこのどれか1行：
-    - `OK: <step> ...`
-    - `ERROR: <step> ...`
-    - `SKIP: <step> reason=...`
-  - 可能なら必須属性を含める：`dataset_id=... seed=... mode=strong|weak out=...`
+**[MUST] Python は例外を封じ込める**
+
+- すべてのメイン処理を `try/except Exception as e:` で包む
+- 例外発生時は `ERROR: ... err=<e>` を1行出して終了（例外を外へ漏らさない）
+- "検査スクリプト" はエラーでも 0 で終わる設計（出力テキストで判定）
+
+**[MUST] 1 target = 1 responsibility（重い処理は分割）**
+
+- strong生成 / strong集計 / weak生成 / weak集計 / 差分生成 は必ず別ステップ
+- 重くなりそうなら「途中で中断して `SKIP:` / `ERROR:` で理由を残す」
+
+**[MUST] Makefile は罠を作らない**
+
+- 失敗で make が止まらないように、判定は出力行（`OK:` / `ERROR:` / `SKIP:`）で行う
+- パイプやリダイレクトでログが消えないように、最小限のログを必ず残す
+- "verify系" は重くしない（強い実行器を呼ばないテストを優先）
+
+**[MUST] 監査ログの書式（1行で読める真実）**
+
+- 形式：`<LEVEL>: <what> key=value ...`
+  - `OK:    OK: il_metrics wrote path=... count=...`
+  - `ERROR: ERROR: il_metrics failed reason=...`
+  - `SKIP:  SKIP: verify-il-causal reason=STOP=1`
 
 ---
 
