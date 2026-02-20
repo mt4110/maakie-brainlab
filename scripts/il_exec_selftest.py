@@ -77,7 +77,7 @@ def main():
 
         # 3. Execute
         try:
-            report = execute_il(il_data, out_dir, str(fixture_db))
+            execute_il(il_data, out_dir, str(fixture_db))
         except Exception as e:
             log(f"ERROR: execute_il raised exception: {e}")
             checks_failed += 1
@@ -97,6 +97,7 @@ def main():
             return
 
         # 5. Validate report content
+        report_data = {}
         try:
             with open(report_path, "r", encoding="utf-8") as f:
                 report_data = json.load(f)

@@ -84,9 +84,9 @@ def main():
                 "overall_status": "ERROR",
                 "steps": [],
             }
-            for err in arg_errors:
+            for i, err in enumerate(arg_errors):
                 error_report["steps"].append({
-                    "index": 0,
+                    "index": i,
                     "opcode": "CLI_ARGS",
                     "status": "ERROR",
                     "reason": err,
