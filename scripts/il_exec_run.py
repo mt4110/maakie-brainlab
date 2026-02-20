@@ -16,6 +16,10 @@ def log(msg: str):
     print(msg)
 
 
+REPORT_FILENAME = "il.exec.report.json"
+RESULT_FILENAME = "il.exec.result.json"
+
+
 def parse_args(argv: List[str]) -> Tuple[Optional[str], Optional[str], Optional[str], List[str]]:
     """
     Manual parser (no argparse -> no SystemExit).
@@ -93,8 +97,8 @@ def main():
 
             try:
                 Path(out_dir).mkdir(parents=True, exist_ok=True)
-                write_json(str(Path(out_dir) / "il.exec.report.json"), error_report)
-                log(f"OK: wrote {out_dir}/il.exec.report.json (status=ERROR)")
+                write_json(str(Path(out_dir) / REPORT_FILENAME), error_report)
+                log(f"OK: wrote {out_dir}/{REPORT_FILENAME} (status=ERROR)")
             except Exception as we:
                 log(f"ERROR: failed to write report: {we}")
             return
@@ -118,9 +122,9 @@ def main():
             }
             try:
                 Path(out_dir).mkdir(parents=True, exist_ok=True)
-                write_json(str(Path(out_dir) / "il.exec.report.json"), error_report)
+                write_json(str(Path(out_dir) / REPORT_FILENAME), error_report)
                 log(f"ERROR: failed to read IL: {e}")
-                log(f"OK: wrote {out_dir}/il.exec.report.json (status=ERROR)")
+                log(f"OK: wrote {out_dir}/{REPORT_FILENAME} (status=ERROR)")
             except Exception as we:
                 log(f"ERROR: failed to write report: {we}")
             return
@@ -130,9 +134,26 @@ def main():
         overall = report.get("overall_status", "ERROR")
 
         log(f"{overall}: executor finished (overall_status={overall})")
-        log(f"OK: wrote {out_dir}/il.exec.report.json")
+
+        # Verify report actually exists before claiming OK
+        report_path = Path(out_dir) / REPORT_FILENAME
+        if report_path.exists():
+            log(f"OK: report exists: {report_path}")
+        else:
+            log(f"ERROR: report missing: {report_path}")
+
+        # Verify result existence matches overall_status
+        result_path = Path(out_dir) / RESULT_FILENAME
         if overall == "OK":
-            log(f"OK: wrote {out_dir}/il.exec.result.json")
+            if result_path.exists():
+                log(f"OK: result exists: {result_path}")
+            else:
+                log(f"ERROR: result missing but overall_status=OK: {result_path}")
+        else:
+            if not result_path.exists():
+                log(f"OK: result correctly absent (overall_status={overall})")
+            else:
+                log(f"ERROR: result exists but overall_status={overall}: {result_path}")
 
     except Exception as e:
         # Top-level catch: write emergency report
@@ -151,7 +172,7 @@ def main():
         }
         try:
             Path(out_dir).mkdir(parents=True, exist_ok=True)
-            report_path = str(Path(out_dir) / "il.exec.report.json")
+            report_path = str(Path(out_dir) / REPORT_FILENAME)
             with open(report_path, "w", encoding="utf-8") as f:
                 json.dump(emergency_report, f, indent=2, ensure_ascii=False, allow_nan=False)
             log(f"OK: wrote emergency report to {out_dir}/il.exec.report.json")

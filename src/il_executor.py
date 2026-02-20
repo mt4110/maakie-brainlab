@@ -226,7 +226,40 @@ def execute_il(il: dict, out_dir: str, fixture_db_path: Optional[str] = None) ->
     il_body = il.get("il", {})
     opcodes = il_body.get("opcodes", [])
 
+    # Guard: opcodes must be a list
+    if not isinstance(opcodes, list):
+        steps_result.append({
+            "index": 0,
+            "opcode": "OPCODES",
+            "status": "ERROR",
+            "reason": f"il.opcodes must be a list, got {type(opcodes).__name__}",
+            "in_summary": {"type": type(opcodes).__name__},
+            "out_summary": {},
+        })
+        report = {
+            "schema": "IL_EXEC_REPORT_v1",
+            "overall_status": "ERROR",
+            "steps": steps_result,
+        }
+        report_path = str(Path(out_dir) / "il.exec.report.json")
+        try:
+            write_json(report_path, report)
+        except Exception as e:
+            print(f"ERROR: failed to write report: {e}")
+        return report
+
     for i, op_def in enumerate(opcodes):
+        # Guard: each opcode entry must be a dict
+        if not isinstance(op_def, dict):
+            steps_result.append({
+                "index": i,
+                "opcode": "UNKNOWN",
+                "status": "ERROR",
+                "reason": f"opcode entry must be an object, got {type(op_def).__name__}",
+                "in_summary": {"type": type(op_def).__name__},
+                "out_summary": {},
+            })
+            continue
         op_name = op_def.get("op", "UNKNOWN")
         handler = _OPCODE_HANDLERS.get(op_name)
 

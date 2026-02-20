@@ -16,7 +16,7 @@
 
 | S21-07 | ACTIVE | docs/ops/S21-07_PLAN.md | 100% (Merged PR #75) |
 | S22-01 | ACTIVE | docs/ops/S22-01_PLAN.md | 100% (Merged PR #76) |
-| S22-02 | ACTIVE | docs/ops/S22-02_PLAN.md | 1% (Kickoff: IL executor minimal) |
+| S22-02 | ACTIVE | docs/ops/S22-02_PLAN.md | 99% (Review: PR #77) |
 
 ## PARKED
 | Item | Reason | Ref |

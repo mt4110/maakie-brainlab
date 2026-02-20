@@ -73,7 +73,7 @@ IL を「ただのJSON」から **決定論的に処理を駆動する"小さな
 
 - `schema`: "IL_EXEC_RESULT_v1"
 - `cites`: list (deterministic order)
-- `answer`: str (P2では空文字 or omittedでも良い。Contractに合わせて固定)
+- `answer`: str (P2では空文字。MUST: 常に存在する)
 
 ## Opcode Semantics (Deterministic)
 
