@@ -29,6 +29,39 @@
     - 原則：Makefileは薄くして **「常に0で終わるPythonランナー」** を呼ぶ
     - どうしても必要な場面は `|| true` を付与しつつ、`ERROR:` / `OK:` のログをPython側で出す
 
+### Safety rules addendum (S22-03 / Exitless Deterministic Ops)
+
+- **[MUST] STOPプロトコル（終了コード禁止の代替）**
+  - すべての手順は `STOP="0"` を前提にする
+  - 各ステップは必ず以下の形：
+    - `if [ "$STOP" = "0" ]; then ...; else echo "SKIP: STOP=1 reason=<why>"; fi`
+  - 失敗したら「そのステップの中断」を宣言し、`STOP="1"` にする（以降ステップへ進まない）
+  - **STOPにした理由は必ず1行で残す**（監査ログ用）：`ERROR: <what> / action=STOP`
+
+- **[MUST] Pythonは "例外封じ込め" が義務**
+  - exit禁止でも例外はプロセスを止めるため、runner/metrics/causal/verifyは必ず：
+    - `try:` 本体
+    - `except Exception as e:` で `print("ERROR: ... err=<e>")`（例外を上に投げない）
+    - 最後に `print("OK: ...")` または `print("ERROR: ...")` を **必ず1行** 出す
+  - `sys.exit / SystemExit / assert` は禁止（既存ルール通り）
+  - 返り値（終了コード）は **常に0でよい**（判定は出力テキストで行う）
+
+- **[MUST] 1ターゲット=1責務（CPU/ターミナル保護）**
+  - strong生成 / weak生成 / metrics / causal / verify を **別コマンド**に分割（TASK方針通り）
+  - "固まりそう"なら中断してよいが、必ず `SKIP:` に **中断理由と直前の観測結果**を1行残す
+
+- **[MUST] Makefileは "止まる罠" を前提に設計**
+  - Makefileは薄く：**「常に0で終わるPythonランナー」**を呼び、判定は `OK:`/`ERROR:` で出す
+  - Makefile側で `&&` 連鎖を作らない（途中で行が止まる）
+  - どうしても必要なら `|| true` を付与し、真実はPythonの最終1行に集約する
+
+- **[MUST] 監査ログの書式（機械が読む前提）**
+  - 各ステップの最後は必ずこのどれか1行：
+    - `OK: <step> ...`
+    - `ERROR: <step> ...`
+    - `SKIP: <step> reason=...`
+  - 可能なら必須属性を含める：`dataset_id=... seed=... mode=strong|weak out=...`
+
 ---
 
 ## 0) Preflight: branch & main divergence吸収（落ちない）
