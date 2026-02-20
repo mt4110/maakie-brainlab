@@ -163,6 +163,18 @@
 - [ ] 出力は stable filename（timestamp禁止）
 - [ ] Python例外は必ず握って `ERROR:` を吐く（sys.exit禁止）
 - [ ] caseごとに `OK/ERROR/SKIP` と `observed_fail_class` を記録
+- [ ] **fail_class 判定の優先順位（precedence）を固定**
+  - 1つのILに複数の違反が共存し得る（例：`created_at` + `injection_trace`）
+  - 判定順は **最も具体的なクラスが勝つ**（以下の優先順で最初にマッチしたものを採用）：
+    1. `forbidden_injection` — キー名が `injection_trace` / `injection_trace_v2` 等（prefix: `injection_trace`）
+    2. `forbidden_network` — キー名が `network_trace` / `network_trace_v2` 等（prefix: `network_trace`）
+    3. `forbidden_random` — キー名が `random_trace` / `random_trace_v2` 等（prefix: `random_trace`）
+    4. `forbidden_field` — 上記以外の禁則フィールド（`created_at` / `timestamp` 等）
+    5. `schema_violation` — JSON schema 違反（必須欠落/型不正等）
+    6. `executor_error` — JSON parse失敗等、検証以前のエラー
+    7. `none` — 違反なし（OK）
+  - キー一致は **prefix match**（`injection_trace` で `injection_trace_v2` も拾う）
+  - この優先順位は **仕様として固定**（実装が独自に順序を変えてはならない）
 - [ ] （推測禁止の回避策）schema駆動で mutation を適用する場合：
   - 文字列注入先は「schema上の最初のstringフィールド（辞書順）」など **固定規則**
   - required削除も「schema required の辞書順先頭」など **固定規則**
@@ -181,6 +193,9 @@
 - [ ] 追加metrics（failclass一致率、FP/FN）
 - [ ] スコア単一値（比較用、式は固定）
 - [ ] 例外を握り、最後に `OK:` or `ERROR:` を1行（終了コードに依存しない）
+- [ ] **permitted fail_class enum（許容値を固定）**
+  - `none` / `schema_violation` / `executor_error` / `forbidden_field` / `forbidden_injection` / `forbidden_network` / `forbidden_random`
+  - ↑ 以外の値が `observed_fail_class` に現れたら `ERROR:` を出す（サイレントな分類漏れ防止）
 
 ## 6) Causal check（差分の証拠）
 
