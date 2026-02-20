@@ -1,0 +1,38 @@
+{
+    "docs": [
+        {
+            "doc_id": "doc_001",
+            "title": "Alpha Overview",
+            "text": "Alpha is the first letter of the Greek alphabet.",
+            "source": "tests/fixtures/il_exec/alpha.md"
+        },
+        {
+            "doc_id": "doc_002",
+            "title": "Beta Overview",
+            "text": "Beta is the second letter of the Greek alphabet.",
+            "source": "tests/fixtures/il_exec/beta.md"
+        },
+        {
+            "doc_id": "doc_003",
+            "title": "Gamma Overview",
+            "text": "Gamma is the third letter of the Greek alphabet.",
+            "source": "tests/fixtures/il_exec/gamma.md"
+        }
+    ],
+    "index": {
+        "alpha": [
+            "doc_001"
+        ],
+        "beta": [
+            "doc_002"
+        ],
+        "gamma": [
+            "doc_003"
+        ],
+        "greek": [
+            "doc_001",
+            "doc_002",
+            "doc_003"
+        ]
+    }
+}

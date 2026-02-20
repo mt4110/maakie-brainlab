@@ -46,6 +46,7 @@ ci: ci-test
 
 verify-il:
 	$(PYENV) $(PY) scripts/il_check.py
+	$(PYENV) $(PY) scripts/il_exec_selftest.py
 
 bootstrap:
 	# S20-08: Canonical bootstrap via uv (using system python only to install uv)
