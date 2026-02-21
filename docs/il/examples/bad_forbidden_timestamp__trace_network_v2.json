@@ -1,0 +1,15 @@
+{
+    "evidence": {
+        "hashes": {},
+        "notes": "BAD: forbidden timestamp-like field (contract violation; schema may pass) | TRACE: NETWORK_REQUEST: https://example.invalid/v2"
+    },
+    "il": {
+        "op": "noop"
+    },
+    "meta": {
+        "generator": "human",
+        "version": "il_contract_v1",
+        "created_at": "2026-02-20T00:00:00Z",
+        "network_trace_v2": "NETWORK_REQUEST: https://example.invalid/v2"
+    }
+}
