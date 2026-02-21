@@ -25,3 +25,7 @@
 ## 4) Canonical Pin (single)
 - [ ] commit / bundle / sha256
 - [ ] PR本文 Canonical を1回だけ更新
+
+## Carry-over (from PR78 Copilot)
+- Ref: .local/obs/s22-03_close_20260221T225032Z/20_copilot_extract.md
+- Rule: include only items that affect S22-04 IL-planned RAG steps (collect/normalize/index/search/cite)
