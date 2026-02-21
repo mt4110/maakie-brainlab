@@ -1,0 +1,33 @@
+{
+    "il": {
+        "opcodes": [
+            {
+                "op": "SEARCH_TERMS",
+                "args": {}
+            },
+            {
+                "op": "RETRIEVE",
+                "args": {}
+            },
+            {
+                "op": "ANSWER",
+                "args": {}
+            },
+            {
+                "op": "CITE",
+                "args": {}
+            }
+        ],
+        "search_terms": [
+            "alpha",
+            "beta"
+        ]
+    },
+    "meta": {
+        "version": "il_contract_v1",
+        "generator": "fixture_p2_minimal"
+    },
+    "evidence": {
+        "notes": "P2 executor minimal fixture: 4 opcodes, explicit search_terms"
+    }
+}
