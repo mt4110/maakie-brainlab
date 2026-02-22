@@ -191,7 +191,25 @@ _OPCODE_HANDLERS = {
     "RETRIEVE": _handle_retrieve,
     "ANSWER": _handle_answer,
     "CITE": _handle_cite,
+    # S22-04: RAG pipeline opcodes (IL-planned, observable)
+    "COLLECT": lambda il, ctx: _handle_rag_step("COLLECT", il, ctx),
+    "NORMALIZE": lambda il, ctx: _handle_rag_step("NORMALIZE", il, ctx),
+    "INDEX": lambda il, ctx: _handle_rag_step("INDEX", il, ctx),
+    "SEARCH_RAG": lambda il, ctx: _handle_rag_step("SEARCH_RAG", il, ctx),
+    "CITE_RAG": lambda il, ctx: _handle_rag_step("CITE_RAG", il, ctx),
+    # D9: SEARCH accepted as alias for SEARCH_RAG (CITE is NOT aliased: existing opcode)
+    "SEARCH": lambda il, ctx: _handle_rag_step("SEARCH_RAG", il, ctx),
 }
+
+
+def _handle_rag_step(step_name: str, _il: dict, _ctx: dict) -> dict:
+    """S22-04: RAG pipeline step stub. Actual work is in scripts/rag_pipeline.py."""
+    return {
+        "status": "SKIP",
+        "reason": f"RAG step {step_name}: use scripts/rag_pipeline.py for full pipeline",
+        "in_summary": f"step={step_name}",
+        "out_summary": {},
+    }
 
 
 # ---------------------------------------------------------------------------
