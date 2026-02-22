@@ -25,103 +25,88 @@ if str(repo_root) not in sys.path:
 # Internal imports (relative to repo root)
 from src.il_validator import ILValidator, ILCanonicalizer
 from src.il_executor import execute_il
+from scripts.obs_writer import OBSWriter
 
-def log(level: str, msg: str):
-    """Unified log printer."""
-    print(f"{level}: {msg}")
+def run_il_entry(il_path: str, fixture_db_path: Optional[str] = None):
+    obs = OBSWriter("il_entry", repo_root=repo_root)
+    obs.log("OK", phase="boot", obs_format="v1", obs_dir=str(obs.obs_dir))
+    
+    if not obs.create_dir():
+        # Already logged in create_dir
+        return 1
 
-def run_il_entry(il_path: str, out_dir: str, fixture_db_path: Optional[str] = None):
-    STOP = 0
-    # repo_root already defined above
-    
-    # 1. Environment Check
-    log("OK", f"entry run starting il_path={il_path} out_dir={out_dir}")
-    
     il_file = Path(il_path)
     if not il_file.exists():
-        log("ERROR", f"IL file not found: {il_path}")
-        STOP = 1
-    
-    out_path = Path(out_dir)
-    try:
-        out_path.mkdir(parents=True, exist_ok=True)
-    except Exception as e:
-        log("ERROR", f"Failed to create out_dir={out_dir} err={e}")
-        STOP = 1
+        obs.log("ERROR", phase="boot", reason=f"file_not_found: {il_path}", STOP=1)
 
     # 2. Validate
-    if STOP == 0:
+    if obs.stop == 0:
         try:
-            log("OK", "starting step=VALIDATE")
+            obs.log("OK", phase="validate", step="start")
             with open(il_file, "r", encoding="utf-8") as f:
                 il_data = json.load(f)
             
             validator = ILValidator()
             valid, errors = validator.validate(il_data)
             if not valid:
-                log("ERROR", f"IL validation failed: {errors}")
-                STOP = 1
+                obs.log("ERROR", phase="validate", reason=str(errors), STOP=1)
             else:
-                log("OK", "step succeeded step=VALIDATE")
+                obs.log("OK", phase="validate", step="success")
         except Exception as e:
-            log("ERROR", f"Validation exception: {e}")
-            STOP = 1
+            obs.log("ERROR", phase="validate", reason=str(e), STOP=1)
     else:
-        log("SKIP", "step=VALIDATE blocked by previous ERROR")
+        obs.log("SKIP", phase="validate", STOP=1, reason="prior_error")
 
     # 3. Canonicalize
     canonical_data = None
-    if STOP == 0:
+    if obs.stop == 0:
         try:
-            log("OK", "starting step=CANONICALIZE")
+            obs.log("OK", phase="canonicalize", step="start")
             canonicalizer = ILCanonicalizer()
             canonical_bytes = canonicalizer.canonicalize(il_data)
             # Write canonical IL for traceability (binary)
-            canon_path = out_path / "canonical.il.json"
+            canon_path = obs.obs_dir / "canonical.il.json"
             with open(canon_path, "wb") as f:
                 f.write(canonical_bytes)
             # Re-parse for execution as a dict
             canonical_data = json.loads(canonical_bytes)
-            log("OK", "step succeeded step=CANONICALIZE")
+            obs.log("OK", phase="canonicalize", step="success")
         except Exception as e:
-            log("ERROR", f"Canonicalization exception: {e}")
-            STOP = 1
+            obs.log("ERROR", phase="canonicalize", reason=str(e), STOP=1)
     else:
-        log("SKIP", "step=CANONICALIZE blocked by previous ERROR")
+        obs.log("SKIP", phase="canonicalize", STOP=1, reason="prior_error")
 
     # 4. Execute
     report = None
-    if STOP == 0:
+    if obs.stop == 0:
         try:
-            log("OK", "starting step=EXECUTE")
-            report = execute_il(canonical_data or il_data, str(out_path), fixture_db_path)
-            log("OK", f"step succeeded step=EXECUTE steps={len(report.get('steps', []))}")
+            obs.log("OK", phase="execute", step="start")
+            report = execute_il(canonical_data or il_data, str(obs.obs_dir), fixture_db_path)
+            obs.log("OK", phase="execute", step="success", steps=len(report.get("steps", [])))
+            obs.write_json("result.json", report)
         except Exception as e:
-            log("ERROR", f"Execution exception: {e}")
+            obs.log("ERROR", phase="execute", reason=str(e), STOP=1)
             traceback.print_exc()
-            STOP = 1
     else:
-        log("SKIP", "step=EXECUTE blocked by previous ERROR")
+        obs.log("SKIP", phase="execute", STOP=1, reason="prior_error")
 
     # 5. Verify (Artifacts)
-    if STOP == 0:
+    if obs.stop == 0:
         try:
-            log("OK", "starting step=VERIFY")
+            obs.log("OK", phase="verify", step="start")
             # Simple health check for output
-            report_file = out_path / "il.exec.report.json"
+            report_file = obs.obs_dir / "il.exec.report.json"
             if not report_file.exists():
-                log("ERROR", "Artifact missing: report.json")
-                STOP = 1
+                obs.log("ERROR", phase="verify", reason="artifact_missing", STOP=1)
             else:
-                log("OK", "step succeeded step=VERIFY")
+                obs.log("OK", phase="verify", step="success")
         except Exception as e:
-            log("ERROR", f"Verification exception: {e}")
-            STOP = 1
+            obs.log("ERROR", phase="verify", reason=str(e), STOP=1)
     else:
-        log("SKIP", "step=VERIFY blocked by previous ERROR")
+        obs.log("SKIP", phase="verify", STOP=1, reason="prior_error")
 
-    log("OK", f"pipeline finished STOP={STOP}")
-    return STOP
+    obs.log("OK", phase="end", STOP=obs.stop)
+    return obs.stop
 
 if __name__ == "__main__":
     import argparse
@@ -131,4 +116,4 @@ if __name__ == "__main__":
     parser.add_argument("--fixture-db", help="Path to fixture DB (optional)")
     
     args = parser.parse_args()
-    run_il_entry(args.il_path, args.out, args.fixture_db)
+    run_il_entry(args.il_path, args.fixture_db)
