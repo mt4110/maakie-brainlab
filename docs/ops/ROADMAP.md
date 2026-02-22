@@ -45,12 +45,18 @@
 - 全体図: `docs/ops/S19_PLAN.md`
 - 実行: `docs/ops/S19_TASK.md`
 
-### S20 — WIP（このPR）
-- Phase: `docs/ops/S20-02_PLAN.md` / `docs/ops/S20-02_TASK.md`
-- Phase: `docs/ops/S20-01_PLAN.md` / `docs/ops/S20-01_TASK.md`
-- Phase: `docs/ops/S20-03_PLAN.md` / `docs/ops/S20-03_TASK.md`
-- Phase: `docs/ops/S20-04_PLAN.md` / `docs/ops/S20-04_TASK.md`
-- Phase: `docs/ops/S20-05_PLAN.md` / `docs/ops/S20-05_TASK.md`
-- Phase: `docs/ops/S20-06_PLAN.md` / `docs/ops/S20-06_TASK.md` (P3 Guardrails)
+### S20 — Done ✅
 - 全体図: `docs/ops/S20_PLAN.md`
 - 実行: `docs/ops/S20_TASK.md`
+
+### S21 — Active
+- 全体図: `docs/ops/S21_PLAN.md` (TBD or derived)
+- Phase 01-07: `docs/ops/S21-0x_PLAN.md` (See STATUS.md for breakdown)
+
+### S22 — Active
+- 全体図: `docs/ops/S22_PLAN.md` (TBD or derived)
+- S22-01: Done ✅ (Merged PR #76)
+- S22-02: WIP (Review PR #77)
+- S22-03: Done ✅ (Merged PR #78)
+- S22-04: Done ✅ (Merged PR #79)
+- S22-05: Done ✅ (Merged PR #81)
