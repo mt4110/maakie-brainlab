@@ -43,7 +43,10 @@
 
 RAG must NOT run "in the background".
 All retrieval must be observable as an IL procedure with artifacts:
-COLLECT -> NORMALIZE -> INDEX -> SEARCH -> CITE
+COLLECT -> NORMALIZE -> INDEX -> SEARCH_RAG -> CITE_RAG
+
+> NOTE: CITE_RAG is used to avoid collision with the existing CITE opcode.
+> SEARCH is accepted as an alias for SEARCH_RAG in the executor.
 
 ### Non-negotiable rules
 
@@ -58,8 +61,8 @@ COLLECT -> NORMALIZE -> INDEX -> SEARCH -> CITE
 - COLLECT: ingest sources -> content-addressed blobs + manifest
 - NORMALIZE: canonicalize text -> normalized texts + manifest
 - INDEX: build deterministic index -> index.json + meta
-- SEARCH: deterministic query -> ranked results.jsonl
-- CITE: stable citations -> citations.jsonl + citations.md
+- SEARCH_RAG: deterministic query -> ranked results.jsonl
+- CITE_RAG: stable citations -> citations.jsonl + citations.md
 
 ### Artifact spec (minimum)
 
@@ -85,14 +88,15 @@ All outputs go under run-scoped obs_dir:
   - deterministic structure (sorted keys, stable arrays)
   - avoid heavy vector DB for now
 
-#### SEARCH
+#### SEARCH_RAG
 
 - 40_search_query.json (query terms + options)
 - 41_search_results.jsonl
   - stable tie-break:
-    score desc, doc_id asc, then offset asc
+    score desc, doc_id asc
+  - NOTE: offset is in citations only, not in search results
 
-#### CITE
+#### CITE_RAG
 
 - 50_citations.jsonl
   - {"doc_id":"...","excerpt":"...","offset":123,"reason":"..."}
@@ -111,7 +115,7 @@ All outputs go under run-scoped obs_dir:
 ```python
 STOP = 0
 
-for step in [COLLECT, NORMALIZE, INDEX, SEARCH, CITE]:
+for step in [COLLECT, NORMALIZE, INDEX, SEARCH_RAG, CITE_RAG]:
     if STOP == 1:
         log("SKIP: blocked by previous ERROR step=" + step)
         continue

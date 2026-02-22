@@ -57,7 +57,7 @@
 
 ### 2) IL contract update (small and safe)
 
-- [ ] if STOP==0: add opcodes COLLECT/NORMALIZE/INDEX/SEARCH/CITE
+- [ ] if STOP==0: add opcodes COLLECT/NORMALIZE/INDEX/SEARCH_RAG/CITE_RAG
 - [ ] ensure: required fields defined for each opcode (inputs/outputs)
 - [ ] output: contract diff is minimal (no refactor)
 
