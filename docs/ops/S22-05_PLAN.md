@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 # S22-05 PLAN — P6 IL Entry Single Entry + Always Verify
+=======
+# S22-05 PLAN — P6 IL Entry Single Entry + Always Verify [AMBI-v1]
+>>>>>>> s22-05-il-entry-unify-always-verify-v1
 
 ## Goal
 ILの入口を一本化し、毎回 validate/canonicalize → execute → artifacts verify を固定順で通す。
