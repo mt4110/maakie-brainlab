@@ -10,6 +10,7 @@
 
 * シェル：exit / return 非0 / set -e / set -euo pipefail / trap ... EXIT 等（終了コード依存・強制終了につながるもの）
 * Python：sys.exit / raise SystemExit / assert / 未捕捉例外で停止
+* argparse：引数エラーによる SystemExit を禁止。使う場合は捕捉して ERROR: に変換すること
 * “成功/失敗”を終了コードで表現する設計（常にログで判定）
 
 ## 必須ログ規約（嘘をつかない）
