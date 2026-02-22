@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
 S22-02: IL executor CLI (P2 minimal)
+DEPRECATED: Use scripts/il_entry.py for single-entry point with always-verify.
 - No sys.exit / SystemExit / assert
 - Always writes il.exec.report.json (even on unhandled exception)
 - Writes il.exec.result.json only when overall_status == "OK"

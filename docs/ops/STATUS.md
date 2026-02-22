@@ -19,6 +19,7 @@
 | S22-02 | ACTIVE | docs/ops/S22-02_PLAN.md | 99% (Review: PR #77) |
 | S22-03 | ACTIVE | docs/ops/S22-03_PLAN.md | 100% (Merged PR #78) |
 | S22-04 | ACTIVE | docs/ops/S22-04_PLAN.md | 100% (Merged PR #79) |
+| S22-05 | ACTIVE | docs/ops/S22-05_PLAN.md | 100% (Merged PR #81) |
 
 ## PARKED
 | Item | Reason | Ref |
