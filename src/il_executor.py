@@ -197,6 +197,8 @@ _OPCODE_HANDLERS = {
     "INDEX": lambda il, ctx: _handle_rag_step("INDEX", il, ctx),
     "SEARCH_RAG": lambda il, ctx: _handle_rag_step("SEARCH_RAG", il, ctx),
     "CITE_RAG": lambda il, ctx: _handle_rag_step("CITE_RAG", il, ctx),
+    # D9: SEARCH accepted as alias for SEARCH_RAG (CITE is NOT aliased: existing opcode)
+    "SEARCH": lambda il, ctx: _handle_rag_step("SEARCH_RAG", il, ctx),
 }
 
 

@@ -10,9 +10,8 @@ Exceptions are captured as ERROR lines, never crash-control.
 """
 import json
 import hashlib
-import os
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Optional
 
 
 # ---------------------------------------------------------------------------
@@ -75,24 +74,36 @@ def step_collect(obs_dir: Path, source_paths: List[str],
 
     _write_text(obs_dir / "10_header.txt", "COLLECT: ingest sources into blobs")
 
+    root_resolved = repo_root.resolve()
     for src_rel in sorted(source_paths):
+        # A5: reject absolute paths and repo-external traversal
+        if Path(src_rel).is_absolute():
+            log_lines.append(f"ERROR: absolute path rejected: {src_rel}")
+            result_lines.append(f"ERROR: absolute path rejected: {src_rel}")
+            continue
         src_path = repo_root / src_rel
-        if not src_path.exists():
-            log_lines.append(f"ERROR: source not found: {src_rel}")
-            result_lines.append(f"ERROR: source not found: {src_rel}")
+        cand = src_path.resolve()
+        if not (cand == root_resolved or root_resolved in cand.parents):
+            log_lines.append(f"ERROR: path traversal rejected: {src_rel}")
+            result_lines.append(f"ERROR: path traversal rejected: {src_rel}")
+            continue
+        if not cand.exists() or not cand.is_file():
+            log_lines.append(f"ERROR: source not found or not a file: {src_rel}")
+            result_lines.append(f"ERROR: source not found or not a file: {src_rel}")
             continue
         try:
-            text = src_path.read_text(encoding="utf-8")
+            text = cand.read_text(encoding="utf-8")
             doc_id = _sha256_text(text)
             size = len(text.encode("utf-8"))
+            src_posix = Path(src_rel).as_posix()
             manifest.append({
                 "doc_id": doc_id,
                 "size": size,
-                "src": src_rel,
+                "src": src_posix,
             })
             blob_path = blobs_dir / (doc_id.replace(":", "_") + ".txt")
             _write_text(blob_path, text)
-            log_lines.append(f"OK: collected {src_rel} -> {doc_id} ({size} bytes)")
+            log_lines.append(f"OK: collected {src_posix} -> {doc_id} ({size} bytes)")
         except Exception as e:
             log_lines.append(f"ERROR: collect failed src={src_rel} err={e}")
             result_lines.append(f"ERROR: collect failed src={src_rel}")
@@ -142,8 +153,8 @@ def step_normalize(obs_dir: Path, manifest: List[dict]) -> tuple:
             # Normalize: CRLF -> LF, strip trailing whitespace per line
             lines = raw.replace("\r\n", "\n").replace("\r", "\n").split("\n")
             normalized = "\n".join(line.rstrip() for line in lines)
-            # Strip trailing newlines but keep one
-            normalized = normalized.strip() + "\n"
+            # A4: rstrip only trailing newlines; preserve leading whitespace
+            normalized = normalized.rstrip("\n") + "\n"
 
             norm_path = norm_dir / (doc_id.replace(":", "_") + ".txt")
             _write_text(norm_path, normalized)
@@ -281,11 +292,13 @@ def step_search(obs_dir: Path, index_data: dict,
     }
     _write_json(obs_dir / "40_search_query.json", query)
 
+    # A1: use sorted terms consistently for deterministic scoring and logs
+    terms_sorted = sorted(set(t.lower() for t in query_terms))
+
     # Score: count of matching terms per doc
     scores: Dict[str, int] = {}
-    for term in query_terms:
-        term_lower = term.lower()
-        doc_ids = index_data.get(term_lower, [])
+    for term in terms_sorted:
+        doc_ids = index_data.get(term, [])
         for did in doc_ids:
             scores[did] = scores.get(did, 0) + 1
 
@@ -304,10 +317,10 @@ def step_search(obs_dir: Path, index_data: dict,
         _write_jsonl(obs_dir / "41_search_results.jsonl", results)
         log_lines.append(f"OK: search returned {len(results)} results")
         result_lines.append(f"OK: {len(results)} results for "
-                            f"terms={query_terms}")
+                            f"terms={terms_sorted}")
     else:
-        log_lines.append(f"SKIP: no results for terms={query_terms}")
-        result_lines.append(f"SKIP: no results for terms={query_terms}")
+        log_lines.append(f"SKIP: no results for terms={terms_sorted}")
+        result_lines.append(f"SKIP: no results for terms={terms_sorted}")
 
     _write_text(obs_dir / "40_run.log", "\n".join(log_lines) + "\n")
     _write_result(obs_dir, "40", result_lines if result_lines else
@@ -526,8 +539,10 @@ if __name__ == "__main__":
                 seed_mini.append(str(f))
 
     print(f"OK: obs_dir={obs}")
-    print(f"OK: query_terms={terms}")
+    print(f"OK: query_terms={sorted(terms)}")
     print(f"OK: sources={seed_mini}")
 
     rc = run_pipeline(obs, seed_mini, terms, repo_root=Path("."))
-    print(f"OK: pipeline finished STOP={rc}")
+    # A3: prefix reflects actual status
+    status_prefix = "OK" if rc == 0 else "ERROR"
+    print(f"{status_prefix}: pipeline finished STOP={rc}")
