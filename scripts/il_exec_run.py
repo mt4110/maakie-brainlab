@@ -12,9 +12,10 @@ import json
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-
 def log(msg: str):
     print(msg)
+
+log("SKIP: legacy entrypoint il_exec_run.py is deprecated. Use scripts/il_entry.py")
 
 
 REPORT_FILENAME = "il.exec.report.json"

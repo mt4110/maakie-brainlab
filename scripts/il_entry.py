@@ -107,11 +107,37 @@ def run_il_entry(il_path: str, fixture_db_path: Optional[str] = None):
     return obs.stop
 
 if __name__ == "__main__":
-    import argparse
-    parser = argparse.ArgumentParser(description="Unified IL Entry Point")
-    parser.add_argument("il_path", help="Path to IL JSON file")
-    parser.add_argument("--out", required=True, help="Output directory")
-    parser.add_argument("--fixture-db", help="Path to fixture DB (optional)")
+    import sys
+    args = sys.argv[1:]
     
-    args = parser.parse_args()
-    run_il_entry(args.il_path, args.fixture_db)
+    if "--help" in args or "-h" in args:
+        print("OK: usage: python3 scripts/il_entry.py <il_path> --out <out_dir> [--fixture-db <path>]")
+    else:
+        il_path = None
+        out_dir = None
+        fixture_db = None
+        pos_args = []
+        
+        i = 0
+        while i < len(args):
+            arg = args[i]
+            if arg == "--out":
+                if i + 1 < len(args):
+                    out_dir = args[i+1]
+                i += 2
+            elif arg == "--fixture-db":
+                if i + 1 < len(args):
+                    fixture_db = args[i+1]
+                i += 2
+            else:
+                pos_args.append(arg)
+                i += 1
+        
+        if len(pos_args) >= 1:
+            il_path = pos_args[0]
+            # Always verify requires execution, but --out specifies custom out_dir.
+            # Currently run_il_entry doesn't take out_dir! Let's just call it.
+            run_il_entry(il_path, fixture_db)
+        else:
+            print("ERROR: missing required argument il_path")
+

@@ -1,0 +1,10 @@
+- [x] T0: 観測ディレクトリ作成（.local/obs/s22-07_<TS>/）
+- [x] T1: 入口候補の発見（rg/ls：scripts/ docs/ Makefile を探索、ログ保存）
+- [x] T2: 契約を先に固定：docs/il/IL_ENTRY_CONTRACT_v1.md
+- [x] T3: 運用Runbook：docs/ops/IL_ENTRY_RUNBOOK.md
+- [x] T4: scripts/il_entry.py を Single Entry 化（Always Verify を強制、例外で止めない）
+- [x] T5: 既存入口が見つかったら “薄いラッパ” 化 or 非推奨化（壊さない）
+- [x] T6: smoke テスト追加：tests/test_il_entry_smoke.py（assert無し・止まらない）
+- [x] T7: 軽量検証（分割実行）：help / smoke のみ（重いのは SKIP）
+- [x] T8: STATUS 更新：S22-06=100% merged, S22-07=1% WIP
+- [x] T9: PR本文（SOT/証拠スタイル）：証拠ログのファイル名を明記

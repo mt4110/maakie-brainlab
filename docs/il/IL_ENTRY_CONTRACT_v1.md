@@ -1,26 +1,26 @@
-# IL_ENTRY_CONTRACT_v1
+# IL Entry Contract v1
 
-## Purpose
-Unify IL execution into a single, predictable entry point that always enforces validation and verification.
+This document defines the strict contract for the single entry point `scripts/il_entry.py`.
 
-## Interface
-- **Command**: `python3 scripts/il_entry.py <il_path> --out <out_dir> [--fixture-db <path>]`
-- **Control Flow**: STOPLESS. The script must never use `sys.exit()` or unhandled exceptions to terminate.
-- **Log Format**: Every step must output exactly one of:
-  - `OK: <message>`
-  - `ERROR: <message>`
-  - `SKIP: <message>`
+## 1. Single Entry Law
+All IL execution MUST go through `scripts/il_entry.py`. Legacy entry points like `il_exec_run.py`, `il_guard.py` etc., are deprecated. They should act as thin wrappers or emit SKIP messages directing users to `il_entry.py`.
 
-## Execution Sequence
-1. **ENVIRONMENT**: Check repository root and dependency health.
-2. **VALIDATE**: Use `ILValidator` to check schema and invariants.
-3. **CANONICALIZE**: Use `ILCanonicalizer` to produce a stable version of the IL.
-4. **EXECUTE**: Use `src/il_executor.py:execute_il` for opcode processing.
-5. **VERIFY**: Check output artifacts for existence and basic schema validity.
+## 2. Always Verify
+Every execution MUST pass validation (canonicalization/guard) before proceeding to execution.
+- If validation fails, the process MUST print `ERROR: ...` and set an internal `STOP=1` (or equivalent flag).
+- `execute` MUST NOT run if validation fails.
 
-## Result Artifacts
-- **report.json**: A unified result summarizing all steps.
-- **logs**: Standard output and error captured for auditing.
+## 3. Execution Safety (Stopless)
+- The script MUST NOT use `sys.exit()`, `raise SystemExit`, or `assert`.
+- Internal exceptions MUST be caught and printed as `ERROR: ...`.
+- Interruption or validation failures MUST log clearly and proceed to a natural exit.
+- The return code should NOT be relied upon for control flow; the truth is in the text logs.
 
-## Error Handling
-If any step produces an `ERROR`, set `STOP=1`. Subsequent steps must be `SKIP`ed with a clear reason.
+## 4. Evidence (Observation Logs)
+- Regardless of success or failure, an OBS log MUST be written using `OBS_FORMAT_v1`.
+- Standard output must summarize the status with `OK:`, `ERROR:`, or `SKIP:` prefixes to be grep-friendly.
+
+## 5. CLI Interface
+```bash
+python3 scripts/il_entry.py <il_path> --out <out_dir> [--fixture-db <path>]
+```

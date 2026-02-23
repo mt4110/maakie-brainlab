@@ -95,6 +95,8 @@ def main():
     errors = []
     out_dir_path = Path(".") # default for early errors
     
+    log("SKIP: legacy entrypoint il_guard.py is deprecated. Use scripts/il_entry.py")
+    
     try:
         # 1. Parse Args (No SystemExit)
         # argv[0] is script name

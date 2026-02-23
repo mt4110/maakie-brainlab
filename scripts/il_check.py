@@ -133,6 +133,7 @@ def check_fixture(name: str, in_path: Path, expect_can_exec: bool) -> bool:
     return True
 
 def main():
+    log("SKIP: legacy entrypoint il_check.py is deprecated. Use scripts/il_entry.py")
     try:
         log("=== IL Verification Checks (Hardened) ===")
         
