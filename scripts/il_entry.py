@@ -31,9 +31,7 @@ def run_il_entry(il_path: str, fixture_db_path: Optional[str] = None):
     obs = OBSWriter("il_entry", repo_root=repo_root)
     obs.log("OK", phase="boot", obs_format="v1", obs_dir=str(obs.obs_dir))
     
-    if not obs.create_dir():
-        # Already logged in create_dir
-        return 1
+    obs.create_dir()
 
     il_file = Path(il_path)
     if not il_file.exists():
