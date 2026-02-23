@@ -7,7 +7,8 @@
 | S21-01 | ACTIVE | docs/ops/S21-01_PLAN.md | Triage Top-1 file (K=10) |
 | S21-05 | ACTIVE | docs/ops/S21-05_PLAN.md | 100% (Merged PR #72) |
 | S21-06 | ACTIVE | docs/ops/S21-06_PLAN.md | 100% (Merged PR #74) |
-| S22-06 | ACTIVE | docs/ops/S22-06_PLAN.md | 1% (WIP: OBS Format v1) |
+| S22-06 | ACTIVE | docs/ops/S22-06_PLAN.md | 100% (Merged PR #83) |
+| S22-07 | ACTIVE | docs/ops/S22-07_PLAN.md | 1% (WIP) |
 
 ## NEXT
 | Item | State | Ref | Next |

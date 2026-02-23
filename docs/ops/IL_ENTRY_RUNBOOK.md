@@ -1,27 +1,24 @@
-# IL_ENTRY_RUNBOOK
+# IL Entry Runbook
 
-## Overview
-`scripts/il_entry.py` is the primary entry point for all IL execution in the repository. It ensures that every IL run is validated, canonicalized, and verified.
+This runbook outlines the operational procedures for using the IL single entry point.
 
-## Standard Execution
-To run an IL file:
+## 1. Primary Entry Point
+Do not use legacy entry points. Always use `scripts/il_entry.py`.
 ```bash
-python3 scripts/il_entry.py path/to/il.json --out .local/obs/run_name
+python3 scripts/il_entry.py <path/to/il.json> --out <OBS_DIR>
 ```
 
-## Smoke Verification
-To quickly check if the entry point and core logic are functional:
+## 2. Verification (Light / Smoke)
+To verify the health of the IL entry system without running heavy evaluations, use the smoke test:
 ```bash
-python3 scripts/il_entry_smoke.py
+python3 tests/test_il_entry_smoke.py
 ```
-This script runs a good and bad case and produces a summary. It never exits with a non-zero code.
+- It runs two cases: a valid IL and an invalid IL.
+- It does NOT use `assert` or terminate with errors (stopless).
+- It outputs `OK:` or `ERROR:` logs for verification via grep.
 
-## Full Diagnostics
-If a run fails, examine the directory specified by `--out`:
-- `canonical.il.json`: The stable version of your IL.
-- `il.exec.report.json`: The detailed execution report.
-- Standard output logs: Check for `ERROR:` lines to identify the first failing step.
-
-## Policy
-1. **Never use legacy runners** (like `scripts/il_exec_run.py`) directly for production or CI. Always go through `il_entry.py`.
-2. **Never commit IL binaries**: Only commit the JSON sources. The entry point handles canonicalization.
+## 3. Grep Rules for Audit
+To audit execution results, rely on standard output and observation logs. Do NOT rely on exit codes.
+- `^OK:` - Indicates successful validation and execution.
+- `^ERROR:` - Indicates a clear validation failure or runtime exception. Downstream operations are skipped.
+- `^SKIP:` - Indicates intentionally skipped operations (e.g., legacy scripts warning).

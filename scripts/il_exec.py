@@ -158,6 +158,8 @@ def main():
     details = []
     out_dir_path = Path(".")
     
+    log("SKIP: legacy entrypoint il_exec.py is deprecated. Use scripts/il_entry.py")
+    
     try:
         # 1. Parse Args
         il_file, guard_file, out_dir, arg_errors = parse_args(sys.argv[1:])
