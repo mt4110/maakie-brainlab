@@ -11,10 +11,17 @@ on:
       - unlabeled
       - milestoned
       - demilestoned
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "PR number to check (used by milestone_autofill dispatch)"
+        required: true
+        type: string
 
 permissions:
   statuses: write
   pull-requests: read
+  issues: read
 
 jobs:
   milestone:
@@ -26,9 +33,17 @@ jobs:
         with:
           script: |
             try {
-              const prNumber = context.payload.pull_request?.number;
-              if (!prNumber) {
-                core.info("SKIP: pull_request.number missing");
+              // Resolve PR number: pull_request event or workflow_dispatch input.
+              let prNumber = null;
+              if (context.eventName === "pull_request") {
+                prNumber = context.payload.pull_request?.number ?? null;
+              } else if (context.eventName === "workflow_dispatch") {
+                const v = context.payload.inputs?.pr_number ?? null;
+                prNumber = v ? Number(v) : null;
+              }
+
+              if (!prNumber || Number.isNaN(prNumber)) {
+                core.info(`SKIP: cannot determine PR number (event=${context.eventName})`);
                 core.setOutput("pr_number", "");
                 core.setOutput("milestone_title", "");
                 core.setOutput("is_draft", "false");
