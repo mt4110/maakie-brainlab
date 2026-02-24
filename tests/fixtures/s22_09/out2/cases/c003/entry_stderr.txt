@@ -1,2 +1,0 @@
-== attempt=0 cmd=python3 /Users/takemuramasaki/dev/maakie-brainlab/scripts/il_entry.py /Users/takemuramasaki/dev/maakie-brainlab/tests/fixtures/s22_09/out2/cases/c003/case_input.json /Users/takemuramasaki/dev/maakie-brainlab/tests/fixtures/s22_09/out2/cases/c003 ==
-
