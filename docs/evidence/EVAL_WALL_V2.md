@@ -38,3 +38,16 @@ Example Evidence (`N=20`, observed `20260224T052939Z`):
 - `summary.json` SHA256: `0f0c69ca65fa51e9b0de4e866abd915c1d5bcc4166b2c2e62002481d4a63ddb0`
 - `cases.jsonl` SHA256: `700341a9807a3bac93ec548d170fe7d7a414f0af926935a5f93d02b403160e50`
 - Audit context available at OBS path: `.local/obs/s22-09_smoke_pp_n20_20260224T052939Z`
+
+## Validate-only Structural Audit (AST Evidence)
+
+Observed: s22-09_ast_audit_20260224T062520Z
+- OBS: `.local/obs/s22-09_ast_audit_20260224T062520Z`
+- ast_audit.log sha256: `81e248aeeacd9176579407a9ab9b81092a5f127c327c501b893922026dafed5c`
+
+## Taxonomy Upgraded Determinism (Precision Evaluation)
+
+Observed: s22-09_smoke_pp_n20_20260224T062727Z
+- `summary.json` SHA256: `0f0c69ca65fa51e9b0de4e866abd915c1d5bcc4166b2c2e62002481d4a63ddb0`
+- `cases.jsonl` SHA256: `700341a9807a3bac93ec548d170fe7d7a414f0af926935a5f93d02b403160e50`
+- Audit context CPU available at OBS path: `.local/obs/s22-09_smoke_pp_n20_20260224T062727Z`

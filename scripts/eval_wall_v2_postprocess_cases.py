@@ -54,6 +54,20 @@ def write_jsonl_atomic(path: str, rows: list) -> None:
 
 def map_error_to_taxonomy(err: str):
     e = (err or "").strip().upper()
+    # extra heuristics (S22-09): widen mapping without changing determinism
+    if "DATASET_SCHEMA" in e or "JSON_SCHEMA" in e:
+        return ("schema", f"error={e}")
+    if "FORBIDDEN" in e or "POLICY" in e:
+        return ("contract", f"error={e}")
+    if "UNKNOWN_OPCODE" in e or "OPCODE_" in e:
+        return ("opcode", f"error={e}")
+    if "CITATION" in e or "CITE_" in e:
+        return ("cite", f"error={e}")
+    if "SEARCH_" in e:
+        return ("search", f"error={e}")
+    if "INDEX_" in e:
+        return ("index", f"error={e}")
+
     if not e or e == "NONE":
         return ("", "")
     if "SCHEMA" in e: return ("schema", f"error={e}")
