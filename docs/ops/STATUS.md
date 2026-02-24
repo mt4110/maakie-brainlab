@@ -10,7 +10,8 @@
 | S22-06 | ACTIVE | docs/ops/S22-06_PLAN.md | 100% (Merged PR #83) |
 | S22-07 | ACTIVE | docs/ops/S22-07_PLAN.md | 100% (Merged PR #84) |
 | S22-08 | ACTIVE | docs/ops/S22-08_PLAN.md | 100% (Merged) |
-| S22-09 | ACTIVE | docs/ops/S22-09_PLAN.md | 100% (Merged PR #87) |
+| S22-09 | ACTIVE | docs/ops/S22-09_PLAN.md | 100% (Merged PR #87) ✅ |
+| S22-10 | ACTIVE | docs/ops/S22-10_PLAN.md | 1% (WIP) |
 
 
 ## NEXT
