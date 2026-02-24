@@ -8,7 +8,9 @@
 | S21-05 | ACTIVE | docs/ops/S21-05_PLAN.md | 100% (Merged PR #72) |
 | S21-06 | ACTIVE | docs/ops/S21-06_PLAN.md | 100% (Merged PR #74) |
 | S22-06 | ACTIVE | docs/ops/S22-06_PLAN.md | 100% (Merged PR #83) |
-| S22-07 | ACTIVE | docs/ops/S22-07_PLAN.md | 1% (WIP) |
+| S22-07 | ACTIVE | docs/ops/S22-07_PLAN.md | 100% (Merged PR #84) |
+| S22-08 | ACTIVE | docs/ops/S22-08_PLAN.md | 0% (WIP: Kickoff) |
+
 
 ## NEXT
 | Item | State | Ref | Next |
