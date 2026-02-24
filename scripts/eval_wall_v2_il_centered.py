@@ -436,9 +436,10 @@ def parse_entry_status(stdout_path, stderr_path):
     out = _tail(stdout_path); err = _tail(stderr_path)
     lines = (out + "\n" + err).splitlines()
     last = ""
-    for line in lines:
-        line = line.strip()
-        if line.startswith("OK:") or line.startswith("ERROR:") or line.startswith("SKIP:"):
+    marker_pattern = re.compile(r"^(OK|ERROR|SKIP):(?:\s|$)")
+    for raw in lines:
+        line = raw.rstrip()
+        if marker_pattern.match(line):
             last = line
     if not last: return ("ERROR", "UNKNOWN", "no_status_marker")
     if last.startswith("OK:"): return ("OK", "NONE", "marker_ok")
@@ -857,14 +858,31 @@ def main():
                 ok_as, note_as = validate_audit_schema(tmp)
                 if ok_as:
                     print("OK: audit_schema_valid")
-                else:
                     print("ERROR: audit_schema_invalid note=" + note_as)
                     fb = make_fallback_audit(out_dir, (args.cases_glob or "cases/*/result.json"), note_as, {"scanned": processed})
-                    json_dump_atomic(audit_path, fb)
+                    ok_fb, note_fb = json_dump_atomic(audit_path, fb)
+                    if not ok_fb:
+                        try:
+                            fallback_path = os.path.join(out_dir, "audit_fallback.txt")
+                            with open(fallback_path, "w", encoding="utf-8") as f2:
+                                f2.write("ERROR: audit_fallback_write_failed_json\n")
+                                f2.write("audit_path=" + str(audit_path) + "\n")
+                                f2.write("json_dump_atomic_note=" + str(note_fb) + "\n")
+                                f2.write("reason=" + str(note_as if 'note_as' in locals() else 'unknown') + "\n")
+                        except Exception: pass
             except Exception as e:
                 print("ERROR: audit_readback_failed err=" + e.__class__.__name__)
                 fb = make_fallback_audit(out_dir, (args.cases_glob or "cases/*/result.json"), "readback_failed", {"scanned": processed})
-                json_dump_atomic(audit_path, fb)
+                ok_fb, note_fb = json_dump_atomic(audit_path, fb)
+                if not ok_fb:
+                    try:
+                        fallback_path = os.path.join(out_dir, "audit_fallback.txt")
+                        with open(fallback_path, "w", encoding="utf-8") as f2:
+                            f2.write("ERROR: audit_fallback_write_failed_json\n")
+                            f2.write("audit_path=" + str(audit_path) + "\n")
+                            f2.write("json_dump_atomic_note=" + str(note_fb) + "\n")
+                            f2.write("reason=" + str(note_as if 'note_as' in locals() else 'unknown') + "\n")
+                    except Exception: pass
         except: pass
 
         # SHA256SUMS best-effort
