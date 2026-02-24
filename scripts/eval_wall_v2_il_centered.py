@@ -9,6 +9,8 @@ Key properties:
 - Entry interface auto-discovery: runs `python3 scripts/il_entry.py --help` once (light),
   then prepares 3 strategies (positional / --in/--out / --input/--output),
   but tries at most 2 attempts (safety guard).
+- Rebuild-summary & Audit: Supports data recovery from output directories without dataset.
+- Audit Self-Validation: Immediate read-back and fallback for audit.json schema.
 
 Output:
 <OUT>/
@@ -23,6 +25,19 @@ Schemas:
 - run.json    schema_version: "s22-08-run-v1"
 - summary.json schema_version: "s22-08-summary-v1"
 - audit.json   schema_version: "s22-08-audit-v1"
+
+Result error_codes:
+- NONE
+- DATASET_PARSE
+- DATASET_SCHEMA
+- RESULT_WRITE
+- RESULT_PARSE
+- RESULT_SCHEMA
+- ENTRY_TIMEOUT
+- ENTRY_BAD_ARGS
+- ENTRY_CRASH
+- ENTRY_ERROR
+- UNKNOWN
 """
 
 import argparse
@@ -672,22 +687,27 @@ def make_fallback_audit(out_dir, cases_glob, note, meta):
 # -------------------------
 def main():
     STOP = 0
-    p = SafeArgumentParser(add_help=True)
-    p.add_argument("--dataset", default="")
-    p.add_argument("--out", default="")
-    p.add_argument("--mode", default="validate-only")
-    p.add_argument("--offset", default="0")
-    p.add_argument("--limit", default="5")
-    p.add_argument("--resume", action="store_true")
-    p.add_argument("--timebox-sec", default="20")
-    p.add_argument("--case-timeout-sec", default="10")
-    p.add_argument("--max-attempts", default="2")
-    p.add_argument("--rebuild-summary", action="store_true")
-    p.add_argument("--cases-glob", default="cases/*/result.json")
-    p.add_argument("--rebuild-timebox-sec", default="10")
-    p.add_argument("--rebuild-max-files", default="5000")
-    p.add_argument("--audit", action="store_true")
-    p.add_argument("--audit-fingerprint", action="store_true")
+    p = SafeArgumentParser(
+        description="S22-08 Eval Wall v2: Stopless, CPU-safe evaluation runner with audit and self-repair.",
+        add_help=True
+    )
+    p.add_argument("--dataset", default="", help="Path to cases.jsonl")
+    p.add_argument("--out", default="", help="Output directory")
+    p.add_argument("--mode", default="validate-only", help="Runner mode (validate-only, validate-exec)")
+    p.add_argument("--offset", default="0", help="Skip N cases")
+    p.add_argument("--limit", default="5", help="Max cases to process per run")
+    p.add_argument("--resume", action="store_true", help="Skip already processed cases in out_dir")
+    p.add_argument("--timebox-sec", default="20", help="Max total time for runner (sec)")
+    p.add_argument("--case-timeout-sec", default="10", help="Timeout per entry execution (sec)")
+    p.add_argument("--max-attempts", default="2", help="Max attempt count for entry interface discovery logic")
+    
+    # Rebuild & Audit options
+    p.add_argument("--rebuild-summary", action="store_true", help="Rebuild summary from cases without running dataset")
+    p.add_argument("--cases-glob", default="cases/*/result.json", help="Glob pattern for rebuild")
+    p.add_argument("--rebuild-timebox-sec", default="10", help="Max time for rebuild operation (sec)")
+    p.add_argument("--rebuild-max-files", default="5000", help="Max result files to scan during rebuild")
+    p.add_argument("--audit", action="store_true", help="Perform summary and schema checking (always happens during rebuild)")
+    p.add_argument("--audit-fingerprint", action="store_true", help="Include file sampling hashes in audit")
     p.add_argument("--audit-fingerprint-max", default="50")
     p.add_argument("--audit-fingerprint-timebox-sec", default="5")
 
