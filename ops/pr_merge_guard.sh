@@ -62,8 +62,34 @@ if [ "$STOP" = "0" ]; then
   if [ -n "$MILESTONE" ]; then
     echo "OK: milestone=$MILESTONE"
   else
-    echo "ERROR: missing milestone (block merge)"
-    STOP="1"
+    echo "WARN: milestone missing, attempting autofix"
+    # --- S22-11 milestone autofix (zero-thought) ---
+    HEAD_REF="$(gh pr view "$PR" --json headRefName --jq '.headRefName // ""' 2>/dev/null || true)"
+    INF="$(printf "%s\n" "$HEAD_REF" | grep -o -i -E 's[0-9]{2}-[0-9]{2}' | head -1 || true)"
+    if [ -z "$INF" ]; then
+      echo "ERROR: cannot infer milestone from head_ref=$HEAD_REF"
+      STOP="1"
+    else
+      WANT="$(printf "%s\n" "$INF" | sed 's/^s/S/' | tr '[:lower:]' '[:upper:]')"
+      echo "OK: inferred milestone title=$WANT"
+      MNUM="$(gh api "repos/$NAME/milestones?state=all&per_page=100" \
+        --jq ".[] | select(.title==\"$WANT\") | .number" 2>/dev/null | head -1 || true)"
+      if [ -z "$MNUM" ]; then
+        echo "ERROR: milestone not found title=$WANT"
+        STOP="1"
+      else
+        gh api -X PATCH "repos/$NAME/issues/$PR" -f milestone="$MNUM" 2>/dev/null >/dev/null || true
+        echo "OK: milestone set number=$MNUM title=$WANT"
+        MILESTONE="$(gh api -H "Accept: application/vnd.github+json" "repos/$NAME/pulls/$PR" \
+          --jq '.milestone.title // ""' 2>/dev/null || true)"
+        echo "OK: milestone(after)=$MILESTONE"
+        if [ -z "$MILESTONE" ]; then
+          echo "ERROR: milestone still missing after autofix"
+          STOP="1"
+        fi
+      fi
+    fi
+    # --- /S22-11 milestone autofix ---
   fi
 fi
 
