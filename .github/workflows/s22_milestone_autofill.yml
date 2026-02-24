@@ -1,60 +1,60 @@
 name: s22 milestone autofill (zero-thought)
 
 on:
-    pull_request:
-        types: [opened, reopened, synchronize, edited, ready_for_review]
+  pull_request:
+    types: [opened, reopened, synchronize, edited, ready_for_review]
 
 permissions:
-    issues: write
-    pull-requests: read
+  issues: write
+  pull-requests: write
 
 jobs:
-    autofill:
-        # forks を避けて安全側（同一 repo ブランチのみ）で動かす
-        if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
-        runs-on: ubuntu-latest
-        steps:
-            - name: Autofill milestone if missing
-              uses: actions/github-script@v7
-              with:
-                  script: |
-                      const pr = context.payload.pull_request;
-                      const already = pr.milestone && pr.milestone.title;
-                      if (already) {
-                        core.info(`OK: milestone already set title=${already}`);
-                        return;
-                      }
+  autofill:
+    # forks を避けて安全側（同一 repo ブランチのみ）で動かす
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Autofill milestone if missing
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const already = pr.milestone && pr.milestone.title;
+            if (already) {
+              core.info(`OK: milestone already set title=${already}`);
+              return;
+            }
 
-                      const head = pr.head && pr.head.ref ? pr.head.ref : "";
-                      const m = head.match(/s\d{2}-\d{2}/i);
-                      if (!m) {
-                        core.info(`SKIP: cannot infer milestone from headRef=${head}`);
-                        return;
-                      }
+            const head = pr.head && pr.head.ref ? pr.head.ref : "";
+            const m = head.match(/s\d{2}-\d{2}/i);
+            if (!m) {
+              core.info(`SKIP: cannot infer milestone from headRef=${head}`);
+              return;
+            }
 
-                      const raw = m[0];
-                      const title = raw.charAt(0).toUpperCase() + raw.slice(1).toUpperCase();
-                      core.info(`OK: inferred milestone title=${title}`);
+            const raw = m[0];
+            const title = raw.charAt(0).toUpperCase() + raw.slice(1).toUpperCase();
+            core.info(`OK: inferred milestone title=${title}`);
 
-                      const owner = context.repo.owner;
-                      const repo = context.repo.repo;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
 
-                      // milestones list (state=all) から title 一致を探す
-                      const milestones = await github.paginate(
-                        github.rest.issues.listMilestones,
-                        { owner, repo, state: "all", per_page: 100 }
-                      );
+            // milestones list (state=all) から title 一致を探す
+            const milestones = await github.paginate(
+              github.rest.issues.listMilestones,
+              { owner, repo, state: "all", per_page: 100 }
+            );
 
-                      const hit = milestones.find(x => (x && x.title) === title);
-                      if (!hit) {
-                        core.info(`ERROR: milestone not found title=${title}`);
-                        return;
-                      }
+            const hit = milestones.find(x => (x && x.title) === title);
+            if (!hit) {
+              core.info(`ERROR: milestone not found title=${title}`);
+              return;
+            }
 
-                      await github.rest.issues.update({
-                        owner, repo,
-                        issue_number: pr.number,
-                        milestone: hit.number
-                      });
+            await github.rest.issues.update({
+              owner, repo,
+              issue_number: pr.number,
+              milestone: hit.number
+            });
 
-                      core.info(`OK: milestone set number=${hit.number} title=${title}`);
+            core.info(`OK: milestone set number=${hit.number} title=${title}`);
