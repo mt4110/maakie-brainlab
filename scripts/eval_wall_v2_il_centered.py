@@ -504,6 +504,93 @@ def audit_from_rebuild(out_dir, cases_glob, summary_obj, meta, samples):
     return (overall, audit, "OK" if overall else "audit_failed")
 
 
+def validate_audit_schema(obj):
+    """
+    Validate minimal schema for s22-08-audit-v1.
+    Never raises. Returns (ok, note).
+    """
+    try:
+        if not isinstance(obj, dict):
+            return (False, "not_object")
+
+        sv = str(obj.get("schema_version", "")).strip()
+        if sv != "s22-08-audit-v1":
+            return (False, "schema_version_mismatch got=" + sv)
+
+        # required strings
+        if not isinstance(obj.get("out_dir"), str) or not str(obj.get("out_dir")).strip():
+            return (False, "missing_out_dir")
+        if not isinstance(obj.get("cases_glob"), str) or not str(obj.get("cases_glob")).strip():
+            return (False, "missing_cases_glob")
+
+        # required scalars
+        try:
+            _ = int(obj.get("scanned"))
+        except Exception:
+            return (False, "missing_or_invalid_scanned")
+
+        # bool-like (accept bool or 0/1)
+        for k in ["timebox_hit", "clamped"]:
+            v = obj.get(k)
+            if isinstance(v, bool):
+                pass
+            elif isinstance(v, int) and v in [0, 1]:
+                pass
+            else:
+                return (False, "missing_or_invalid_" + k)
+
+        cfc = obj.get("counts_from_cases")
+        if not isinstance(cfc, dict):
+            return (False, "missing_counts_from_cases")
+
+        for k in ["total", "ok", "error", "skip"]:
+            try:
+                _ = int(cfc.get(k))
+            except Exception:
+                return (False, "missing_or_invalid_counts_" + k)
+
+        bd = cfc.get("breakdown_by_error_code")
+        if not isinstance(bd, dict):
+            return (False, "missing_breakdown_by_error_code")
+
+        checks = obj.get("checks")
+        if not isinstance(checks, dict):
+            return (False, "missing_checks")
+
+        for k in ["started_at_utc", "ended_at_utc"]:
+            if not isinstance(obj.get(k), str) or not str(obj.get(k)).strip():
+                return (False, "missing_" + k)
+
+        return (True, "OK")
+
+    except Exception as e:
+        return (False, "validator_failed err=" + e.__class__.__name__)
+
+
+def make_fallback_audit(out_dir, cases_glob, note, meta):
+    """
+    Minimal audit object that is always schema-valid.
+    """
+    return {
+        "schema_version": "s22-08-audit-v1",
+        "out_dir": out_dir,
+        "cases_glob": cases_glob,
+        "scanned": int(meta.get("scanned", 0)),
+        "timebox_hit": bool(meta.get("timebox_hit", False)),
+        "clamped": bool(meta.get("clamped", False)),
+        "counts_from_cases": {
+            "total": 0, "ok": 0, "error": 0, "skip": 0,
+            "breakdown_by_error_code": {"AUDIT_SCHEMA": 1}
+        },
+        "checks": {
+            "audit_schema_self_check": {"ok": False, "note": note}
+        },
+        "fingerprints": {"result_files_sha256_sample": []},
+        "started_at_utc": now_utc_z(),
+        "ended_at_utc": now_utc_z()
+    }
+
+
 # -------------------------
 # Main
 # -------------------------
@@ -544,7 +631,26 @@ def main():
         ok_rb, summary_obj, note_rb, meta, samples = rebuild_summary(out_dir, args.cases_glob, rtb, rmax)
         json_dump_atomic(os.path.join(out_dir, "summary.json"), summary_obj)
         ov_ok, audit_obj, a_note = audit_from_rebuild(out_dir, args.cases_glob, summary_obj, meta, samples)
-        json_dump_atomic(os.path.join(out_dir, "audit.json"), audit_obj)
+        
+        audit_path = os.path.join(out_dir, "audit.json")
+        json_dump_atomic(audit_path, audit_obj)
+
+        # self-validate audit.json (stopless)
+        try:
+            with open(audit_path, "r", encoding="utf-8") as f:
+                tmp = json.load(f)
+            ok_as, note_as = validate_audit_schema(tmp)
+            if ok_as:
+                print("OK: audit_schema_valid")
+            else:
+                print("ERROR: audit_schema_invalid note=" + note_as)
+                fb = make_fallback_audit(out_dir, (args.cases_glob or "cases/*/result.json"), note_as, meta)
+                json_dump_atomic(audit_path, fb)
+        except Exception as e:
+            print("ERROR: audit_readback_failed err=" + e.__class__.__name__)
+            fb = make_fallback_audit(out_dir, (args.cases_glob or "cases/*/result.json"), "readback_failed", meta)
+            json_dump_atomic(audit_path, fb)
+
         print("OK: rebuild_summary total="+str(summary_obj["total"])+" scanned="+str(meta["scanned"])+" audit="+("PASS" if ov_ok else "FAIL"))
         print("OK: done stop=0"); return
 
@@ -638,7 +744,24 @@ def main():
         # audit always - best effort on current summary
         try:
             ov_ok, audit_obj, a_note = audit_from_rebuild(out_dir, args.cases_glob, summary_obj, {"scanned": processed}, {})
-            json_dump_atomic(os.path.join(out_dir, "audit.json"), audit_obj)
+            audit_path = os.path.join(out_dir, "audit.json")
+            json_dump_atomic(audit_path, audit_obj)
+
+            # self-validate audit.json (stopless)
+            try:
+                with open(audit_path, "r", encoding="utf-8") as f:
+                    tmp = json.load(f)
+                ok_as, note_as = validate_audit_schema(tmp)
+                if ok_as:
+                    print("OK: audit_schema_valid")
+                else:
+                    print("ERROR: audit_schema_invalid note=" + note_as)
+                    fb = make_fallback_audit(out_dir, (args.cases_glob or "cases/*/result.json"), note_as, {"scanned": processed})
+                    json_dump_atomic(audit_path, fb)
+            except Exception as e:
+                print("ERROR: audit_readback_failed err=" + e.__class__.__name__)
+                fb = make_fallback_audit(out_dir, (args.cases_glob or "cases/*/result.json"), "readback_failed", {"scanned": processed})
+                json_dump_atomic(audit_path, fb)
         except: pass
 
         # SHA256SUMS best-effort
