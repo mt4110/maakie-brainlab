@@ -794,7 +794,6 @@ def main():
         ok_rb, summary_obj, note_rb, meta, samples = rebuild_summary(out_dir, args.cases_glob, rtb, rmax)
         # === S22-09: build cases.jsonl + taxonomy metrics (TAXONOMY_v1) ===
         try:
-            import os, json
 
             run_json_path = os.path.join(out_dir, "run.json")
             cases_jsonl_path = os.path.join(out_dir, "cases.jsonl")
@@ -849,7 +848,7 @@ def main():
 
                     row = {
                         "case_id": case_id,
-                        "dataset": str(getattr(args, "dataset", "") or ""),
+                        "dataset": "",
                         "mode": "run",
                         "result": res,
                         "artifacts": {
