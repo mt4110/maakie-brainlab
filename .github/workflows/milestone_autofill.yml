@@ -118,7 +118,7 @@ jobs:
             let dispatchOk = "0";
             let dispatchErr = "";
             let prNumberStr = "";
-            let headSha = "";
+            let headRef = "";
 
             try {
               const prNumber = context.payload.pull_request?.number ?? null;
@@ -127,19 +127,19 @@ jobs:
                 core.setOutput("dispatch_ok", dispatchOk);
                 core.setOutput("dispatch_error", "SKIP: no pull_request number");
                 core.setOutput("pr_number", "");
-                core.setOutput("head_sha", "");
+                core.setOutput("head_ref", "");
                 return;
               }
               prNumberStr = String(prNumber);
 
               const pr = await github.rest.pulls.get({ owner, repo, pull_number: prNumber });
-              headSha = pr.data?.head?.sha ?? "";
-              if (!headSha) {
-                core.info(`ERROR: dispatch skipped (no head sha) pr=${prNumberStr}`);
+              headRef = pr.data?.head?.ref ?? "";
+              if (!headRef) {
+                core.info(`ERROR: dispatch skipped (no head ref) pr=${prNumberStr}`);
                 core.setOutput("dispatch_ok", dispatchOk);
-                core.setOutput("dispatch_error", "ERROR: no head sha");
+                core.setOutput("dispatch_error", "ERROR: no head ref");
                 core.setOutput("pr_number", prNumberStr);
-                core.setOutput("head_sha", headSha);
+                core.setOutput("head_ref", headRef);
                 return;
               }
 
@@ -147,38 +147,38 @@ jobs:
                 owner,
                 repo,
                 workflow_id: "milestone_required.yml",
-                ref: headSha,
+                ref: headRef,
                 inputs: { pr_number: prNumberStr },
               });
 
               dispatchOk = "1";
-              core.info(`OK: dispatched milestone_required pr=${prNumberStr} ref=${headSha}`);
+              core.info(`OK: dispatched milestone_required pr=${prNumberStr} ref=${headRef}`);
             } catch (e) {
               const status = (e && (e.status || e.response?.status)) ? String(e.status || e.response?.status) : "NA";
               const msg = (e && e.message) ? e.message : String(e);
               dispatchErr = `status=${status} msg=${msg}`.slice(0, 360);
-              core.info(`ERROR: dispatch milestone_required failed pr=${prNumberStr || "NA"} ref=${headSha || "NA"} ${dispatchErr}`);
+              core.info(`ERROR: dispatch milestone_required failed pr=${prNumberStr || "NA"} ref=${headRef || "NA"} ${dispatchErr}`);
             }
 
             core.setOutput("dispatch_ok", dispatchOk);
             core.setOutput("dispatch_error", dispatchErr);
             core.setOutput("pr_number", prNumberStr);
-            core.setOutput("head_sha", headSha);
+            core.setOutput("head_ref", headRef);
 
       - name: Audit dispatch result (one-line)
         if: always()
         run: |
           OK="${{ steps.dispatch_milestone_required.outputs.dispatch_ok }}"
           PR="${{ steps.dispatch_milestone_required.outputs.pr_number }}"
-          SHA="${{ steps.dispatch_milestone_required.outputs.head_sha }}"
+          REF="${{ steps.dispatch_milestone_required.outputs.head_ref }}"
           ERR="${{ steps.dispatch_milestone_required.outputs.dispatch_error }}"
 
           if [ "$OK" = "1" ]; then
-            LINE="OK: milestone_autofill dispatch milestone_required pr=${PR:-NA} ref=${SHA:-NA}"
+            LINE="OK: milestone_autofill dispatch milestone_required pr=${PR:-NA} ref=${REF:-NA}"
             echo "$LINE"
             printf "%s\n" "$LINE" >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
           else
-            LINE="ERROR: milestone_autofill dispatch milestone_required failed pr=${PR:-NA} ref=${SHA:-NA} ${ERR:-NA}"
+            LINE="ERROR: milestone_autofill dispatch milestone_required failed pr=${PR:-NA} ref=${REF:-NA} ${ERR:-NA}"
             echo "$LINE"
             printf "%s\n" "$LINE" >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
           fi
