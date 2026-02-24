@@ -1,0 +1,3 @@
+{"artifacts":{"audit_json":"audit.json","cases_dir":"cases","run_json":"run.json","summary_json":"summary.json"},"case_id":"c001","dataset":"tests/fixtures/s22_09/tiny_cases.jsonl","mode":"classify","result":"OK"}
+{"artifacts":{"audit_json":"audit.json","cases_dir":"cases","run_json":"run.json","summary_json":"summary.json"},"case_id":"c002","dataset":"tests/fixtures/s22_09/tiny_cases.jsonl","mode":"classify","result":"OK"}
+{"artifacts":{"audit_json":"audit.json","cases_dir":"cases","run_json":"run.json","summary_json":"summary.json"},"case_id":"c003","dataset":"tests/fixtures/s22_09/tiny_cases.jsonl","mode":"classify","result":"OK"}

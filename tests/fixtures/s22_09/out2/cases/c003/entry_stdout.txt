@@ -1,0 +1,8 @@
+== attempt=0 cmd=python3 /Users/takemuramasaki/dev/maakie-brainlab/scripts/il_entry.py /Users/takemuramasaki/dev/maakie-brainlab/tests/fixtures/s22_09/out2/cases/c003/case_input.json /Users/takemuramasaki/dev/maakie-brainlab/tests/fixtures/s22_09/out2/cases/c003 ==
+OK: phase=boot obs_format=v1 obs_dir=/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/il_entry_20260224T052607Z
+OK: phase=validate step=start
+ERROR: phase=validate reason="[{'code': 'E_SCHEMA', 'message': 'Missing required field: evidence'}, {'code': 'E_SCHEMA', 'message': 'Missing required field: meta'}, {'code': 'E_SCHEMA', 'message': 'Unexpected top-level field: case_id', 'path': '/case_id'}, {'code': 'E_SCHEMA', 'message': 'Unexpected top-level field: schema_version', 'path': '/schema_version'}]" STOP=1
+SKIP: phase=canonicalize STOP=1 reason=prior_error
+SKIP: phase=execute STOP=1 reason=prior_error
+SKIP: phase=verify STOP=1 reason=prior_error
+OK: phase=end STOP=1

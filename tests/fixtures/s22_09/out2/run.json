@@ -1,0 +1,13 @@
+{
+  "dataset_path": "tests/fixtures/s22_09/tiny_cases.jsonl",
+  "dataset_sha256": "ec79e8fd8f9fa3417252564fbb46b69dafae112bb6fb337f6ed1a9b38da6b376",
+  "schema_version": "s22-08-run-v1",
+  "segments": [
+    {
+      "limit": 3,
+      "mode": "validate-only",
+      "offset": 0,
+      "started": "2026-02-24T05:26:07Z"
+    }
+  ]
+}
