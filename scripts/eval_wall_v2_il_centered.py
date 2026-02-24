@@ -455,18 +455,25 @@ def rebuild_summary(out_dir, cases_glob, timebox_sec, max_files):
         try:
             with open(pth, "r", encoding="utf-8") as f:
                 obj = json.load(f)
-            status = str(obj.get("status", "")).strip()
-            error_code = str(obj.get("error_code", "")).strip()
-            if status not in ["OK", "ERROR", "SKIP"]: status = "ERROR"
-            if not error_code: error_code = "UNKNOWN"
-            summary["total"] += 1
-            if status == "OK": summary["ok"] += 1
-            elif status == "SKIP": summary["skip"] += 1
-            else: summary["error"] += 1
-            if error_code != "NONE":
-                bd[error_code] = int(bd.get(error_code, 0)) + 1
+            
+            ok_v, note_v, norm = validate_result_schema(obj)
+            status = norm["status"]
+            error_code = norm["error_code"]
+            
+            if not ok_v:
+                # schema error
+                summary["total"] += 1; summary["error"] += 1
+                bd["RESULT_SCHEMA"] = int(bd.get("RESULT_SCHEMA", 0)) + 1
+            else:
+                summary["total"] += 1
+                if status == "OK": summary["ok"] += 1
+                elif status == "SKIP": summary["skip"] += 1
+                else: summary["error"] += 1
+                if error_code != "NONE":
+                    bd[error_code] = int(bd.get(error_code, 0)) + 1
+            
             if len(samples["status_errorcode_pairs"]) < SAMPLE_MAX:
-                samples["status_errorcode_pairs"].append({"case_id": str(obj.get("case_id","")), "status": status, "error_code": error_code})
+                samples["status_errorcode_pairs"].append({"case_id": norm.get("case_id",""), "status": status, "error_code": error_code})
         except Exception:
             summary["total"] += 1; summary["error"] += 1
             bd["RESULT_PARSE"] = int(bd.get("RESULT_PARSE", 0)) + 1
@@ -502,6 +509,75 @@ def audit_from_rebuild(out_dir, cases_glob, summary_obj, meta, samples):
     audit["checks"]["errorcode_none_only_ok"] = {"ok": bool(c_ok), "note": "OK" if c_ok else "found_mismatch", "examples": bad_examples}
     overall = bool(a_ok and b_ok and c_ok)
     return (overall, audit, "OK" if overall else "audit_failed")
+
+
+def validate_result_schema(obj):
+    norm = {"case_id": "", "status": "ERROR", "error_code": "RESULT_SCHEMA", "mode": ""}
+    try:
+        if not isinstance(obj, dict):
+            return (False, "not_object", norm)
+
+        sv = str(obj.get("schema_version", "")).strip()
+        if sv != "s22-08-result-v1":
+            # still extract best-effort
+            cid = obj.get("case_id")
+            if isinstance(cid, str):
+                norm["case_id"] = cid.strip()
+            st = obj.get("status")
+            if isinstance(st, str) and st.strip() in ["OK", "ERROR", "SKIP"]:
+                norm["status"] = st.strip()
+            md = obj.get("mode")
+            if isinstance(md, str):
+                norm["mode"] = md.strip()
+            return (False, "schema_version_mismatch got=" + sv, norm)
+
+        cid = obj.get("case_id")
+        if isinstance(cid, str):
+            norm["case_id"] = cid.strip()
+
+        st = obj.get("status")
+        if isinstance(st, str) and st.strip() in ["OK", "ERROR", "SKIP"]:
+            norm["status"] = st.strip()
+        else:
+            return (False, "missing_or_invalid_status", norm)
+
+        ec = obj.get("error_code")
+        if isinstance(ec, str) and ec.strip():
+            norm["error_code"] = ec.strip()
+        else:
+            return (False, "missing_error_code", norm)
+
+        md = obj.get("mode")
+        if isinstance(md, str):
+            norm["mode"] = md.strip()
+
+        ds = obj.get("dataset")
+        if not isinstance(ds, dict):
+            return (False, "missing_dataset", norm)
+        if not isinstance(ds.get("path"), str) or not str(ds.get("path")).strip():
+            return (False, "missing_dataset_path", norm)
+        try:
+            _ = int(ds.get("line_index"))
+        except Exception:
+            return (False, "missing_or_invalid_line_index", norm)
+
+        en = obj.get("entry")
+        if not isinstance(en, dict):
+            return (False, "missing_entry", norm)
+        if not isinstance(en.get("cmd"), list):
+            return (False, "missing_entry_cmd", norm)
+
+        tm = obj.get("timing")
+        if not isinstance(tm, dict):
+            return (False, "missing_timing", norm)
+        if not isinstance(tm.get("started_at_utc"), str) or not str(tm.get("started_at_utc")).strip():
+            return (False, "missing_started_at_utc", norm)
+        if not isinstance(tm.get("ended_at_utc"), str) or not str(tm.get("ended_at_utc")).strip():
+            return (False, "missing_ended_at_utc", norm)
+
+        return (True, "OK", norm)
+    except Exception as e:
+        return (False, "validator_failed err=" + e.__class__.__name__, norm)
 
 
 def validate_audit_schema(obj):
@@ -611,6 +687,9 @@ def main():
     p.add_argument("--rebuild-timebox-sec", default="10")
     p.add_argument("--rebuild-max-files", default="5000")
     p.add_argument("--audit", action="store_true")
+    p.add_argument("--audit-fingerprint", action="store_true")
+    p.add_argument("--audit-fingerprint-max", default="50")
+    p.add_argument("--audit-fingerprint-timebox-sec", default="5")
 
     args = p.parse_args()
     if getattr(p, "_safe_error", ""):
@@ -697,6 +776,7 @@ def main():
             if args.resume and os.path.isfile(res_path):
                 print("SKIP: idx="+str(i)+" reason=already_done"); processed += 1; continue
 
+            used_c = []
             if not p_ok: status = "ERROR"; ec = "DATASET_PARSE"; note = p_note; case_id = cid_pre
             else:
                 ok_p, case_id, payload, note_p = extract_case_payload(obj, i)
@@ -723,6 +803,7 @@ def main():
             res = {
                 "schema_version": "s22-08-result-v1", "case_id": case_id, "status": status, "error_code": ec,
                 "mode": mode, "dataset": {"path": dataset, "line_index": i},
+                "entry": {"cmd": used_c if isinstance(used_c, list) else []},
                 "timing": {"started_at_utc": case_started, "ended_at_utc": now_utc_z(), "duration_ms": int((time.monotonic()-t0)*1000)},
                 "notes": note
             }

@@ -257,3 +257,9 @@ echo "OK: done stop=$STOP"
 - [ ] milestone: S22-08
 - [ ] merge は ops/pr_merge_guard.sh（dry→execute）
 - [ ] gh pr view --json mergedAt,mergeCommit で事後確認（merged フィールド禁止）
+
+
+## Extension: 6-10%% Pack
+- [x] Rebuild without dataset
+- [x] Corruption Drill (RESULT_SCHEMA mismatch)
+- [x] Verify-only bundle evidence
