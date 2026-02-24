@@ -11,26 +11,53 @@ FORBIDDEN_NAMES = {
 
 def parse_args(argv):
   targets=[]
+  seen=set()
   i=0
   while i < len(argv):
     a=argv[i]
     if a=="--targets" and i+1 < len(argv):
-      targets += [p for p in argv[i+1].split(",") if p.strip()]
+      raw=argv[i+1]
+      for item in raw.split(","):
+        t=item.strip()
+        if not t:
+          continue
+        if t in seen:
+          continue
+        seen.add(t)
+        targets.append(t)
       i += 2
       continue
     i += 1
   return targets
 
-def call_name(node):
-  # get dotted name (best-effort)
+def build_alias_map(tree):
+  amap={}
+  for node in ast.walk(tree):
+    if isinstance(node, ast.Import):
+      for a in node.names:
+        name=a.name
+        asn=a.asname or name.split(".")[-1]
+        amap[asn]=name
+    if isinstance(node, ast.ImportFrom):
+      mod=node.module or ""
+      for a in node.names:
+        nm=a.name
+        asn=a.asname or nm
+        if mod:
+          amap[asn]=mod + "." + nm
+  return amap
+
+def call_name(node, amap):
+  # get dotted name (best-effort + import alias resolution)
   if isinstance(node, ast.Name):
-    return node.id
+    n=node.id
+    return amap.get(n, n)
   if isinstance(node, ast.Attribute):
-    base = call_name(node.value)
+    base = call_name(node.value, amap)
     if base:
       return base + "." + node.attr
     return node.attr
-  return ""
+  return "" 
 
 def is_validate_only_test(test_src: str) -> bool:
   s=test_src.lower()
@@ -49,11 +76,11 @@ def walk_validate_only_blocks(tree, source):
         blocks.append(node)
   return blocks
 
-def scan_block_forbidden(block):
+def scan_block_forbidden(block, amap):
   found=set()
   for node in ast.walk(block):
     if isinstance(node, ast.Call):
-      n=call_name(node.func)
+      n=call_name(node.func, amap)
       if n in FORBIDDEN_NAMES:
         found.add(n)
       # substring check (best-effort)
@@ -78,6 +105,7 @@ def main():
     try:
       src=p.read_text(encoding="utf-8", errors="replace")
       tree=ast.parse(src)
+      amap=build_alias_map(tree)
     except Exception as e:
       print(f"ERROR: parse_failed target={t} err={e}")
       STOP="1"
@@ -90,9 +118,10 @@ def main():
 
     ok=True
     for i,b in enumerate(blocks[:20]):  # CPU safety
-      bad=scan_block_forbidden(b)
+      bad=scan_block_forbidden(b, amap)
       if bad:
         ok=False
+        STOP="1"
         print(f"ERROR: forbidden calls inside validate-only target={t} block#{i} bad={bad}")
     if ok:
       print(f"OK: validate-only blocks clean target={t} blocks={len(blocks)}")
