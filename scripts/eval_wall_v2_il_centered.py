@@ -305,6 +305,7 @@ def discover_entry_interface(timeout_sec=2):
 def build_entry_attempts(case_dir, payload_obj, mode, iface, max_attempts):
     try:
         os.makedirs(case_dir, exist_ok=True)
+        case_dir = os.path.abspath(case_dir)
     except Exception as e:
         return (False, [], "mkdir_case_dir_failed err=" + e.__class__.__name__)
 
@@ -380,6 +381,7 @@ def build_entry_attempts(case_dir, payload_obj, mode, iface, max_attempts):
 # Run entry
 # -------------------------
 def run_entry_attempts(attempts, case_dir, stdout_path, stderr_path, timeout_sec):
+    case_dir = os.path.abspath(case_dir)
     MAX_BYTES = 1024 * 1024
     def _append_text(path, s):
         try:
