@@ -1,0 +1,18 @@
+# S22-09_TASK.md
+- [ ] 0) repo位置確認（落ちない）
+- [ ] 1) main同期（落ちない）
+- [ ] 2) ブランチ作成（1PRで閉じ切る前提）
+- [x] 3) OBSディレクトリ作成（.local/obs/s22-09_...）
+- [x] 4) 既存entrypoint探索（rgで validate-only/run/executor を洗い出し、OBSへ保存）
+- [x] 5) docs/evidence/EVAL_WALL_V2.md に「実行モード契約」を先に追記（validate-only/run定義）
+- [x] 6) 失敗分類 TAXONOMY_v1 を固定（schema/contract/opcode/normalization/index/search/cite）
+- [ ] 7) dataset( seed-mini ) を失敗分類タグで再編（既存がv0001ならそのまま、必要なら追記方式）
+- [ ] 8) 計測出力（JSONL + summary.json）へタグ集計を統合
+- [ ] 9) validate-onlyの“非実行保証”監査：入口ごとに executor 呼び出しが無いことを確認（違反はERRORで停止）
+- [ ] 10) 決定論チェック（同一入力2回実行→JSONL sha256一致）※CPU安全：まずsmoke
+- [ ] 11) tests/test_eval_wall_v2_smoke.py を追加/更新（taxonomy/スキーマ/sha一致をカバー）
+- [ ] 12) Council設計ドキュメント2本を作成（設計のみ、実装しない）
+- [ ] 13) docs/ops/STATUS.md を更新（S22-08 100% / S22-09 1% WIP）
+- [ ] 14) 軽いverify（ログ判定。終了コードに依存しない）
+- [ ] 15) コミット（粒度は少なめ、でも監査点は分ける）
+- [ ] 16) PR作成（SOT/証拠：ガチガチ版＋短縮版、OBSとsha256を貼る）
