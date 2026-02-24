@@ -11,6 +11,6 @@
 - [x] 9) validate-onlyの“非実行保証”監査：入口ごとに executor 呼び出しが無いことを確認（違反はERRORで停止）
 - [x] 10) 決定論チェック（同一入力2回実行→JSONL sha256一致）※CPU安全：smoke(N=20)完了
 - [x] 13) docs/ops/STATUS.md を更新（S22-08 100% / S22-09 50% (Smoke tests OK)）
-- [ ] 14) 軽いverify（ログ判定。終了コードに依存しない）
-- [ ] 15) コミット（粒度は少なめ、でも監査点は分ける）
-- [ ] 16) PR作成（SOT/証拠：ガチガチ版＋短縮版、OBSとsha256を貼る）
+- [x] 14) 軽いverify（ログ判定。終了コードに依存しない）
+- [x] 15) コミット（粒度は少なめ、でも監査点は分ける）
+- [x] 16) reviewpack submit --mode verify-only 実行とPR生成（bundle shaをSOTに）/証拠：ガチガチ版＋短縮版、OBSとsha256を貼る）
