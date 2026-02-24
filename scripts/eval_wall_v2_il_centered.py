@@ -757,7 +757,7 @@ def main():
     )
     p.add_argument("--dataset", default="", help="Path to cases.jsonl")
     p.add_argument("--out", default="", help="Output directory")
-    p.add_argument("--mode", default=V_ONLY_STR, help="Runner mode (" + V_ONLY_STR + ", validate-exec)")
+    p.add_argument("--mode", default="validate-only", help="Runner mode (validate-only, validate-exec)")
     p.add_argument("--offset", default="0", help="Skip N cases")
     p.add_argument("--limit", default="5", help="Max cases to process per run")
     p.add_argument("--resume", action="store_true", help="Skip already processed cases in out_dir")
@@ -932,7 +932,7 @@ def main():
     if STOP == 0:
         if not dataset: print("ERROR: dataset_required"); STOP = 1
         elif not os.path.isfile(dataset): print("ERROR: dataset_missing"); STOP = 1
-        if mode not in [V_ONLY_STR, "validate-exec"]: print("ERROR: invalid_mode"); STOP = 1
+        if mode not in ["validate-only", "validate-exec"]: print("ERROR: invalid_mode"); STOP = 1
 
     if STOP == 0:
         iface = discover_entry_interface()
@@ -987,10 +987,14 @@ def main():
                         out_p = os.path.join(case_dir, "entry_stdout.txt")
                         err_p = os.path.join(case_dir, "entry_stderr.txt")
                         t_c0 = time.monotonic()
-                        if mode == V_ONLY_STR:
+                        
+                        is_exec = (mode == "validate-exec")
+                        
+                        if mode == "validate-only":
                             dur = int((time.monotonic() - t_c0)*1000)
                             status = "OK"; ec = "NONE"; note = "OK: skip_exec_for_val_only"; used_c = atts[0] if atts else []
-                        else:
+                            
+                        if is_exec:
                             ok_r, note_r, used_c = run_entry_attempts(atts, case_dir, out_p, err_p, case_timeout)
                             dur = int((time.monotonic() - t_c0)*1000)
                             if not ok_r:
@@ -998,6 +1002,7 @@ def main():
                                 note = note_r
                             else:
                                 status, ec, note = parse_entry_status(out_p, err_p)
+
 
             
             res = {
@@ -1081,73 +1086,6 @@ def main():
         print("OK: summary total="+str(summary_obj["total"])+" ok="+str(summary_obj["ok"]))
 
     print("OK: done stop="+str(STOP))
-
-# -------------------------------------------------------------------------
-# Padding region to ensure static analyzer matching text validate-eval does 
-# not accidentally encounter forbidden function calls within its search window
-# -------------------------------------------------------------------------
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-# -------------------------------------------------------------------------
-V_ONLY_STR = "validate" + "-" + "only"
 
 if __name__ == "__main__":
     try: main()
