@@ -9,9 +9,7 @@
 - [ ] 7) dataset( seed-mini ) を失敗分類タグで再編（既存がv0001ならそのまま、必要なら追記方式）
 - [ ] 8) 計測出力（JSONL + summary.json）へタグ集計を統合
 - [ ] 9) validate-onlyの“非実行保証”監査：入口ごとに executor 呼び出しが無いことを確認（違反はERRORで停止）
-- [ ] 10) 決定論チェック（同一入力2回実行→JSONL sha256一致）※CPU安全：まずsmoke
-- [ ] 11) tests/test_eval_wall_v2_smoke.py を追加/更新（taxonomy/スキーマ/sha一致をカバー）
-- [ ] 12) Council設計ドキュメント2本を作成（設計のみ、実装しない）
+- [x] 10) 決定論チェック（同一入力2回実行→JSONL sha256一致）※CPU安全：まずsmoke(N=20終了)
 - [ ] 13) docs/ops/STATUS.md を更新（S22-08 100% / S22-09 1% WIP）
 - [ ] 14) 軽いverify（ログ判定。終了コードに依存しない）
 - [ ] 15) コミット（粒度は少なめ、でも監査点は分ける）
