@@ -50,6 +50,67 @@ import time
 import glob as _glob
 from datetime import datetime, timezone
 
+# === S22-09: taxonomy/metrics helpers (TAXONOMY_v1) ===
+TAXONOMY_V1 = ["schema", "contract", "opcode", "normalization", "index", "search", "cite"]
+TAXONOMY_VERSION = "TAXONOMY_v1"
+
+def _sha256_file(path: str) -> str:
+    import hashlib
+    h = hashlib.sha256()
+    try:
+        with open(path, "rb") as f:
+            for chunk in iter(lambda: f.read(1024 * 1024), b""):
+                h.update(chunk)
+        return h.hexdigest()
+    except Exception as e:
+        print(f"ERROR: sha256_file_failed path={path} err={e}")
+        return ""
+
+def _write_jsonl_atomic(path: str, rows: list) -> None:
+    import os, tempfile, json
+    d = os.path.dirname(path) or "."
+    tmp_path = ""
+    try:
+        os.makedirs(d, exist_ok=True)
+        fd, tmp_path = tempfile.mkstemp(prefix=".tmp_jsonl_", dir=d)
+        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as f:
+            for obj in rows:
+                ss = json.dumps(obj, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+                f.write(ss + "\n")
+        os.replace(tmp_path, path)
+        print(f"OK: wrote_jsonl path={path} lines={len(rows)}")
+    except Exception as e:
+        print(f"ERROR: write_jsonl_atomic_failed path={path} err={e}")
+        try:
+            if tmp_path:
+                os.unlink(tmp_path)
+        except Exception:
+            pass
+
+def _taxonomy_from_case_v1(case_obj: dict) -> tuple[str, str]:
+    tag = ""
+    reason = ""
+    rs = str(case_obj.get("result_schema") or case_obj.get("failure_schema") or "").strip()
+    if rs in TAXONOMY_V1:
+        tag = rs
+        reason = f"result_schema={rs}"
+        return tag, reason
+    return tag, reason
+
+def _normalize_result(case_obj: dict) -> str:
+    v = case_obj.get("result") or case_obj.get("status") or case_obj.get("ok")
+    if v is True:
+        return "OK"
+    if v is False:
+        return "ERROR"
+    ss = str(v or "").upper()
+    if ss in ("OK", "ERROR", "SKIP"):
+        return ss
+    if ss:
+        return "ERROR"
+    return "ERROR"
+
+
 
 # -------------------------
 # Safe argparse (no exit)
@@ -731,6 +792,100 @@ def main():
         ok_i, rtb, _ = _to_int(args.rebuild_timebox_sec, "rebuild-timebox-sec", 10)
         ok_i, rmax, _ = _to_int(args.rebuild_max_files, "rebuild-max-files", 5000)
         ok_rb, summary_obj, note_rb, meta, samples = rebuild_summary(out_dir, args.cases_glob, rtb, rmax)
+        # === S22-09: build cases.jsonl + taxonomy metrics (TAXONOMY_v1) ===
+        try:
+            import os, json
+
+            run_json_path = os.path.join(out_dir, "run.json")
+            cases_jsonl_path = os.path.join(out_dir, "cases.jsonl")
+
+            notes = []
+            counts_by_tag = {t: 0 for t in TAXONOMY_V1}
+            out_rows = []
+
+            if not os.path.exists(run_json_path):
+                print(f"ERROR: run_json_missing path={run_json_path}")
+                notes.append("ERROR: run_json_missing")
+            else:
+                with open(run_json_path, "r", encoding="utf-8") as f:
+                    run_obj = json.load(f)
+
+                def _find_case_list(x):
+                    if isinstance(x, list):
+                        if x and isinstance(x[0], dict) and ("case_id" in x[0] or "id" in x[0]):
+                            return x
+                        return None
+                    if isinstance(x, dict):
+                        for k in sorted(x.keys()):
+                            got = _find_case_list(x[k])
+                            if got is not None:
+                                return got
+                    return None
+
+                cases = _find_case_list(run_obj) or []
+                if not cases:
+                    print("ERROR: cannot_find_cases_in_run_json")
+                    notes.append("ERROR: cannot_find_cases_in_run_json")
+
+                for c in cases:
+                    if not isinstance(c, dict):
+                        continue
+
+                    case_id = str(c.get("case_id") or c.get("id") or "").strip()
+                    res = _normalize_result(c)
+
+                    tag, reason = _taxonomy_from_case_v1(c)
+                    if res in ("ERROR", "SKIP"):
+                        if not tag:
+                            tag = "contract"
+                            reason = "unclassified_failure"
+                        if tag not in TAXONOMY_V1:
+                            tag = "contract"
+                            reason = "invalid_tag_fallback"
+                        counts_by_tag[tag] = int(counts_by_tag.get(tag, 0)) + 1
+                    else:
+                        tag = ""
+                        reason = ""
+
+                    row = {
+                        "case_id": case_id,
+                        "dataset": str(getattr(args, "dataset", "") or ""),
+                        "mode": "run",
+                        "result": res,
+                        "artifacts": {
+                            "run_json": "run.json",
+                            "summary_json": "summary.json",
+                            "audit_json": "audit.json",
+                        },
+                    }
+                    if tag:
+                        row["taxonomy_tag"] = tag
+                        row["taxonomy_reason"] = reason
+
+                    out_rows.append(row)
+
+                out_rows.sort(key=lambda r: r.get("case_id", ""))
+
+                _write_jsonl_atomic(cases_jsonl_path, out_rows)
+
+            sha256_cases_jsonl = _sha256_file(cases_jsonl_path)
+
+            summary_obj["taxonomy_version"] = TAXONOMY_VERSION
+            summary_obj["counts_by_tag"] = counts_by_tag
+            summary_obj["sha256_cases_jsonl"] = sha256_cases_jsonl
+            if notes:
+                summary_obj.setdefault("notes", [])
+                for n in notes:
+                    summary_obj["notes"].append(n)
+
+        except Exception as e:
+            print(f"ERROR: taxonomy_metrics_block_failed err={e}")
+            try:
+                summary_obj.setdefault("notes", [])
+                summary_obj["notes"].append(f"ERROR: taxonomy_metrics_block_failed err={e}")
+            except Exception:
+                pass
+        # === end S22-09 block ===
         json_dump_atomic(os.path.join(out_dir, "summary.json"), summary_obj)
         ov_ok, audit_obj, a_note = audit_from_rebuild(out_dir, args.cases_glob, summary_obj, meta, samples)
         
@@ -907,7 +1062,7 @@ def main():
         # SHA256SUMS best-effort
         sums_path = os.path.join(out_dir, "SHA256SUMS.txt")
         lines = []
-        for rel in ["run.json", "summary.json", "audit.json"]:
+        for rel in ["run.json", "cases.jsonl", "summary.json", "audit.json"]:
             p2 = os.path.join(out_dir, rel)
             okh, hx, _ = sha256_file(p2)
             if okh:
