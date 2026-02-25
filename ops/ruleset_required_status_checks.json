@@ -7,24 +7,7 @@
     "ruleset_id": 12629447,
     "ruleset_name": "main"
   },
-  "required_status_checks": [
-    {
-      "context": "verify-pack",
-      "integration_id": 15368
-    },
-    {
-      "context": "test",
-      "integration_id": 15368
-    },
-    {
-      "context": "body_required",
-      "integration_id": 15368
-    },
-    {
-      "context": "milestone_required",
-      "integration_id": 15368
-    }
-  ],
+  "required_status_checks": [],
   "strict_required_status_checks_policy": true,
   "do_not_enforce_on_create": false
 }
