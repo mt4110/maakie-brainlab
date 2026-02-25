@@ -3,7 +3,7 @@
 ## ACTIVE
 
 | Item | State | Ref | Next |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | AMBI-01 | ACTIVE | docs/ops/AMBI_CONTRACT_v1.md | 100% (First Release) |
 | S21-01 | ACTIVE | docs/ops/S21-01_PLAN.md | Triage Top-1 file (K=10) |
 | S21-05 | ACTIVE | docs/ops/S21-05_PLAN.md | 100% (Merged PR #72) |
@@ -17,13 +17,12 @@
 | S22-12 | ACTIVE | docs/ops/S22-12_PLAN.md | 100% (Merged PR #92) ✅ |
 | S22-13 | ACTIVE | docs/ops/S22-13_PLAN.md | 100% (Merged PR #93) ✅ |
 | S22-14 | ACTIVE | docs/ops/S22-14_PLAN.md | 100% (Merged PR #94) ✅ |
-
-
+| S22-15 | ACTIVE | docs/ops/S22-15_PLAN.md | 100% ✅ |
 
 ## NEXT
 
 | Item | State | Ref | Next |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | S21-02 | ACTIVE | docs/ops/S21-02_PLAN.md | 100% (Merged PR #69) |
 | S21-03 | ACTIVE | docs/ops/S21-03_PLAN.md | 100% (Merged PR #70) |
 | S21-04 | ACTIVE | docs/ops/S21-04_PLAN.md | 100% (Merged PR #71) |
@@ -41,12 +40,8 @@
 |---|---|---|
 | TBD | TBD | TBD |
 
-
 ## GRAVEYARD
 
 | Item | Reason | Ref |
 |---|---|---|
 | TBD | TBD | TBD |
-
-
-| S22-15 | ACTIVE | docs/ops/S22-15_PLAN.md | 1% 🟡 |
