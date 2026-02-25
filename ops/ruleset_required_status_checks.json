@@ -1,0 +1,18 @@
+{
+    "schema_version": 1,
+    "updated_utc": "2026-02-25T15:45:00Z",
+    "source": {
+        "owner": null,
+        "repo": null,
+        "ruleset_id": null,
+        "ruleset_name": null
+    },
+    "required_status_checks": [
+        {
+            "context": "REPLACE_ME",
+            "integration_id": null
+        }
+    ],
+    "strict_required_status_checks_policy": null,
+    "do_not_enforce_on_create": null
+}
