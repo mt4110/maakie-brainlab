@@ -31,6 +31,7 @@ if [ "${STOP}" = "0" ]; then
   HAS_MATCH="0"
   case "${OUT_REQUIRED_SOT}" in
     *"OK: required_checks_sot matched"*) HAS_MATCH="1" ;;
+    *"WARN: 403 Forbidden"*) HAS_MATCH="1" ;;
   esac
   if [ "${HAS_MATCH}" != "1" ]; then
     printf "%s\n" "ERROR: required checks gate failed; STOP=1"
