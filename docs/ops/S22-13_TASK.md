@@ -44,7 +44,7 @@
   * SHA256: 5398e53c5e37948e4cd464f01776433ef01495f66d770454c9ed175acd798a9b
 * walkthrough:
 
-  * walkthrough.md（※リポジトリに入れる場合は file:// 等の非portable要素を含めない）
+  * walkthrough.md（※リポジトリに入れる場合は file scheme 等の非portable要素を含めない）
 
 ## 既知の運用手順（後日：GitHub設定が整った時に解除）
 
