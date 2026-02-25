@@ -45,6 +45,7 @@ ci: ci-test
 	$(MAKE) verify-il
 
 verify-il:
+	$(PYENV) $(PY) ops/il_entrypoint_guard.py
 	$(PYENV) $(PY) scripts/il_check.py
 	$(PYENV) $(PY) scripts/il_exec_selftest.py
 
