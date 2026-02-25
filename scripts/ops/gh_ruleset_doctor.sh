@@ -85,35 +85,32 @@ fi
 
 # Fetch check-runs (head commit)
 if [ "$STOP" = "0" ]; then
-  $GH api "repos/$REPO/commits/$SHA/check-runs?per_page=100" > "$OBS/20_check_runs_head.json" 2>/dev/null || true
-  SZ="$(wc -c < "$OBS/20_check_runs_head.json" 2>/dev/null | tr -d " " || true)"
-  if [ -z "$SZ" ] || [ "$SZ" = "0" ]; then
-    echo "WARN: check-runs response empty (insufficient permission or API change?)" | tee "$OBS/21_check_runs_warn.txt" || true
-  else
-    echo "OK: wrote check-runs head bytes=$SZ" | tee "$OBS/21_check_runs_ok.txt" || true
-  fi
+  $GH api "repos/$REPO/commits/$SHA/check-runs?per_page=100" > "$OBS/20_check_runs_head.json" 2>&1 || true
+  $GH api "repos/$REPO/commits/$SHA/status" > "$OBS/22_statuses_head.json" 2>&1 || true
+  
+  RUNS_SZ="$(wc -c < "$OBS/20_check_runs_head.json" 2>/dev/null | tr -d " " || true)"
+  STAT_SZ="$(wc -c < "$OBS/22_statuses_head.json" 2>/dev/null | tr -d " " || true)"
+  echo "OK: wrote check-runs bytes=$RUNS_SZ" | tee "$OBS/21_check_runs_ok.txt" || true
+  echo "OK: wrote statuses bytes=$STAT_SZ" | tee "$OBS/23_statuses_ok.txt" || true
 fi
 
 # Fetch rulesets list
 if [ "$STOP" = "0" ]; then
-  $GH api "repos/$REPO/rulesets?per_page=100" > "$OBS/30_rulesets_list.json" 2>/dev/null || true
+  $GH api "repos/$REPO/rulesets?per_page=100" > "$OBS/30_rulesets_list.json" 2>&1 || true
   SZ="$(wc -c < "$OBS/30_rulesets_list.json" 2>/dev/null | tr -d " " || true)"
-  if [ -z "$SZ" ] || [ "$SZ" = "0" ]; then
-    echo "WARN: rulesets list empty (no rulesets or permission?)" | tee "$OBS/31_rulesets_warn.txt" || true
-  else
-    echo "OK: wrote rulesets list bytes=$SZ" | tee "$OBS/31_rulesets_ok.txt" || true
-  fi
+  echo "OK: wrote rulesets list bytes=$SZ" | tee "$OBS/31_rulesets_ok.txt" || true
 fi
 
-# Parse + compare in python (no sys.exit / no raise for control)
+# Parse + compare in python
 if [ "$STOP" = "0" ]; then
   export OBS
-  python3 - <<'PY' 2>/dev/null | tee "$OBS/40_compare.log" || true
+  python3 - <<"PY" 2>&1 | tee "$OBS/40_compare.log" || true
 import os, json
 from pathlib import Path
 
 obs = Path(os.environ["OBS"])
 p_runs = obs / "20_check_runs_head.json"
+p_stat = obs / "22_statuses_head.json"
 p_list = obs / "30_rulesets_list.json"
 
 def safe_load(p):
@@ -124,23 +121,31 @@ def safe_load(p):
         return None
 
 runs = safe_load(p_runs) if p_runs.exists() else None
+stat = safe_load(p_stat) if p_stat.exists() else None
 lst  = safe_load(p_list) if p_list.exists() else None
 
 observed = set()
+# 1) Check-runs
 if isinstance(runs, dict):
     for cr in runs.get("check_runs", []) or []:
         name = cr.get("name")
         if isinstance(name, str) and name.strip():
             observed.add(name.strip())
 
-print(f"OK: observed_check_runs_count={len(observed)}")
+# 2) Statuses
+if isinstance(stat, dict):
+    for s in stat.get("statuses", []) or []:
+        ctx = s.get("context")
+        if isinstance(ctx, str) and ctx.strip():
+            observed.add(ctx.strip())
+
+print(f"OK: observed_total_contexts_count={len(observed)}")
 if len(observed) > 0:
-    # keep it light: show up to 30
     sample = sorted(list(observed))[:30]
     for s in sample:
         print(f"OK: observed={s}")
 else:
-    print("WARN: no observed check-runs (may be permissions / no checks on that commit)")
+    print("WARN: no observed contexts (may be permissions / no checks on that commit)")
 
 ruleset_ids = []
 if isinstance(lst, list):
@@ -208,7 +213,7 @@ fi
 # Final compare (detail jsons -> required contexts -> diff)
 if [ "$STOP" = "0" ]; then
   export OBS
-  python3 - <<'PY' 2>/dev/null | tee "$OBS/60_report.log" || true
+  python3 - <<"PY" 2>&1 | tee "$OBS/60_report.log" || true
 import os, json, glob
 from pathlib import Path
 
@@ -221,13 +226,24 @@ def safe_load(p):
         print(f"ERROR: cannot parse {p} ({e})")
         return None
 
-runs = safe_load(obs / "20_check_runs_head.json") if (obs / "20_check_runs_head.json").exists() else None
 observed = set()
-if isinstance(runs, dict):
-    for cr in runs.get("check_runs", []) or []:
-        n = cr.get("name")
-        if isinstance(n, str) and n.strip():
-            observed.add(n.strip())
+# 1) Check-runs
+p_runs = obs / "20_check_runs_head.json"
+if p_runs.exists():
+    j = safe_load(p_runs)
+    if isinstance(j, dict):
+        for cr in j.get("check_runs", []) or []:
+            n = cr.get("name")
+            if isinstance(n, str) and n.strip(): observed.add(n.strip())
+
+# 2) Statuses context
+p_stat = obs / "22_statuses_head.json"
+if p_stat.exists():
+    j = safe_load(p_stat)
+    if isinstance(j, dict):
+        for s in j.get("statuses", []) or []:
+            ctx = s.get("context")
+            if isinstance(ctx, str) and ctx.strip(): observed.add(ctx.strip())
 
 # collect required contexts from detail files if they exist
 required_contexts = {}  # key: ruleset_name, val: set(context)
@@ -235,8 +251,7 @@ detail_files = sorted(glob.glob(str(obs / "51_ruleset_*.json")))
 if detail_files:
     for fp in detail_files:
         j = safe_load(fp)
-        if not isinstance(j, dict):
-            continue
+        if not isinstance(j, dict): continue
         rname = j.get("name") or f"id={j.get('id')}"
         reqs = set()
         for rule in (j.get("rules") or []):
@@ -245,10 +260,8 @@ if detail_files:
                 for item in (params.get("required_status_checks") or []):
                     if isinstance(item, dict):
                         ctx = item.get("context")
-                        if isinstance(ctx, str) and ctx.strip():
-                            reqs.add(ctx.strip())
-        if reqs:
-            required_contexts[rname] = reqs
+                        if isinstance(ctx, str) and ctx.strip(): reqs.add(ctx.strip())
+        if reqs: required_contexts[rname] = reqs
 
 # fallback: if no detail files, try list response parse
 if not required_contexts and (obs / "30_rulesets_list.json").exists():
@@ -263,10 +276,8 @@ if not required_contexts and (obs / "30_rulesets_list.json").exists():
                     for item in (params.get("required_status_checks") or []):
                         if isinstance(item, dict):
                             ctx = item.get("context")
-                            if isinstance(ctx, str) and ctx.strip():
-                                reqs.add(ctx.strip())
-            if reqs:
-                required_contexts[rname] = reqs
+                            if isinstance(ctx, str) and ctx.strip(): reqs.add(ctx.strip())
+            if reqs: required_contexts[rname] = reqs
 
 print(f"OK: observed_count={len(observed)}")
 print(f"OK: rulesets_with_required_checks={len(required_contexts)}")
@@ -281,7 +292,7 @@ for rname, reqs in sorted(required_contexts.items(), key=lambda x: x[0].lower())
             print(f"WARN: missing_context={c} (ruleset={rname})")
 
 if ghost_total == 0:
-    print("OK: no missing contexts detected on HEAD commit check-runs")
+    print("OK: no missing contexts detected on HEAD commit")
 else:
     print(f"WARN: missing_contexts_total={ghost_total}")
     print("HINT: missing does not always mean ghost; it may be conditional. If it keeps missing across several commits, it is likely ghost.")

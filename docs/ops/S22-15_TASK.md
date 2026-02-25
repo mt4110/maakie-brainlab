@@ -34,7 +34,7 @@ S22-15: 50% 🟡 (Addendum Pack WIP)
 - [x] docs_ops_doctor 実行（ERRORが無い）
 - [x] gh_ruleset_doctor 実行（WARNが出たら、対処メモを残す）
 
-05 Addendum: Pro Ops Pack (4-9)
+05 Addendum: Pro Ops Pack (4-9, Local Only)
 
 - [ ] 4-A: Extract ruleset ID from latest audit log [/]
 - [ ] 4-B: Re-audit with PR head SHA (if available)
