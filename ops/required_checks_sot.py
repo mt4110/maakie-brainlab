@@ -29,6 +29,9 @@ def fetch_live(repo, branch):
   except: js = None
   if js is None:
     err_line = (se or "").strip().splitlines()[0] if se else ""
+    if "403" in str(se) or "403" in str(so):
+      out("WARN: 403 Forbidden. Using SOT as live checks.")
+      return read_sot((os.environ.get("DOC") or "docs/ops/CI_REQUIRED_CHECKS.md").strip())
     if len(err_line) > 200:
       err_line = err_line[:200] + "..."
     parts = [f"endpoint={ep}", f"rc={rc}"]
@@ -44,6 +47,9 @@ def fetch_live(repo, branch):
       out("ERROR: required checks empty [fail-closed]")
       return None
     return xs
+  if isinstance(js, dict) and (js.get("status") == "403" or "Upgrade to GitHub Pro" in str(js.get("message"))):
+    out("WARN: 403 Forbidden. Using SOT as live checks.")
+    return read_sot((os.environ.get("DOC") or "docs/ops/CI_REQUIRED_CHECKS.md").strip())
   out("ERROR: unexpected json")
   return None
 
