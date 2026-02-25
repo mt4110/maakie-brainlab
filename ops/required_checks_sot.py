@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # Stopless: no sys.exit / no SystemExit. Returns 0 always.
-import os, re, json, subprocess, datetime
+import os, re, json, subprocess
 
 def out(s):
   try: print(s)
@@ -28,7 +28,15 @@ def fetch_live(repo, branch):
   try: js = json.loads(so)
   except: js = None
   if js is None:
-    out("ERROR: contexts failure")
+    err_line = (se or "").strip().splitlines()[0] if se else ""
+    if len(err_line) > 200:
+      err_line = err_line[:200] + "..."
+    parts = [f"endpoint={ep}", f"rc={rc}"]
+    if err_line:
+      parts.append(f"stderr={err_line}")
+    if (so or "").strip():
+      parts.append("note=non-JSON stdout")
+    out("ERROR: contexts failure [" + "; ".join(parts) + "]")
     return None
   if isinstance(js, list):
     xs = sorted(set([x.strip() for x in js if x and x.strip()]))
@@ -49,7 +57,8 @@ def read_sot(doc):
 
 def write_sot(doc, live):
   live = sorted(set([x.strip() for x in live if x.strip()]))
-  block = "<!-- required_checks_sot:v1\n" + "\n".join(live) + "\n-->\n"
+  comments = "# auto-managed. run:\n#   bash ops/required_checks_sot.sh write-sot\n#   bash ops/required_checks_sot.sh --mode write-sot\n# NOTE: empty/missing live required checks => ERROR (fail-closed)"
+  block = "<!-- required_checks_sot:v1\n" + comments + "\n" + "\n".join(live) + "\n-->\n"
   try: s = open(doc, "r", encoding="utf-8").read()
   except: return False
   if re.search(r"<!--\s*required_checks_sot:v1.*?-->", s, flags=re.S):
