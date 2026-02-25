@@ -17,7 +17,7 @@
 | S22-12 | ACTIVE | docs/ops/S22-12_PLAN.md | 100% (Merged PR #92) ✅ |
 | S22-13 | ACTIVE | docs/ops/S22-13_PLAN.md | 100% (Merged PR #93) ✅ |
 | S22-14 | ACTIVE | docs/ops/S22-14_PLAN.md | 100% (Merged PR #94) ✅ |
-| S22-15 | Addendum (4-9) 50% 🟡 | WIP | [S22-15_TASK.md](file:///Users/takemuramasaki/dev/maakie-brainlab/docs/ops/S22-15_TASK.md) |
+| S22-15 | Addendum (4-9) 50% 🟡 | WIP | [S22-15_TASK.md](~/dev/maakie-brainlab/docs/ops/S22-15_TASK.md) |
 
 ## NEXT
 
