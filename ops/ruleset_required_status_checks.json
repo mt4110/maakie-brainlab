@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_utc": "2026-02-25T06:48:32Z",
+  "updated_utc": "2026-02-25T07:44:36Z",
   "source": {
     "owner": "mt4110",
     "repo": "maakie-brainlab",
@@ -8,22 +8,8 @@
     "ruleset_name": "main"
   },
   "required_status_checks": [
-    {
-      "context": "verify-pack",
-      "integration_id": 15368
-    },
-    {
-      "context": "test",
-      "integration_id": 15368
-    },
-    {
-      "context": "body_required",
-      "integration_id": 15368
-    },
-    {
-      "context": "milestone_required",
-      "integration_id": 15368
-    }
+    "verify-pack",
+    "test"
   ],
   "strict_required_status_checks_policy": true,
   "do_not_enforce_on_create": false

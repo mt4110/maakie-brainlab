@@ -1,7 +1,7 @@
 
 S22-15 TASK
 
-S22-15: 100% ✅ (Merged)
+S22-15: 50% 🟡 (Addendum Pack WIP)
 
 ルール: exit禁止 / set -e禁止 / 例外停止禁止 / 重処理禁止（分割）
 ログ: .local/obs に “真実だけ” を残す（SKIP理由は必ず1行）
@@ -10,7 +10,7 @@ S22-15: 100% ✅ (Merged)
 
 - [x] main 最新化 / prune 済み（obsに記録）
 - [x] 作業ブランチ作成（衝突回避ループ）
-- [x] docs/ops の STATUS に S22-15 が 1% で載っている
+- [x] docs/ops/ STATUS に S22-15 が 50% で載っている
 
 01 Implement: docs_ops_doctor.py
 
@@ -23,7 +23,7 @@ S22-15: 100% ✅ (Merged)
 - [x] gh が無い環境は SKIP で落ちない
 - [x] rulesets JSON / check-runs JSON を obs に保存
 - [x] required_status_checks の “未観測context” を WARN で列挙
-- [x] 未観測が出た時だけ直近Nコミット追観測（N小さめ）
+- [x] 未観測が出た時の Hint 表示（Nコミット追観測は descope/軽量化）
 
 03 Docs
 
@@ -34,12 +34,17 @@ S22-15: 100% ✅ (Merged)
 - [x] docs_ops_doctor 実行（ERRORが無い）
 - [x] gh_ruleset_doctor 実行（WARNが出たら、対処メモを残す）
 
-05 Commit/Push/PR
+05 Addendum: Pro Ops Pack (4-9, Local Only)
 
-- [x] 差分がある時だけ commit（無駄コミット禁止）
-- [x] push
-- [x] PR 作成（このフェーズは 1PR で閉じる）
+- [ ] 4-A: Extract ruleset ID from latest audit log [/]
+- [ ] 4-B: Re-audit with PR head SHA (if available)
+- [ ] 4-C: Self-audit for banned tokens (exit/SystemExit)
+- [ ] 5: Pin SOT (write-sot) and commit
+- [ ] 6: Generate/Apply ghost prune candidate (APPLY_SOT=1)
+- [ ] 7: Sync SOT to Ruleset (APPLY_SYNC=1 + Double-lock)
+- [ ] 8: Automated PR creation
+- [ ] 9: Closeout (100% status update and commit)
 
 99 Closeout (merge後)
 
-- [x] S22-15 を 100% ✅ に（TASK/STATUS）
+- [ ] S22-15 を 100% ✅ に（TASK/STATUS）

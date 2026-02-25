@@ -1,0 +1,38 @@
+name: verify
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    if: ${{ vars.SELF_HOSTED_OWNER != '' && github.repository_owner == vars.SELF_HOSTED_OWNER && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false) }}
+    runs-on:
+      - self-hosted
+      - mac-mini
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify (Nix)
+        shell: bash
+        run: |
+          if ! command -v nix >/dev/null 2>&1; then
+            echo "ERROR: nix is required on this runner"
+            exit 1
+          fi
+          nix shell nixpkgs#go nixpkgs#uv nixpkgs#python312 -c env -u GOROOT -u GOTOOLDIR -u GOENV bash -c '
+            uv sync
+            make test
+            make smoke
+            go vet ./...
+          '

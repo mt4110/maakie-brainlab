@@ -35,21 +35,39 @@ def main():
     s_stat = safe_read(stat) if stat.exists() else None
 
     # TASK progress line
+    task_val = None
     if s_task is not None:
         m = re.search(rf"^\s*{re.escape(sprint)}:\s*([0-9]+%)\s*(.*)$", s_task, re.M)
         if m:
-            print(f"OK: task_progress={m.group(1)} {m.group(2).strip()}")
+            task_val = m.group(1)
+            print(f"OK: task_progress={task_val} {m.group(2).strip()}")
         else:
             warns.append(f"TASK has no progress line like '{sprint}: ...'")
 
     # STATUS row
+    stat_val = None
     if s_stat is not None:
-        # very tolerant: find any table row that starts with | S22-15 |
-        row = re.search(rf"^\s*\|\s*{re.escape(sprint)}\s*\|.*\|\s*([^|]+)\|\s*$", s_stat, re.M)
-        if row:
-            print(f"OK: status_progress={row.group(1).strip()}")
+        # Capture the whole row for the sprint to avoid column mismatch
+        row_match = re.search(rf"^\s*\|\s*{re.escape(sprint)}\s*\|.*$", s_stat, re.M)
+        if row_match:
+            stat_line = row_match.group(0)
+            print(f"OK: status_row_found={stat_line.strip()}")
+            # Find percentage anywhere in the row
+            pct_match = re.search(r"([0-9]+%)", stat_line)
+            if pct_match:
+                stat_val = pct_match.group(1)
+                print(f"OK: status_progress={stat_val}")
+            else:
+                warns.append(f"STATUS row for {sprint} has no percentage")
         else:
             warns.append(f"STATUS has no row for {sprint}")
+
+    # Consistency Check
+    if task_val and stat_val:
+        if task_val != stat_val:
+            warns.append(f"mismatch: TASK={task_val} vs STATUS={stat_val}")
+        else:
+            print("OK: TASK/STATUS progress value match")
 
     # report
     for e in errors:
