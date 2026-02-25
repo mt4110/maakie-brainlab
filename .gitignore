@@ -103,3 +103,4 @@ walkthrough.md.resolved
 
 # Temporary test files
 .tmp/
+cache/
