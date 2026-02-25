@@ -59,6 +59,7 @@
         "reviewpack",
         "setuptools",
         "sqlite",
+        "Stopless",
         "STOPWORDS",
         "tamperkey",
         "tampertest",
