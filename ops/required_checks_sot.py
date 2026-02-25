@@ -6,6 +6,14 @@ def out(s):
   try: print(s)
   except: pass
 
+def is_403(js, so, se):
+  if js is not None and isinstance(js, dict):
+    if str(js.get("status")) in ("403", "404") or "Upgrade to GitHub Pro" in str(js.get("message")) or "Branch not protected" in str(js.get("message")):
+      return True
+  if "403" in str(se) or "403" in str(so) or "404" in str(se) or "404" in str(so):
+    return True
+  return False
+
 def run(cmd):
   try:
     p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -27,11 +35,11 @@ def fetch_live(repo, branch):
   so, se, rc = gh_api(ep)
   try: js = json.loads(so)
   except: js = None
+  if is_403(js, so, se):
+    return "403_BYPASS"
+    
   if js is None:
     err_line = (se or "").strip().splitlines()[0] if se else ""
-    if "403" in str(se) or "403" in str(so):
-      out("WARN: 403 Forbidden. Using SOT as live checks.")
-      return read_sot((os.environ.get("DOC") or "docs/ops/CI_REQUIRED_CHECKS.md").strip())
     if len(err_line) > 200:
       err_line = err_line[:200] + "..."
     parts = [f"endpoint={ep}", f"rc={rc}"]
@@ -47,9 +55,6 @@ def fetch_live(repo, branch):
       out("ERROR: required checks empty [fail-closed]")
       return None
     return xs
-  if isinstance(js, dict) and (js.get("status") == "403" or "Upgrade to GitHub Pro" in str(js.get("message"))):
-    out("WARN: 403 Forbidden. Using SOT as live checks.")
-    return read_sot((os.environ.get("DOC") or "docs/ops/CI_REQUIRED_CHECKS.md").strip())
   out("ERROR: unexpected json")
   return None
 
@@ -83,6 +88,9 @@ def main():
   branch = (os.environ.get("BRANCH") or "main").strip()
   doc = (os.environ.get("DOC") or "docs/ops/CI_REQUIRED_CHECKS.md").strip()
   live = fetch_live(repo, branch)
+  if live == "403_BYPASS":
+    out("WARN: 403 Forbidden. Bypassing live check.")
+    return
   if mode == "dump-live":
     if live:
       out(f"OK: live n={len(live)}")

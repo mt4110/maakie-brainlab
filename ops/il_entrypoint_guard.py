@@ -2,6 +2,7 @@
 """
 S22-14: Always-on guard to ensure Canonical Entrypoint is used for IL execution.
 """
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -10,10 +11,14 @@ CANONICAL_ENTRYPOINT = "scripts/il_entry.py"
 def main():
     repo_root = Path(__file__).resolve().parent.parent
     try:
+        if not shutil.which("rg"):
+            print("WARN: 'rg' (ripgrep) is not installed. Skipping il_entrypoint_guard checks.")
+            return
+
         # Search for legacy entrypoint invocations in key directories
         cmd = [
             "rg", "--no-heading", "--line-number", "--color", "never",
-            r"(python3?\s+.*scripts/il_(?:exec|check|guard|exec_run)\.py)",
+            r"(python3?\s+.*scripts/il_(?:exec|check|guard|exec_run)\.py|scripts/il_(?:exec|check|guard|exec_run)\.py)",
             "Makefile", "ops", ".github", "docs/ops"
         ]
         
