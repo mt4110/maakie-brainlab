@@ -1,7 +1,7 @@
 
 S22-15 TASK
 
-S22-15: 50% 🟡 (Addendum Pack WIP)
+S22-15: 100% ✅ (Merged PR #98 / commit 2b8df7b)
 
 ルール: exit禁止 / set -e禁止 / 例外停止禁止 / 重処理禁止（分割）
 ログ: .local/obs に “真実だけ” を残す（SKIP理由は必ず1行）
@@ -35,16 +35,14 @@ S22-15: 50% 🟡 (Addendum Pack WIP)
 - [x] gh_ruleset_doctor 実行（WARNが出たら、対処メモを残す）
 
 05 Addendum: Pro Ops Pack (4-9, Local Only)
-
-- [ ] 4-A: Extract ruleset ID from latest audit log [/]
-- [ ] 4-B: Re-audit with PR head SHA (if available)
-- [ ] 4-C: Self-audit for banned tokens (exit/SystemExit)
-- [ ] 5: Pin SOT (write-sot) and commit
-- [ ] 6: Generate/Apply ghost prune candidate (APPLY_SOT=1)
+- [x] 4-A: Extract ruleset ID from latest audit log [/]
+- [x] 4-B: Re-audit with PR head SHA (if available)
+- [x] 4-C: Self-audit for banned tokens (exit/SystemExit)
+- [x] 5: Pin SOT (write-sot) and commit
+- [x] 6: Generate/Apply ghost prune candidate (APPLY_SOT=1)
 - [ ] 7: Sync SOT to Ruleset (APPLY_SYNC=1 + Double-lock)
-- [ ] 8: Automated PR creation
-- [ ] 9: Closeout (100% status update and commit)
+- [x] 8: Automated PR creation
+- [x] 9: Closeout (100% status update and commit)
 
 99 Closeout (merge後)
-
-- [ ] S22-15 を 100% ✅ に（TASK/STATUS）
+- [x] S22-15 を 100% ✅ に（TASK/STATUS）

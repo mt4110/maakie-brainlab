@@ -1,7 +1,7 @@
 # S22-15 PLAN
 ## SOT
 - Prev: S22-14 = 100% ✅ (Merged PR #94 / commit e74cb10)
-- Next: Addendum (4-9) 50% 🟡 (WIP)
+- Now: S22-15 = 100% ✅ (Merged PR #98 / commit 2b8df7b)
 
 ## Theme (neutral but durable)
 Ops Guardrails: GitHub Ruleset required_status_checks の “幽霊context” 再発防止 + docs/ops SOT同期の監査性向上
