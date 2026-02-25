@@ -47,24 +47,27 @@ def main():
     # STATUS row
     stat_val = None
     if s_stat is not None:
-        row = re.search(rf"^\s*\|\s*{re.escape(sprint)}\s*\|.*\|\s*([^|]+)\|\s*$", s_stat, re.M)
-        if row:
-            stat_val = row.group(1).strip()
-            print(f"OK: status_progress={stat_val}")
+        # Capture the whole row for the sprint to avoid column mismatch
+        row_match = re.search(rf"^\s*\|\s*{re.escape(sprint)}\s*\|.*$", s_stat, re.M)
+        if row_match:
+            stat_line = row_match.group(0)
+            print(f"OK: status_row_found={stat_line.strip()}")
+            # Find percentage anywhere in the row
+            pct_match = re.search(r"([0-9]+%)", stat_line)
+            if pct_match:
+                stat_val = pct_match.group(1)
+                print(f"OK: status_progress={stat_val}")
+            else:
+                warns.append(f"STATUS row for {sprint} has no percentage")
         else:
             warns.append(f"STATUS has no row for {sprint}")
 
     # Consistency Check
     if task_val and stat_val:
-        # Extract % from stat_val if it contains other text
-        stat_pct = re.search(r"([0-9]+%)", stat_val)
-        if stat_pct:
-            if task_val != stat_pct.group(1):
-                warns.append(f"mismatch: TASK={task_val} vs STATUS={stat_pct.group(1)}")
-            else:
-                print("OK: TASK/STATUS progress value match")
+        if task_val != stat_val:
+            warns.append(f"mismatch: TASK={task_val} vs STATUS={stat_val}")
         else:
-            warns.append(f"STATUS progress '{stat_val}' has no percentage to compare with TASK '{task_val}'")
+            print("OK: TASK/STATUS progress value match")
 
     # report
     for e in errors:

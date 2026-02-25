@@ -85,23 +85,37 @@ fi
 
 # Fetch check-runs (head commit)
 if [ "$STOP" = "0" ]; then
-  $GH api "repos/$REPO/commits/$SHA/check-runs?per_page=100" > "$OBS/20_check_runs_head.json" 2>&1 || true
-  $GH api "repos/$REPO/commits/$SHA/status" > "$OBS/22_statuses_head.json" 2>&1 || true
+  $GH api "repos/$REPO/commits/$SHA/check-runs?per_page=100" > "$OBS/20_check_runs_head.json" 2> "$OBS/20_check_runs_err.log" || true
+  $GH api "repos/$REPO/commits/$SHA/status" > "$OBS/22_statuses_head.json" 2> "$OBS/22_statuses_err.log" || true
   
   RUNS_SZ="$(wc -c < "$OBS/20_check_runs_head.json" 2>/dev/null | tr -d " " || true)"
   STAT_SZ="$(wc -c < "$OBS/22_statuses_head.json" 2>/dev/null | tr -d " " || true)"
-  echo "OK: wrote check-runs bytes=$RUNS_SZ" | tee "$OBS/21_check_runs_ok.txt" || true
-  echo "OK: wrote statuses bytes=$STAT_SZ" | tee "$OBS/23_statuses_ok.txt" || true
+  
+  if [ -z "$RUNS_SZ" ] || [ "$RUNS_SZ" -eq 0 ] 2>/dev/null; then
+    echo "WARN: check-runs response appears empty bytes=$RUNS_SZ" | tee "$OBS/21_check_runs_warn.txt" || true
+  else
+    echo "OK: wrote check-runs bytes=$RUNS_SZ" | tee "$OBS/21_check_runs_ok.txt" || true
+  fi
+
+  if [ -z "$STAT_SZ" ] || [ "$STAT_SZ" -eq 0 ] 2>/dev/null; then
+    echo "WARN: statuses response appears empty bytes=$STAT_SZ" | tee "$OBS/23_statuses_warn.txt" || true
+  else
+    echo "OK: wrote statuses bytes=$STAT_SZ" | tee "$OBS/23_statuses_ok.txt" || true
+  fi
 fi
 
 # Fetch rulesets list
 if [ "$STOP" = "0" ]; then
-  $GH api "repos/$REPO/rulesets?per_page=100" > "$OBS/30_rulesets_list.json" 2>&1 || true
+  $GH api "repos/$REPO/rulesets?per_page=100" > "$OBS/30_rulesets_list.json" 2> "$OBS/30_rulesets_err.log" || true
   SZ="$(wc -c < "$OBS/30_rulesets_list.json" 2>/dev/null | tr -d " " || true)"
-  echo "OK: wrote rulesets list bytes=$SZ" | tee "$OBS/31_rulesets_ok.txt" || true
+  if [ -z "$SZ" ] || [ "$SZ" -eq 0 ] 2>/dev/null; then
+    echo "WARN: rulesets list appears empty bytes=$SZ" | tee "$OBS/31_rulesets_warn.txt" || true
+  else
+    echo "OK: wrote rulesets list bytes=$SZ" | tee "$OBS/31_rulesets_ok.txt" || true
+  fi
 fi
 
-# Parse + compare in python
+# Parse + compare in python (no sys.exit / no raise for control; follow STOP-flag "stopless" pattern)
 if [ "$STOP" = "0" ]; then
   export OBS
   python3 - <<"PY" 2>&1 | tee "$OBS/40_compare.log" || true

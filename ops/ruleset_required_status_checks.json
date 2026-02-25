@@ -7,7 +7,10 @@
     "ruleset_id": 12629447,
     "ruleset_name": "main"
   },
-  "required_status_checks": [],
+  "required_status_checks": [
+    "verify-pack",
+    "test"
+  ],
   "strict_required_status_checks_policy": true,
   "do_not_enforce_on_create": false
 }
