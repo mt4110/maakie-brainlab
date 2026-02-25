@@ -30,7 +30,7 @@ if [ "${STOP}" = "0" ]; then
   printf "%s\n" "${OUT_REQUIRED_SOT}"
   HAS_MATCH="0"
   case "${OUT_REQUIRED_SOT}" in
-    *"OK: required_checks_sot matched"**) HAS_MATCH="1" ;;
+    *"OK: required_checks_sot matched"*) HAS_MATCH="1" ;;
   esac
   if [ "${HAS_MATCH}" != "1" ]; then
     printf "%s\n" "ERROR: required checks gate failed; STOP=1"
