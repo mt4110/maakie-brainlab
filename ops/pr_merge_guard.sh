@@ -5,19 +5,7 @@
 REPO_DIR="$(git rev-parse --show-toplevel 2>/dev/null)"
 STOP="0"
 
-# --- S22-13 gate: required checks SOT sync (fail-closed) ---
-if [ "${STOP}" = "0" ]; then
-  OUT_REQUIRED_SOT="$(bash ops/required_checks_sot.sh check 2>&1 || true)"
-  printf "%s\n" "${OUT_REQUIRED_SOT}"
-  HAS_MATCH="0"
-  case "${OUT_REQUIRED_SOT}" in
-    *"OK: required_checks_sot matched"**) HAS_MATCH="1" ;;
-  esac
-  if [ "${HAS_MATCH}" != "1" ]; then
-    printf "%s\n" "ERROR: required checks gate failed; STOP=1"
-    STOP="1"
-  fi
-fi
+
 DO_MERGE="0"
 PR_IN=""
 
@@ -34,6 +22,20 @@ if [ -z "$REPO_DIR" ]; then
   STOP="1"
 else
   cd "$REPO_DIR" 2>/dev/null || STOP="1"
+fi
+
+# --- S22-13 gate: required checks SOT sync (fail-closed) ---
+if [ "${STOP}" = "0" ]; then
+  OUT_REQUIRED_SOT="$(bash ops/required_checks_sot.sh check 2>&1 || true)"
+  printf "%s\n" "${OUT_REQUIRED_SOT}"
+  HAS_MATCH="0"
+  case "${OUT_REQUIRED_SOT}" in
+    *"OK: required_checks_sot matched"**) HAS_MATCH="1" ;;
+  esac
+  if [ "${HAS_MATCH}" != "1" ]; then
+    printf "%s\n" "ERROR: required checks gate failed; STOP=1"
+    STOP="1"
+  fi
 fi
 
 if [ "$STOP" = "0" ]; then
