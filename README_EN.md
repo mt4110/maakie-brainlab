@@ -30,7 +30,7 @@ graph TD
 
 ## Milestones Status
 
-The project is structured around specific milestones (S21, S22 series). Many core operational foundations have been completed:
+As of February 2026, the project is structured around specific milestones (S21, S22 series). Many core operational foundations have been completed:
 
 *   **Completed (Merged)**: S21-02, S21-03, S21-04, S21-05, S21-06, S21-07, S22-01, S22-03, S22-04, S22-05, S22-06, S22-07, S22-08, S22-09, S22-10, S22-11, S22-12, S22-13, S22-14.
 *   **Active / Next Up**: AMBI-01, S21-01, S22-02 (In Review).
