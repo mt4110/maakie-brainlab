@@ -10,7 +10,7 @@ S22-15: 50% 🟡 (Addendum Pack WIP)
 
 - [x] main 最新化 / prune 済み（obsに記録）
 - [x] 作業ブランチ作成（衝突回避ループ）
-- [x] docs/ops の STATUS に S22-15 が 1% で載っている
+- [x] docs/ops/ STATUS に S22-15 が 50% で載っている
 
 01 Implement: docs_ops_doctor.py
 
@@ -23,7 +23,7 @@ S22-15: 50% 🟡 (Addendum Pack WIP)
 - [x] gh が無い環境は SKIP で落ちない
 - [x] rulesets JSON / check-runs JSON を obs に保存
 - [x] required_status_checks の “未観測context” を WARN で列挙
-- [x] 未観測が出た時だけ直近Nコミット追観測（N小さめ）
+- [x] 未観測が出た時の Hint 表示（Nコミット追観測は descope/軽量化）
 
 03 Docs
 
