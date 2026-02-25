@@ -18,6 +18,7 @@
 | S22-13 | ACTIVE | docs/ops/S22-13_PLAN.md | 100% (Merged PR #93) ✅ |
 | S22-14 | ACTIVE | docs/ops/S22-14_PLAN.md | 100% (Merged PR #94) ✅ |
 | S22-15 | ACTIVE | docs/ops/S22-15_PLAN.md | 100% ✅ (Merged PR #98 / commit 2b8df7b) |
+| S22-16 | ACTIVE | docs/ops/S22-16_PLAN.md | 1% (WIP) |
 
 ## NEXT
 
