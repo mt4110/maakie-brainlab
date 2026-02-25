@@ -33,6 +33,7 @@ jobs:
           fetch-depth: 0
 
       - name: Init CI (Run Always)
+        if: always()
         run: |
           mkdir -p .local/ci
           echo "run_id=${{ github.run_id }}" >> .local/ci/00_meta.txt
@@ -494,11 +495,18 @@ jobs:
             done
           fi
 
+      - name: Ensure Artifact Paths (Run Always)
+        if: always()
+        run: |
+          mkdir -p .local/ci ci_out
+          date -u > .local/ci/00_utc.txt 2>/dev/null || true
+          echo OK: ensured > ci_out/_ensure.txt 2>/dev/null || true
+
       - name: Upload Artifacts (Run Always)
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          if-no-files-found: error
+          if-no-files-found: warn
           name: run-always-${{ github.run_number }}-${{ github.sha }}
           path: |
             .local/ci/

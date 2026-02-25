@@ -25,3 +25,9 @@ Note: `milestone_required` exists as a detection check but is NOT required by de
 
 - These checks are configured in GitHub repository settings under **Branches** -> **Branch protection rules** -> **main**.
 - **Require status checks to pass before merging** should be enabled with the list above.
+
+<!-- required_checks_sot:v1
+# auto-managed. run: bash ops/required_checks_sot.sh write-sot
+# NOTE: empty/missing live required checks => ERROR (fail-closed)
+-->
+
