@@ -2,6 +2,7 @@
 .PHONY: sat-collect sat-normalize sat-gate sat-store sat-digest sat-index sat-run
 .PHONY: server-start server-stop server-status log ingest ask
 .PHONY: ai-smoke ai-verify
+.PHONY: s22-16-ship
 
 PY=.venv/bin/python
 PYENV=PYTHONPATH=./src:.
@@ -46,8 +47,11 @@ ci: ci-test
 
 verify-il:
 	$(PYENV) $(PY) ops/il_entrypoint_guard.py
-	$(PYENV) $(PY) scripts/il_check.py
+	$(PYENV) $(PY) scripts/il_entry_smoke.py
 	$(PYENV) $(PY) scripts/il_exec_selftest.py
+
+s22-16-ship:
+	$(PYENV) $(PY) ops/s22_16_ship.py
 
 bootstrap:
 	# S20-08: Canonical bootstrap via uv (using system python only to install uv)

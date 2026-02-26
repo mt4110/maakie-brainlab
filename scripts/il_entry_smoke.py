@@ -1,92 +1,119 @@
 """
-S22-05: Smoke Test Runner for IL Entry
+S22-16: IL entry smoke for verify-il canonical path.
 
-Test cases:
-1. Valid IL (il_min.json) -> Should produce OK for all steps.
-2. Invalid IL (Schema violation) -> Should produce ERROR at VALIDATE and SKIP later.
+Lightweight and stopless:
+- good fixture expects "OK: phase=end STOP=0"
+- bad fixture expects "OK: phase=end STOP=1"
 """
 
 import os
 import subprocess
 from pathlib import Path
+from typing import Optional
 
-def log(lvl: str, msg: str):
-    print(f"{lvl}: {msg}")
 
-def run_smoke():
+def log(level: str, message: str) -> None:
+    print(f"{level}: {message}")
+
+
+def run_case(
+    repo_root: Path,
+    il_entry_path: Path,
+    case_name: str,
+    il_path: Path,
+    fixture_db: Optional[Path],
+    expected_final_line: str,
+) -> int:
+    stop = 0
+    cmd = ["python3", str(il_entry_path), str(il_path)]
+    if fixture_db:
+        cmd += ["--fixture-db", str(fixture_db)]
+
+    try:
+        proc = subprocess.run(
+            cmd,
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            check=False,
+            env=os.environ.copy(),
+        )
+        output = (proc.stdout or "") + (proc.stderr or "")
+        if output.strip():
+            print(output.rstrip())
+
+        if proc.returncode != 0:
+            log("ERROR", f"case={case_name} non_zero_returncode={proc.returncode}")
+            stop = 1
+
+        if expected_final_line in output:
+            log("OK", f"case={case_name} matched='{expected_final_line}'")
+        else:
+            log("ERROR", f"case={case_name} missing='{expected_final_line}'")
+            stop = 1
+    except Exception as exc:
+        log("ERROR", f"case={case_name} exception={exc}")
+        stop = 1
+
+    return stop
+
+
+def run_smoke() -> None:
     repo_root = Path(__file__).resolve().parent.parent
-    scripts_dir = repo_root / "scripts"
-    il_entry = scripts_dir / "il_entry.py"
-    fixtures_dir = repo_root / "tests" / "fixtures" / "il_exec"
-    out_base = repo_root / ".local" / "obs" / "il_entry_smoke"
-    
-    os.makedirs(out_base, exist_ok=True)
-    
+    il_entry_path = repo_root / "scripts" / "il_entry.py"
+    fixture_dir = repo_root / "tests" / "fixtures" / "il_exec"
+    obs_dir = repo_root / ".local" / "obs" / "il_entry_smoke"
+    obs_dir.mkdir(parents=True, exist_ok=True)
+
+    bad_fixture = obs_dir / "bad_schema.json"
+    try:
+        bad_fixture.write_text('{"invalid":"format"}\n', encoding="utf-8")
+        log("OK", f"prepared_bad_fixture={bad_fixture}")
+    except Exception as exc:
+        log("ERROR", f"cannot_write_bad_fixture err={exc}")
+        log("ERROR", "smoke_summary STOP=1 cases=0 passed=0 failed=1")
+        return
+
     cases = [
         {
             "name": "good_minimal",
-            "il": fixtures_dir / "il_min.json",
-            "db": fixtures_dir / "retrieve_db.json",
-            "expect_stop": 0
+            "il": fixture_dir / "il_min.json",
+            "db": fixture_dir / "retrieve_db.json",
+            "expect": "OK: phase=end STOP=0",
         },
         {
             "name": "bad_schema",
-            "il": None, # Will create a temporary bad file
+            "il": bad_fixture,
             "db": None,
-            "expect_stop": 1
-        }
+            "expect": "OK: phase=end STOP=1",
+        },
     ]
-    
-    results = {"OK": 0, "ERROR": 0, "SKIP": 0}
-    
+
+    total = 0
+    failed = 0
     for case in cases:
-        name = case["name"]
-        log("OK", f"Starting smoke case={name}")
-        
-        il_path = case["il"]
-        if name == "bad_schema":
-            il_path = out_base / "bad_schema.json"
-            with open(il_path, "w") as f:
-                f.write('{"invalid": "format", "missing": "version"}')
-        
-        out_dir = out_base / name
-        os.makedirs(out_dir, exist_ok=True)
-        
-        cmd = ["python3", str(il_entry), str(il_path), "--out", str(out_dir)]
-        if case["db"]:
-            cmd += ["--fixture-db", str(case["db"])]
-            
-        env = os.environ.copy()
-        env["PYTHONPATH"] = str(repo_root)
-        
-        try:
-            # || true pattern: always return 0, capture output
-            proc = subprocess.run(cmd, capture_output=True, text=True, check=False, env=env)
-            output = proc.stdout + proc.stderr
-            print(output)
-            
-            # Count tags in output
-            for line in output.splitlines():
-                if line.startswith("OK:"): results["OK"] += 1
-                if line.startswith("ERROR:"): results["ERROR"] += 1
-                if line.startswith("SKIP:"): results["SKIP"] += 1
-            
-            # Verification logic for the smoke test results
-            if case["expect_stop"] == 0:
-                if "pipeline finished STOP=0" in output:
-                    log("OK", f"Case {name} passed as expected.")
-                else:
-                    log("ERROR", f"Case {name} failed: expected STOP=0 but got non-zero.")
-            else:
-                if "pipeline finished STOP=1" in output:
-                    log("OK", f"Case {name} failed (STOP=1) as expected.")
-                else:
-                    log("ERROR", f"Case {name} passed: expected STOP=1 but got STOP=0.")
-                    
-        except Exception as e:
-            log("ERROR", f"Smoke runner exception case={name} err={e}")
-            
-    log("OK", f"Smoke summary: OK={results['OK']} ERROR={results['ERROR']} SKIP={results['SKIP']}")
+        total += 1
+        log("OK", f"start_case={case['name']}")
+        case_stop = run_case(
+            repo_root=repo_root,
+            il_entry_path=il_entry_path,
+            case_name=case["name"],
+            il_path=case["il"],
+            fixture_db=case["db"],
+            expected_final_line=case["expect"],
+        )
+        if case_stop == 0:
+            log("OK", f"end_case={case['name']} STOP=0")
+        else:
+            log("ERROR", f"end_case={case['name']} STOP=1")
+            failed += 1
+
+    passed = total - failed
+    if failed == 0:
+        log("OK", f"smoke_summary STOP=0 cases={total} passed={passed} failed={failed}")
+    else:
+        log("ERROR", f"smoke_summary STOP=1 cases={total} passed={passed} failed={failed}")
+
 
 if __name__ == "__main__":
     run_smoke()

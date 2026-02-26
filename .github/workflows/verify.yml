@@ -26,8 +26,16 @@ jobs:
       - name: Verify (Nix)
         shell: bash
         run: |
+          if ! command -v nix >/dev/null 2>&1 && [[ -f /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]]; then
+            # shellcheck disable=SC1091
+            . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
+          fi
+          if ! command -v nix >/dev/null 2>&1; then
+            export PATH="/nix/var/nix/profiles/default/bin:/nix/var/nix/profiles/per-user/${USER:-$(id -un)}/profile/bin:$PATH"
+          fi
           if ! command -v nix >/dev/null 2>&1; then
             echo "ERROR: nix is required on this runner"
+            echo "HINT: install nix and/or ensure nix-daemon profile exists"
             exit 1
           fi
           nix shell nixpkgs#go nixpkgs#uv nixpkgs#python312 -c env -u GOROOT -u GOTOOLDIR -u GOENV bash -c '

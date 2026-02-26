@@ -1,0 +1,13 @@
+name: branch-name-guard
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review, edited]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate branch name
+        run: bash scripts/validate_branch_name.sh "${{ github.head_ref }}"
