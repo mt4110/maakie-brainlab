@@ -180,3 +180,4 @@ if __name__ == "__main__":
         print("OK: il_thread_runner_v2_doctor exit=0")
     else:
         print("ERROR: il_thread_runner_v2_doctor exit=1")
+    sys.exit(rc)
