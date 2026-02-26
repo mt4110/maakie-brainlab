@@ -10,11 +10,14 @@ Output is intentionally stopless:
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
 import subprocess
 from pathlib import Path
 from typing import List, Optional, Tuple
+
+from scripts.ops.obs_contract import DEFAULT_OBS_ROOT, emit, make_run_context, write_events, write_summary
 
 
 THREAD_RX = re.compile(r"([sS]\d{2}-\d{2}-[sS]?\d{2}-\d{2})")
@@ -24,20 +27,16 @@ PERCENT_RX = re.compile(r"([0-9]+(?:\.[0-9]+)?)%")
 CHECKBOX_RX = re.compile(r"^\s*-\s*\[([xX ])\]\s+(.+?)\s*$", re.M)
 
 
-def log(level: str, message: str) -> None:
-    print(f"{level}: {message}", flush=True)
-
-
 def run_git(args: List[str], cwd: Path) -> Optional[str]:
     try:
         cp = subprocess.run(["git", *args], cwd=str(cwd), capture_output=True, text=True, check=False)
     except Exception as exc:
-        log("WARN", f"git exception args={' '.join(args)} err={exc}")
+        print(f"WARN: git exception args={' '.join(args)} err={exc}", flush=True)
         return None
     if cp.returncode != 0:
         stderr = (cp.stderr or "").strip()
         if stderr:
-            log("WARN", f"git failed args={' '.join(args)} err={stderr}")
+            print(f"WARN: git failed args={' '.join(args)} err={stderr}", flush=True)
         return None
     return (cp.stdout or "").strip()
 
@@ -130,6 +129,7 @@ def main() -> None:
     parser.add_argument("--branch", default="", help="Branch override.")
     parser.add_argument("--task-file", default="", help="TASK markdown path override.")
     parser.add_argument("--max-next", type=int, default=5, help="Max number of next items to print.")
+    parser.add_argument("--obs-root", default=DEFAULT_OBS_ROOT, help="Observability root directory.")
     args = parser.parse_args()
 
     cwd = Path(args.repo_root).resolve() if args.repo_root else Path.cwd()
@@ -138,17 +138,19 @@ def main() -> None:
         if git_root:
             cwd = Path(git_root)
 
+    run_dir, meta, events = make_run_context(cwd, tool="current-point", obs_root=args.obs_root)
+
     branch = args.branch or run_git(["branch", "--show-current"], cwd) or ""
     track = detect_track(branch)
 
     if branch:
-        log("OK", f"branch={branch}")
+        emit("OK", f"branch={branch}", events)
     else:
-        log("WARN", "branch unknown")
+        emit("WARN", "branch unknown", events)
     if track:
-        log("OK", f"track_hint={track}")
+        emit("OK", f"track_hint={track}", events)
     else:
-        log("WARN", "track_hint unresolved from branch")
+        emit("WARN", "track_hint unresolved from branch", events)
 
     if args.task_file:
         task_path = Path(args.task_file)
@@ -158,41 +160,65 @@ def main() -> None:
         task_path = choose_task_file(cwd / "docs" / "ops", track)
 
     if task_path is None:
-        log("ERROR", "no TASK file found under docs/ops")
+        emit("ERROR", "no TASK file found under docs/ops", events)
+        write_events(run_dir, events)
+        write_summary(run_dir, meta, events, extra={})
         return
     if not task_path.exists():
-        log("ERROR", f"task file missing path={task_path}")
+        emit("ERROR", f"task file missing path={task_path}", events)
+        write_events(run_dir, events)
+        write_summary(run_dir, meta, events, extra={})
         return
 
     rel_task = os.path.relpath(task_path, cwd)
-    log("OK", f"task_file={rel_task}")
+    emit("OK", f"task_file={rel_task}", events)
 
     try:
         text = task_path.read_text(encoding="utf-8")
     except Exception as exc:
-        log("ERROR", f"cannot read task file err={exc}")
+        emit("ERROR", f"cannot read task file err={exc}", events)
+        write_events(run_dir, events)
+        write_summary(run_dir, meta, events, extra={})
         return
 
     progress, detail, checked, total, next_items = parse_task(text, max_next=max(1, args.max_next))
-    log("OK", f"progress={progress}")
+    emit("OK", f"progress={progress}", events)
     if detail:
-        log("OK", f"progress_detail={detail}")
+        emit("OK", f"progress_detail={detail}", events)
     if total > 0:
-        log("OK", f"checklist={checked}/{total}")
+        emit("OK", f"checklist={checked}/{total}", events)
     else:
-        log("WARN", "checklist not found")
+        emit("WARN", "checklist not found", events)
 
     if next_items:
+        emit("OK", f"next_items={len(next_items)}", events)
         print("NEXT:")
         for item in next_items:
             print(f"- [ ] {item}")
     else:
+        emit("SKIP", "no pending checklist item found", events)
         print("NEXT:")
         print("- [ ] no pending checklist item found")
+
+    snapshot = {
+        "branch": branch,
+        "track_hint": track,
+        "task_file": rel_task,
+        "progress": progress,
+        "progress_detail": detail,
+        "checklist": {"checked": checked, "total": total},
+        "next_items": next_items,
+    }
+    (run_dir / "snapshot.json").write_text(json.dumps(snapshot, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    emit("OK", f"obs_run_dir={run_dir}", events)
+    events_path = write_events(run_dir, events)
+    summary = write_summary(run_dir, meta, events, extra={"snapshot_file": "snapshot.json"})
+    print(f"OK: obs_events={events_path}", flush=True)
+    print(f"OK: obs_counts={summary['counts']}", flush=True)
 
 
 if __name__ == "__main__":
     try:
         main()
     except Exception as exc:
-        log("ERROR", f"unhandled exception err={exc}")
+        print(f"ERROR: unhandled exception err={exc}", flush=True)

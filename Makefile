@@ -2,7 +2,7 @@
 .PHONY: sat-collect sat-normalize sat-gate sat-store sat-digest sat-index sat-run
 .PHONY: server-start server-stop server-status log ingest ask
 .PHONY: ai-smoke ai-verify
-.PHONY: s22-16-ship phase-ship ops-now bench-il-compile tune-il-compile-prompt il-thread-smoke il-thread-replay-check verify-il-thread-v2
+.PHONY: s22-16-ship phase-ship ops-now s25-baseline-freeze s25-obs-summary bench-il-compile tune-il-compile-prompt il-thread-smoke il-thread-replay-check verify-il-thread-v2
 
 PY=.venv/bin/python
 PYENV=PYTHONPATH=./src:.
@@ -83,6 +83,12 @@ phase-ship:
 
 ops-now:
 	$(PYENV) $(PY) scripts/ops/current_point.py
+
+s25-baseline-freeze:
+	$(PYENV) $(PY) scripts/ops/s25_baseline_freeze.py
+
+s25-obs-summary:
+	$(PYENV) $(PY) scripts/ops/s25_obs_pr_summary.py
 
 bootstrap:
 	# S20-08: Canonical bootstrap via uv (using system python only to install uv)

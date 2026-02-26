@@ -4,7 +4,7 @@ Last Updated: 2026-02-26
 
 ## Progress
 
-- S25-01-25-10: 10% (PLAN固定 + 現在地導線の実装着手)
+- S25-01-25-10: 45% (S25-01..S25-04 完了)
 
 ## Ritual 22-16-22-99
 
@@ -24,23 +24,31 @@ Last Updated: 2026-02-26
 ### S25-01 Current Point Contract
 
 - [x] S25 thread の PLAN/TASK を新規作成
-- [ ] `make ops-now` 導線を追加
-- [ ] branch/task/progress/next actions が表示されることを確認
+- [x] `make ops-now` 導線を追加
+- [x] branch/task/progress/next actions が表示されることを確認
 
 ### S25-02 Work Breakdown
 
-- [ ] 実装タスクを phase 単位で PR 粒度へ分割
-- [ ] 依存関係（先行/後続）を明示
+- [x] 実装タスクを phase 単位で PR 粒度へ分割
+- [x] 依存関係（先行/後続）を明示
+  - matrix: `docs/ops/S25-02_WORK_BREAKDOWN.md`
 
 ### S25-03 Baseline Freeze
 
-- [ ] 変更前のテスト/eval baseline を PR body に固定
-- [ ] 比較指標（品質/速度/コスト）を固定
+- [x] 変更前のテスト/eval baseline を PR body に固定
+- [x] 比較指標（品質/速度/コスト）を固定
+  - baseline artifact: `docs/evidence/s25-03/baseline_latest.json`
+  - snippet artifact: `docs/evidence/s25-03/baseline_latest.md`
 
 ### S25-04 Observability
 
-- [ ] 実験ログの出力先を固定
-- [ ] `OK:/WARN:/ERROR:/SKIP:` 形式で観測結果を統一
+- [x] 実験ログの出力先を固定
+- [x] `OK:/WARN:/ERROR:/SKIP:` 形式で観測結果を統一
+- [x] PR本文へ貼る観測サマリを自動生成
+  - contract helper: `scripts/ops/obs_contract.py`
+  - summary generator: `scripts/ops/s25_obs_pr_summary.py`
+  - contract doc: `docs/ops/S25-04_OBSERVABILITY_CONTRACT.md`
+  - summary artifact: `docs/evidence/s25-04/observability_latest.md`
 
 ### S25-05 Regression Safety
 
@@ -77,12 +85,12 @@ Last Updated: 2026-02-26
 
 軽量（毎PR）:
 
-- [ ] `python3 scripts/ops/current_point.py`
+- [x] `python3 scripts/ops/current_point.py`
 - [ ] `python3 -m unittest -v tests/test_il_entry_smoke.py`
 
 中量（必要時）:
 
-- [ ] `make verify-il-thread-v2`
+- [x] `make verify-il-thread-v2`
 
 重量（ship前）:
 

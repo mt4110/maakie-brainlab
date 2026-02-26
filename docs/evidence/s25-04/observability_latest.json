@@ -1,0 +1,69 @@
+{
+  "schema_version": "s25-obs-report-v1",
+  "baseline_json": "/Users/takemuramasaki/dev/maakie-brainlab/docs/evidence/s25-03/baseline_latest.json",
+  "tools": {
+    "baseline-freeze": {
+      "schema_version": "s25-obs-contract-v1",
+      "tool": "baseline-freeze",
+      "run_id": "baseline-freeze__20260226T163128Z__ops-s25-01-25-10__5d99cc9",
+      "run_dir": "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/baseline-freeze/baseline-freeze__20260226T163128Z__ops-s25-01-25-10__5d99cc9",
+      "captured_at_utc": "2026-02-26T16:31:28.495200+00:00",
+      "branch": "ops/S25-01-25-10",
+      "head": "5d99cc94a5011058a555f37b9739e99292d24a6a",
+      "counts": {
+        "OK": 14,
+        "WARN": 0,
+        "ERROR": 0,
+        "SKIP": 0
+      },
+      "events_total": 14,
+      "extra": {
+        "baseline_json": "/Users/takemuramasaki/dev/maakie-brainlab/docs/evidence/s25-03/baseline_latest.json",
+        "baseline_md": "/Users/takemuramasaki/dev/maakie-brainlab/docs/evidence/s25-03/baseline_latest.md",
+        "stop": 0,
+        "commands_total": 5
+      }
+    },
+    "current-point": {
+      "schema_version": "s25-obs-contract-v1",
+      "tool": "current-point",
+      "run_id": "current-point__20260226T163128Z__ops-s25-01-25-10__5d99cc9",
+      "run_dir": "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/current-point/current-point__20260226T163128Z__ops-s25-01-25-10__5d99cc9",
+      "captured_at_utc": "2026-02-26T16:31:28.573633+00:00",
+      "branch": "ops/S25-01-25-10",
+      "head": "5d99cc94a5011058a555f37b9739e99292d24a6a",
+      "counts": {
+        "OK": 8,
+        "WARN": 0,
+        "ERROR": 0,
+        "SKIP": 0
+      },
+      "events_total": 8,
+      "extra": {
+        "snapshot_file": "snapshot.json"
+      }
+    },
+    "obs-pr-summary": {
+      "schema_version": "s25-obs-contract-v1",
+      "tool": "obs-pr-summary",
+      "run_id": "obs-pr-summary__20260226T163206Z__ops-s25-01-25-10__5d99cc9",
+      "run_dir": "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/obs-pr-summary/obs-pr-summary__20260226T163206Z__ops-s25-01-25-10__5d99cc9",
+      "captured_at_utc": "2026-02-26T16:32:06.181710+00:00",
+      "branch": "ops/S25-01-25-10",
+      "head": "5d99cc94a5011058a555f37b9739e99292d24a6a",
+      "counts": {
+        "OK": 4,
+        "WARN": 0,
+        "ERROR": 0,
+        "SKIP": 0
+      },
+      "events_total": 4,
+      "extra": {
+        "outputs": {
+          "json": "/Users/takemuramasaki/dev/maakie-brainlab/docs/evidence/s25-04/observability_latest.json",
+          "md": "/Users/takemuramasaki/dev/maakie-brainlab/docs/evidence/s25-04/observability_latest.md"
+        }
+      }
+    }
+  }
+}
