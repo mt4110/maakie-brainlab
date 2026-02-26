@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_utc": "2026-02-26T02:06:41Z",
+  "updated_utc": "2026-02-26T15:08:00Z",
   "source": {
     "owner": "mt4110",
     "repo": "maakie-brainlab",
@@ -9,6 +9,7 @@
     "observed_by": "ruleset_sot_fallback"
   },
   "required_status_checks": [
+    "body_required",
     "test",
     "verify-pack"
   ],

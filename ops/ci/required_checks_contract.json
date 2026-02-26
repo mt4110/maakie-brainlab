@@ -2,7 +2,8 @@
   "schema": "CI_REQUIRED_CHECKS_CONTRACT_v1",
   "required_contexts": [
     "test",
-    "verify-pack"
+    "verify-pack",
+    "body_required"
   ],
   "context_to_workflow_job": {
     "test": {
@@ -12,6 +13,10 @@
     "verify-pack": {
       "workflow": ".github/workflows/verify_pack.yml",
       "job": "verify-pack"
+    },
+    "body_required": {
+      "workflow": ".github/workflows/pr_body_required.yml",
+      "job": "body_required"
     }
   }
 }
