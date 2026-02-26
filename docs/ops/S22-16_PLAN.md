@@ -26,14 +26,14 @@
   - 例: `WITH_REVIEWPACK=1 make s22-16-ship`
   - 例: `SKIP_COMMIT=1 SKIP_PR=1 make s22-16-ship`（観測のみ）
 
-## Edited Files (absolute paths)
-- `/Users/takemuramasaki/dev/maakie-brainlab/Makefile`
-- `/Users/takemuramasaki/dev/maakie-brainlab/scripts/il_entry_smoke.py`
-- `/Users/takemuramasaki/dev/maakie-brainlab/ops/il_entrypoint_guard.py`
-- `/Users/takemuramasaki/dev/maakie-brainlab/docs/ops/S22-16_PLAN.md`
-- `/Users/takemuramasaki/dev/maakie-brainlab/docs/ops/S22-16_TASK.md`
-- `/Users/takemuramasaki/dev/maakie-brainlab/docs/ops/STATUS.md`
-- `/Users/takemuramasaki/dev/maakie-brainlab/ops/s22_16_ship.py`
+## Edited Files
+- `Makefile`
+- `scripts/il_entry_smoke.py`
+- `ops/il_entrypoint_guard.py`
+- `docs/ops/S22-16_PLAN.md`
+- `docs/ops/S22-16_TASK.md`
+- `docs/ops/STATUS.md`
+- `ops/s22_16_ship.py`
 
 ## Stop Condition (do not proceed)
 - `make verify-il` に `scripts/il_check.py` が残る場合
