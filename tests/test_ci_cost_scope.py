@@ -17,6 +17,7 @@ def _run_decide(extra_args):
         stderr=subprocess.PIPE,
         text=True,
         check=False,
+        cwd=str(ROOT),
     )
     if cp.returncode != 0:
         raise AssertionError(f"decide_cost_scope failed: rc={cp.returncode}\nstdout={cp.stdout}\nstderr={cp.stderr}")
@@ -144,6 +145,75 @@ class TestCICostScope(unittest.TestCase):
         self.assertEqual(out["mode"], "balanced")
         self.assertEqual(out["heavy_needed"], 0)
         self.assertTrue(str(out["reason"]).startswith("fallback_mode:turbo;"))
+
+    def test_rename_from_impact_path_to_docs_is_heavy(self):
+        with tempfile.TemporaryDirectory() as td:
+            repo = Path(td)
+            subprocess.run(["git", "init"], cwd=str(repo), check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            subprocess.run(["git", "config", "user.email", "ci@example.com"], cwd=str(repo), check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            subprocess.run(["git", "config", "user.name", "CI"], cwd=str(repo), check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+
+            (repo / "src").mkdir(parents=True, exist_ok=True)
+            (repo / "src/main.py").write_text("print('hello')\n", encoding="utf-8")
+            subprocess.run(["git", "add", "."], cwd=str(repo), check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            subprocess.run(["git", "commit", "-m", "base"], cwd=str(repo), check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            base_sha = subprocess.run(
+                ["git", "rev-parse", "HEAD"],
+                cwd=str(repo),
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            ).stdout.strip()
+
+            (repo / "docs").mkdir(parents=True, exist_ok=True)
+            subprocess.run(
+                ["git", "mv", "src/main.py", "docs/main.md"],
+                cwd=str(repo),
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            subprocess.run(["git", "commit", "-m", "rename"], cwd=str(repo), check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            head_sha = subprocess.run(
+                ["git", "rev-parse", "HEAD"],
+                cwd=str(repo),
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            ).stdout.strip()
+
+            cp = subprocess.run(
+                [
+                    "python3",
+                    str(SCRIPT),
+                    "--policy",
+                    str(POLICY),
+                    "--event",
+                    "pull_request",
+                    "--ref",
+                    "refs/pull/1/merge",
+                    "--mode",
+                    "balanced",
+                    "--base",
+                    base_sha,
+                    "--head",
+                    head_sha,
+                    "--json",
+                ],
+                cwd=str(repo),
+                check=False,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            self.assertEqual(cp.returncode, 0, msg=f"stdout={cp.stdout}\nstderr={cp.stderr}")
+            out = json.loads(cp.stdout.strip())
+            self.assertEqual(out["mode"], "balanced")
+            self.assertEqual(out["heavy_needed"], 1)
+            self.assertTrue(str(out["reason"]).startswith("impact_file:"))
 
     def test_github_output_reason_is_single_line(self):
         with tempfile.TemporaryDirectory() as td:

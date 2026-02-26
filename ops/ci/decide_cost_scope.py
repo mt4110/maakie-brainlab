@@ -26,17 +26,29 @@ def _run_git_diff(base: str, head: str) -> Optional[List[str]]:
         return None
     try:
         cp = subprocess.run(
-            ["git", "diff", "--name-only", base, head],
+            ["git", "diff", "--name-status", "--no-renames", "-z", base, head],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            text=True,
             check=False,
         )
     except Exception:
         return None
     if cp.returncode != 0:
         return None
-    return [line.strip() for line in (cp.stdout or "").splitlines() if line.strip()]
+    raw = cp.stdout or b""
+    if not isinstance(raw, (bytes, bytearray)):
+        return None
+    parts = bytes(raw).split(b"\0")
+    changed: List[str] = []
+    i = 0
+    while i + 1 < len(parts):
+        status = parts[i].decode("utf-8", errors="replace").strip()
+        path = parts[i + 1].decode("utf-8", errors="replace").strip()
+        i += 2
+        if not status or not path:
+            continue
+        changed.append(path)
+    return changed
 
 
 def _load_policy(path: str) -> Dict[str, object]:

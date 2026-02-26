@@ -81,7 +81,7 @@ If the scheduled run fails:
     - Fix the issue.
     - Run the script again.
 4. **Manual Trigger (Optional)**:
-    - Go to GitHub Actions -> "Verify Pack" -> "Run workflow".
+    - Go to GitHub Actions -> "Run Always (run_always_1h)" -> "Run workflow".
 
 ## 5. Normalized Data (S6 Ready)
 

@@ -144,7 +144,16 @@ jobs:
               flushOutputs();
             }
 
-            run().catch(e => core.warning(`ERROR: unexpected (non-fatal): ${e?.message || e}`));
+            await run().catch(e => {
+              core.warning(`ERROR: unexpected (non-fatal): ${e?.message || e}`);
+              try {
+                if (typeof flushOutputs === "function") {
+                  flushOutputs();
+                }
+              } catch (flushError) {
+                core.warning(`ERROR: failed to flush outputs after unexpected error: ${flushError?.message || flushError}`);
+              }
+            });
 
       - name: Dispatch milestone_required (refresh required check)
         id: dispatch_milestone_required
