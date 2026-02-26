@@ -2,7 +2,7 @@
 .PHONY: sat-collect sat-normalize sat-gate sat-store sat-digest sat-index sat-run
 .PHONY: server-start server-stop server-status log ingest ask
 .PHONY: ai-smoke ai-verify
-.PHONY: s22-16-ship phase-ship
+.PHONY: s22-16-ship phase-ship bench-il-compile tune-il-compile-prompt il-thread-smoke il-thread-replay-check verify-il-thread-v2
 
 PY=.venv/bin/python
 PYENV=PYTHONPATH=./src:.
@@ -47,8 +47,26 @@ ci: ci-test
 
 verify-il:
 	$(PYENV) $(PY) ops/il_entrypoint_guard.py
+	$(PYENV) $(PY) scripts/il_compile_entry_smoke.py
+	$(PYENV) $(PY) scripts/il_thread_runner_v2_smoke.py
+	$(MAKE) verify-il-thread-v2
 	$(PYENV) $(PY) scripts/il_entry_smoke.py
 	$(PYENV) $(PY) scripts/il_exec_selftest.py
+
+il-thread-smoke:
+	$(PYENV) $(PY) scripts/il_thread_runner_v2_smoke.py
+
+il-thread-replay-check:
+	$(PYENV) $(PY) scripts/il_thread_runner_v2_replay_check.py
+
+verify-il-thread-v2:
+	$(PYENV) $(PY) scripts/il_thread_runner_v2_suite.py
+
+bench-il-compile:
+	$(PYENV) $(PY) scripts/il_compile_bench.py
+
+tune-il-compile-prompt:
+	$(PYENV) $(PY) scripts/il_compile_prompt_loop.py
 
 s22-16-ship:
 	$(PYENV) $(PY) ops/s22_16_ship.py
