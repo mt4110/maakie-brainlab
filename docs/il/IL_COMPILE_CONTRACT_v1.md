@@ -22,12 +22,13 @@
 
 ## 1. Compile CLI Interface (S23-03 実装ターゲット)
 ```bash
-python3 scripts/il_compile.py --request <request_json> --out <out_dir> [--model <model_name>] [--seed <int>]
+python3 scripts/il_compile.py --request <request_json> --out <out_dir> [--model <model_name>] [--provider <rule_based|local_llm>] [--seed <int>] [--no-fallback]
 ```
 
 - MUST: `--request` は UTF-8 JSON ファイル
 - MUST: `--out` に obs 成果物を出力
 - MUST NOT: compile 成否を終了コードだけで表現しない（真実は `OK:/ERROR:/SKIP:` + report）
+- MUST: `--provider local_llm` で失敗した場合、デフォルトは rule-based fallback（`--no-fallback` 指定時は fail-closed）
 
 ## 2. Input Envelope (`IL_COMPILE_REQUEST_v1`)
 
@@ -144,6 +145,9 @@ Note:
 - `determinism`: `{temperature, top_p, seed, stream}`
 - `prompt_template_id`: str
 - `model`: str
+- `provider_requested`: `rule_based|local_llm`
+- `provider_selected`: `rule_based|local_llm`
+- `fallback_used`: bool
 - `canonical_sha256`: str（success のみ）
 
 ## 7. Bridge to Execute (S23-03)

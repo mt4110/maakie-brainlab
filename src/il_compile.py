@@ -1,13 +1,16 @@
 import hashlib
 import json
+import os
 import re
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from src.il_validator import ILCanonicalizer, ILValidator
 
 
 PROMPT_TEMPLATE_ID = "il_compile_prompt_v1"
 DEFAULT_MODEL = "rule_based_v1"
+DEFAULT_PROVIDER = "rule_based"
+DEFAULT_LOCAL_LLM_API_BASE = "http://127.0.0.1:8080/v1"
 DEFAULT_DETERMINISM = {
     "temperature": 0.0,
     "top_p": 1.0,
@@ -487,12 +490,267 @@ def render_compile_prompt(normalized_request: Dict[str, Any]) -> str:
     return "\n".join(lines) + "\n"
 
 
+LLMAdapter = Callable[[str, str, Dict[str, Any]], str]
+
+
+def _extract_first_json_object_text(text: str) -> Optional[str]:
+    start = text.find("{")
+    if start < 0:
+        return None
+    depth = 0
+    in_string = False
+    escape = False
+    for i in range(start, len(text)):
+        ch = text[i]
+        if in_string:
+            if escape:
+                escape = False
+            elif ch == "\\":
+                escape = True
+            elif ch == '"':
+                in_string = False
+            continue
+        if ch == '"':
+            in_string = True
+            continue
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                return text[start : i + 1]
+    return None
+
+
+def _parse_llm_json_response(raw_response: str) -> Tuple[Optional[Dict[str, Any]], List[Dict[str, Any]]]:
+    errors: List[Dict[str, Any]] = []
+    payload_text = raw_response.strip()
+    payload: Any = None
+
+    try:
+        payload = json.loads(payload_text)
+    except Exception:
+        extracted = _extract_first_json_object_text(payload_text)
+        if not extracted:
+            return None, [
+                _make_error(
+                    "E_PARSE",
+                    "model response is not valid JSON object text",
+                    path="/",
+                    hint="return only JSON object with il/meta/evidence",
+                )
+            ]
+        try:
+            payload = json.loads(extracted)
+        except Exception as exc:
+            return None, [
+                _make_error(
+                    "E_PARSE",
+                    f"json parse failed: {exc}",
+                    path="/",
+                    hint="return strict JSON object",
+                )
+            ]
+
+    if not isinstance(payload, dict):
+        errors.append(_make_error("E_PARSE", "model response must be JSON object", path="/"))
+        return None, errors
+
+    for key in ("il", "meta", "evidence"):
+        if key not in payload:
+            errors.append(_make_error("E_PARSE", f"missing key in model JSON: {key}", path=f"/{key}"))
+
+    if "errors" in payload:
+        errors.append(_make_error("E_PARSE", "model output must not include top-level errors on success", path="/errors"))
+
+    if errors:
+        return None, errors
+    return payload, []
+
+
+def _call_local_llm_default(prompt_text: str, model: str, determinism: Dict[str, Any]) -> str:
+    api_base = os.environ.get("IL_COMPILE_LLM_API_BASE", DEFAULT_LOCAL_LLM_API_BASE).rstrip("/")
+    api_key = os.environ.get("IL_COMPILE_LLM_API_KEY", "dummy")
+    timeout_s = int(os.environ.get("IL_COMPILE_LLM_TIMEOUT_S", "60"))
+    max_tokens = int(os.environ.get("IL_COMPILE_LLM_MAX_TOKENS", "1024"))
+
+    # Prefer project adapter first. If unavailable (e.g. llama_index missing), fallback to raw OpenAI-compatible HTTP.
+    try:
+        from src.local_llm import LocalLlamaCppLLM
+
+        llm = LocalLlamaCppLLM(
+            api_base=api_base,
+            model=model,
+            api_key=api_key,
+            temperature=float(determinism["temperature"]),
+            timeout_s=timeout_s,
+        )
+        resp = llm.complete(prompt_text, max_tokens=max_tokens, top_p=float(determinism["top_p"]))
+        text = getattr(resp, "text", "")
+        if isinstance(text, str) and text.strip():
+            return text
+    except Exception:
+        pass
+
+    try:
+        import requests
+    except Exception as exc:
+        raise RuntimeError(f"local llm adapter import failed: {exc}") from exc
+
+    payload = {
+        "model": model,
+        "temperature": float(determinism["temperature"]),
+        "top_p": float(determinism["top_p"]),
+        "messages": [{"role": "user", "content": prompt_text}],
+        "max_tokens": max_tokens,
+        "stream": False,
+    }
+    headers = {"Content-Type": "application/json"}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+    url = f"{api_base}/chat/completions"
+    resp = requests.post(url, json=payload, headers=headers, timeout=timeout_s)
+    resp.raise_for_status()
+    data = resp.json()
+    return data["choices"][0]["message"]["content"]
+
+
+def _compile_rule_based(normalized_request: Dict[str, Any], model: str) -> Tuple[Optional[Dict[str, Any]], str, List[Dict[str, Any]]]:
+    terms = extract_search_terms(normalized_request)
+    if not terms:
+        return None, "RULE_BASED_COMPILER: no IL output", [
+            _make_error(
+                "E_INPUT",
+                "could not derive search terms from request_text/context",
+                path="/request_text",
+                hint="add concrete domain keywords",
+            )
+        ]
+
+    opcodes = _build_opcode_plan(normalized_request)
+    if not opcodes:
+        return None, "RULE_BASED_COMPILER: no IL output", [
+            _make_error(
+                "E_UNSUPPORTED",
+                "no executable opcodes after constraints filtering",
+                path="/constraints/allowed_opcodes",
+            )
+        ]
+
+    compiled = {
+        "il": {
+            "opcodes": opcodes,
+            "search_terms": terms,
+        },
+        "meta": {
+            "version": "il_contract_v1",
+            "generator": model,
+        },
+        "evidence": {
+            "notes": "compiled via il_compile_contract_v1 rule-based planner",
+            "compile_contract": "il_compile_contract_v1",
+            "prompt_template_id": PROMPT_TEMPLATE_ID,
+        },
+    }
+    raw_response_text = json.dumps(
+        compiled,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    return compiled, raw_response_text, []
+
+
+def _compile_local_llm(
+    normalized_request: Dict[str, Any],
+    model: str,
+    llm_adapter: Optional[LLMAdapter] = None,
+) -> Tuple[Optional[Dict[str, Any]], str, List[Dict[str, Any]]]:
+    adapter = llm_adapter or _call_local_llm_default
+    prompt = render_compile_prompt(normalized_request)
+    try:
+        raw_response = adapter(prompt, model, normalized_request["determinism"])
+    except Exception as exc:
+        return None, "", [
+            _make_error(
+                "E_MODEL",
+                f"local_llm invocation failed: {exc}",
+                path="/",
+                retriable=True,
+            )
+        ]
+
+    if not isinstance(raw_response, str) or not raw_response.strip():
+        return None, "", [
+            _make_error(
+                "E_MODEL",
+                "local_llm returned empty response",
+                path="/",
+                retriable=True,
+            )
+        ]
+
+    parsed, parse_errors = _parse_llm_json_response(raw_response)
+    if parse_errors:
+        return None, raw_response, parse_errors
+    return parsed, raw_response, []
+
+
+def _finalize_compiled_output(
+    compiled: Dict[str, Any],
+    normalized_request: Dict[str, Any],
+) -> Tuple[Optional[bytes], List[Dict[str, Any]]]:
+    errors: List[Dict[str, Any]] = []
+    forbidden = set(normalized_request["constraints"]["forbidden_keys"])
+    if forbidden:
+        errors.extend(_collect_forbidden_keys(compiled, forbidden))
+
+    if errors:
+        return None, errors
+
+    validator = ILValidator()
+    valid, val_errors = validator.validate(compiled)
+    if not valid:
+        for err in val_errors:
+            errors.append(
+                _make_error(
+                    "E_VALIDATE",
+                    err.get("message", "validator error"),
+                    path=err.get("path", ""),
+                    hint=err.get("hint", ""),
+                )
+            )
+        return None, errors
+
+    try:
+        canonical_bytes = ILCanonicalizer.canonicalize(compiled)
+    except Exception as exc:
+        return None, [_make_error("E_VALIDATE", f"canonicalization failed: {exc}", path="/")]
+
+    return canonical_bytes, []
+
+
 def compile_request_bundle(
     raw_request: Any,
     model: str = DEFAULT_MODEL,
     seed_override: Optional[int] = None,
+    provider: str = DEFAULT_PROVIDER,
+    allow_fallback: bool = True,
+    llm_adapter: Optional[LLMAdapter] = None,
 ) -> Dict[str, Any]:
     normalized, errors = normalize_compile_request(raw_request, seed_override=seed_override)
+    provider_requested = (provider or DEFAULT_PROVIDER).strip().lower()
+    if provider_requested not in {"rule_based", "local_llm"}:
+        errors.append(
+            _make_error(
+                "E_UNSUPPORTED",
+                f"unsupported provider: {provider_requested}",
+                path="/provider",
+                hint="use rule_based or local_llm",
+            )
+        )
+        provider_requested = "rule_based"
+
     bundle: Dict[str, Any] = {
         "status": "ERROR",
         "normalized_request": normalized or {},
@@ -504,9 +762,7 @@ def compile_request_bundle(
         "report": {},
     }
 
-    determinism = (
-        normalized["determinism"] if normalized else dict(DEFAULT_DETERMINISM)
-    )
+    determinism = normalized["determinism"] if normalized else dict(DEFAULT_DETERMINISM)
     if seed_override is not None:
         determinism["seed"] = seed_override
 
@@ -516,83 +772,57 @@ def compile_request_bundle(
         bundle["prompt_text"] = "SYSTEM: compile request failed before normalization\n"
 
     if not bundle["errors"] and normalized:
-        terms = extract_search_terms(normalized)
-        if not terms:
-            bundle["errors"].append(
-                _make_error(
-                    "E_INPUT",
-                    "could not derive search terms from request_text/context",
-                    path="/request_text",
-                    hint="add concrete domain keywords",
-                )
+        provider_selected = provider_requested
+        fallback_used = False
+        fallback_reason = ""
+
+        if provider_requested == "local_llm":
+            compiled, raw_response, compile_errors = _compile_local_llm(
+                normalized_request=normalized,
+                model=model,
+                llm_adapter=llm_adapter,
             )
-        opcodes = _build_opcode_plan(normalized)
-        if not opcodes:
-            bundle["errors"].append(
-                _make_error(
-                    "E_UNSUPPORTED",
-                    "no executable opcodes after constraints filtering",
-                    path="/constraints/allowed_opcodes",
-                )
+        else:
+            compiled, raw_response, compile_errors = _compile_rule_based(
+                normalized_request=normalized,
+                model=model,
             )
 
-        if not bundle["errors"]:
-            compiled = {
-                "il": {
-                    "opcodes": opcodes,
-                    "search_terms": terms,
-                },
-                "meta": {
-                    "version": "il_contract_v1",
-                    "generator": model,
-                },
-                "evidence": {
-                    "notes": "compiled via il_compile_contract_v1 rule-based planner",
-                    "compile_contract": "il_compile_contract_v1",
-                    "prompt_template_id": PROMPT_TEMPLATE_ID,
-                },
-            }
+        bundle["raw_response_text"] = raw_response or "RULE_BASED_COMPILER: no IL output"
 
-            forbidden = set(normalized["constraints"]["forbidden_keys"])
-            if forbidden:
-                bundle["errors"].extend(_collect_forbidden_keys(compiled, forbidden))
+        if compile_errors and provider_requested == "local_llm" and allow_fallback:
+            fallback_used = True
+            fallback_reason = compile_errors[0].get("message", "local_llm compile failed")
+            provider_selected = "rule_based"
+            compiled, fallback_raw_response, compile_errors = _compile_rule_based(
+                normalized_request=normalized,
+                model=model,
+            )
+            bundle["raw_response_text"] = fallback_raw_response
 
-            if not bundle["errors"]:
-                validator = ILValidator()
-                valid, val_errors = validator.validate(compiled)
-                if not valid:
-                    for err in val_errors:
-                        bundle["errors"].append(
-                            _make_error(
-                                "E_VALIDATE",
-                                err.get("message", "validator error"),
-                                path=err.get("path", ""),
-                                hint=err.get("hint", ""),
-                            )
-                        )
-                else:
-                    try:
-                        canonical_bytes = ILCanonicalizer.canonicalize(compiled)
-                        bundle["compiled_output"] = compiled
-                        bundle["canonical_bytes"] = canonical_bytes
-                        bundle["raw_response_text"] = json.dumps(
-                            compiled,
-                            ensure_ascii=False,
-                            sort_keys=True,
-                            separators=(",", ":"),
-                        )
-                    except Exception as exc:
-                        bundle["errors"].append(
-                            _make_error(
-                                "E_VALIDATE",
-                                f"canonicalization failed: {exc}",
-                                path="/",
-                            )
-                        )
+        if compile_errors:
+            bundle["errors"].extend(compile_errors)
+        elif compiled is not None:
+            canonical_bytes, finalize_errors = _finalize_compiled_output(
+                compiled=compiled,
+                normalized_request=normalized,
+            )
+            if finalize_errors:
+                bundle["errors"].extend(finalize_errors)
+            else:
+                bundle["compiled_output"] = compiled
+                bundle["canonical_bytes"] = canonical_bytes
+        else:
+            bundle["errors"].append(_make_error("E_INPUT", "no compiled output produced", path="/"))
+    else:
+        provider_selected = provider_requested
+        fallback_used = False
+        fallback_reason = ""
 
     if not bundle["raw_response_text"]:
         bundle["raw_response_text"] = "RULE_BASED_COMPILER: no IL output"
 
+    bundle["errors"].sort(key=lambda x: (x.get("path", ""), x.get("code", ""), x.get("message", "")))
     status = "OK" if not bundle["errors"] and bundle["compiled_output"] is not None else "ERROR"
     bundle["status"] = status
     report: Dict[str, Any] = {
@@ -602,7 +832,12 @@ def compile_request_bundle(
         "determinism": determinism,
         "prompt_template_id": PROMPT_TEMPLATE_ID,
         "model": model,
+        "provider_requested": provider_requested,
+        "provider_selected": provider_selected,
+        "fallback_used": fallback_used,
     }
+    if fallback_reason:
+        report["fallback_reason"] = fallback_reason
     if bundle["canonical_bytes"] is not None:
         report["canonical_sha256"] = hashlib.sha256(bundle["canonical_bytes"]).hexdigest()
     bundle["report"] = report
