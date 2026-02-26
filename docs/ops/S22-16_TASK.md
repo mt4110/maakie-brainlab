@@ -1,6 +1,6 @@
 # S22-16 TASK — verify-il入口整合 + guardノイズ制御 + ship自動化
 
-S22-16: 95% (WIP)
+S22-16: 100% (Closeout)
 
 ## 0. Kickoff / Scope Fix
 - [x] Confirm branch is S22-16 work branch
@@ -43,7 +43,7 @@ S22-16: 95% (WIP)
 - [x] `branch-name-guard` をチェック観測項目に反映
 - [x] `milestone_required` FAILURE の方針を A で固定（milestone を設定して green 化）
 - [x] PR #102 に `S22-16` milestone を設定し、`milestone_required` が SUCCESS になること
-- [ ] `mergeStateStatus=BEHIND` 解消（必要時 main 取り込み）後に再チェック
+- [x] `mergeStateStatus=BEHIND` 解消（必要時 main 取り込み）後に再チェック
 
 ## 7. Closeout
-- [ ] 全チェック green + 方針反映を確認後、S22-16 を 100% に更新
+- [x] 全チェック green + 方針反映を確認後、S22-16 を 100% に更新
