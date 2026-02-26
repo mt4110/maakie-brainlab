@@ -8,7 +8,7 @@ One-command flow (stopless):
 3) Gate on ci-self checks (all green required for PR sync)
 4) Generate PR body with gate summaries
 5) Create/update PR via gh (optional)
-5) Optionally run reviewpack verify-only once
+6) Optionally run reviewpack verify-only once
 """
 
 from __future__ import annotations
