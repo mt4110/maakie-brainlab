@@ -30,7 +30,7 @@ Note: `milestone_required` exists as a detection check but is NOT required by de
 <!-- required_checks_sot:v1
 # auto-managed. run: bash ops/required_checks_sot.sh write-sot
 # NOTE: empty/missing live required checks => ERROR (fail-closed)
+body_required
 test
 verify-pack
-body_required
 -->

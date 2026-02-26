@@ -70,6 +70,7 @@ jobs:
           elif [ "$EVENT_NAME" = "push" ]; then
             BASE_SHA="${PUSH_BEFORE_SHA:-}"
           fi
+          # NOTE: ubuntu-latest ships python3 by default; setup-python remains heavy-gated for cost control.
           python3 ops/ci/decide_cost_scope.py \
             --policy ops/ci/cost_scope_policy.json \
             --event "$EVENT_NAME" \

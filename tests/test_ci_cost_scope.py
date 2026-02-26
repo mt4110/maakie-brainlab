@@ -1,5 +1,6 @@
 import json
 import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -143,6 +144,30 @@ class TestCICostScope(unittest.TestCase):
         self.assertEqual(out["mode"], "balanced")
         self.assertEqual(out["heavy_needed"], 0)
         self.assertTrue(str(out["reason"]).startswith("fallback_mode:turbo;"))
+
+    def test_github_output_reason_is_single_line(self):
+        with tempfile.TemporaryDirectory() as td:
+            out_path = Path(td) / "gh_output.txt"
+            cmd = [
+                "python3",
+                str(SCRIPT),
+                "--policy",
+                "/path/that/does/not/exist.json",
+                "--github-output",
+                str(out_path),
+            ]
+            cp = subprocess.run(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(cp.returncode, 0, msg=f"stdout={cp.stdout}\nstderr={cp.stderr}")
+            lines = out_path.read_text(encoding="utf-8").splitlines()
+            reason_lines = [x for x in lines if x.startswith("reason=")]
+            self.assertEqual(len(reason_lines), 1, msg=f"lines={lines}")
+            self.assertNotIn("\n", reason_lines[0])
 
 
 if __name__ == "__main__":

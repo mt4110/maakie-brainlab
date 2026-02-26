@@ -15,6 +15,12 @@ from typing import Dict, List, Optional
 ZERO_SHA = "0000000000000000000000000000000000000000"
 
 
+def _single_line(value: object) -> str:
+    s = str(value).replace("\r", "\n")
+    parts = [x.strip() for x in s.split("\n") if x.strip()]
+    return " | ".join(parts)
+
+
 def _run_git_diff(base: str, head: str) -> Optional[List[str]]:
     if not base or not head or base == ZERO_SHA:
         return None
@@ -163,11 +169,21 @@ def decide(
 def _write_outputs(path: str, decision: Dict[str, object]) -> None:
     if not path:
         return
+    mode = _single_line(decision.get("mode", "")) or "balanced"
+    reason = _single_line(decision.get("reason", ""))
+    try:
+        heavy_needed = int(decision.get("heavy_needed", 1))
+    except Exception:
+        heavy_needed = 1
+    try:
+        changed_count = int(decision.get("changed_count", 0))
+    except Exception:
+        changed_count = 0
     lines = [
-        f"mode={decision['mode']}",
-        f"heavy_needed={decision['heavy_needed']}",
-        f"reason={decision['reason']}",
-        f"changed_count={decision['changed_count']}",
+        f"mode={mode}",
+        f"heavy_needed={heavy_needed}",
+        f"reason={reason}",
+        f"changed_count={changed_count}",
     ]
     with open(path, "a", encoding="utf-8") as f:
         f.write("\n".join(lines) + "\n")
@@ -212,10 +228,12 @@ def main(argv: List[str]) -> int:
         decision = {
             "mode": mode_fallback,
             "heavy_needed": 1,
-            "reason": f"decider_error:{exc}",
+            "reason": _single_line(f"decider_error:{exc}"),
             "changed_count": 0,
         }
 
+    decision["mode"] = _single_line(decision.get("mode", "")) or "balanced"
+    decision["reason"] = _single_line(decision.get("reason", ""))
     _write_outputs(ns.github_output, decision)
     if ns.json:
         print(json.dumps(decision, ensure_ascii=True, sort_keys=True))

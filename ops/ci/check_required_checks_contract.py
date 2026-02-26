@@ -55,6 +55,9 @@ def _read_ruleset_sot(path: Path) -> Optional[List[str]]:
 
 
 def _read_workflow_jobs(path: Path) -> Optional[Set[str]]:
+    # Minimal parser: collect direct child keys under top-level `jobs:` block.
+    # This intentionally avoids full YAML dependencies while remaining stable
+    # for quoted/unquoted job IDs and workflows with later top-level sections.
     try:
         lines = path.read_text(encoding="utf-8").splitlines()
     except Exception:

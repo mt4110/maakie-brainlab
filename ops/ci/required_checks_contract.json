@@ -1,11 +1,15 @@
 {
   "schema": "CI_REQUIRED_CHECKS_CONTRACT_v1",
   "required_contexts": [
+    "body_required",
     "test",
-    "verify-pack",
-    "body_required"
+    "verify-pack"
   ],
   "context_to_workflow_job": {
+    "body_required": {
+      "workflow": ".github/workflows/pr_body_required.yml",
+      "job": "body_required"
+    },
     "test": {
       "workflow": ".github/workflows/test.yml",
       "job": "test"
@@ -13,10 +17,6 @@
     "verify-pack": {
       "workflow": ".github/workflows/verify_pack.yml",
       "job": "verify-pack"
-    },
-    "body_required": {
-      "workflow": ".github/workflows/pr_body_required.yml",
-      "job": "body_required"
     }
   }
 }
