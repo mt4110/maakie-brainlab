@@ -124,7 +124,9 @@ def run_suite(cases: Path, out: Path) -> int:
     )
     smoke_output = (smoke_proc.stdout or "") + (smoke_proc.stderr or "")
     (out / "thread_smoke.log").write_text(smoke_output, encoding="utf-8")
-    rc_smoke = 0 if smoke_proc.returncode == 0 else 1
+    rc_smoke = 1
+    if smoke_proc.returncode == 0 and "OK: smoke_summary STOP=0" in smoke_output:
+        rc_smoke = 0
     steps.append({"name": "thread_smoke", "rc": rc_smoke, "status": "OK" if rc_smoke == 0 else "ERROR"})
     if rc_smoke == 0:
         log("OK", "phase=step name=thread_smoke status=OK")
@@ -171,3 +173,4 @@ if __name__ == "__main__":
         print("OK: il_thread_runner_v2_suite exit=0")
     else:
         print("ERROR: il_thread_runner_v2_suite exit=1")
+    sys.exit(rc)

@@ -24,6 +24,7 @@ from src.il_compile import (
     DEFAULT_PROVIDER,
     compile_request_bundle,
     normalize_prompt_profile,
+    resolve_prompt_template_id,
 )
 
 CASE_SCHEMA = "IL_THREAD_RUNNER_V2_CASE_v1"
@@ -367,6 +368,7 @@ def _bundle_from_case_errors(
     prompt_profile: str,
     seed: int,
 ) -> Dict[str, Any]:
+    prompt_template_id = resolve_prompt_template_id(prompt_profile)
     return {
         "status": "ERROR",
         "normalized_request": {},
@@ -380,7 +382,7 @@ def _bundle_from_case_errors(
             "status": "ERROR",
             "error_count": len(errors),
             "determinism": {"temperature": 0.0, "top_p": 1.0, "seed": seed, "stream": False},
-            "prompt_template_id": "il_compile_prompt_v1",
+            "prompt_template_id": prompt_template_id,
             "prompt_profile": prompt_profile,
             "model": model,
             "provider_requested": provider,
