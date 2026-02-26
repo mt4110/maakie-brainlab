@@ -18,7 +18,7 @@ if [ "$branch" = "HEAD" ]; then
   exit 0
 fi
 
-if echo "$branch" | grep -Eq '^codex/feat([/-]|$)'; then
+if echo "$branch" | grep -Eq '^codex/feat'; then
   echo "ERROR: forbidden branch pattern detected: $branch"
   echo "ERROR: do not continue on this branch"
   echo "OK: recreate branch from same HEAD, e.g. git switch -c feat/<slug>"

@@ -24,7 +24,7 @@ from typing import Dict, List, Optional, Tuple
 
 
 DEFAULT_COMMIT_MESSAGE = "s22-16: align verify-il entrypoint and reduce guard noise"
-FORBIDDEN_BRANCH_RX = re.compile(r"^codex/feat([/-]|$)")
+FORBIDDEN_BRANCH_RX = re.compile(r"^codex/feat")
 
 
 def log(level: str, message: str) -> None:
@@ -209,7 +209,7 @@ def build_pr_body(
         "# Scope",
         "- Changed: Makefile / ops / scripts / docs/ops",
         "- Added: ops/s22_16_ship.py",
-        "- Not changed: il executor behavior, CI workflow definitions",
+        "- Not changed: il executor behavior",
         "",
         "# Evidence (Gates)",
         f"- guard summary: `{guard_summary or 'N/A'}`",
@@ -337,7 +337,8 @@ def main(argv: List[str]) -> None:
         return
 
     branch = ""
-    ok, out, _, _ = run_cmd(["git", "branch", "--show-current"], cwd=root, dry_run=dry_run, log_path=obs / "00_branch.log")
+    # Resolve current branch even in dry-run mode.
+    ok, out, _, _ = run_cmd(["git", "branch", "--show-current"], cwd=root, dry_run=False, log_path=obs / "00_branch.log")
     if ok:
         branch = out.strip()
         if branch:
@@ -373,6 +374,14 @@ def main(argv: List[str]) -> None:
         guard_summary = extract_last_matching_line(combined, "OK: guard_summary")
         if not guard_summary:
             guard_summary = f"ERROR: missing guard_summary rc={rc}"
+            if not dry_run:
+                log("ERROR", "guard_summary_missing")
+                stop = 1
+        m_guard_err = re.search(r"errors=(\d+)", guard_summary)
+        guard_errors = int(m_guard_err.group(1)) if m_guard_err else 0
+        if guard_errors > 0:
+            log("ERROR", f"guard_summary_has_errors errors={guard_errors}")
+            stop = 1
         if not ok:
             log("ERROR", f"guard_failed rc={rc}")
             stop = 1
@@ -385,16 +394,43 @@ def main(argv: List[str]) -> None:
             log_path=obs / "20_verify_il.log",
         )
         combined = out + err
-        verify_status = "OK" if ok else f"ERROR rc={rc}"
         smoke_summary = extract_last_matching_line(combined, "smoke_summary")
         selftest_summary = extract_last_matching_line(combined, "selftest summary")
         if not smoke_summary:
             smoke_summary = "WARN: smoke_summary not found"
+            if not dry_run:
+                log("ERROR", "smoke_summary_missing")
+                stop = 1
         if not selftest_summary:
             selftest_summary = "WARN: selftest summary not found"
+            if not dry_run:
+                log("ERROR", "selftest_summary_missing")
+                stop = 1
+
+        smoke_stop = 0
+        m_smoke = re.search(r"STOP=(\d+)", smoke_summary)
+        if m_smoke:
+            smoke_stop = int(m_smoke.group(1))
+
+        selftest_failed = 0
+        m_selftest = re.search(r"summary:\s+\d+/\d+\s+passed,\s+(\d+)\s+failed", selftest_summary)
+        if m_selftest:
+            selftest_failed = int(m_selftest.group(1))
+
         if not ok:
+            verify_status = f"ERROR rc={rc}"
             log("ERROR", f"verify_il_failed rc={rc}")
             stop = 1
+        elif smoke_stop > 0:
+            verify_status = f"ERROR: {smoke_summary}"
+            log("ERROR", "verify_il_failed smoke_summary_stop=1")
+            stop = 1
+        elif selftest_failed > 0:
+            verify_status = f"ERROR: {selftest_summary}"
+            log("ERROR", f"verify_il_failed selftest_failed={selftest_failed}")
+            stop = 1
+        else:
+            verify_status = "OK"
 
     if with_reviewpack:
         if stop == 0:
@@ -511,31 +547,44 @@ def main(argv: List[str]) -> None:
                     log("WARN", "gh auth not ready; PR update skipped")
                     ci_self_status = "WARN: gh auth not ready"
                 else:
-                    run_cmd(["git", "push"], cwd=root, dry_run=False, log_path=obs / "61_git_push.log")
-                    ci_ok, ci_out, ci_err, ci_rc = run_cmd(
-                        [
-                            "bash",
-                            "-lc",
-                            'source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh && cd ~/dev/maakie-brainlab && ci-self up --ref "$(git branch --show-current)"',
-                        ],
-                        cwd=root,
-                        dry_run=False,
-                        log_path=obs / "62_ci_self_up.log",
+                    ok_push, _, _, rc_push = run_cmd(
+                        ["git", "push"], cwd=root, dry_run=False, log_path=obs / "61_git_push.log"
                     )
-                    ci_text = (ci_out or "") + (ci_err or "")
-                    if not ci_ok:
-                        ci_self_status = f"ERROR: ci-self command failed rc={ci_rc}"
+                    if not ok_push:
+                        ci_self_status = f"ERROR: git push failed rc={rc_push}"
                         log("ERROR", ci_self_status)
                         stop = 1
-                    else:
-                        all_green, reason = ci_self_all_green(ci_text)
-                        if all_green:
-                            ci_self_status = f"OK: {reason}"
-                            log("OK", f"ci_self_gate {reason}")
-                        else:
-                            ci_self_status = f"ERROR: {reason}"
-                            log("ERROR", f"ci_self_gate_blocked reason={reason}")
+
+                    if stop == 0:
+                        ci_cmd = (
+                            "source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh"
+                            " && cd ~/dev/maakie-brainlab"
+                            f" && ci-self up --ref {shlex.quote(branch)}"
+                        )
+                        ci_ok, ci_out, ci_err, ci_rc = run_cmd(
+                            [
+                                "bash",
+                                "-lc",
+                                ci_cmd,
+                            ],
+                            cwd=root,
+                            dry_run=False,
+                            log_path=obs / "62_ci_self_up.log",
+                        )
+                        ci_text = (ci_out or "") + (ci_err or "")
+                        if not ci_ok:
+                            ci_self_status = f"ERROR: ci-self command failed rc={ci_rc}"
+                            log("ERROR", ci_self_status)
                             stop = 1
+                        else:
+                            all_green, reason = ci_self_all_green(ci_text)
+                            if all_green:
+                                ci_self_status = f"OK: {reason}"
+                                log("OK", f"ci_self_gate {reason}")
+                            else:
+                                ci_self_status = f"ERROR: {reason}"
+                                log("ERROR", f"ci_self_gate_blocked reason={reason}")
+                                stop = 1
 
     pr_body = build_pr_body(
         branch=branch or "unknown",
@@ -578,13 +627,17 @@ def main(argv: List[str]) -> None:
                 except Exception:
                     pass
                 if pr_number:
-                    run_cmd(
+                    ok_edit, _, _, rc_edit = run_cmd(
                         ["gh", "pr", "edit", pr_number, "--body-file", str(pr_body_path)],
                         cwd=root,
                         dry_run=False,
                         log_path=obs / "64_pr_edit.log",
                     )
-                    log("OK", f"pr_updated number={pr_number} url={pr_url}")
+                    if ok_edit:
+                        log("OK", f"pr_updated number={pr_number} url={pr_url}")
+                    else:
+                        log("ERROR", f"pr_update_failed number={pr_number} rc={rc_edit}")
+                        stop = 1
                 else:
                     log("WARN", "cannot parse existing PR number; skipping edit")
             else:
@@ -597,7 +650,7 @@ def main(argv: List[str]) -> None:
                 )
                 if ok_title and out_title.strip():
                     title = out_title.strip()
-                run_cmd(
+                ok_create, _, _, rc_create = run_cmd(
                     [
                         "gh",
                         "pr",
@@ -615,6 +668,9 @@ def main(argv: List[str]) -> None:
                     dry_run=False,
                     log_path=obs / "66_pr_create.log",
                 )
+                if not ok_create:
+                    log("ERROR", f"pr_create_failed rc={rc_create}")
+                    stop = 1
 
     if stop == 0:
         log("OK", f"s22_16_ship_done STOP=0 obs_dir={obs}")
