@@ -59,6 +59,23 @@ class TestCICostScope(unittest.TestCase):
         self.assertEqual(out["heavy_needed"], 1)
         self.assertTrue(str(out["reason"]).startswith("impact_file:"))
 
+    def test_balanced_top_level_markdown_is_heavy(self):
+        out = _run_decide(
+            [
+                "--event",
+                "pull_request",
+                "--ref",
+                "refs/pull/2/merge",
+                "--mode",
+                "balanced",
+                "--changed-file",
+                "notes.md",
+            ]
+        )
+        self.assertEqual(out["mode"], "balanced")
+        self.assertEqual(out["heavy_needed"], 1)
+        self.assertTrue(str(out["reason"]).startswith("impact_file:"))
+
     def test_lite_mode_is_light_for_impact_changes(self):
         out = _run_decide(
             [

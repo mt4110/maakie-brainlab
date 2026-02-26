@@ -21,7 +21,6 @@
     }
   },
   "docs_only_allowlist_globs": [
-    "*.md",
     "docs/**",
     "README",
     "README.*",
