@@ -27,8 +27,20 @@ from src.il_validator import ILValidator, ILCanonicalizer
 from src.il_executor import execute_il
 from scripts.obs_writer import OBSWriter
 
-def run_il_entry(il_path: str, fixture_db_path: Optional[str] = None):
+def _resolve_obs_dir(out_dir: Optional[str]) -> Optional[Path]:
+    if not out_dir:
+        return None
+    candidate = Path(out_dir).expanduser()
+    if candidate.is_absolute():
+        return candidate
+    return (repo_root / candidate).resolve()
+
+
+def run_il_entry(il_path: str, fixture_db_path: Optional[str] = None, out_dir: Optional[str] = None):
     obs = OBSWriter("il_entry", repo_root=repo_root)
+    resolved_out_dir = _resolve_obs_dir(out_dir)
+    if resolved_out_dir is not None:
+        obs.obs_dir = resolved_out_dir
     obs.log("OK", phase="boot", obs_format="v1", obs_dir=str(obs.obs_dir))
     
     obs.create_dir()
@@ -135,9 +147,6 @@ if __name__ == "__main__":
         
         if len(pos_args) >= 1:
             il_path = pos_args[0]
-            # Always verify requires execution, but --out specifies custom out_dir.
-            # Currently run_il_entry doesn't take out_dir! Let's just call it.
-            run_il_entry(il_path, fixture_db)
+            run_il_entry(il_path, fixture_db, out_dir)
         else:
             print("ERROR: missing required argument il_path")
-
