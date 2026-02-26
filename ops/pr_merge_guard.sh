@@ -26,6 +26,19 @@ fi
 
 # --- S22-13 gate: required checks SOT sync (fail-closed) ---
 if [ "${STOP}" = "0" ]; then
+  OUT_REQUIRED_CONTRACT="$(python3 ops/ci/check_required_checks_contract.py 2>&1 || true)"
+  printf "%s\n" "${OUT_REQUIRED_CONTRACT}"
+  HAS_CONTRACT_OK="0"
+  case "${OUT_REQUIRED_CONTRACT}" in
+    *"OK: docs SOT matched"*"OK: ruleset SOT matched"*) HAS_CONTRACT_OK="1" ;;
+  esac
+  if [ "${HAS_CONTRACT_OK}" != "1" ]; then
+    printf "%s\n" "ERROR: required checks contract gate failed; STOP=1"
+    STOP="1"
+  fi
+fi
+
+if [ "${STOP}" = "0" ]; then
   OUT_REQUIRED_SOT="$(bash ops/required_checks_sot.sh check 2>&1 || true)"
   printf "%s\n" "${OUT_REQUIRED_SOT}"
   HAS_MATCH="0"

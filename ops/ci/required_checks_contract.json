@@ -1,0 +1,17 @@
+{
+  "schema": "CI_REQUIRED_CHECKS_CONTRACT_v1",
+  "required_contexts": [
+    "test",
+    "verify-pack"
+  ],
+  "context_to_workflow_job": {
+    "test": {
+      "workflow": ".github/workflows/test.yml",
+      "job": "test"
+    },
+    "verify-pack": {
+      "workflow": ".github/workflows/verify_pack.yml",
+      "job": "verify-pack"
+    }
+  }
+}

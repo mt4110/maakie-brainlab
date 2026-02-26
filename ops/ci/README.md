@@ -6,6 +6,7 @@ This directory contains scripts and configuration for CI workflows.
 
 - `verify_pack_ci.sh`: Main entry point for CI pack verification (legacy path).
 - `decide_cost_scope.py`: Decides whether `verify_pack` should run heavy steps.
+- `check_required_checks_contract.py`: Validates required-check contract consistency.
 
 ## Config
 
@@ -13,6 +14,7 @@ This directory contains scripts and configuration for CI workflows.
   - `default_mode`: `balanced`
   - `modes` enum: `lite`, `balanced`, `full`
   - `docs_only_allowlist_globs`: patterns allowed for docs-only lightweight runs
+- `required_checks_contract.json`: Source of truth for required check contexts and workflow-job mapping.
 
 ## Usage
 
@@ -28,4 +30,8 @@ python3 ops/ci/decide_cost_scope.py \
   --mode balanced \
   --changed-file docs/ops/README.md \
   --json
+```
+
+```bash
+python3 ops/ci/check_required_checks_contract.py
 ```
