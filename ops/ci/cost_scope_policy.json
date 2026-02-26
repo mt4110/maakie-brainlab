@@ -1,0 +1,29 @@
+{
+  "schema": "CI_COST_SCOPE_POLICY_v1",
+  "default_mode": "balanced",
+  "force_heavy": {
+    "events": [
+      "workflow_dispatch"
+    ],
+    "refs": [
+      "refs/heads/main"
+    ]
+  },
+  "modes": {
+    "lite": {
+      "strategy": "always_light"
+    },
+    "balanced": {
+      "strategy": "docs_only_light"
+    },
+    "full": {
+      "strategy": "always_heavy"
+    }
+  },
+  "docs_only_allowlist_globs": [
+    "docs/**",
+    "README",
+    "README.*",
+    "SECURITY.md"
+  ]
+}

@@ -50,7 +50,7 @@ Policy:
 
 CI:
 - A workflow posts a commit status with context `milestone_required`.
-- Missing milestone (and no exception label, non-draft) => status `failure`.
+- Missing milestone (and no exception label, non-draft) => status `success` with WARN text (advisory-only).
 - **Invariant**: Every decision must be written in PR body.
 - **Rule**: Milestone OR (no-milestone-ok + **Non-empty Reason**)
 
@@ -83,5 +83,5 @@ git reset --hard origin/main
 
 - `ops/pr_merge_guard.sh` の blocking 条件は required checks と check-runs のみ。
 - milestone 系は観測 + 自動補正（best-effort）で、判定は non-blocking。
-- `milestone_required` の失敗は WARN 扱い（merge停止条件にしない）。
+- `milestone_required` は success-only の WARN 表示（merge停止条件にしない）。
 - 実行マージは merge-commit 固定（`gh pr merge --merge --match-head-commit <sha>`）。

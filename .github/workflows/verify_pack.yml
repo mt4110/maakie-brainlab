@@ -13,8 +13,8 @@ on:
         default: "none"
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -53,13 +53,55 @@ jobs:
       - name: Sanity Check (Finalize Clean)
         run: bash ops/finalize_clean.sh --check
 
+      - name: Decide Cost Scope
+        id: cost_scope
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          GIT_REF: ${{ github.ref }}
+          HEAD_SHA: ${{ github.sha }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+          COST_MODE: ${{ vars.CI_COST_MODE }}
+        run: |
+          BASE_SHA=""
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            BASE_SHA="${PR_BASE_SHA:-}"
+          elif [ "$EVENT_NAME" = "push" ]; then
+            BASE_SHA="${PUSH_BEFORE_SHA:-}"
+          fi
+          # NOTE: ubuntu-latest ships python3 by default; setup-python remains heavy-gated for cost control.
+          python3 ops/ci/decide_cost_scope.py \
+            --policy ops/ci/cost_scope_policy.json \
+            --event "$EVENT_NAME" \
+            --ref "$GIT_REF" \
+            --base "$BASE_SHA" \
+            --head "$HEAD_SHA" \
+            --mode "${COST_MODE:-}" \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Record Light Mode Skips
+        if: ${{ steps.cost_scope.outputs.heavy_needed != '1' }}
+        run: |
+          {
+            echo -e "seed_eval\t0"
+            echo -e "s5_evidence_pack\t0"
+            echo -e "review_bundle\t0"
+            echo -e "verify_evidence\t0"
+            echo -e "verify_bundle\t0"
+            echo -e "pack_delta\t0"
+          } >> .local/ci/10_status.tsv
+          echo "OK: lite mode skip heavy steps reason=${{ steps.cost_scope.outputs.reason }}"
+
       - name: Set up Python
+        if: ${{ steps.cost_scope.outputs.heavy_needed == '1' }}
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: "pip"
 
       - name: Create venv & Install Deps
+        if: ${{ steps.cost_scope.outputs.heavy_needed == '1' }}
         run: |
           make bootstrap
           # Diagnostics
@@ -68,6 +110,7 @@ jobs:
           uv pip freeze | head -n 40
 
       - name: Set up Go
+        if: ${{ steps.cost_scope.outputs.heavy_needed == '1' }}
         uses: actions/setup-go@v4
         with:
           go-version-file: go.mod
@@ -75,8 +118,8 @@ jobs:
           cache-dependency-path: go.sum
 
       # S7-01: GPG Key Generation (Ephemeral for CI)
-      # S7-01: GPG Key Generation (Ephemeral for CI)
       - name: Generate Ephemeral Keys
+        if: ${{ steps.cost_scope.outputs.heavy_needed == '1' }}
         shell: bash
         working-directory: ${{ github.workspace }}
         run: |
@@ -105,9 +148,8 @@ jobs:
           ls -la "$KEYDIR"
 
       # S5: Seed eval results fixture (CI)
-      # S5: Seed eval results fixture (CI)
-      # S5: Seed eval results fixture (CI)
       - name: Seed eval results fixture (CI)
+        if: ${{ steps.cost_scope.outputs.heavy_needed == '1' }}
         shell: bash
         working-directory: ${{ github.workspace }}
         run: |
@@ -148,6 +190,7 @@ jobs:
 
       # S5: Evidence Pack (Clean Execution)
       - name: Create Evidence Pack (Clean Workspace & Run Always)
+        if: ${{ steps.cost_scope.outputs.heavy_needed == '1' }}
         id: create_evidence_pack
         shell: bash
         working-directory: ${{ github.workspace }}
@@ -202,6 +245,7 @@ jobs:
 
       # Review Bundle (Run Always Wrap)
       - name: Create Review Bundle
+        if: ${{ steps.cost_scope.outputs.heavy_needed == '1' }}
         run: |
           set +e
           {
@@ -231,6 +275,7 @@ jobs:
 
       # Verification (Unified) (Run Always Wrap)
       - name: Verify Evidence Pack
+        if: ${{ steps.cost_scope.outputs.heavy_needed == '1' }}
         run: |
           set +e
           {
@@ -242,6 +287,7 @@ jobs:
           exit 0
 
       - name: Verify Review Bundle
+        if: ${{ steps.cost_scope.outputs.heavy_needed == '1' }}
         run: |
           set +e
           {
@@ -254,6 +300,7 @@ jobs:
 
       # S15: Pack Delta Report (PR vs main baseline)
       - name: Pack Delta Report
+        if: ${{ steps.cost_scope.outputs.heavy_needed == '1' }}
         run: |
           # S15-H00: NO set -euo pipefail (manual EC recovery)
 
@@ -512,7 +559,7 @@ jobs:
             .local/ci/
             ci_out/
             review_bundle_*.tar.gz
-          retention-days: 14
+          retention-days: 5
 
       - name: Check Workspace Dirtiness
         if: always()

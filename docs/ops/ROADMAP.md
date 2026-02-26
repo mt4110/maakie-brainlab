@@ -60,3 +60,11 @@
 - S22-03: Done ✅ (Merged PR #78)
 - S22-04: Done ✅ (Merged PR #79)
 - S22-05: Done ✅ (Merged PR #81)
+
+### S23 — Done ✅
+- 全体図: `docs/ops/S23-01_PLAN.md` ... `docs/ops/S23-10_PLAN.md`
+- 実行: `docs/ops/S23-01_TASK.md` ... `docs/ops/S23-10_TASK.md`
+
+### S24 — Active (Thread v1)
+- 全体図: `docs/ops/S24-01-S24-10-THREAD-V1_PLAN.md`
+- 実行: `docs/ops/S24-01-S24-10-THREAD-V1_TASK.md`

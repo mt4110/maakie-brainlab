@@ -18,6 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Autofill milestone if missing (truth over payload)
+        id: autofill
         uses: actions/github-script@v7
         continue-on-error: true
         with:
@@ -28,27 +29,48 @@ jobs:
               const owner = context.repo.owner;
               const repo = context.repo.repo;
               const prNumber = context.payload.pull_request?.number;
+              let prNumberStr = "";
+              let headRef = "";
+              let dispatchNeeded = "0";
+              let autofillStatus = "skip";
+              let autofillDetail = "";
+
+              function flushOutputs() {
+                core.setOutput("pr_number", prNumberStr);
+                core.setOutput("head_ref", headRef);
+                core.setOutput("dispatch_needed", dispatchNeeded);
+                core.setOutput("autofill_status", autofillStatus);
+                core.setOutput("autofill_detail", autofillDetail.slice(0, 360));
+              }
 
               if (!prNumber) {
-                core.notice("SKIP: no PR number in payload");
+                autofillDetail = "SKIP: no PR number in payload";
+                core.notice(autofillDetail);
+                flushOutputs();
                 return;
               }
+              prNumberStr = String(prNumber);
 
               // Always fetch current PR state (avoid stale payload)
               let pr;
               try {
                 pr = (await github.rest.pulls.get({ owner, repo, pull_number: prNumber })).data;
               } catch (e) {
-                core.warning(`ERROR: pulls.get failed (non-fatal): ${e?.message || e}`);
+                autofillStatus = "error";
+                autofillDetail = `ERROR: pulls.get failed (non-fatal): ${e?.message || e}`;
+                core.warning(autofillDetail);
+                flushOutputs();
                 return;
               }
 
               const current = pr.milestone?.title || "";
-              const headRef = pr.head?.ref || "";
+              headRef = pr.head?.ref || "";
               const title = pr.title || "";
 
               if (current) {
-                core.notice(`SKIP: milestone already set: ${current}`);
+                autofillDetail = `SKIP: milestone already set: ${current}`;
+                core.notice(autofillDetail);
+                flushOutputs();
                 return;
               }
 
@@ -58,13 +80,17 @@ jobs:
                       || hay.match(/(?:^|[^A-Za-z0-9])S(\d{1,2})(?:[-_]\d{2})?(?:[^A-Za-z0-9]|$)/);
 
               if (!mm) {
-                core.notice(`SKIP: cannot infer milestone from headRef/title: headRef="${headRef}" title="${title}"`);
+                autofillDetail = `SKIP: cannot infer milestone from headRef/title: headRef="${headRef}" title="${title}"`;
+                core.notice(autofillDetail);
+                flushOutputs();
                 return;
               }
 
               const n = parseInt(mm[1], 10);
               if (!Number.isFinite(n) || n <= 0) {
-                core.notice(`SKIP: invalid inferred milestone number: ${mm[1]}`);
+                autofillDetail = `SKIP: invalid inferred milestone number: ${mm[1]}`;
+                core.notice(autofillDetail);
+                flushOutputs();
                 return;
               }
 
@@ -79,7 +105,10 @@ jobs:
                   per_page: 100,
                 })).data || [];
               } catch (e) {
-                core.warning(`ERROR: listMilestones failed (non-fatal): ${e?.message || e}`);
+                autofillStatus = "error";
+                autofillDetail = `ERROR: listMilestones failed (non-fatal): ${e?.message || e}`;
+                core.warning(autofillDetail);
+                flushOutputs();
                 return;
               }
 
@@ -87,7 +116,9 @@ jobs:
                           || milestones.find(x => (x.title || "").startsWith(want));
 
               if (!target) {
-                core.notice(`SKIP: milestone not found: want="${want}" (create milestone first)`);
+                autofillDetail = `SKIP: milestone not found: want="${want}" (create milestone first)`;
+                core.notice(autofillDetail);
+                flushOutputs();
                 return;
               }
 
@@ -98,46 +129,66 @@ jobs:
                   issue_number: prNumber,
                   milestone: target.number,
                 });
-                core.notice(`OK: milestone set: ${want} (#${target.number})`);
+                dispatchNeeded = "1";
+                autofillStatus = "ok";
+                autofillDetail = `OK: milestone set: ${want} (#${target.number})`;
+                core.notice(autofillDetail);
               } catch (e) {
-                core.warning(`ERROR: issues.update failed (non-fatal): ${e?.message || e}`);
+                autofillStatus = "error";
+                autofillDetail = `ERROR: issues.update failed (non-fatal): ${e?.message || e}`;
+                core.warning(autofillDetail);
+                flushOutputs();
                 return;
               }
+
+              flushOutputs();
             }
 
-            run().catch(e => core.warning(`ERROR: unexpected (non-fatal): ${e?.message || e}`));
+            await run().catch(e => {
+              core.warning(`ERROR: unexpected (non-fatal): ${e?.message || e}`);
+              try {
+                if (typeof flushOutputs === "function") {
+                  flushOutputs();
+                }
+              } catch (flushError) {
+                core.warning(`ERROR: failed to flush outputs after unexpected error: ${flushError?.message || flushError}`);
+              }
+            });
 
       - name: Dispatch milestone_required (refresh required check)
         id: dispatch_milestone_required
         uses: actions/github-script@v7
         continue-on-error: true
+        env:
+          DISPATCH_NEEDED: ${{ steps.autofill.outputs.dispatch_needed }}
+          PR_NUMBER: ${{ steps.autofill.outputs.pr_number }}
+          HEAD_REF: ${{ steps.autofill.outputs.head_ref }}
         with:
           script: |
             const { owner, repo } = context.repo;
-
-            let dispatchOk = "0";
+            const dispatchNeeded = (process.env.DISPATCH_NEEDED || "0").trim();
+            let dispatchState = "skip";
             let dispatchErr = "";
-            let prNumberStr = "";
-            let headRef = "";
+            let prNumberStr = (process.env.PR_NUMBER || "").trim();
+            let headRef = (process.env.HEAD_REF || "").trim();
 
             try {
-              const prNumber = context.payload.pull_request?.number ?? null;
-              if (!prNumber) {
-                core.info("SKIP: no pull_request number");
-                core.setOutput("dispatch_ok", dispatchOk);
-                core.setOutput("dispatch_error", "SKIP: no pull_request number");
-                core.setOutput("pr_number", "");
-                core.setOutput("head_ref", "");
+              if (dispatchNeeded !== "1") {
+                dispatchErr = "SKIP: dispatch not needed";
+                core.info(dispatchErr);
+                core.setOutput("dispatch_state", dispatchState);
+                core.setOutput("dispatch_error", dispatchErr);
+                core.setOutput("pr_number", prNumberStr);
+                core.setOutput("head_ref", headRef);
                 return;
               }
-              prNumberStr = String(prNumber);
 
-              const pr = await github.rest.pulls.get({ owner, repo, pull_number: prNumber });
-              headRef = pr.data?.head?.ref ?? "";
-              if (!headRef) {
-                core.info(`ERROR: dispatch skipped (no head ref) pr=${prNumberStr}`);
-                core.setOutput("dispatch_ok", dispatchOk);
-                core.setOutput("dispatch_error", "ERROR: no head ref");
+              if (!prNumberStr || !headRef) {
+                dispatchState = "error";
+                dispatchErr = "ERROR: missing pr_number/head_ref for dispatch";
+                core.info(`${dispatchErr} pr=${prNumberStr || "NA"} ref=${headRef || "NA"}`);
+                core.setOutput("dispatch_state", dispatchState);
+                core.setOutput("dispatch_error", dispatchErr);
                 core.setOutput("pr_number", prNumberStr);
                 core.setOutput("head_ref", headRef);
                 return;
@@ -151,16 +202,17 @@ jobs:
                 inputs: { pr_number: prNumberStr },
               });
 
-              dispatchOk = "1";
+              dispatchState = "ok";
               core.info(`OK: dispatched milestone_required pr=${prNumberStr} ref=${headRef}`);
             } catch (e) {
+              dispatchState = "error";
               const status = (e && (e.status || e.response?.status)) ? String(e.status || e.response?.status) : "NA";
               const msg = (e && e.message) ? e.message : String(e);
               dispatchErr = `status=${status} msg=${msg}`.slice(0, 360);
               core.info(`ERROR: dispatch milestone_required failed pr=${prNumberStr || "NA"} ref=${headRef || "NA"} ${dispatchErr}`);
             }
 
-            core.setOutput("dispatch_ok", dispatchOk);
+            core.setOutput("dispatch_state", dispatchState);
             core.setOutput("dispatch_error", dispatchErr);
             core.setOutput("pr_number", prNumberStr);
             core.setOutput("head_ref", headRef);
@@ -168,17 +220,17 @@ jobs:
       - name: Audit dispatch result (one-line)
         if: always()
         run: |
-          OK="${{ steps.dispatch_milestone_required.outputs.dispatch_ok }}"
+          STATE="${{ steps.dispatch_milestone_required.outputs.dispatch_state }}"
           PR="${{ steps.dispatch_milestone_required.outputs.pr_number }}"
           REF="${{ steps.dispatch_milestone_required.outputs.head_ref }}"
           ERR="${{ steps.dispatch_milestone_required.outputs.dispatch_error }}"
 
-          if [ "$OK" = "1" ]; then
+          if [ "$STATE" = "ok" ]; then
             LINE="OK: milestone_autofill dispatch milestone_required pr=${PR:-NA} ref=${REF:-NA}"
-            echo "$LINE"
-            printf "%s\n" "$LINE" >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+          elif [ "$STATE" = "skip" ]; then
+            LINE="SKIP: milestone_autofill dispatch not needed pr=${PR:-NA} ref=${REF:-NA}"
           else
             LINE="ERROR: milestone_autofill dispatch milestone_required failed pr=${PR:-NA} ref=${REF:-NA} ${ERR:-NA}"
-            echo "$LINE"
-            printf "%s\n" "$LINE" >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
           fi
+          echo "$LINE"
+          printf "%s\n" "$LINE" >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true

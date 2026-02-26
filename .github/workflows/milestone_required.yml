@@ -81,7 +81,7 @@ jobs:
               core.setOutput("body", "");
             }
 
-      - name: Decide (required + advisory)
+      - name: Decide (advisory statuses)
         id: decide
         shell: bash
         env:
@@ -120,7 +120,7 @@ jobs:
           advisory_warns = []
 
           try:
-            # required check
+            # milestone_required context (advisory-only)
             if draft:
               required_state = "success"
               required_desc = "SKIP: draft PR"
@@ -128,8 +128,8 @@ jobs:
               required_state = "success"
               required_desc = "SKIP: no-milestone-ok label"
             elif ms_title == "":
-              required_state = "failure"
-              required_desc = "FAIL: missing milestone"
+              required_state = "success"
+              required_desc = "WARN: missing milestone (advisory)"
             else:
               required_state = "success"
               required_desc = "OK: milestone present"
@@ -173,7 +173,7 @@ jobs:
           print(f"OK: advisory_desc={advisory_desc}")
           PY
 
-      - name: Post status milestone_required (non-blocking job)
+      - name: Post status milestone_required (advisory-only)
         shell: bash
         env:
           REPO: ${{ github.repository }}
@@ -296,7 +296,7 @@ jobs:
           lines.append("")
           lines.append("Rules (non-blocking):")
           lines.append("- `milestone_advisory` never blocks merges (success-only)")
-          lines.append("- `milestone_required` posts failure when milestone is missing (not required-check by default)")
+          lines.append("- `milestone_required` is advisory-only and posts success (with WARN text when missing)")
 
           if not path:
             print("ERROR: GITHUB_STEP_SUMMARY not set (non-fatal)")
