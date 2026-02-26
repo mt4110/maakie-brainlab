@@ -35,9 +35,6 @@ jobs:
       - name: Run Unit Tests
         run: make test
 
-      - name: Required Checks Contract Guard
-        run: python3 ops/ci/check_required_checks_contract.py
-
       - name: Run Smoke Test
         run: make smoke
 

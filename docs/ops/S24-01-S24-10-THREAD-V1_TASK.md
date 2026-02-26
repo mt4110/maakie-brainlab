@@ -4,7 +4,7 @@ Last Updated: 2026-02-26
 
 ## Progress
 
-- S24-01-S24-10: 0% (design fixed, implementation pending)
+- S24-01-S24-10: 75% (S24-04/06/07/08 実装済み、closeout/evidence 固めを残し実装進行中)
 
 ## Ritual 22-16-22-99
 
@@ -35,9 +35,9 @@ Last Updated: 2026-02-26
 
 ### S24-04 Milestone API Slimming
 
-- [ ] `milestone_autofill` の重複 API fetch を削減
-- [ ] milestone 実変化時のみ dispatch する条件を導入
-- [ ] `milestone_required` が non-blocking 契約を維持することを確認
+- [x] `milestone_autofill` の重複 API fetch を削減
+- [x] milestone 実変化時のみ dispatch する条件を導入
+- [x] `milestone_required` が non-blocking 契約を維持することを確認
 
 ### S24-05 Artifact Budgeting
 
@@ -47,21 +47,21 @@ Last Updated: 2026-02-26
 
 ### S24-06 Tiered Execution
 
-- [ ] `CI_COST_MODE` を導入（lite/balanced/full）
-- [ ] PR default を lite に設定
-- [ ] manual/full 導線を残す
+- [x] `CI_COST_MODE` を導入（lite/balanced/full）
+- [x] PR default を balanced に設定（品質優先）
+- [x] manual/full 導線を残す
 
 ### S24-07 Schedule Throttling
 
-- [ ] `run_always_1h` の頻度を再設計（候補: 4h）
-- [ ] 手動 dispatch 導線を保持
+- [x] `run_always_1h` の頻度を再設計（4h）
+- [x] 手動 dispatch 導線を保持
 - [ ] 変更なし期間 skip 判定を追加（必要なら）
 
 ### S24-08 Required Checks Alignment
 
-- [ ] `ops/required_checks_sot.sh check` が通ることを確認
-- [ ] required checks 集合に milestone advisory 系が入っていないことを確認
-- [ ] drift 時の対応手順を PR body に記録
+- [x] `ops/required_checks_sot.sh check` が通ることを確認
+- [x] required checks 集合に milestone advisory 系が入っていないことを確認
+- [x] drift 時の対応手順を PR body に記録
 
 ### S24-09 Rollout Safety
 

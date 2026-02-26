@@ -8,6 +8,7 @@ import fnmatch
 import json
 import os
 import subprocess
+import sys
 from typing import Dict, List, Optional
 
 
@@ -230,4 +231,4 @@ def main(argv: List[str]) -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main(os.sys.argv[1:]))
+    raise SystemExit(main(sys.argv[1:]))

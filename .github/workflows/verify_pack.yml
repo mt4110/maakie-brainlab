@@ -117,7 +117,6 @@ jobs:
           cache-dependency-path: go.sum
 
       # S7-01: GPG Key Generation (Ephemeral for CI)
-      # S7-01: GPG Key Generation (Ephemeral for CI)
       - name: Generate Ephemeral Keys
         if: ${{ steps.cost_scope.outputs.heavy_needed == '1' }}
         shell: bash
@@ -147,8 +146,6 @@ jobs:
           git status --porcelain=v1 || true
           ls -la "$KEYDIR"
 
-      # S5: Seed eval results fixture (CI)
-      # S5: Seed eval results fixture (CI)
       # S5: Seed eval results fixture (CI)
       - name: Seed eval results fixture (CI)
         if: ${{ steps.cost_scope.outputs.heavy_needed == '1' }}

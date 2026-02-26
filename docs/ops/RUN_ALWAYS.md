@@ -1,7 +1,8 @@
-# Run Always 1h (Scheduled Validation)
+# Run Always (4h Scheduled Validation)
 
-This document describes the **Run Always 1h** automated workflow,
+This document describes the **Run Always** automated workflow,
 designed to provide a continuous baseline for the project's health.
+Legacy naming note: workflow/file/script names still include `run_always_1h` for compatibility.
 
 ## 1. Overview
 
