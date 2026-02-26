@@ -4,7 +4,7 @@ Last Updated: 2026-02-26
 
 ## Progress
 
-- S25-01-25-10: 45% (S25-01..S25-04 完了)
+- S25-01-25-10: 55% (S25-01..S25-05 完了)
 
 ## Ritual 22-16-22-99
 
@@ -52,8 +52,11 @@ Last Updated: 2026-02-26
 
 ### S25-05 Regression Safety
 
-- [ ] 既存 verify コマンドとの整合を確認
-- [ ] 既存契約を壊す変更がないことを明示
+- [x] 既存 verify コマンドとの整合を確認
+- [x] 既存契約を壊す変更がないことを明示
+  - runner: `scripts/ops/s25_regression_safety.py`
+  - artifact: `docs/evidence/s25-05/regression_safety_latest.md`
+  - gate: `make s25-regression-safety`
 
 ### S25-06 Acceptance Test Wall
 
@@ -94,7 +97,7 @@ Last Updated: 2026-02-26
 
 重量（ship前）:
 
-- [ ] `make verify-il`
+- [x] `make verify-il`
 - [ ] `source /path/to/your/nix/profile.d/nix-daemon.sh`
 - [ ] `ci-self up --ref "$(git branch --show-current)"`
 

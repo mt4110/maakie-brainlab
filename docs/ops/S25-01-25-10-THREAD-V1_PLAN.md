@@ -94,8 +94,10 @@ Last Updated: 2026-02-26
 - `docs/ops/S25-02_WORK_BREAKDOWN.md`
 - `scripts/ops/obs_contract.py`
 - `scripts/ops/s25_obs_pr_summary.py`
+- `scripts/ops/s25_regression_safety.py`
 - `docs/ops/S25-04_OBSERVABILITY_CONTRACT.md`
 - `docs/evidence/s25-04/*`
+- `docs/evidence/s25-05/*`
 - `scripts/ops/current_point.py`
 - `Makefile`
 - `docs/ops/ROADMAP.md`

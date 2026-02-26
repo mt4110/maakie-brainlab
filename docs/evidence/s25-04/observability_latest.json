@@ -27,9 +27,9 @@
     "current-point": {
       "schema_version": "s25-obs-contract-v1",
       "tool": "current-point",
-      "run_id": "current-point__20260226T163128Z__ops-s25-01-25-10__5d99cc9",
-      "run_dir": "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/current-point/current-point__20260226T163128Z__ops-s25-01-25-10__5d99cc9",
-      "captured_at_utc": "2026-02-26T16:31:28.573633+00:00",
+      "run_id": "current-point__20260226T163242Z__ops-s25-01-25-10__5d99cc9",
+      "run_dir": "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/current-point/current-point__20260226T163242Z__ops-s25-01-25-10__5d99cc9",
+      "captured_at_utc": "2026-02-26T16:32:42.479596+00:00",
       "branch": "ops/S25-01-25-10",
       "head": "5d99cc94a5011058a555f37b9739e99292d24a6a",
       "counts": {
@@ -46,9 +46,9 @@
     "obs-pr-summary": {
       "schema_version": "s25-obs-contract-v1",
       "tool": "obs-pr-summary",
-      "run_id": "obs-pr-summary__20260226T163206Z__ops-s25-01-25-10__5d99cc9",
-      "run_dir": "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/obs-pr-summary/obs-pr-summary__20260226T163206Z__ops-s25-01-25-10__5d99cc9",
-      "captured_at_utc": "2026-02-26T16:32:06.181710+00:00",
+      "run_id": "obs-pr-summary__20260226T163242Z__ops-s25-01-25-10__5d99cc9",
+      "run_dir": "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/obs-pr-summary/obs-pr-summary__20260226T163242Z__ops-s25-01-25-10__5d99cc9",
+      "captured_at_utc": "2026-02-26T16:32:42.474641+00:00",
       "branch": "ops/S25-01-25-10",
       "head": "5d99cc94a5011058a555f37b9739e99292d24a6a",
       "counts": {
@@ -63,6 +63,28 @@
           "json": "/Users/takemuramasaki/dev/maakie-brainlab/docs/evidence/s25-04/observability_latest.json",
           "md": "/Users/takemuramasaki/dev/maakie-brainlab/docs/evidence/s25-04/observability_latest.md"
         }
+      }
+    },
+    "regression-safety": {
+      "schema_version": "s25-obs-contract-v1",
+      "tool": "regression-safety",
+      "run_id": "regression-safety__20260226T234053Z__ops-s25-01-25-10__650b76c",
+      "run_dir": "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/regression-safety/regression-safety__20260226T234053Z__ops-s25-01-25-10__650b76c",
+      "captured_at_utc": "2026-02-26T23:40:53.206145+00:00",
+      "branch": "ops/S25-01-25-10",
+      "head": "650b76ce2782dd2141d3dd17e8ffcdab44ba4d65",
+      "counts": {
+        "OK": 13,
+        "WARN": 0,
+        "ERROR": 0,
+        "SKIP": 0
+      },
+      "events_total": 13,
+      "extra": {
+        "regression_json": "/Users/takemuramasaki/dev/maakie-brainlab/docs/evidence/s25-05/regression_safety_latest.json",
+        "regression_md": "/Users/takemuramasaki/dev/maakie-brainlab/docs/evidence/s25-05/regression_safety_latest.md",
+        "stop": 0,
+        "commands_total": 4
       }
     }
   }
