@@ -27,7 +27,6 @@ jobs:
       GATE1_VERIFY_ONLY: "1"
       S5_MODE: "verify-only"
       REVIEWPACK_POLICY_MODE: "ci"
-      CI_COST_MODE: ${{ vars.CI_COST_MODE }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -57,68 +56,30 @@ jobs:
       - name: Decide Cost Scope
         id: cost_scope
         shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          GIT_REF: ${{ github.ref }}
+          HEAD_SHA: ${{ github.sha }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+          COST_MODE: ${{ vars.CI_COST_MODE }}
         run: |
-          MODE="${CI_COST_MODE:-lite}"
-          EVENT="${{ github.event_name }}"
-          HEAVY="1"
-          REASON="default"
-
-          # manual run and main branch pushes stay full coverage
-          if [ "$EVENT" = "workflow_dispatch" ]; then
-            MODE="full"
-            HEAVY="1"
-            REASON="workflow_dispatch"
-          elif [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            HEAVY="1"
-            REASON="main_ref"
-          elif [ "$MODE" = "full" ]; then
-            HEAVY="1"
-            REASON="ci_cost_mode_full"
-          else
-            BASE=""
-            ZERO="0000000000000000000000000000000000000000"
-            if [ "$EVENT" = "pull_request" ]; then
-              BASE="${{ github.event.pull_request.base.sha }}"
-            elif [ "$EVENT" = "push" ]; then
-              BASE="${{ github.event.before }}"
-            fi
-
-            if [ -n "$BASE" ] && [ "$BASE" != "$ZERO" ]; then
-              CHANGED="$(git diff --name-only "$BASE" "${{ github.sha }}" || true)"
-              if [ -z "$CHANGED" ]; then
-                HEAVY="0"
-                REASON="empty_diff"
-              else
-                HEAVY="0"
-                REASON="docs_only"
-                OLDIFS="$IFS"
-                IFS=$'\n'
-                for f in $CHANGED; do
-                  [ -z "$f" ] && continue
-                  case "$f" in
-                    *.md|docs/*|README|README.*|SECURITY.md)
-                      ;;
-                    *)
-                      HEAVY="1"
-                      REASON="impact_file:$f"
-                      break
-                      ;;
-                  esac
-                done
-                IFS="$OLDIFS"
-              fi
-            else
-              HEAVY="1"
-              REASON="missing_base"
-            fi
+          BASE_SHA=""
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            BASE_SHA="${PR_BASE_SHA:-}"
+          elif [ "$EVENT_NAME" = "push" ]; then
+            BASE_SHA="${PUSH_BEFORE_SHA:-}"
           fi
+          python3 ops/ci/decide_cost_scope.py \
+            --policy ops/ci/cost_scope_policy.json \
+            --event "$EVENT_NAME" \
+            --ref "$GIT_REF" \
+            --base "$BASE_SHA" \
+            --head "$HEAD_SHA" \
+            --mode "${COST_MODE:-}" \
+            --github-output "$GITHUB_OUTPUT"
 
-          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
-          echo "heavy_needed=$HEAVY" >> "$GITHUB_OUTPUT"
-          echo "reason=$REASON" >> "$GITHUB_OUTPUT"
-          echo "OK: cost_scope mode=$MODE heavy_needed=$HEAVY reason=$REASON"
-
-      - name: Record Lite Mode Skips
+      - name: Record Light Mode Skips
         if: ${{ steps.cost_scope.outputs.heavy_needed != '1' }}
         run: |
           {
