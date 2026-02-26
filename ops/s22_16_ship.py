@@ -5,8 +5,9 @@ S22-16 ship helper.
 One-command flow (stopless):
 1) Run light gates (guard + make verify-il)
 2) Commit changes (optional)
-3) Generate PR body with gate summaries
-4) Create/update PR via gh (optional)
+3) Gate on ci-self checks (all green required for PR sync)
+4) Generate PR body with gate summaries
+5) Create/update PR via gh (optional)
 5) Optionally run reviewpack verify-only once
 """
 
@@ -23,6 +24,7 @@ from typing import Dict, List, Optional, Tuple
 
 
 DEFAULT_COMMIT_MESSAGE = "s22-16: align verify-il entrypoint and reduce guard noise"
+FORBIDDEN_BRANCH_RX = re.compile(r"^codex/feat([/-]|$)")
 
 
 def log(level: str, message: str) -> None:
@@ -195,6 +197,7 @@ def build_pr_body(
     verify_status: str,
     smoke_summary: str,
     selftest_summary: str,
+    ci_self_status: str,
     reviewpack_status: str,
     reviewpack_sha: str,
 ) -> str:
@@ -213,6 +216,7 @@ def build_pr_body(
         f"- make verify-il: `{verify_status or 'N/A'}`",
         f"- smoke summary: `{smoke_summary or 'N/A'}`",
         f"- selftest summary: `{selftest_summary or 'N/A'}`",
+        f"- ci-self gate: `{ci_self_status or 'N/A'}`",
         f"- reviewpack submit --mode verify-only: `{reviewpack_status or 'SKIP'}`",
     ]
     if reviewpack_sha:
@@ -239,6 +243,30 @@ def build_pr_body(
         ]
     )
     return "\n".join(lines)
+
+
+def ci_self_all_green(output_text: str) -> Tuple[bool, str]:
+    text = output_text or ""
+    if "Some checks were not successful" in text:
+        return False, "Some checks were not successful"
+
+    rx_counts = re.search(
+        r"(\d+)\s+cancelled,\s+(\d+)\s+failing,\s+(\d+)\s+successful,\s+(\d+)\s+skipped,\s+and\s+(\d+)\s+pending\s+checks",
+        text,
+        flags=re.I,
+    )
+    if rx_counts:
+        cancelled = int(rx_counts.group(1))
+        failing = int(rx_counts.group(2))
+        pending = int(rx_counts.group(5))
+        if cancelled == 0 and failing == 0 and pending == 0:
+            return True, "all checks green"
+        return False, f"counts cancelled={cancelled} failing={failing} pending={pending}"
+
+    if "All checks passed" in text:
+        return True, "all checks passed"
+
+    return False, "cannot confirm all-green state from ci-self output"
 
 
 def main(argv: List[str]) -> None:
@@ -281,11 +309,17 @@ def main(argv: List[str]) -> None:
     elif branch in ("main", "master"):
         log("ERROR", f"refuse_on_base_branch branch={branch}")
         stop = 1
+    elif FORBIDDEN_BRANCH_RX.search(branch):
+        log("ERROR", f"forbidden_branch_pattern branch={branch}")
+        log("ERROR", "do not continue on codex/feat* branches")
+        log("OK", "recreate_branch_example=git switch -c feat/<slug>")
+        stop = 1
 
     guard_summary = ""
     verify_status = ""
     smoke_summary = ""
     selftest_summary = ""
+    ci_self_status = "SKIP: not run"
     reviewpack_status = "SKIP: not requested"
     reviewpack_sha = ""
 
@@ -420,6 +454,50 @@ def main(argv: List[str]) -> None:
     if ok and out.strip():
         head_sha = out.strip()
 
+    if skip_pr:
+        log("SKIP", "PR step skipped by option")
+    elif stop == 1:
+        log("SKIP", "PR step skipped because STOP=1")
+    else:
+        if dry_run:
+            ci_self_status = "SKIP: dry_run"
+            log("SKIP", "dry_run skips ci-self/PR update")
+        else:
+            if not shutil_which("gh"):
+                log("WARN", "gh not found; cannot create/update PR")
+                ci_self_status = "WARN: gh not found"
+            else:
+                ok_auth, _, _, _ = run_cmd(["gh", "auth", "status"], cwd=root, dry_run=False, log_path=obs / "60_gh_auth.log")
+                if not ok_auth:
+                    log("WARN", "gh auth not ready; PR update skipped")
+                    ci_self_status = "WARN: gh auth not ready"
+                else:
+                    run_cmd(["git", "push"], cwd=root, dry_run=False, log_path=obs / "61_git_push.log")
+                    ci_ok, ci_out, ci_err, ci_rc = run_cmd(
+                        [
+                            "bash",
+                            "-lc",
+                            'source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh && cd ~/dev/maakie-brainlab && ci-self up --ref "$(git branch --show-current)"',
+                        ],
+                        cwd=root,
+                        dry_run=False,
+                        log_path=obs / "62_ci_self_up.log",
+                    )
+                    ci_text = (ci_out or "") + (ci_err or "")
+                    if not ci_ok:
+                        ci_self_status = f"ERROR: ci-self command failed rc={ci_rc}"
+                        log("ERROR", ci_self_status)
+                        stop = 1
+                    else:
+                        all_green, reason = ci_self_all_green(ci_text)
+                        if all_green:
+                            ci_self_status = f"OK: {reason}"
+                            log("OK", f"ci_self_gate {reason}")
+                        else:
+                            ci_self_status = f"ERROR: {reason}"
+                            log("ERROR", f"ci_self_gate_blocked reason={reason}")
+                            stop = 1
+
     pr_body = build_pr_body(
         branch=branch or "unknown",
         head_sha=head_sha or "unknown",
@@ -427,6 +505,7 @@ def main(argv: List[str]) -> None:
         verify_status=verify_status,
         smoke_summary=smoke_summary,
         selftest_summary=selftest_summary,
+        ci_self_status=ci_self_status,
         reviewpack_status=reviewpack_status,
         reviewpack_sha=reviewpack_sha,
     )
@@ -439,75 +518,64 @@ def main(argv: List[str]) -> None:
         log("ERROR", f"cannot_write_pr_body err={exc}")
         stop = 1
 
-    if skip_pr:
-        log("SKIP", "PR step skipped by option")
-    elif stop == 1:
-        log("SKIP", "PR step skipped because STOP=1")
-    else:
-        if dry_run:
-            log("SKIP", "dry_run skips push/PR update")
+    if stop == 0 and (not skip_pr) and (not dry_run):
+        # PR sync is allowed only after ci-self all-green gate.
+        if not shutil_which("gh"):
+            log("WARN", "gh not found; cannot create/update PR")
         else:
-            if not shutil_which("gh"):
-                log("WARN", "gh not found; cannot create/update PR")
-            else:
-                ok_auth, _, _, _ = run_cmd(["gh", "auth", "status"], cwd=root, dry_run=False, log_path=obs / "60_gh_auth.log")
-                if not ok_auth:
-                    log("WARN", "gh auth not ready; PR update skipped")
-                else:
-                    run_cmd(["git", "push"], cwd=root, dry_run=False, log_path=obs / "61_git_push.log")
-                    ok_view, out_view, _, _ = run_cmd(
-                        ["gh", "pr", "view", "--json", "number,url"],
+            ok_view, out_view, _, _ = run_cmd(
+                ["gh", "pr", "view", "--json", "number,url"],
+                cwd=root,
+                dry_run=False,
+                log_path=obs / "63_pr_view.log",
+            )
+            if ok_view:
+                pr_number = ""
+                pr_url = ""
+                try:
+                    obj = json.loads(out_view)
+                    pr_number = str(obj.get("number", ""))
+                    pr_url = str(obj.get("url", ""))
+                except Exception:
+                    pass
+                if pr_number:
+                    run_cmd(
+                        ["gh", "pr", "edit", pr_number, "--body-file", str(pr_body_path)],
                         cwd=root,
                         dry_run=False,
-                        log_path=obs / "62_pr_view.log",
+                        log_path=obs / "64_pr_edit.log",
                     )
-                    if ok_view:
-                        pr_number = ""
-                        pr_url = ""
-                        try:
-                            obj = json.loads(out_view)
-                            pr_number = str(obj.get("number", ""))
-                            pr_url = str(obj.get("url", ""))
-                        except Exception:
-                            pass
-                        if pr_number:
-                            run_cmd(
-                                ["gh", "pr", "edit", pr_number, "--body-file", str(pr_body_path)],
-                                cwd=root,
-                                dry_run=False,
-                                log_path=obs / "63_pr_edit.log",
-                            )
-                            log("OK", f"pr_updated number={pr_number} url={pr_url}")
-                        else:
-                            log("WARN", "cannot parse existing PR number; skipping edit")
-                    else:
-                        title = commit_message
-                        ok_title, out_title, _, _ = run_cmd(
-                            ["git", "log", "-1", "--pretty=%s"],
-                            cwd=root,
-                            dry_run=False,
-                            log_path=obs / "64_pr_title.log",
-                        )
-                        if ok_title and out_title.strip():
-                            title = out_title.strip()
-                        run_cmd(
-                            [
-                                "gh",
-                                "pr",
-                                "create",
-                                "--base",
-                                base_branch,
-                                "--head",
-                                branch,
-                                "--title",
-                                title,
-                                "--body-file",
-                                str(pr_body_path),
-                            ],
-                            cwd=root,
-                            dry_run=False,
-                            log_path=obs / "65_pr_create.log",
-                        )
+                    log("OK", f"pr_updated number={pr_number} url={pr_url}")
+                else:
+                    log("WARN", "cannot parse existing PR number; skipping edit")
+            else:
+                title = commit_message
+                ok_title, out_title, _, _ = run_cmd(
+                    ["git", "log", "-1", "--pretty=%s"],
+                    cwd=root,
+                    dry_run=False,
+                    log_path=obs / "65_pr_title.log",
+                )
+                if ok_title and out_title.strip():
+                    title = out_title.strip()
+                run_cmd(
+                    [
+                        "gh",
+                        "pr",
+                        "create",
+                        "--base",
+                        base_branch,
+                        "--head",
+                        branch,
+                        "--title",
+                        title,
+                        "--body-file",
+                        str(pr_body_path),
+                    ],
+                    cwd=root,
+                    dry_run=False,
+                    log_path=obs / "66_pr_create.log",
+                )
 
     if stop == 0:
         log("OK", f"s22_16_ship_done STOP=0 obs_dir={obs}")
