@@ -135,10 +135,11 @@ fi
 PENDING=""
 FAILS=""
 if [ "$STOP" = "0" ]; then
+  # milestone系はadvisory扱い。pending/failing集計から除外する。
   PENDING="$(gh api -H "Accept: application/vnd.github+json" "repos/$NAME/commits/$SHA/check-runs" \
-    --jq '[.check_runs[] | select(.status != "completed")] | length' 2>/dev/null || true)"
+    --jq '[.check_runs[] | select(((.name // "") | test("milestone_required|milestone_advisory|^milestone$"; "i")) | not) | select(.status != "completed")] | length' 2>/dev/null || true)"
   FAILS="$(gh api -H "Accept: application/vnd.github+json" "repos/$NAME/commits/$SHA/check-runs" \
-    --jq '[.check_runs[] | select(.status=="completed" and (.conclusion!="success" and .conclusion!="neutral" and .conclusion!="skipped"))] | length' 2>/dev/null || true)"
+    --jq '[.check_runs[] | select(((.name // "") | test("milestone_required|milestone_advisory|^milestone$"; "i")) | not) | select(.status=="completed" and (.conclusion!="success" and .conclusion!="neutral" and .conclusion!="skipped"))] | length' 2>/dev/null || true)"
 
   echo "OK: check_runs pending=${PENDING:-UNKNOWN} failing=${FAILS:-UNKNOWN}"
 

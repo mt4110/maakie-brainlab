@@ -315,7 +315,9 @@ def main(argv: List[str]) -> None:
     if not phase:
         log("ERROR", "phase missing (pass --phase or use sXX-YY branch)")
         stop = 1
-    commit_message = str(opts["commit_message"]).strip() or f"{phase.lower()}: ship updates"
+    phase_label = phase or "unknown"
+    phase_slug = phase_label.lower()
+    commit_message = str(opts["commit_message"]).strip() or f"{phase_slug}: ship updates"
 
     if branch in ("main", "master"):
         log("ERROR", f"refuse_on_base_branch branch={branch}")
@@ -432,24 +434,7 @@ def main(argv: List[str]) -> None:
     ok_sha, out_sha, _, _ = run_cmd(["git", "rev-parse", "HEAD"], cwd=root, dry_run=dry_run, log_path=obs / "50_head.log")
     if ok_sha and out_sha.strip():
         head_sha = out_sha.strip()
-
-    pr_body = build_pr_body(
-        phase=phase,
-        branch=branch or "unknown",
-        head_sha=head_sha or "unknown",
-        guard_summary=guard_summary,
-        verify_status=verify_status,
-        ci_self_status=ci_self_status,
-        reviewpack_status=reviewpack_status,
-    )
-    pr_path = root / ".local" / "pr" / f"{phase.lower()}-auto.md"
-    try:
-        pr_path.parent.mkdir(parents=True, exist_ok=True)
-        pr_path.write_text(pr_body, encoding="utf-8")
-        log("OK", f"pr_body_written={pr_path}")
-    except Exception as exc:
-        log("ERROR", f"cannot_write_pr_body err={exc}")
-        stop = 1
+    pr_path = root / ".local" / "pr" / f"{phase_slug}-auto.md"
 
     if skip_pr:
         log("SKIP", "PR step skipped by option")
@@ -467,7 +452,7 @@ def main(argv: List[str]) -> None:
         if stop == 0:
             ci_cmd = (
                 "source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh"
-                " && cd ~/dev/maakie-brainlab"
+                f" && cd {shlex.quote(str(root))}"
                 f" && ci-self up --ref {shlex.quote(branch)}"
             )
             ok_ci, out_ci, err_ci, rc_ci = run_cmd(
@@ -487,6 +472,23 @@ def main(argv: List[str]) -> None:
                     ci_self_status = f"ERROR: {reason}"
                     log("ERROR", f"ci_self_gate_blocked reason={reason}")
                     stop = 1
+
+    pr_body = build_pr_body(
+        phase=phase_label,
+        branch=branch or "unknown",
+        head_sha=head_sha or "unknown",
+        guard_summary=guard_summary,
+        verify_status=verify_status,
+        ci_self_status=ci_self_status,
+        reviewpack_status=reviewpack_status,
+    )
+    try:
+        pr_path.parent.mkdir(parents=True, exist_ok=True)
+        pr_path.write_text(pr_body, encoding="utf-8")
+        log("OK", f"pr_body_written={pr_path}")
+    except Exception as exc:
+        log("ERROR", f"cannot_write_pr_body err={exc}")
+        stop = 1
 
     if stop == 0 and (not skip_pr) and (not dry_run):
         ok_view, out_view, _, _ = run_cmd(
@@ -546,9 +548,9 @@ def main(argv: List[str]) -> None:
                 stop = 1
 
     if stop == 0:
-        log("OK", f"phase_ship_done STOP=0 phase={phase} obs_dir={obs}")
+        log("OK", f"phase_ship_done STOP=0 phase={phase_label} obs_dir={obs}")
     else:
-        log("ERROR", f"phase_ship_done STOP=1 phase={phase} obs_dir={obs}")
+        log("ERROR", f"phase_ship_done STOP=1 phase={phase_label} obs_dir={obs}")
 
 
 if __name__ == "__main__":

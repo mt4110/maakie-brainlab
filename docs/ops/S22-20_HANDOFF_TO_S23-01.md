@@ -27,11 +27,10 @@ Last Updated: 2026-02-26
 ```bash
 python3 ops/required_checks_sot.py
 bash ops/pr_merge_guard.sh
-make phase-ship PHASE=S23-01 SKIP_COMMIT=1 SKIP_PR=1
+SKIP_COMMIT=1 SKIP_PR=1 make phase-ship PHASE=S23-01
 ```
 
 ## Known Risks
 - `gh`未認証環境では PR同期と live取得が劣化する。
 - branch protection API 側の制約時は ruleset SOT fallback 運用になる。
 - `phase_ship` は `verify-il` を前提にするため、対象節の gate を変更する場合は追従が必要。
-

@@ -54,6 +54,13 @@ s22-16-ship:
 	$(PYENV) $(PY) ops/s22_16_ship.py
 
 phase-ship:
+	DRY_RUN="$(DRY_RUN)" \
+	SKIP_COMMIT="$(SKIP_COMMIT)" \
+	SKIP_PR="$(SKIP_PR)" \
+	WITH_REVIEWPACK="$(WITH_REVIEWPACK)" \
+	BASE_BRANCH="$(BASE_BRANCH)" \
+	COMMIT_MESSAGE="$(COMMIT_MESSAGE)" \
+	INCLUDE_UNTRACKED="$(INCLUDE_UNTRACKED)" \
 	$(PYENV) $(PY) ops/phase_ship.py --phase "$(PHASE)"
 
 bootstrap:

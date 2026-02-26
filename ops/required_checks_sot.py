@@ -214,8 +214,10 @@ def main():
     if doc_match and ruleset_match:
         out(f"OK: required_checks_sot matched source={source} n={len(live)}")
     else:
-        out(f"ERROR: docs_required_checks_sot drift {doc_diff}")
-        out(f"ERROR: ruleset_required_checks_sot drift {ruleset_diff}")
+        if not doc_match:
+            out(f"ERROR: docs_required_checks_sot drift {doc_diff}")
+        if not ruleset_match:
+            out(f"ERROR: ruleset_required_checks_sot drift {ruleset_diff}")
 
 
 if __name__ == "__main__":
