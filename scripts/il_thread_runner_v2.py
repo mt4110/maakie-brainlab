@@ -40,7 +40,7 @@ def usage() -> str:
         "--cases <cases.jsonl> --mode <validate-only|run> --out <out_dir> "
         "[--provider <rule_based|local_llm>] [--model <name>] "
         "[--prompt-profile <v1|strict_json_v2|contract_json_v3>] [--seed <int>] [--no-fallback] "
-        "[--entry-timeout-sec <int>] [--entry-script <path>]"
+        "[--entry-timeout-sec <int>] [--entry-retries <int>] [--entry-script <path>]"
     )
 
 
@@ -71,7 +71,7 @@ def _make_error(code: str, message: str, path: str = "") -> Dict[str, Any]:
 
 def parse_args(
     args: List[str],
-) -> Tuple[Optional[Path], str, Optional[Path], str, str, str, int, bool, int, Path, List[str], bool]:
+) -> Tuple[Optional[Path], str, Optional[Path], str, str, str, int, bool, int, int, Path, List[str], bool]:
     cases_path: Optional[Path] = None
     mode = "validate-only"
     out_dir: Optional[Path] = None
@@ -81,6 +81,7 @@ def parse_args(
     seed = 7
     allow_fallback = True
     entry_timeout_sec = 30
+    entry_retries = 0
     entry_script = repo_root / "scripts" / "il_entry.py"
     errors: List[str] = []
 
@@ -95,6 +96,7 @@ def parse_args(
             seed,
             allow_fallback,
             entry_timeout_sec,
+            entry_retries,
             entry_script,
             errors,
             True,
@@ -179,6 +181,19 @@ def parse_args(
                 continue
             entry_script = _resolve_path(args[i + 1])
             i += 2
+        elif token == "--entry-retries":
+            if i + 1 >= len(args):
+                errors.append("missing value for --entry-retries")
+                i += 1
+                continue
+            raw = args[i + 1]
+            try:
+                entry_retries = int(raw)
+                if entry_retries < 0:
+                    errors.append("entry-retries must be >= 0")
+            except Exception:
+                errors.append(f"invalid --entry-retries: {raw}")
+            i += 2
         elif token.startswith("-"):
             errors.append(f"unknown option: {token}")
             i += 1
@@ -203,6 +218,7 @@ def parse_args(
         seed,
         allow_fallback,
         entry_timeout_sec,
+        entry_retries,
         entry_script,
         errors,
         False,
@@ -332,6 +348,7 @@ def _run_entry_subprocess(
     entry_dir: Path,
     fixture_db: Optional[str],
     entry_timeout_sec: int,
+    attempt_index: int,
 ) -> Tuple[int, List[str], str]:
     entry_dir.mkdir(parents=True, exist_ok=True)
     cmd: List[str] = [
@@ -356,16 +373,22 @@ def _run_entry_subprocess(
     except subprocess.TimeoutExpired as exc:
         stdout = exc.stdout if isinstance(exc.stdout, str) else (exc.stdout or b"").decode("utf-8", errors="replace")
         stderr = exc.stderr if isinstance(exc.stderr, str) else (exc.stderr or b"").decode("utf-8", errors="replace")
+        _write_text(entry_dir / f"entry.stdout.attempt{attempt_index:02d}.log", stdout)
+        _write_text(entry_dir / f"entry.stderr.attempt{attempt_index:02d}.log", stderr)
         _write_text(entry_dir / "entry.stdout.log", stdout)
         _write_text(entry_dir / "entry.stderr.log", stderr)
         return 1, ["E_TIMEOUT"], f"entry_timeout_{entry_timeout_sec}s"
     except Exception as exc:
+        _write_text(entry_dir / f"entry.stdout.attempt{attempt_index:02d}.log", "")
+        _write_text(entry_dir / f"entry.stderr.attempt{attempt_index:02d}.log", str(exc))
         _write_text(entry_dir / "entry.stdout.log", "")
         _write_text(entry_dir / "entry.stderr.log", str(exc))
         return 1, ["E_ENTRY_SUBPROCESS"], f"entry_subprocess_exception:{exc}"
 
     stdout = proc.stdout or ""
     stderr = proc.stderr or ""
+    _write_text(entry_dir / f"entry.stdout.attempt{attempt_index:02d}.log", stdout)
+    _write_text(entry_dir / f"entry.stderr.attempt{attempt_index:02d}.log", stderr)
     _write_text(entry_dir / "entry.stdout.log", stdout)
     _write_text(entry_dir / "entry.stderr.log", stderr)
     combined = stdout + stderr
@@ -392,6 +415,7 @@ def run_thread_runner(
     seed: int = 7,
     allow_fallback: bool = True,
     entry_timeout_sec: int = 30,
+    entry_retries: int = 0,
     entry_script: Optional[Path] = None,
 ) -> int:
     selected_entry_script = entry_script or (repo_root / "scripts" / "il_entry.py")
@@ -400,7 +424,7 @@ def run_thread_runner(
         (
             f"phase=boot mode={mode} out={out_dir} cases={cases_path} provider={provider} "
             f"model={model} prompt_profile={prompt_profile} seed={seed} allow_fallback={allow_fallback} "
-            f"entry_timeout_sec={entry_timeout_sec} entry_script={selected_entry_script}"
+            f"entry_timeout_sec={entry_timeout_sec} entry_retries={entry_retries} entry_script={selected_entry_script}"
         ),
     )
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -463,6 +487,7 @@ def run_thread_runner(
         entry_skip_reason = ""
         entry_error_codes: List[str] = []
         entry_error_reason = ""
+        entry_attempts = 0
         if mode == "validate-only":
             entry_skip_reason = "mode_validate_only"
             log("SKIP", f"phase=entry index={idx} id={case_id} reason={entry_skip_reason}")
@@ -476,28 +501,44 @@ def run_thread_runner(
                 entry_stop = 1
                 entry_error_codes = ["E_MISSING_COMPILED"]
                 entry_error_reason = "missing_compiled_json"
+                entry_attempts = 1
                 stop = 1
                 log("ERROR", f"phase=entry index={idx} id={case_id} reason=missing_compiled_json")
             else:
                 try:
                     fixture_db = case.get("fixture_db")
-                    entry_stop, entry_error_codes, entry_error_reason = _run_entry_subprocess(
-                        entry_script=selected_entry_script,
-                        compiled_path=compiled_path,
-                        entry_dir=entry_dir,
-                        fixture_db=fixture_db,
-                        entry_timeout_sec=entry_timeout_sec,
-                    )
-                    if entry_stop == 0:
-                        entry_status = "OK"
-                        log("OK", f"phase=entry index={idx} id={case_id} status=OK")
-                    else:
+                    total_attempts = 1 + max(0, entry_retries)
+                    for attempt in range(1, total_attempts + 1):
+                        entry_attempts = attempt
+                        entry_stop, entry_error_codes, entry_error_reason = _run_entry_subprocess(
+                            entry_script=selected_entry_script,
+                            compiled_path=compiled_path,
+                            entry_dir=entry_dir,
+                            fixture_db=fixture_db,
+                            entry_timeout_sec=entry_timeout_sec,
+                            attempt_index=attempt,
+                        )
+                        if entry_stop == 0:
+                            entry_status = "OK"
+                            log("OK", f"phase=entry index={idx} id={case_id} status=OK attempts={attempt}")
+                            break
+
+                        if attempt < total_attempts:
+                            log(
+                                "SKIP",
+                                (
+                                    f"phase=entry_retry index={idx} id={case_id} attempt={attempt} "
+                                    f"reason={entry_error_reason} next_attempt={attempt+1}"
+                                ),
+                            )
+                            continue
+
                         entry_status = "ERROR"
                         stop = 1
                         log(
                             "ERROR",
                             (
-                                f"phase=entry index={idx} id={case_id} status=ERROR "
+                                f"phase=entry index={idx} id={case_id} status=ERROR attempts={attempt} "
                                 f"codes={','.join(entry_error_codes)} reason={entry_error_reason}"
                             ),
                         )
@@ -506,6 +547,7 @@ def run_thread_runner(
                     entry_stop = 1
                     entry_error_codes = ["E_ENTRY_EXCEPTION"]
                     entry_error_reason = str(exc)
+                    entry_attempts = max(entry_attempts, 1)
                     stop = 1
                     log("ERROR", f"phase=entry index={idx} id={case_id} reason=exception err={exc}")
 
@@ -542,6 +584,7 @@ def run_thread_runner(
             "compile_status": compile_status,
             "entry_status": entry_status,
             "entry_stop": entry_stop,
+            "entry_attempts": entry_attempts,
             "entry_skip_reason": entry_skip_reason,
             "entry_error_codes": entry_error_codes,
             "entry_error_reason": entry_error_reason,
@@ -568,6 +611,7 @@ def run_thread_runner(
     entry_ok_count = sum(1 for r in records if r["entry_status"] == "OK")
     entry_error_count = sum(1 for r in records if r["entry_status"] == "ERROR")
     entry_skip_count = sum(1 for r in records if r["entry_status"] == "SKIP")
+    retries_used_count = sum(max(0, int(r.get("entry_attempts", 0)) - 1) for r in records)
 
     summary = {
         "schema": SUMMARY_SCHEMA,
@@ -578,6 +622,7 @@ def run_thread_runner(
         "seed": seed,
         "allow_fallback": allow_fallback,
         "entry_timeout_sec": entry_timeout_sec,
+        "entry_retries": entry_retries,
         "entry_script": str(selected_entry_script),
         "total_cases": len(records),
         "compile_ok_count": compile_ok_count,
@@ -585,6 +630,7 @@ def run_thread_runner(
         "entry_ok_count": entry_ok_count,
         "entry_error_count": entry_error_count,
         "entry_skip_count": entry_skip_count,
+        "retries_used_count": retries_used_count,
         "error_count": compile_error_count + entry_error_count,
         "sha256_cases_jsonl": _sha256_file(cases_path_out),
     }
@@ -614,6 +660,7 @@ def main(argv: List[str]) -> int:
         seed,
         allow_fallback,
         entry_timeout_sec,
+        entry_retries,
         entry_script,
         errors,
         show_help,
@@ -638,6 +685,7 @@ def main(argv: List[str]) -> int:
         seed=seed,
         allow_fallback=allow_fallback,
         entry_timeout_sec=entry_timeout_sec,
+        entry_retries=entry_retries,
         entry_script=entry_script,
     )
 

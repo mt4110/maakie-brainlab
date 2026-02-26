@@ -15,6 +15,7 @@ python3 scripts/il_thread_runner_v2.py \
   --mode <validate-only|run> \
   --out <out_dir> \
   [--entry-timeout-sec <int>] \
+  [--entry-retries <int>] \
   [--entry-script <path/to/il_entry.py>] \
   [--provider <rule_based|local_llm>] \
   [--model <model_name>] \
@@ -89,6 +90,7 @@ Rules:
 - `entry_error_codes`: array[string]
 - `entry_error_reason`: string
 - `entry_stop`: 0 or 1
+- `entry_attempts`: int
 - `artifacts`: relative paths object
 
 ## Summary (`IL_THREAD_RUNNER_V2_SUMMARY_v1`)
@@ -101,6 +103,7 @@ Rules:
 - `seed`
 - `allow_fallback`
 - `entry_timeout_sec`
+- `entry_retries`
 - `total_cases`
 - `compile_ok_count`
 - `compile_error_count`
