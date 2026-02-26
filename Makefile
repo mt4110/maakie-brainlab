@@ -2,7 +2,7 @@
 .PHONY: sat-collect sat-normalize sat-gate sat-store sat-digest sat-index sat-run
 .PHONY: server-start server-stop server-status log ingest ask
 .PHONY: ai-smoke ai-verify
-.PHONY: s22-16-ship phase-ship bench-il-compile tune-il-compile-prompt il-thread-smoke il-thread-replay-check verify-il-thread-v2
+.PHONY: s22-16-ship phase-ship ops-now bench-il-compile tune-il-compile-prompt il-thread-smoke il-thread-replay-check verify-il-thread-v2
 
 PY=.venv/bin/python
 PYENV=PYTHONPATH=./src:.
@@ -80,6 +80,9 @@ phase-ship:
 	COMMIT_MESSAGE="$(COMMIT_MESSAGE)" \
 	INCLUDE_UNTRACKED="$(INCLUDE_UNTRACKED)" \
 	$(PYENV) $(PY) ops/phase_ship.py --phase "$(PHASE)"
+
+ops-now:
+	$(PYENV) $(PY) scripts/ops/current_point.py
 
 bootstrap:
 	# S20-08: Canonical bootstrap via uv (using system python only to install uv)
