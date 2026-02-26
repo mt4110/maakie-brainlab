@@ -202,6 +202,20 @@ class TestILCompile(unittest.TestCase):
         self.assertFalse(report.get("fallback_used"))
         self.assertTrue(report.get("canonical_sha256"))
 
+    def test_prompt_profile_affects_report_and_prompt(self):
+        req = self._good_request_payload()
+        bundle = compile_request_bundle(
+            req,
+            provider="rule_based",
+            prompt_profile="strict_json_v2",
+        )
+        report = bundle.get("report", {})
+        self.assertEqual(report.get("prompt_profile"), "strict_json_v2")
+        self.assertEqual(report.get("prompt_template_id"), "il_compile_prompt_strict_json_v2")
+        prompt_text = bundle.get("prompt_text", "")
+        self.assertIn("Return ONLY one JSON object", prompt_text)
+        self.assertEqual(bundle.get("status"), "OK")
+
 
 if __name__ == "__main__":
     unittest.main()

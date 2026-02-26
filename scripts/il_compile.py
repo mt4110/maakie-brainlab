@@ -17,7 +17,14 @@ if str(repo_root) not in sys.path:
     sys.path.insert(0, str(repo_root))
 
 from scripts.obs_writer import OBSWriter
-from src.il_compile import DEFAULT_MODEL, DEFAULT_PROVIDER, compile_request_bundle
+from src.il_compile import (
+    DEFAULT_MODEL,
+    DEFAULT_PROMPT_PROFILE,
+    DEFAULT_PROVIDER,
+    compile_request_bundle,
+    normalize_prompt_profile,
+    resolve_prompt_template_id,
+)
 
 
 def _resolve_out_dir(out_dir: Optional[str]) -> Optional[Path]:
@@ -32,23 +39,25 @@ def _resolve_out_dir(out_dir: Optional[str]) -> Optional[Path]:
 def _usage() -> str:
     return (
         "python3 scripts/il_compile.py --request <request_json> --out <out_dir> "
-        "[--model <model_name>] [--provider <rule_based|local_llm>] [--seed <int>] [--no-fallback]"
+        "[--model <model_name>] [--provider <rule_based|local_llm>] "
+        "[--prompt-profile <v1|strict_json_v2|contract_json_v3>] [--seed <int>] [--no-fallback]"
     )
 
 
 def _parse_args(
     args: List[str],
-) -> Tuple[Optional[str], Optional[str], str, str, Optional[int], bool, List[str], bool]:
+) -> Tuple[Optional[str], Optional[str], str, str, str, Optional[int], bool, List[str], bool]:
     request_path: Optional[str] = None
     out_dir: Optional[str] = None
     model = DEFAULT_MODEL
     provider = DEFAULT_PROVIDER
+    prompt_profile = DEFAULT_PROMPT_PROFILE
     seed: Optional[int] = None
     allow_fallback = True
     errors: List[str] = []
 
     if "--help" in args or "-h" in args:
-        return request_path, out_dir, model, provider, seed, allow_fallback, errors, True
+        return request_path, out_dir, model, provider, prompt_profile, seed, allow_fallback, errors, True
 
     i = 0
     while i < len(args):
@@ -81,6 +90,13 @@ def _parse_args(
                 continue
             provider = args[i + 1]
             i += 2
+        elif token == "--prompt-profile":
+            if i + 1 >= len(args):
+                errors.append("missing value for --prompt-profile")
+                i += 1
+                continue
+            prompt_profile = args[i + 1]
+            i += 2
         elif token == "--seed":
             if i + 1 >= len(args):
                 errors.append("missing value for --seed")
@@ -104,7 +120,7 @@ def _parse_args(
 
     if request_path is None:
         errors.append("missing required --request")
-    return request_path, out_dir, model, provider, seed, allow_fallback, errors, False
+    return request_path, out_dir, model, provider, prompt_profile, seed, allow_fallback, errors, False
 
 
 def _read_json(path: Path) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
@@ -137,9 +153,13 @@ def run_il_compile(
     out_dir: Optional[str] = None,
     model: str = DEFAULT_MODEL,
     provider: str = DEFAULT_PROVIDER,
+    prompt_profile: str = DEFAULT_PROMPT_PROFILE,
     seed: Optional[int] = None,
     allow_fallback: bool = True,
 ) -> int:
+    prompt_profile_selected = normalize_prompt_profile(prompt_profile)
+    prompt_template_id = resolve_prompt_template_id(prompt_profile_selected)
+
     obs = OBSWriter("il_compile", repo_root=repo_root)
     resolved_out = _resolve_out_dir(out_dir)
     if resolved_out is not None:
@@ -184,6 +204,7 @@ def run_il_compile(
             seed_override=seed,
             provider=provider,
             allow_fallback=allow_fallback,
+            prompt_profile=prompt_profile_selected,
         )
         if bundle["status"] == "OK":
             obs.log("OK", phase="compile", step="success")
@@ -203,7 +224,8 @@ def run_il_compile(
                 "status": "ERROR",
                 "error_count": len(input_errors),
                 "determinism": {"temperature": 0.0, "top_p": 1.0, "seed": seed if seed is not None else 7, "stream": False},
-                "prompt_template_id": "il_compile_prompt_v1",
+                "prompt_template_id": prompt_template_id,
+                "prompt_profile": prompt_profile_selected,
                 "model": model,
                 "provider_requested": provider,
                 "provider_selected": provider,
@@ -233,7 +255,7 @@ def run_il_compile(
 
 
 def main(args: List[str]) -> int:
-    request_path, out_dir, model, provider, seed, allow_fallback, arg_errors, show_help = _parse_args(args)
+    request_path, out_dir, model, provider, prompt_profile, seed, allow_fallback, arg_errors, show_help = _parse_args(args)
     if show_help:
         print(f"OK: usage: {_usage()}")
         return 0
@@ -247,6 +269,7 @@ def main(args: List[str]) -> int:
         out_dir=out_dir,
         model=model,
         provider=provider,
+        prompt_profile=prompt_profile,
         seed=seed,
         allow_fallback=allow_fallback,
     )

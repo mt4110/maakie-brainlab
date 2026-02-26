@@ -7,7 +7,12 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 from src.il_validator import ILCanonicalizer, ILValidator
 
 
-PROMPT_TEMPLATE_ID = "il_compile_prompt_v1"
+DEFAULT_PROMPT_PROFILE = "v1"
+PROMPT_TEMPLATE_IDS = {
+    "v1": "il_compile_prompt_v1",
+    "strict_json_v2": "il_compile_prompt_strict_json_v2",
+    "contract_json_v3": "il_compile_prompt_contract_json_v3",
+}
 DEFAULT_MODEL = "rule_based_v1"
 DEFAULT_PROVIDER = "rule_based"
 DEFAULT_LOCAL_LLM_API_BASE = "http://127.0.0.1:8080/v1"
@@ -50,6 +55,18 @@ STOP_WORDS = {
 }
 _WIN_ABS_RE = re.compile(r"^[A-Za-z]:[\\/]")
 _TOKEN_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{1,31}")
+
+
+def normalize_prompt_profile(prompt_profile: str) -> str:
+    profile = (prompt_profile or DEFAULT_PROMPT_PROFILE).strip()
+    if profile in PROMPT_TEMPLATE_IDS:
+        return profile
+    return DEFAULT_PROMPT_PROFILE
+
+
+def resolve_prompt_template_id(prompt_profile: str) -> str:
+    normalized = normalize_prompt_profile(prompt_profile)
+    return PROMPT_TEMPLATE_IDS.get(normalized, PROMPT_TEMPLATE_IDS[DEFAULT_PROMPT_PROFILE])
 
 
 def _make_error(
@@ -464,8 +481,9 @@ def _collect_forbidden_keys(data: Any, forbidden: set, path: str = "") -> List[D
     return hits
 
 
-def render_compile_prompt(normalized_request: Dict[str, Any]) -> str:
+def render_compile_prompt(normalized_request: Dict[str, Any], prompt_profile: str = DEFAULT_PROMPT_PROFILE) -> str:
     constraints = normalized_request["constraints"]
+    profile = normalize_prompt_profile(prompt_profile)
     artifact_lines = []
     for pointer in normalized_request["artifact_pointers"]:
         if "sha256" in pointer:
@@ -475,7 +493,7 @@ def render_compile_prompt(normalized_request: Dict[str, Any]) -> str:
     if not artifact_lines:
         artifact_lines.append("- (none)")
 
-    lines = [
+    common_lines = [
         "SYSTEM: compile natural language request into deterministic IL JSON",
         f"REQUEST_TEXT: {normalized_request['request_text']}",
         f"ALLOWED_OPCODES: {','.join(constraints['allowed_opcodes']) or '(default)'}",
@@ -485,8 +503,36 @@ def render_compile_prompt(normalized_request: Dict[str, Any]) -> str:
         *artifact_lines,
         f"CONTEXT_JSON: {json.dumps(normalized_request['context'], ensure_ascii=False, sort_keys=True, separators=(',', ':'))}",
         f"DETERMINISM_JSON: {json.dumps(normalized_request['determinism'], ensure_ascii=False, sort_keys=True, separators=(',', ':'))}",
-        "OUTPUT: JSON object with il/meta/evidence only; no errors key on success",
     ]
+
+    if profile == "strict_json_v2":
+        profile_lines = [
+            "OUTPUT_RULES:",
+            "- Return ONLY one JSON object. No markdown. No explanation text.",
+            "- Object MUST contain keys: il, meta, evidence.",
+            "- Top-level errors key is forbidden on success.",
+            "- Keep output deterministic and compact.",
+            "JSON_SHAPE_HINT:",
+            '{"il":{"opcodes":[{"op":"SEARCH_TERMS","args":{}}],"search_terms":["alpha"]},"meta":{"version":"il_contract_v1","generator":"local_llm"},"evidence":{"notes":"...","compile_contract":"il_compile_contract_v1","prompt_template_id":"%s"}}'
+            % resolve_prompt_template_id(profile),
+        ]
+    elif profile == "contract_json_v3":
+        profile_lines = [
+            "OUTPUT_RULES:",
+            "1) Emit strict JSON object only.",
+            "2) Include il/meta/evidence and nothing else at top-level.",
+            "3) meta.version MUST be il_contract_v1.",
+            "4) il.search_terms MUST be array[str] derived from request/context.",
+            "5) il.opcodes MUST follow ALLOWED_OPCODES and MAX_STEPS.",
+            "6) Do not emit timestamp/uuid/random/nonce.",
+            "7) If uncertain, still emit best deterministic IL object (no prose).",
+            "FINAL_CHECK: ensure JSON parse succeeds exactly.",
+        ]
+    else:
+        profile_lines = [
+            "OUTPUT: JSON object with il/meta/evidence only; no errors key on success",
+        ]
+    lines = common_lines + profile_lines
     return "\n".join(lines) + "\n"
 
 
@@ -592,11 +638,6 @@ def _call_local_llm_default(prompt_text: str, model: str, determinism: Dict[str,
     except Exception:
         pass
 
-    try:
-        import requests
-    except Exception as exc:
-        raise RuntimeError(f"local llm adapter import failed: {exc}") from exc
-
     payload = {
         "model": model,
         "temperature": float(determinism["temperature"]),
@@ -609,13 +650,41 @@ def _call_local_llm_default(prompt_text: str, model: str, determinism: Dict[str,
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
     url = f"{api_base}/chat/completions"
-    resp = requests.post(url, json=payload, headers=headers, timeout=timeout_s)
-    resp.raise_for_status()
-    data = resp.json()
-    return data["choices"][0]["message"]["content"]
+
+    # Prefer requests when available.
+    try:
+        import requests  # type: ignore
+
+        resp = requests.post(url, json=payload, headers=headers, timeout=timeout_s)
+        resp.raise_for_status()
+        data = resp.json()
+        return data["choices"][0]["message"]["content"]
+    except ModuleNotFoundError:
+        pass
+
+    # Stdlib fallback (no external deps).
+    try:
+        from urllib import error as urllib_error
+        from urllib import request as urllib_request
+
+        body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        req = urllib_request.Request(url, data=body, headers=headers, method="POST")
+        with urllib_request.urlopen(req, timeout=timeout_s) as resp:  # nosec B310: URL from local config
+            raw = resp.read().decode("utf-8")
+        data = json.loads(raw)
+        return data["choices"][0]["message"]["content"]
+    except urllib_error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"local llm http_error status={exc.code} body={detail[:200]}") from exc
+    except Exception as exc:
+        raise RuntimeError(f"local llm http request failed: {exc}") from exc
 
 
-def _compile_rule_based(normalized_request: Dict[str, Any], model: str) -> Tuple[Optional[Dict[str, Any]], str, List[Dict[str, Any]]]:
+def _compile_rule_based(
+    normalized_request: Dict[str, Any],
+    model: str,
+    prompt_template_id: str,
+) -> Tuple[Optional[Dict[str, Any]], str, List[Dict[str, Any]]]:
     terms = extract_search_terms(normalized_request)
     if not terms:
         return None, "RULE_BASED_COMPILER: no IL output", [
@@ -649,7 +718,7 @@ def _compile_rule_based(normalized_request: Dict[str, Any], model: str) -> Tuple
         "evidence": {
             "notes": "compiled via il_compile_contract_v1 rule-based planner",
             "compile_contract": "il_compile_contract_v1",
-            "prompt_template_id": PROMPT_TEMPLATE_ID,
+            "prompt_template_id": prompt_template_id,
         },
     }
     raw_response_text = json.dumps(
@@ -662,14 +731,14 @@ def _compile_rule_based(normalized_request: Dict[str, Any], model: str) -> Tuple
 
 
 def _compile_local_llm(
-    normalized_request: Dict[str, Any],
+    prompt_text: str,
+    determinism: Dict[str, Any],
     model: str,
     llm_adapter: Optional[LLMAdapter] = None,
 ) -> Tuple[Optional[Dict[str, Any]], str, List[Dict[str, Any]]]:
     adapter = llm_adapter or _call_local_llm_default
-    prompt = render_compile_prompt(normalized_request)
     try:
-        raw_response = adapter(prompt, model, normalized_request["determinism"])
+        raw_response = adapter(prompt_text, model, determinism)
     except Exception as exc:
         return None, "", [
             _make_error(
@@ -736,6 +805,7 @@ def compile_request_bundle(
     seed_override: Optional[int] = None,
     provider: str = DEFAULT_PROVIDER,
     allow_fallback: bool = True,
+    prompt_profile: str = DEFAULT_PROMPT_PROFILE,
     llm_adapter: Optional[LLMAdapter] = None,
 ) -> Dict[str, Any]:
     normalized, errors = normalize_compile_request(raw_request, seed_override=seed_override)
@@ -750,6 +820,9 @@ def compile_request_bundle(
             )
         )
         provider_requested = "rule_based"
+
+    prompt_profile_selected = normalize_prompt_profile(prompt_profile)
+    prompt_template_id = resolve_prompt_template_id(prompt_profile_selected)
 
     bundle: Dict[str, Any] = {
         "status": "ERROR",
@@ -767,7 +840,10 @@ def compile_request_bundle(
         determinism["seed"] = seed_override
 
     if normalized:
-        bundle["prompt_text"] = render_compile_prompt(normalized)
+        bundle["prompt_text"] = render_compile_prompt(
+            normalized,
+            prompt_profile=prompt_profile_selected,
+        )
     else:
         bundle["prompt_text"] = "SYSTEM: compile request failed before normalization\n"
 
@@ -778,7 +854,8 @@ def compile_request_bundle(
 
         if provider_requested == "local_llm":
             compiled, raw_response, compile_errors = _compile_local_llm(
-                normalized_request=normalized,
+                prompt_text=bundle["prompt_text"],
+                determinism=normalized["determinism"],
                 model=model,
                 llm_adapter=llm_adapter,
             )
@@ -786,6 +863,7 @@ def compile_request_bundle(
             compiled, raw_response, compile_errors = _compile_rule_based(
                 normalized_request=normalized,
                 model=model,
+                prompt_template_id=prompt_template_id,
             )
 
         bundle["raw_response_text"] = raw_response or "RULE_BASED_COMPILER: no IL output"
@@ -797,6 +875,7 @@ def compile_request_bundle(
             compiled, fallback_raw_response, compile_errors = _compile_rule_based(
                 normalized_request=normalized,
                 model=model,
+                prompt_template_id=prompt_template_id,
             )
             bundle["raw_response_text"] = fallback_raw_response
 
@@ -830,7 +909,8 @@ def compile_request_bundle(
         "status": status,
         "error_count": len(bundle["errors"]),
         "determinism": determinism,
-        "prompt_template_id": PROMPT_TEMPLATE_ID,
+        "prompt_template_id": prompt_template_id,
+        "prompt_profile": prompt_profile_selected,
         "model": model,
         "provider_requested": provider_requested,
         "provider_selected": provider_selected,

@@ -22,7 +22,7 @@
 
 ## 1. Compile CLI Interface (S23-03 実装ターゲット)
 ```bash
-python3 scripts/il_compile.py --request <request_json> --out <out_dir> [--model <model_name>] [--provider <rule_based|local_llm>] [--seed <int>] [--no-fallback]
+python3 scripts/il_compile.py --request <request_json> --out <out_dir> [--model <model_name>] [--provider <rule_based|local_llm>] [--prompt-profile <v1|strict_json_v2|contract_json_v3>] [--seed <int>] [--no-fallback]
 ```
 
 - MUST: `--request` は UTF-8 JSON ファイル
@@ -144,6 +144,7 @@ Note:
 - `error_count`: int
 - `determinism`: `{temperature, top_p, seed, stream}`
 - `prompt_template_id`: str
+- `prompt_profile`: str
 - `model`: str
 - `provider_requested`: `rule_based|local_llm`
 - `provider_selected`: `rule_based|local_llm`
