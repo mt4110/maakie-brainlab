@@ -42,8 +42,7 @@ def main():
 
         # docs/ops is intentionally excluded:
         # historical milestone docs can contain legacy references that are not runtime paths.
-        print("WARN: docs/ops excluded from scan (historical references are non-runtime).")
-        warns_found += 1
+        print("INFO: docs/ops excluded from scan (historical references are non-runtime).")
 
         result = run_rg(repo_root, ["Makefile", "ops", ".github"])
         if result.stdout:
