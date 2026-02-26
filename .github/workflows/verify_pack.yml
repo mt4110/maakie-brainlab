@@ -13,8 +13,8 @@ on:
         default: "none"
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -27,6 +27,7 @@ jobs:
       GATE1_VERIFY_ONLY: "1"
       S5_MODE: "verify-only"
       REVIEWPACK_POLICY_MODE: "ci"
+      CI_COST_MODE: ${{ vars.CI_COST_MODE }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -53,13 +54,92 @@ jobs:
       - name: Sanity Check (Finalize Clean)
         run: bash ops/finalize_clean.sh --check
 
+      - name: Decide Cost Scope
+        id: cost_scope
+        shell: bash
+        run: |
+          MODE="${CI_COST_MODE:-lite}"
+          EVENT="${{ github.event_name }}"
+          HEAVY="1"
+          REASON="default"
+
+          # manual run and main branch pushes stay full coverage
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            MODE="full"
+            HEAVY="1"
+            REASON="workflow_dispatch"
+          elif [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            HEAVY="1"
+            REASON="main_ref"
+          elif [ "$MODE" = "full" ]; then
+            HEAVY="1"
+            REASON="ci_cost_mode_full"
+          else
+            BASE=""
+            ZERO="0000000000000000000000000000000000000000"
+            if [ "$EVENT" = "pull_request" ]; then
+              BASE="${{ github.event.pull_request.base.sha }}"
+            elif [ "$EVENT" = "push" ]; then
+              BASE="${{ github.event.before }}"
+            fi
+
+            if [ -n "$BASE" ] && [ "$BASE" != "$ZERO" ]; then
+              CHANGED="$(git diff --name-only "$BASE" "${{ github.sha }}" || true)"
+              if [ -z "$CHANGED" ]; then
+                HEAVY="0"
+                REASON="empty_diff"
+              else
+                HEAVY="0"
+                REASON="docs_only"
+                OLDIFS="$IFS"
+                IFS=$'\n'
+                for f in $CHANGED; do
+                  [ -z "$f" ] && continue
+                  case "$f" in
+                    *.md|docs/*|README|README.*|SECURITY.md)
+                      ;;
+                    *)
+                      HEAVY="1"
+                      REASON="impact_file:$f"
+                      break
+                      ;;
+                  esac
+                done
+                IFS="$OLDIFS"
+              fi
+            else
+              HEAVY="1"
+              REASON="missing_base"
+            fi
+          fi
+
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+          echo "heavy_needed=$HEAVY" >> "$GITHUB_OUTPUT"
+          echo "reason=$REASON" >> "$GITHUB_OUTPUT"
+          echo "OK: cost_scope mode=$MODE heavy_needed=$HEAVY reason=$REASON"
+
+      - name: Record Lite Mode Skips
+        if: ${{ steps.cost_scope.outputs.heavy_needed != '1' }}
+        run: |
+          {
+            echo -e "seed_eval\t0"
+            echo -e "s5_evidence_pack\t0"
+            echo -e "review_bundle\t0"
+            echo -e "verify_evidence\t0"
+            echo -e "verify_bundle\t0"
+            echo -e "pack_delta\t0"
+          } >> .local/ci/10_status.tsv
+          echo "OK: lite mode skip heavy steps reason=${{ steps.cost_scope.outputs.reason }}"
+
       - name: Set up Python
+        if: ${{ steps.cost_scope.outputs.heavy_needed == '1' }}
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: "pip"
 
       - name: Create venv & Install Deps
+        if: ${{ steps.cost_scope.outputs.heavy_needed == '1' }}
         run: |
           make bootstrap
           # Diagnostics
@@ -68,6 +148,7 @@ jobs:
           uv pip freeze | head -n 40
 
       - name: Set up Go
+        if: ${{ steps.cost_scope.outputs.heavy_needed == '1' }}
         uses: actions/setup-go@v4
         with:
           go-version-file: go.mod
@@ -77,6 +158,7 @@ jobs:
       # S7-01: GPG Key Generation (Ephemeral for CI)
       # S7-01: GPG Key Generation (Ephemeral for CI)
       - name: Generate Ephemeral Keys
+        if: ${{ steps.cost_scope.outputs.heavy_needed == '1' }}
         shell: bash
         working-directory: ${{ github.workspace }}
         run: |
@@ -108,6 +190,7 @@ jobs:
       # S5: Seed eval results fixture (CI)
       # S5: Seed eval results fixture (CI)
       - name: Seed eval results fixture (CI)
+        if: ${{ steps.cost_scope.outputs.heavy_needed == '1' }}
         shell: bash
         working-directory: ${{ github.workspace }}
         run: |
@@ -148,6 +231,7 @@ jobs:
 
       # S5: Evidence Pack (Clean Execution)
       - name: Create Evidence Pack (Clean Workspace & Run Always)
+        if: ${{ steps.cost_scope.outputs.heavy_needed == '1' }}
         id: create_evidence_pack
         shell: bash
         working-directory: ${{ github.workspace }}
@@ -202,6 +286,7 @@ jobs:
 
       # Review Bundle (Run Always Wrap)
       - name: Create Review Bundle
+        if: ${{ steps.cost_scope.outputs.heavy_needed == '1' }}
         run: |
           set +e
           {
@@ -231,6 +316,7 @@ jobs:
 
       # Verification (Unified) (Run Always Wrap)
       - name: Verify Evidence Pack
+        if: ${{ steps.cost_scope.outputs.heavy_needed == '1' }}
         run: |
           set +e
           {
@@ -242,6 +328,7 @@ jobs:
           exit 0
 
       - name: Verify Review Bundle
+        if: ${{ steps.cost_scope.outputs.heavy_needed == '1' }}
         run: |
           set +e
           {
@@ -254,6 +341,7 @@ jobs:
 
       # S15: Pack Delta Report (PR vs main baseline)
       - name: Pack Delta Report
+        if: ${{ steps.cost_scope.outputs.heavy_needed == '1' }}
         run: |
           # S15-H00: NO set -euo pipefail (manual EC recovery)
 
@@ -512,7 +600,7 @@ jobs:
             .local/ci/
             ci_out/
             review_bundle_*.tar.gz
-          retention-days: 14
+          retention-days: 5
 
       - name: Check Workspace Dirtiness
         if: always()

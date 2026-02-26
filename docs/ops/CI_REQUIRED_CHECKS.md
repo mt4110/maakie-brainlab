@@ -11,15 +11,15 @@ The following checks must pass for any Pull Request targeting `main`.
 | **Lint Go** | CI (Lint & Verify) | `pull_request` | Validates Go code using `golangci-lint`. |
 | **Lint Markdown** | CI (Lint & Verify) | `pull_request` | Validates Markdown files using `markdownlint-cli2`. |
 | **test** | Test | `pull_request` | Runs `make test` (Go + Python unit tests). |
-| **verify-pack** | Verify Pack | `pull_request` | Ensures clean pack generation and presence of test markers in `30_make_test.log`. |
+| **verify-pack** | Verify Pack | `pull_request` | Runs full pack verification for impact changes; docs-only changes run a lightweight mode while keeping the required check context. |
 
 Note: `milestone_required` exists as a detection check but is NOT required by default (policy decision later).
 
 ## Optional / Aggregator Checks
 
 - **summary**: A job in `CI (Lint & Verify)` that aggregates lint results.
-    - *Status*: Recommended as Optional (Informational).
-    - Can be made required if strict "all lints pass" enforcement is desired via a single status check.
+  - *Status*: Recommended as Optional (Informational).
+  - Can be made required if strict "all lints pass" enforcement is desired via a single status check.
 
 ## Enforcement
 

@@ -2,7 +2,7 @@ name: Run Always 1h
 
 on:
   schedule:
-    - cron: "0 * * * *" # Hourly
+    - cron: "0 */4 * * *" # Every 4 hours
   workflow_dispatch:
 
 concurrency:
@@ -63,4 +63,4 @@ jobs:
           name: run-always-${{ github.run_number }}-${{ github.sha }}
           path: |
             .local/run-always/
-          retention-days: 14
+          retention-days: 5
