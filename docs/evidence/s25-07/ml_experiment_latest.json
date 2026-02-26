@@ -1,0 +1,123 @@
+{
+  "schema_version": "s25-ml-experiment-v1",
+  "captured_at_utc": "2026-02-26T23:51:48.738162+00:00",
+  "git": {
+    "branch": "ops/S25-01-25-10",
+    "head": "754475298c2985d81a1e5c32250acb826fd063fd"
+  },
+  "experiment": {
+    "experiment_id": "s25-07-il-compile-bench-v1",
+    "template_path": "/Users/takemuramasaki/dev/maakie-brainlab/docs/ops/S25-07_ML_EXPERIMENT_TEMPLATE.json",
+    "seed": 7,
+    "command": [
+      "python3",
+      "/Users/takemuramasaki/dev/maakie-brainlab/scripts/il_compile_bench.py",
+      "--cases",
+      "/Users/takemuramasaki/dev/maakie-brainlab/tests/fixtures/il_compile/bench_cases.jsonl",
+      "--out",
+      "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/ml-experiment/ml-experiment__20260226T235148Z__ops-s25-01-25-10__7544752/ml_bench",
+      "--provider",
+      "rule_based",
+      "--model",
+      "rule_based_v1",
+      "--prompt-profile",
+      "v1",
+      "--seed",
+      "7",
+      "--expand-factor",
+      "0"
+    ],
+    "rerun_command": "make s25-ml-experiment"
+  },
+  "bench_summary_path": "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/ml-experiment/ml-experiment__20260226T235148Z__ops-s25-01-25-10__7544752/ml_bench/il.compile.bench.summary.json",
+  "bench_summary": {
+    "schema": "IL_COMPILE_BENCH_SUMMARY_v2",
+    "total_cases": 10,
+    "base_cases": 10,
+    "expanded_cases": 0,
+    "provider": "rule_based",
+    "model": "rule_based_v1",
+    "prompt_profile": "v1",
+    "seed": 7,
+    "allow_fallback": true,
+    "expand_factor": 0,
+    "expected_match_count": 10,
+    "expected_match_rate": 1.0,
+    "il_valid_cases": 7,
+    "il_valid_total": 7,
+    "il_validity_rate": 1.0,
+    "reproducible_count": 10,
+    "reproducible_rate": 1.0,
+    "fallback_count": 0,
+    "fallback_rate": 0.0,
+    "fallback_reason_histogram": {},
+    "term_summary": {
+      "evaluated_cases": 7,
+      "macro_precision": 1.0,
+      "macro_recall": 1.0,
+      "macro_f1": 1.0,
+      "micro_precision": 1.0,
+      "micro_recall": 1.0,
+      "micro_f1": 1.0,
+      "exact_match_rate": 1.0
+    },
+    "opcode_summary": {
+      "evaluated_cases": 7,
+      "macro_precision": 1.0,
+      "macro_recall": 1.0,
+      "macro_f1": 1.0,
+      "micro_precision": 1.0,
+      "micro_recall": 1.0,
+      "micro_f1": 1.0,
+      "exact_match_rate": 1.0
+    },
+    "objective_score": 1.0
+  },
+  "threshold_results": [
+    {
+      "metric": "expected_match_rate",
+      "op": ">=",
+      "target": 1.0,
+      "actual": 1.0,
+      "passed": true,
+      "reason_code": ""
+    },
+    {
+      "metric": "reproducible_rate",
+      "op": ">=",
+      "target": 1.0,
+      "actual": 1.0,
+      "passed": true,
+      "reason_code": ""
+    },
+    {
+      "metric": "il_validity_rate",
+      "op": ">=",
+      "target": 0.8,
+      "actual": 1.0,
+      "passed": true,
+      "reason_code": ""
+    },
+    {
+      "metric": "objective_score",
+      "op": ">=",
+      "target": 0.9,
+      "actual": 1.0,
+      "passed": true,
+      "reason_code": ""
+    }
+  ],
+  "summary": {
+    "status": "PASS",
+    "reason_code": "",
+    "errors": [],
+    "bench_rc": 0,
+    "duration_sec": 0.046
+  },
+  "artifact_names": {
+    "json": "ml_experiment_latest.json",
+    "md": "ml_experiment_latest.md",
+    "run_dir": "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/ml-experiment/ml-experiment__20260226T235148Z__ops-s25-01-25-10__7544752"
+  },
+  "stop": 0
+}

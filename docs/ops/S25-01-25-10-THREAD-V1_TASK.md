@@ -4,7 +4,7 @@ Last Updated: 2026-02-26
 
 ## Progress
 
-- S25-01-25-10: 55% (S25-01..S25-05 完了)
+- S25-01-25-10: 75% (S25-01..S25-07 完了)
 
 ## Ritual 22-16-22-99
 
@@ -60,13 +60,21 @@ Last Updated: 2026-02-26
 
 ### S25-06 Acceptance Test Wall
 
-- [ ] acceptance cases を最小セットで定義
-- [ ] pass/fail 判定条件を明記
+- [x] acceptance cases を最小セットで定義
+- [x] pass/fail 判定条件を明記
+  - cases: `docs/ops/S25-06_ACCEPTANCE_CASES.json`
+  - runner: `scripts/ops/s25_acceptance_wall.py`
+  - artifact: `docs/evidence/s25-06/acceptance_wall_latest.md`
+  - gate: `make s25-acceptance-wall`
 
 ### S25-07 ML Experiment Loop
 
-- [ ] ML 実験テンプレート（入力/出力/評価）を固定
-- [ ] seed と設定を保存し再実行可能にする
+- [x] ML 実験テンプレート（入力/出力/評価）を固定
+- [x] seed と設定を保存し再実行可能にする
+  - template: `docs/ops/S25-07_ML_EXPERIMENT_TEMPLATE.json`
+  - runner: `scripts/ops/s25_ml_experiment.py`
+  - artifact: `docs/evidence/s25-07/ml_experiment_latest.md`
+  - gate: `make s25-ml-experiment`
 
 ### S25-08 RAG Tuning Loop
 

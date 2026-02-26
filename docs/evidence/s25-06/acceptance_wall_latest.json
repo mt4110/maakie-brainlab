@@ -1,0 +1,79 @@
+{
+  "schema_version": "s25-acceptance-wall-v1",
+  "captured_at_utc": "2026-02-26T23:46:51.655186+00:00",
+  "git": {
+    "branch": "ops/S25-01-25-10",
+    "head": "754475298c2985d81a1e5c32250acb826fd063fd"
+  },
+  "cases_file": "/Users/takemuramasaki/dev/maakie-brainlab/docs/ops/S25-06_ACCEPTANCE_CASES.json",
+  "summary": {
+    "total_cases": 5,
+    "passed_cases": 5,
+    "failed_cases": 0,
+    "total_duration_sec": 3.042,
+    "failure_counts": {}
+  },
+  "cases": [
+    {
+      "case_id": "A01",
+      "title": "Current point is observable",
+      "category": "ops",
+      "status": "PASS",
+      "reason_code": "",
+      "command": "make ops-now",
+      "rc": 0,
+      "duration_sec": 0.093,
+      "log_path": "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/acceptance-wall/acceptance-wall__20260226T234648Z__ops-s25-01-25-10__7544752/01_a01.log"
+    },
+    {
+      "case_id": "A02",
+      "title": "Baseline freeze is reproducible",
+      "category": "baseline",
+      "status": "PASS",
+      "reason_code": "",
+      "command": "make s25-baseline-freeze",
+      "rc": 0,
+      "duration_sec": 0.641,
+      "log_path": "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/acceptance-wall/acceptance-wall__20260226T234648Z__ops-s25-01-25-10__7544752/02_a02.log"
+    },
+    {
+      "case_id": "A03",
+      "title": "Observability summary is generated",
+      "category": "observability",
+      "status": "PASS",
+      "reason_code": "",
+      "command": "make s25-obs-summary",
+      "rc": 0,
+      "duration_sec": 0.07,
+      "log_path": "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/acceptance-wall/acceptance-wall__20260226T234648Z__ops-s25-01-25-10__7544752/03_a03.log"
+    },
+    {
+      "case_id": "A04",
+      "title": "Regression safety contract is green",
+      "category": "safety",
+      "status": "PASS",
+      "reason_code": "",
+      "command": "make s25-regression-safety",
+      "rc": 0,
+      "duration_sec": 2.029,
+      "log_path": "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/acceptance-wall/acceptance-wall__20260226T234648Z__ops-s25-01-25-10__7544752/04_a04.log"
+    },
+    {
+      "case_id": "A05",
+      "title": "IL thread suite stays green",
+      "category": "core",
+      "status": "PASS",
+      "reason_code": "",
+      "command": "make verify-il-thread-v2",
+      "rc": 0,
+      "duration_sec": 0.209,
+      "log_path": "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/acceptance-wall/acceptance-wall__20260226T234648Z__ops-s25-01-25-10__7544752/05_a05.log"
+    }
+  ],
+  "artifact_names": {
+    "json": "acceptance_wall_latest.json",
+    "md": "acceptance_wall_latest.md",
+    "run_dir": "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/acceptance-wall/acceptance-wall__20260226T234648Z__ops-s25-01-25-10__7544752"
+  },
+  "stop": 0
+}

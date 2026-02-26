@@ -95,9 +95,15 @@ Last Updated: 2026-02-26
 - `scripts/ops/obs_contract.py`
 - `scripts/ops/s25_obs_pr_summary.py`
 - `scripts/ops/s25_regression_safety.py`
+- `scripts/ops/s25_acceptance_wall.py`
+- `docs/ops/S25-06_ACCEPTANCE_CASES.json`
+- `scripts/ops/s25_ml_experiment.py`
+- `docs/ops/S25-07_ML_EXPERIMENT_TEMPLATE.json`
 - `docs/ops/S25-04_OBSERVABILITY_CONTRACT.md`
 - `docs/evidence/s25-04/*`
 - `docs/evidence/s25-05/*`
+- `docs/evidence/s25-06/*`
+- `docs/evidence/s25-07/*`
 - `scripts/ops/current_point.py`
 - `Makefile`
 - `docs/ops/ROADMAP.md`

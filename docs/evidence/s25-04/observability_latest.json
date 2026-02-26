@@ -2,14 +2,36 @@
   "schema_version": "s25-obs-report-v1",
   "baseline_json": "/Users/takemuramasaki/dev/maakie-brainlab/docs/evidence/s25-03/baseline_latest.json",
   "tools": {
+    "acceptance-wall": {
+      "schema_version": "s25-obs-contract-v1",
+      "tool": "acceptance-wall",
+      "run_id": "acceptance-wall__20260226T234648Z__ops-s25-01-25-10__7544752",
+      "run_dir": "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/acceptance-wall/acceptance-wall__20260226T234648Z__ops-s25-01-25-10__7544752",
+      "captured_at_utc": "2026-02-26T23:46:48.611543+00:00",
+      "branch": "ops/S25-01-25-10",
+      "head": "754475298c2985d81a1e5c32250acb826fd063fd",
+      "counts": {
+        "OK": 16,
+        "WARN": 0,
+        "ERROR": 0,
+        "SKIP": 0
+      },
+      "events_total": 16,
+      "extra": {
+        "acceptance_json": "/Users/takemuramasaki/dev/maakie-brainlab/docs/evidence/s25-06/acceptance_wall_latest.json",
+        "acceptance_md": "/Users/takemuramasaki/dev/maakie-brainlab/docs/evidence/s25-06/acceptance_wall_latest.md",
+        "stop": 0,
+        "cases_total": 5
+      }
+    },
     "baseline-freeze": {
       "schema_version": "s25-obs-contract-v1",
       "tool": "baseline-freeze",
-      "run_id": "baseline-freeze__20260226T163128Z__ops-s25-01-25-10__5d99cc9",
-      "run_dir": "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/baseline-freeze/baseline-freeze__20260226T163128Z__ops-s25-01-25-10__5d99cc9",
-      "captured_at_utc": "2026-02-26T16:31:28.495200+00:00",
+      "run_id": "baseline-freeze__20260226T234648Z__ops-s25-01-25-10__7544752",
+      "run_dir": "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/baseline-freeze/baseline-freeze__20260226T234648Z__ops-s25-01-25-10__7544752",
+      "captured_at_utc": "2026-02-26T23:46:48.782974+00:00",
       "branch": "ops/S25-01-25-10",
-      "head": "5d99cc94a5011058a555f37b9739e99292d24a6a",
+      "head": "754475298c2985d81a1e5c32250acb826fd063fd",
       "counts": {
         "OK": 14,
         "WARN": 0,
@@ -27,11 +49,11 @@
     "current-point": {
       "schema_version": "s25-obs-contract-v1",
       "tool": "current-point",
-      "run_id": "current-point__20260226T163242Z__ops-s25-01-25-10__5d99cc9",
-      "run_dir": "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/current-point/current-point__20260226T163242Z__ops-s25-01-25-10__5d99cc9",
-      "captured_at_utc": "2026-02-26T16:32:42.479596+00:00",
+      "run_id": "current-point__20260226T234656Z__ops-s25-01-25-10__7544752",
+      "run_dir": "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/current-point/current-point__20260226T234656Z__ops-s25-01-25-10__7544752",
+      "captured_at_utc": "2026-02-26T23:46:56.439358+00:00",
       "branch": "ops/S25-01-25-10",
-      "head": "5d99cc94a5011058a555f37b9739e99292d24a6a",
+      "head": "754475298c2985d81a1e5c32250acb826fd063fd",
       "counts": {
         "OK": 8,
         "WARN": 0,
@@ -43,14 +65,36 @@
         "snapshot_file": "snapshot.json"
       }
     },
+    "ml-experiment": {
+      "schema_version": "s25-obs-contract-v1",
+      "tool": "ml-experiment",
+      "run_id": "ml-experiment__20260226T235148Z__ops-s25-01-25-10__7544752",
+      "run_dir": "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/ml-experiment/ml-experiment__20260226T235148Z__ops-s25-01-25-10__7544752",
+      "captured_at_utc": "2026-02-26T23:51:48.690703+00:00",
+      "branch": "ops/S25-01-25-10",
+      "head": "754475298c2985d81a1e5c32250acb826fd063fd",
+      "counts": {
+        "OK": 8,
+        "WARN": 0,
+        "ERROR": 0,
+        "SKIP": 0
+      },
+      "events_total": 8,
+      "extra": {
+        "ml_experiment_json": "/Users/takemuramasaki/dev/maakie-brainlab/docs/evidence/s25-07/ml_experiment_latest.json",
+        "ml_experiment_md": "/Users/takemuramasaki/dev/maakie-brainlab/docs/evidence/s25-07/ml_experiment_latest.md",
+        "status": "PASS",
+        "reason_code": ""
+      }
+    },
     "obs-pr-summary": {
       "schema_version": "s25-obs-contract-v1",
       "tool": "obs-pr-summary",
-      "run_id": "obs-pr-summary__20260226T163242Z__ops-s25-01-25-10__5d99cc9",
-      "run_dir": "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/obs-pr-summary/obs-pr-summary__20260226T163242Z__ops-s25-01-25-10__5d99cc9",
-      "captured_at_utc": "2026-02-26T16:32:42.474641+00:00",
+      "run_id": "obs-pr-summary__20260226T234656Z__ops-s25-01-25-10__7544752",
+      "run_dir": "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/obs-pr-summary/obs-pr-summary__20260226T234656Z__ops-s25-01-25-10__7544752",
+      "captured_at_utc": "2026-02-26T23:46:56.424084+00:00",
       "branch": "ops/S25-01-25-10",
-      "head": "5d99cc94a5011058a555f37b9739e99292d24a6a",
+      "head": "754475298c2985d81a1e5c32250acb826fd063fd",
       "counts": {
         "OK": 4,
         "WARN": 0,
@@ -68,11 +112,11 @@
     "regression-safety": {
       "schema_version": "s25-obs-contract-v1",
       "tool": "regression-safety",
-      "run_id": "regression-safety__20260226T234053Z__ops-s25-01-25-10__650b76c",
-      "run_dir": "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/regression-safety/regression-safety__20260226T234053Z__ops-s25-01-25-10__650b76c",
-      "captured_at_utc": "2026-02-26T23:40:53.206145+00:00",
+      "run_id": "regression-safety__20260226T234649Z__ops-s25-01-25-10__7544752",
+      "run_dir": "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/regression-safety/regression-safety__20260226T234649Z__ops-s25-01-25-10__7544752",
+      "captured_at_utc": "2026-02-26T23:46:49.493801+00:00",
       "branch": "ops/S25-01-25-10",
-      "head": "650b76ce2782dd2141d3dd17e8ffcdab44ba4d65",
+      "head": "754475298c2985d81a1e5c32250acb826fd063fd",
       "counts": {
         "OK": 13,
         "WARN": 0,

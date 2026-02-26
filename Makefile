@@ -2,7 +2,7 @@
 .PHONY: sat-collect sat-normalize sat-gate sat-store sat-digest sat-index sat-run
 .PHONY: server-start server-stop server-status log ingest ask
 .PHONY: ai-smoke ai-verify
-.PHONY: s22-16-ship phase-ship ops-now s25-baseline-freeze s25-obs-summary s25-regression-safety bench-il-compile tune-il-compile-prompt il-thread-smoke il-thread-replay-check verify-il-thread-v2
+.PHONY: s22-16-ship phase-ship ops-now s25-baseline-freeze s25-obs-summary s25-regression-safety s25-acceptance-wall s25-ml-experiment bench-il-compile tune-il-compile-prompt il-thread-smoke il-thread-replay-check verify-il-thread-v2
 
 PY=.venv/bin/python
 PYENV=PYTHONPATH=./src:.
@@ -92,6 +92,12 @@ s25-obs-summary:
 
 s25-regression-safety:
 	$(PYENV) $(PY) scripts/ops/s25_regression_safety.py
+
+s25-acceptance-wall:
+	$(PYENV) $(PY) scripts/ops/s25_acceptance_wall.py
+
+s25-ml-experiment:
+	$(PYENV) $(PY) scripts/ops/s25_ml_experiment.py
 
 bootstrap:
 	# S20-08: Canonical bootstrap via uv (using system python only to install uv)
