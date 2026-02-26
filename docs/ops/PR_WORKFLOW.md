@@ -78,3 +78,10 @@ git reset --hard origin/main
 
 - Milestone は `milestone_autofill` が自動付与する（Sxx推測）
 - マージは `ops/pr_merge_guard.sh` 経由（UI mergeは運用禁止）
+
+## Merge Guard Contract (S22-17)
+
+- `ops/pr_merge_guard.sh` の blocking 条件は required checks と check-runs のみ。
+- milestone 系は観測 + 自動補正（best-effort）で、判定は non-blocking。
+- `milestone_required` の失敗は WARN 扱い（merge停止条件にしない）。
+- 実行マージは merge-commit 固定（`gh pr merge --merge --match-head-commit <sha>`）。

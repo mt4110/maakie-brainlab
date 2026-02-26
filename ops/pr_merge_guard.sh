@@ -31,7 +31,6 @@ if [ "${STOP}" = "0" ]; then
   HAS_MATCH="0"
   case "${OUT_REQUIRED_SOT}" in
     *"OK: required_checks_sot matched"*) HAS_MATCH="1" ;;
-    *"WARN: 403 Forbidden"*) HAS_MATCH="1" ;;
   esac
   if [ "${HAS_MATCH}" != "1" ]; then
     printf "%s\n" "ERROR: required checks gate failed; STOP=1"
@@ -84,16 +83,14 @@ if [ "$STOP" = "0" ]; then
     HEAD_REF="$(gh pr view "$PR" --json headRefName --jq '.headRefName // ""' 2>/dev/null || true)"
     INF="$(printf "%s\n" "$HEAD_REF" | grep -o -i -E 's[0-9]{2}-[0-9]{2}' | head -1 || true)"
     if [ -z "$INF" ]; then
-      echo "ERROR: cannot infer milestone from head_ref=$HEAD_REF"
-      STOP="1"
+      echo "WARN: cannot infer milestone from head_ref=$HEAD_REF (non-blocking)"
     else
       WANT="$(printf "%s\n" "$INF" | sed 's/^s/S/' | tr '[:lower:]' '[:upper:]')"
       echo "OK: inferred milestone title=$WANT"
       MNUM="$(gh api "repos/$NAME/milestones?state=all&per_page=100" \
         --jq ".[] | select(.title==\"$WANT\") | .number" 2>/dev/null | head -1 || true)"
       if [ -z "$MNUM" ]; then
-        echo "ERROR: milestone not found title=$WANT"
-        STOP="1"
+        echo "WARN: milestone not found title=$WANT (non-blocking)"
       else
         gh api -X PATCH "repos/$NAME/issues/$PR" -f milestone="$MNUM" 2>/dev/null >/dev/null || true
         echo "OK: milestone set number=$MNUM title=$WANT"
@@ -101,8 +98,7 @@ if [ "$STOP" = "0" ]; then
           --jq '.milestone.title // ""' 2>/dev/null || true)"
         echo "OK: milestone(after)=$MILESTONE"
         if [ -z "$MILESTONE" ]; then
-          echo "ERROR: milestone still missing after autofix"
-          STOP="1"
+          echo "WARN: milestone still missing after autofix (non-blocking)"
         fi
       fi
     fi
@@ -110,7 +106,7 @@ if [ "$STOP" = "0" ]; then
   fi
 fi
 
-# Must be success: milestone_required (prefer status; fallback check-runs)
+# Advisory only: milestone_required (non-blocking)
 MS_STATE=""
 MS_CONCL=""
 if [ "$STOP" = "0" ]; then
@@ -120,8 +116,7 @@ if [ "$STOP" = "0" ]; then
   if [ "$MS_STATE" = "success" ]; then
     echo "OK: status milestone_required=success"
   elif [ -n "$MS_STATE" ]; then
-    echo "ERROR: status milestone_required not success: state=${MS_STATE:-EMPTY}"
-    STOP="1"
+    echo "WARN: status milestone_required not success: state=${MS_STATE:-EMPTY} (non-blocking)"
   else
     # 2) Fallback: scan check-runs (name is often job-name, not workflow-name)
     MS_CONCL="$(gh api -H "Accept: application/vnd.github+json" "repos/$NAME/commits/$SHA/check-runs"       --jq '[.check_runs[] | select(((.name // "") | test("milestone_required"; "i")) or ((.name // "") == "milestone"))] | .[0].conclusion // ""' 2>/dev/null || true)"
@@ -129,10 +124,9 @@ if [ "$STOP" = "0" ]; then
     if [ "$MS_CONCL" = "success" ]; then
       echo "OK: check_run milestone_required=success"
     elif [ -n "$MS_CONCL" ]; then
-      echo "ERROR: check_run milestone_required not success: conclusion=${MS_CONCL:-EMPTY}"
-      STOP="1"
+      echo "WARN: check_run milestone_required not success: conclusion=${MS_CONCL:-EMPTY} (non-blocking)"
     else
-      echo "WARN: milestone_required not observable via status/check-runs (non-blocking); rely on milestone + global checks gate"
+      echo "WARN: milestone_required not observable via status/check-runs (non-blocking)"
     fi
   fi
 fi
@@ -141,10 +135,11 @@ fi
 PENDING=""
 FAILS=""
 if [ "$STOP" = "0" ]; then
+  # milestone系はadvisory扱い。pending/failing集計から除外する。
   PENDING="$(gh api -H "Accept: application/vnd.github+json" "repos/$NAME/commits/$SHA/check-runs" \
-    --jq '[.check_runs[] | select(.status != "completed")] | length' 2>/dev/null || true)"
+    --jq '[.check_runs[] | select(((.name // "") | test("milestone_required|milestone_advisory|^milestone$"; "i")) | not) | select(.status != "completed")] | length' 2>/dev/null || true)"
   FAILS="$(gh api -H "Accept: application/vnd.github+json" "repos/$NAME/commits/$SHA/check-runs" \
-    --jq '[.check_runs[] | select(.status=="completed" and (.conclusion!="success" and .conclusion!="neutral" and .conclusion!="skipped"))] | length' 2>/dev/null || true)"
+    --jq '[.check_runs[] | select(((.name // "") | test("milestone_required|milestone_advisory|^milestone$"; "i")) | not) | select(.status=="completed" and (.conclusion!="success" and .conclusion!="neutral" and .conclusion!="skipped"))] | length' 2>/dev/null || true)"
 
   echo "OK: check_runs pending=${PENDING:-UNKNOWN} failing=${FAILS:-UNKNOWN}"
 
@@ -160,9 +155,13 @@ fi
 
 if [ "$STOP" = "0" ]; then
   if [ "$DO_MERGE" = "1" ]; then
-    echo "OK: merging PR $PR"
-    gh pr merge "$PR" --squash --delete-branch 2>/dev/null || true
-    echo "OK: merge command executed (check GH UI for result)"
+    echo "OK: merging PR $PR (mode=merge-commit)"
+    if gh pr merge "$PR" --merge --delete-branch --match-head-commit "$SHA"; then
+      echo "OK: merge command executed"
+    else
+      echo "ERROR: merge command failed"
+      STOP="1"
+    fi
   else
     echo "OK: dry-run (pass --merge to execute)"
   fi

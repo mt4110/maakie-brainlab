@@ -2,7 +2,7 @@
 .PHONY: sat-collect sat-normalize sat-gate sat-store sat-digest sat-index sat-run
 .PHONY: server-start server-stop server-status log ingest ask
 .PHONY: ai-smoke ai-verify
-.PHONY: s22-16-ship
+.PHONY: s22-16-ship phase-ship
 
 PY=.venv/bin/python
 PYENV=PYTHONPATH=./src:.
@@ -52,6 +52,16 @@ verify-il:
 
 s22-16-ship:
 	$(PYENV) $(PY) ops/s22_16_ship.py
+
+phase-ship:
+	DRY_RUN="$(DRY_RUN)" \
+	SKIP_COMMIT="$(SKIP_COMMIT)" \
+	SKIP_PR="$(SKIP_PR)" \
+	WITH_REVIEWPACK="$(WITH_REVIEWPACK)" \
+	BASE_BRANCH="$(BASE_BRANCH)" \
+	COMMIT_MESSAGE="$(COMMIT_MESSAGE)" \
+	INCLUDE_UNTRACKED="$(INCLUDE_UNTRACKED)" \
+	$(PYENV) $(PY) ops/phase_ship.py --phase "$(PHASE)"
 
 bootstrap:
 	# S20-08: Canonical bootstrap via uv (using system python only to install uv)
