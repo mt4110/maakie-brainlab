@@ -2,7 +2,7 @@
 .PHONY: sat-collect sat-normalize sat-gate sat-store sat-digest sat-index sat-run
 .PHONY: server-start server-stop server-status log ingest ask
 .PHONY: ai-smoke ai-verify
-.PHONY: s22-16-ship phase-ship bench-il-compile tune-il-compile-prompt
+.PHONY: s22-16-ship phase-ship bench-il-compile tune-il-compile-prompt il-thread-smoke
 
 PY=.venv/bin/python
 PYENV=PYTHONPATH=./src:.
@@ -48,8 +48,12 @@ ci: ci-test
 verify-il:
 	$(PYENV) $(PY) ops/il_entrypoint_guard.py
 	$(PYENV) $(PY) scripts/il_compile_entry_smoke.py
+	$(PYENV) $(PY) scripts/il_thread_runner_v2_smoke.py
 	$(PYENV) $(PY) scripts/il_entry_smoke.py
 	$(PYENV) $(PY) scripts/il_exec_selftest.py
+
+il-thread-smoke:
+	$(PYENV) $(PY) scripts/il_thread_runner_v2_smoke.py
 
 bench-il-compile:
 	$(PYENV) $(PY) scripts/il_compile_bench.py
