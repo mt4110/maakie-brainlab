@@ -1,6 +1,6 @@
 # S22-16 TASK — verify-il入口整合 + guardノイズ制御 + ship自動化
 
-S22-16: 35% (WIP)
+S22-16: 90% (WIP)
 
 ## 0. Kickoff / Scope Fix
 - [x] Confirm branch is S22-16 work branch
@@ -30,8 +30,19 @@ S22-16: 35% (WIP)
 
 ## 4. Validation (automation dry-run)
 - [x] `SKIP_COMMIT=1 SKIP_PR=1 make s22-16-ship`
-- [ ] （任意）`WITH_REVIEWPACK=1 SKIP_COMMIT=1 SKIP_PR=1 make s22-16-ship`
+- [x] （任意）`WITH_REVIEWPACK=1 SKIP_COMMIT=1 SKIP_PR=1 make s22-16-ship`
+  - 観測: `go` 未導入環境では reviewpack verify-only は `WARN`（他フローは STOP=0）
 
 ## 5. STATUS Sync
-- [x] `docs/ops/STATUS.md` の S22-16 を 35% (WIP) へ更新
-- [x] 進捗35%の根拠をこのTASKに記録（入口整合 + guardノイズ制御 + ship自動化）
+- [x] `docs/ops/STATUS.md` の S22-16 を最新進捗へ同期
+- [x] 進捗は PR 本文をソースオブトゥルースとし、`STATUS.md` はミラー運用
+
+## 6. CI Gate / Policy Sync
+- [x] ship helper に `ci-self all-green` gate を実装（green 以外は PR 作成/更新停止）
+- [x] `branch-name-guard` をチェック観測項目に反映
+- [x] `milestone_required` FAILURE の方針を A で固定（milestone を設定して green 化）
+- [ ] PR #102 に `S22-16` milestone を設定し、`milestone_required` が SUCCESS になること
+- [ ] `mergeStateStatus=BEHIND` 解消（必要時 main 取り込み）後に再チェック
+
+## 7. Closeout
+- [ ] 全チェック green + 方針反映を確認後、S22-16 を 100% に更新
