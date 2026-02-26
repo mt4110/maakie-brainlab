@@ -14,6 +14,8 @@ python3 scripts/il_thread_runner_v2.py \
   --cases <cases.jsonl> \
   --mode <validate-only|run> \
   --out <out_dir> \
+  [--entry-timeout-sec <int>] \
+  [--entry-script <path/to/il_entry.py>] \
   [--provider <rule_based|local_llm>] \
   [--model <model_name>] \
   [--prompt-profile <v1|strict_json_v2|contract_json_v3>] \
@@ -73,6 +75,8 @@ Rules:
   - `il.compile.error.json`（compile失敗時のみ）
 - `cases/<id>/entry/`（runモードかつcompile成功時のみ）
   - `il.exec.report.json` 等の `il_entry` 成果物
+  - `entry.stdout.log`
+  - `entry.stderr.log`
 
 ## Case Record (`IL_THREAD_RUNNER_V2_CASE_v1`)
 最低必須フィールド:
@@ -82,6 +86,8 @@ Rules:
 - `compile_status`: `OK|ERROR`
 - `entry_status`: `OK|ERROR|SKIP`
 - `compile_error_codes`: array[string]
+- `entry_error_codes`: array[string]
+- `entry_error_reason`: string
 - `entry_stop`: 0 or 1
 - `artifacts`: relative paths object
 
@@ -94,6 +100,7 @@ Rules:
 - `prompt_profile`
 - `seed`
 - `allow_fallback`
+- `entry_timeout_sec`
 - `total_cases`
 - `compile_ok_count`
 - `compile_error_count`

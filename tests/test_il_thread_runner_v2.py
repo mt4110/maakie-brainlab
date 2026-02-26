@@ -41,14 +41,19 @@ class TestILThreadRunnerV2(unittest.TestCase):
         return h.hexdigest()
 
     def test_parse_args_validation(self):
-        _, _, _, _, _, _, _, _, errors, _ = parse_args(["--mode", "run"])
+        _, _, _, _, _, _, _, _, _, _, errors, _ = parse_args(["--mode", "run"])
         self.assertIn("missing required --cases", errors)
         self.assertIn("missing required --out", errors)
 
-        _, _, _, _, _, _, _, _, errors2, _ = parse_args(
+        _, _, _, _, _, _, _, _, _, _, errors2, _ = parse_args(
             ["--cases", "x.jsonl", "--mode", "bad", "--out", "tmp/out"]
         )
         self.assertIn("invalid --mode: bad", errors2)
+
+        _, _, _, _, _, _, _, _, _, _, errors3, _ = parse_args(
+            ["--cases", "x.jsonl", "--mode", "run", "--out", "tmp/out", "--entry-timeout-sec", "0"]
+        )
+        self.assertIn("entry-timeout-sec must be > 0", errors3)
 
     def test_load_cases_collects_schema_errors(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -197,6 +202,78 @@ class TestILThreadRunnerV2(unittest.TestCase):
             s2 = json.loads((out2 / "summary.json").read_text(encoding="utf-8"))
             self.assertEqual(s1["sha256_cases_jsonl"], s2["sha256_cases_jsonl"])
             self.assertEqual(self._sha256_file(out1 / "cases.jsonl"), self._sha256_file(out2 / "cases.jsonl"))
+
+    def _write_dummy_entry_script(self, path: Path, sleep_first_sec: int = 0) -> None:
+        script = f"""#!/usr/bin/env python3
+import json
+import sys
+import time
+from pathlib import Path
+
+args = sys.argv[1:]
+il_path = args[0]
+out_dir = None
+i = 1
+while i < len(args):
+    if args[i] == "--out" and i + 1 < len(args):
+        out_dir = args[i + 1]
+        i += 2
+    elif args[i] == "--fixture-db":
+        i += 2
+    else:
+        i += 1
+
+if out_dir is None:
+    print("ERROR: missing --out")
+    sys.exit(2)
+
+out = Path(out_dir)
+out.mkdir(parents=True, exist_ok=True)
+if "0001_" in il_path and {sleep_first_sec} > 0:
+    time.sleep({sleep_first_sec})
+
+(out / "il.exec.report.json").write_text(json.dumps({{"schema":"IL_EXEC_REPORT_v1"}}), encoding="utf-8")
+print("OK: phase=end STOP=0")
+"""
+        path.write_text(script, encoding="utf-8")
+
+    def test_timeout_does_not_block_next_case(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            cases_path = tmp_path / "cases.jsonl"
+            out_dir = tmp_path / "out_timeout"
+            entry_script = tmp_path / "dummy_entry.py"
+            self._write_dummy_entry_script(entry_script, sleep_first_sec=2)
+
+            rows = [
+                {"id": "first_timeout", "request": self._good_request("alpha")},
+                {"id": "second_ok", "request": self._good_request("beta")},
+            ]
+            self._write_cases(cases_path, rows)
+
+            rc = run_thread_runner(
+                cases_path=cases_path,
+                mode="run",
+                out_dir=out_dir,
+                entry_timeout_sec=1,
+                entry_script=entry_script,
+            )
+            self.assertEqual(rc, 1)
+
+            summary = json.loads((out_dir / "summary.json").read_text(encoding="utf-8"))
+            self.assertEqual(summary["compile_ok_count"], 2)
+            self.assertEqual(summary["entry_error_count"], 1)
+            self.assertEqual(summary["entry_ok_count"], 1)
+
+            rows_out = [
+                json.loads(line)
+                for line in (out_dir / "cases.jsonl").read_text(encoding="utf-8").splitlines()
+                if line.strip()
+            ]
+            self.assertEqual(rows_out[0]["entry_status"], "ERROR")
+            self.assertIn("E_TIMEOUT", rows_out[0]["entry_error_codes"])
+            self.assertEqual(rows_out[1]["entry_status"], "OK")
+            self.assertTrue((out_dir / "cases" / "0002_second_ok" / "entry" / "il.exec.report.json").exists())
 
     def test_cli_help_and_invalid_mode(self):
         repo_root = Path(__file__).resolve().parent.parent
