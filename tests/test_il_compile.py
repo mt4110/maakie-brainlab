@@ -216,6 +216,45 @@ class TestILCompile(unittest.TestCase):
         self.assertIn("Return ONLY one JSON object", prompt_text)
         self.assertEqual(bundle.get("status"), "OK")
 
+    def test_artifact_path_rejects_windows_style_traversal_and_unc(self):
+        req = self._good_request_payload()
+        req["artifact_pointers"] = [{"path": "..\\secret.txt"}]
+        bundle = compile_request_bundle(req)
+        self.assertEqual(bundle.get("status"), "ERROR")
+        messages = [e.get("message", "") for e in bundle.get("errors", [])]
+        self.assertIn("path traversal '..' is forbidden", messages)
+
+        req_unc = self._good_request_payload()
+        req_unc["artifact_pointers"] = [{"path": "\\\\server\\share\\x"}]
+        bundle_unc = compile_request_bundle(req_unc)
+        self.assertEqual(bundle_unc.get("status"), "ERROR")
+        unc_messages = [e.get("message", "") for e in bundle_unc.get("errors", [])]
+        self.assertIn("absolute path is forbidden", unc_messages)
+
+    def test_cli_requires_out_argument(self):
+        repo_root = Path(__file__).resolve().parent.parent
+        compile_script = repo_root / "scripts" / "il_compile.py"
+        with tempfile.TemporaryDirectory() as tmp:
+            req_path = Path(tmp) / "request.good.json"
+            req_payload = self._good_request_payload()
+            req_path.write_text(json.dumps(req_payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+            cp = subprocess.run(
+                [
+                    "python3",
+                    str(compile_script),
+                    "--request",
+                    str(req_path),
+                ],
+                cwd=repo_root,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            output = (cp.stdout or "") + (cp.stderr or "")
+            self.assertIn("missing required --out", output)
+            self.assertIn("usage:", output)
+
 
 if __name__ == "__main__":
     unittest.main()

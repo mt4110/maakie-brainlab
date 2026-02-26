@@ -91,11 +91,12 @@ def _make_error(
 def _validate_artifact_path(path: Any) -> Optional[str]:
     if not isinstance(path, str) or not path.strip():
         return "path must be a non-empty string"
-    if path.startswith("/") or _WIN_ABS_RE.match(path):
+    normalized = path.replace("\\", "/")
+    if normalized.startswith("/") or normalized.startswith("//") or _WIN_ABS_RE.match(path):
         return "absolute path is forbidden"
     if "://" in path or path.startswith("file:"):
         return "URI form is forbidden"
-    parts = path.split("/")
+    parts = normalized.split("/")
     if ".." in parts:
         return "path traversal '..' is forbidden"
     return None

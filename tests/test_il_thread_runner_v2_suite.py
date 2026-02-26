@@ -51,7 +51,7 @@ class TestILThreadRunnerV2Suite(unittest.TestCase):
             check=False,
         )
         output = (cp.stdout or "") + (cp.stderr or "")
-        self.assertNotEqual(cp.returncode, 0)
+        self.assertEqual(cp.returncode, 1)
         self.assertIn("unknown option", output)
         self.assertIn("ERROR: il_thread_runner_v2_suite exit=1", output)
 

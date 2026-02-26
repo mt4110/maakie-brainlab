@@ -9,6 +9,7 @@ Stopless, grep-friendly logs only.
 import json
 import os
 import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -39,7 +40,7 @@ def _run(cmd: list[str], cwd: Path, case_name: str) -> tuple[int, str]:
         return 1, ""
 
 
-def run_smoke() -> None:
+def run_smoke() -> int:
     repo_root = Path(__file__).resolve().parent.parent
     compile_script = repo_root / "scripts" / "il_compile.py"
     il_entry_script = repo_root / "scripts" / "il_entry.py"
@@ -71,7 +72,7 @@ def run_smoke() -> None:
     except Exception as exc:
         log("ERROR", f"cannot_write_request exception={exc}")
         log("ERROR", "smoke_summary STOP=1 cases=2 passed=0 failed=2")
-        return
+        return 1
 
     failed = 0
     total = 2
@@ -112,9 +113,10 @@ def run_smoke() -> None:
     passed = total - failed
     if failed == 0:
         log("OK", f"smoke_summary STOP=0 cases={total} passed={passed} failed={failed}")
-    else:
-        log("ERROR", f"smoke_summary STOP=1 cases={total} passed={passed} failed={failed}")
+        return 0
+    log("ERROR", f"smoke_summary STOP=1 cases={total} passed={passed} failed={failed}")
+    return 1
 
 
 if __name__ == "__main__":
-    run_smoke()
+    sys.exit(run_smoke())

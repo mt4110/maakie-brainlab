@@ -275,3 +275,4 @@ if __name__ == "__main__":
         print("OK: il_compile_prompt_loop exit=0")
     else:
         print("ERROR: il_compile_prompt_loop exit=1")
+    sys.exit(rc)

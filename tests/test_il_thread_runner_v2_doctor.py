@@ -50,6 +50,7 @@ class TestILThreadRunnerV2Doctor(unittest.TestCase):
                 check=False,
             )
             out = (cp.stdout or "") + (cp.stderr or "")
+            self.assertEqual(cp.returncode, 0)
             self.assertIn("doctor_summary status=OK", out)
             self.assertIn("OK: il_thread_runner_v2_doctor exit=0", out)
 
@@ -67,6 +68,7 @@ class TestILThreadRunnerV2Doctor(unittest.TestCase):
                 check=False,
             )
             out = (cp.stdout or "") + (cp.stderr or "")
+            self.assertEqual(cp.returncode, 1)
             self.assertIn("missing summary.json", out)
             self.assertIn("ERROR: il_thread_runner_v2_doctor exit=1", out)
 

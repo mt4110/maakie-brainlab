@@ -36,6 +36,7 @@ class TestILCompileBench(unittest.TestCase):
                 check=False,
             )
             output = (cp.stdout or "") + (cp.stderr or "")
+            self.assertEqual(cp.returncode, 0)
             self.assertIn("OK: il_compile_bench exit=0", output)
 
             summary_path = out_dir / "il.compile.bench.summary.json"
@@ -79,6 +80,7 @@ class TestILCompileBench(unittest.TestCase):
                 check=False,
             )
             output = (cp.stdout or "") + (cp.stderr or "")
+            self.assertEqual(cp.returncode, 0)
             self.assertIn("OK: il_compile_bench exit=0", output)
             summary = json.loads((out_dir / "il.compile.bench.summary.json").read_text(encoding="utf-8"))
             self.assertGreater(summary.get("expanded_cases", 0), 0)

@@ -376,6 +376,7 @@ print("OK: phase=end STOP=0")
             check=False,
         )
         out = (invalid.stdout or "") + (invalid.stderr or "")
+        self.assertEqual(invalid.returncode, 1)
         self.assertIn("invalid --mode", out)
         self.assertIn("ERROR: il_thread_runner_v2 exit=1", out)
 

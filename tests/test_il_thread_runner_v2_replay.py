@@ -30,6 +30,7 @@ class TestILThreadRunnerV2Replay(unittest.TestCase):
                 check=False,
             )
             output = (cp.stdout or "") + (cp.stderr or "")
+            self.assertEqual(cp.returncode, 0)
             self.assertIn("OK: il_thread_runner_v2_replay_check exit=0", output)
 
             report_path = out_dir / "il.thread.replay.report.json"
@@ -54,6 +55,7 @@ class TestILThreadRunnerV2Replay(unittest.TestCase):
             check=False,
         )
         output = (cp.stdout or "") + (cp.stderr or "")
+        self.assertEqual(cp.returncode, 1)
         self.assertIn("invalid --mode", output)
         self.assertIn("ERROR: il_thread_runner_v2_replay_check exit=1", output)
 

@@ -6,8 +6,10 @@ S23-04 smoke:
 
 import json
 import subprocess
+import sys
 import time
 from pathlib import Path
+from typing import List, Optional, Tuple
 
 
 def log(level: str, message: str) -> None:
@@ -76,12 +78,44 @@ def _write_cases(path: Path) -> None:
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
 
 
-def run_smoke() -> None:
+def usage() -> str:
+    return "python3 scripts/il_thread_runner_v2_smoke.py [--out <dir>]"
+
+
+def parse_args(args: List[str]) -> Tuple[Optional[Path], List[str], bool]:
+    out_dir: Optional[Path] = None
+    errors: List[str] = []
+    if "--help" in args or "-h" in args:
+        return out_dir, errors, True
+
+    i = 0
+    while i < len(args):
+        token = args[i]
+        if token == "--out":
+            if i + 1 >= len(args):
+                errors.append("missing value for --out")
+                i += 1
+                continue
+            out_dir = Path(args[i + 1]).expanduser()
+            i += 2
+        elif token.startswith("-"):
+            errors.append(f"unknown option: {token}")
+            i += 1
+        else:
+            errors.append(f"unexpected positional arg: {token}")
+            i += 1
+    return out_dir, errors, False
+
+
+def run_smoke(out_dir: Optional[Path] = None) -> int:
     repo_root = Path(__file__).resolve().parent.parent
     runner_script = repo_root / "scripts" / "il_thread_runner_v2.py"
 
-    run_id = int(time.time() * 1000)
-    obs_root = repo_root / ".local" / "obs" / f"il_thread_runner_v2_smoke_{run_id}"
+    if out_dir is None:
+        run_id = int(time.time() * 1000)
+        obs_root = repo_root / ".local" / "obs" / f"il_thread_runner_v2_smoke_{run_id}"
+    else:
+        obs_root = out_dir if out_dir.is_absolute() else (repo_root / out_dir).resolve()
     cases_path = obs_root / "cases.jsonl"
     validate_out = obs_root / "validate_only"
     run_out = obs_root / "run_mode"
@@ -146,9 +180,23 @@ def run_smoke() -> None:
     passed = total - failed
     if failed == 0:
         log("OK", f"smoke_summary STOP=0 cases={total} passed={passed} failed={failed}")
-    else:
-        log("ERROR", f"smoke_summary STOP=1 cases={total} passed={passed} failed={failed}")
+        return 0
+    log("ERROR", f"smoke_summary STOP=1 cases={total} passed={passed} failed={failed}")
+    return 1
+
+
+def main(args: List[str]) -> int:
+    out_dir, errors, show_help = parse_args(args)
+    if show_help:
+        print(f"OK: usage: {usage()}")
+        return 0
+    if errors:
+        for err in errors:
+            print(f"ERROR: {err}")
+        print(f"OK: usage: {usage()}")
+        return 1
+    return run_smoke(out_dir=out_dir)
 
 
 if __name__ == "__main__":
-    run_smoke()
+    sys.exit(main(sys.argv[1:]))

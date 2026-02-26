@@ -114,7 +114,12 @@ def run_suite(cases: Path, out: Path) -> int:
     else:
         log("ERROR", "phase=step name=replay_check status=ERROR")
 
-    smoke_cmd = ["python3", str(repo_root / "scripts" / "il_thread_runner_v2_smoke.py")]
+    smoke_cmd = [
+        "python3",
+        str(repo_root / "scripts" / "il_thread_runner_v2_smoke.py"),
+        "--out",
+        str(out / "thread_smoke_out"),
+    ]
     smoke_proc = subprocess.run(
         smoke_cmd,
         cwd=repo_root,

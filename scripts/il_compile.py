@@ -120,6 +120,8 @@ def _parse_args(
 
     if request_path is None:
         errors.append("missing required --request")
+    if out_dir is None:
+        errors.append("missing required --out")
     return request_path, out_dir, model, provider, prompt_profile, seed, allow_fallback, errors, False
 
 

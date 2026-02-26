@@ -1,10 +1,10 @@
 """
 S23-04: Compile -> Entry thread runner v2.
 
-Stopless policy:
-- no sys.exit
+Stopless policy for core run logic:
 - continue per-case even if one case fails
 - emit grep-friendly OK:/ERROR:/SKIP: logs
+- CLI wrapper returns the computed process status
 """
 
 import hashlib
@@ -774,3 +774,4 @@ if __name__ == "__main__":
         print("OK: il_thread_runner_v2 exit=0")
     else:
         print("ERROR: il_thread_runner_v2 exit=1")
+    sys.exit(rc)
