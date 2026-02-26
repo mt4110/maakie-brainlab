@@ -11,7 +11,8 @@ from typing import Dict, List, Optional, Set, Tuple
 
 
 SOT_RE = re.compile(r"<!--\s*required_checks_sot:v1(.*?)-->", re.S)
-JOB_ID_RE = re.compile(r"^  ([A-Za-z0-9_-]+):\s*$")
+JOBS_HEADER_RE = re.compile(r"^(\s*)jobs:\s*$")
+JOB_KEY_RE = re.compile(r'^\s*([A-Za-z0-9_.-]+|"[^"]+"|\'[^\']+\')\s*:\s*$')
 
 
 def _norm(items: List[str]) -> List[str]:
@@ -59,17 +60,39 @@ def _read_workflow_jobs(path: Path) -> Optional[Set[str]]:
     except Exception:
         return None
     in_jobs = False
+    jobs_indent = 0
+    child_indent: Optional[int] = None
     jobs: Set[str] = set()
     for line in lines:
-        if line.strip() == "jobs:":
+        m_header = JOBS_HEADER_RE.match(line)
+        if m_header:
             in_jobs = True
+            jobs_indent = len(m_header.group(1))
+            child_indent = None
             continue
-        if in_jobs and line and not line.startswith(" "):
+        if not in_jobs:
+            continue
+        if not line.strip():
+            continue
+
+        indent = len(line) - len(line.lstrip(" "))
+        if indent <= jobs_indent:
             break
-        if in_jobs:
-            m = JOB_ID_RE.match(line)
-            if m:
-                jobs.add(m.group(1))
+
+        m_key = JOB_KEY_RE.match(line)
+        if not m_key:
+            continue
+        if line.lstrip(" ").startswith("- "):
+            continue
+
+        if child_indent is None:
+            child_indent = indent
+        if indent != child_indent:
+            continue
+
+        key = m_key.group(1).strip().strip('"').strip("'")
+        if key:
+            jobs.add(key)
     return jobs
 
 
