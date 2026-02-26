@@ -1,6 +1,6 @@
 # S22-16 TASK — verify-il入口整合 + guardノイズ制御 + ship自動化
 
-S22-16: 90% (WIP)
+S22-16: 95% (WIP)
 
 ## 0. Kickoff / Scope Fix
 - [x] Confirm branch is S22-16 work branch
@@ -39,9 +39,10 @@ S22-16: 90% (WIP)
 
 ## 6. CI Gate / Policy Sync
 - [x] ship helper に `ci-self all-green` gate を実装（green 以外は PR 作成/更新停止）
+- [x] `ci-self` の `gh pr checks` 出力形式でも all-green 判定できるよう補強
 - [x] `branch-name-guard` をチェック観測項目に反映
 - [x] `milestone_required` FAILURE の方針を A で固定（milestone を設定して green 化）
-- [ ] PR #102 に `S22-16` milestone を設定し、`milestone_required` が SUCCESS になること
+- [x] PR #102 に `S22-16` milestone を設定し、`milestone_required` が SUCCESS になること
 - [ ] `mergeStateStatus=BEHIND` 解消（必要時 main 取り込み）後に再チェック
 
 ## 7. Closeout

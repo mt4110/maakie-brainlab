@@ -17,6 +17,7 @@
   - light gate 実行（guard + make verify-il）
   - commit（必要ファイルをstage、`.local` と review bundle tarball は除外）
   - PR同期前に `ci-self up --ref <branch>` を実行し、all-green以外は停止
+  - `gh pr checks` watch出力（最終スナップショット）を解釈できる all-green 判定
   - PR本文生成（guard summary / make verify-il 要約を自動反映）
   - `gh` が使える場合は PR create/edit まで実行
   - `--with-reviewpack` 指定時のみ verify-only を1回実行して本文へ追記

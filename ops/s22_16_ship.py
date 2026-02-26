@@ -266,6 +266,50 @@ def ci_self_all_green(output_text: str) -> Tuple[bool, str]:
     if "All checks passed" in text:
         return True, "all checks passed"
 
+    # Fallback: parse the latest gh pr checks snapshot.
+    # ci-self may emit repeated "Refreshing checks status..." blocks without a final summary line.
+    lines = text.splitlines()
+    latest_block = lines
+    marker = "Refreshing checks status every"
+    marker_indexes = [i for i, line in enumerate(lines) if marker in line]
+    if marker_indexes:
+        latest_block = lines[marker_indexes[-1] + 1 :]
+
+    allowed_ok = {"pass", "skipped", "skip"}
+    non_green: List[str] = []
+    observed = 0
+    for line in latest_block:
+        if "\t" not in line:
+            continue
+        cols = [c.strip() for c in line.split("\t")]
+        if len(cols) < 2:
+            continue
+        state = cols[1].lower()
+        if state in {
+            "pass",
+            "skipped",
+            "skip",
+            "pending",
+            "fail",
+            "failure",
+            "failing",
+            "cancelled",
+            "canceled",
+            "error",
+            "timed_out",
+            "action_required",
+            "queued",
+            "in_progress",
+        }:
+            observed += 1
+            if state not in allowed_ok:
+                non_green.append(state)
+
+    if observed > 0:
+        if not non_green:
+            return True, f"all checks green (snapshot observed={observed})"
+        return False, f"non-green statuses in latest snapshot: {','.join(sorted(set(non_green)))}"
+
     return False, "cannot confirm all-green state from ci-self output"
 
 
