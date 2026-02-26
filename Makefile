@@ -47,6 +47,7 @@ ci: ci-test
 
 verify-il:
 	$(PYENV) $(PY) ops/il_entrypoint_guard.py
+	$(PYENV) $(PY) scripts/il_compile_entry_smoke.py
 	$(PYENV) $(PY) scripts/il_entry_smoke.py
 	$(PYENV) $(PY) scripts/il_exec_selftest.py
 
