@@ -2,7 +2,7 @@
 .PHONY: sat-collect sat-normalize sat-gate sat-store sat-digest sat-index sat-run
 .PHONY: server-start server-stop server-status log ingest ask
 .PHONY: ai-smoke ai-verify
-.PHONY: s22-16-ship phase-ship bench-il-compile tune-il-compile-prompt il-thread-smoke
+.PHONY: s22-16-ship phase-ship bench-il-compile tune-il-compile-prompt il-thread-smoke il-thread-replay-check
 
 PY=.venv/bin/python
 PYENV=PYTHONPATH=./src:.
@@ -54,6 +54,9 @@ verify-il:
 
 il-thread-smoke:
 	$(PYENV) $(PY) scripts/il_thread_runner_v2_smoke.py
+
+il-thread-replay-check:
+	$(PYENV) $(PY) scripts/il_thread_runner_v2_replay_check.py
 
 bench-il-compile:
 	$(PYENV) $(PY) scripts/il_compile_bench.py
