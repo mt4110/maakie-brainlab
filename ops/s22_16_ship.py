@@ -487,12 +487,12 @@ def main(argv: List[str]) -> None:
             if not stage_paths:
                 log("SKIP", "no_paths_to_stage")
             else:
-                for p in stage_paths:
+                for idx, p in enumerate(stage_paths, start=1):
                     ok_add, _, _, rc_add = run_cmd(
                         ["git", "add", "--", p],
                         cwd=root,
                         dry_run=dry_run,
-                        log_path=obs / "41_git_add.log",
+                        log_path=obs / f"41_git_add_{idx}.log",
                     )
                     if not ok_add:
                         log("ERROR", f"git_add_failed path={p} rc={rc_add}")
