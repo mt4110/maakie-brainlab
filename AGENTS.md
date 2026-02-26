@@ -4,9 +4,9 @@
 - Use Ritual `22-16-22-99` as the default workflow.
 - Keep milestone checks non-blocking. Do not introduce milestone-required gates.
 - Do not use `STATUS.md` as a progress source of truth. Put progress in PR body.
-- Before PR creation/update, run ci-self gate and proceed only when checks are all green:
-  - `source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh`
-  - `cd ~/dev/maakie-brainlab`
+- Before PR creation/update, run ci-self gate and proceed only when checks are all green (adapting paths to your local setup):
+  - `source /path/to/your/nix/profile.d/nix-daemon.sh`
+  - `cd $REPO_ROOT`  <!-- $REPO_ROOT: root of this repository -->
   - `ci-self up --ref "$(git branch --show-current)"`
 
 ## Branch Rule (Problem Pattern Limited)
