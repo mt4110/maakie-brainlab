@@ -236,12 +236,60 @@ def _write_text(path: Path, text: str) -> None:
     path.write_text(text, encoding="utf-8")
 
 
+def _append_jsonl_line(path: Path, row: Dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(row, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n")
+
+
 def _sha256_file(path: Path) -> str:
     h = hashlib.sha256()
     with open(path, "rb") as f:
         for chunk in iter(lambda: f.read(8192), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+def _build_summary(
+    records: List[Dict[str, Any]],
+    mode: str,
+    provider: str,
+    model: str,
+    prompt_profile: str,
+    seed: int,
+    allow_fallback: bool,
+    entry_timeout_sec: int,
+    entry_retries: int,
+    selected_entry_script: Path,
+    cases_jsonl_sha256: str = "",
+) -> Dict[str, Any]:
+    compile_ok_count = sum(1 for r in records if r["compile_status"] == "OK")
+    compile_error_count = sum(1 for r in records if r["compile_status"] == "ERROR")
+    entry_ok_count = sum(1 for r in records if r["entry_status"] == "OK")
+    entry_error_count = sum(1 for r in records if r["entry_status"] == "ERROR")
+    entry_skip_count = sum(1 for r in records if r["entry_status"] == "SKIP")
+    retries_used_count = sum(max(0, int(r.get("entry_attempts", 0)) - 1) for r in records)
+    return {
+        "schema": SUMMARY_SCHEMA,
+        "mode": mode,
+        "provider": provider,
+        "model": model,
+        "prompt_profile": prompt_profile,
+        "seed": seed,
+        "allow_fallback": allow_fallback,
+        "entry_timeout_sec": entry_timeout_sec,
+        "entry_retries": entry_retries,
+        "entry_script": str(selected_entry_script),
+        "total_cases": len(records),
+        "compile_ok_count": compile_ok_count,
+        "compile_error_count": compile_error_count,
+        "entry_ok_count": entry_ok_count,
+        "entry_error_count": entry_error_count,
+        "entry_skip_count": entry_skip_count,
+        "retries_used_count": retries_used_count,
+        "error_count": compile_error_count + entry_error_count,
+        "sha256_cases_jsonl": cases_jsonl_sha256,
+    }
 
 
 def load_cases(path: Path) -> List[Dict[str, Any]]:
@@ -442,6 +490,20 @@ def run_thread_runner(
     seen_ids: Dict[str, int] = {}
     records: List[Dict[str, Any]] = []
     stop = 0
+    cases_partial_path = out_dir / "cases.partial.jsonl"
+    summary_partial_path = out_dir / "summary.partial.json"
+    try:
+        if cases_partial_path.exists():
+            cases_partial_path.unlink()
+    except Exception as exc:
+        log("ERROR", f"phase=checkpoint reason=cannot_reset_cases_partial err={exc}")
+        stop = 1
+    try:
+        if summary_partial_path.exists():
+            summary_partial_path.unlink()
+    except Exception as exc:
+        log("ERROR", f"phase=checkpoint reason=cannot_reset_summary_partial err={exc}")
+        stop = 1
 
     for idx, case in enumerate(cases, 1):
         case_id = str(case.get("id", f"line_{idx:04d}"))
@@ -593,6 +655,31 @@ def run_thread_runner(
             "artifacts": artifacts,
         }
         records.append(record)
+        try:
+            _append_jsonl_line(cases_partial_path, record)
+        except Exception as exc:
+            log("ERROR", f"phase=checkpoint index={idx} id={case_id} reason=partial_case_write_failed err={exc}")
+            stop = 1
+
+        try:
+            partial_summary = _build_summary(
+                records=records,
+                mode=mode,
+                provider=provider,
+                model=model,
+                prompt_profile=prompt_profile,
+                seed=seed,
+                allow_fallback=allow_fallback,
+                entry_timeout_sec=entry_timeout_sec,
+                entry_retries=entry_retries,
+                selected_entry_script=selected_entry_script,
+                cases_jsonl_sha256="",
+            )
+            _write_json(summary_partial_path, partial_summary)
+        except Exception as exc:
+            log("ERROR", f"phase=checkpoint index={idx} id={case_id} reason=partial_summary_write_failed err={exc}")
+            stop = 1
+
         log(
             "OK",
             (
@@ -606,34 +693,19 @@ def run_thread_runner(
         for row in records:
             f.write(json.dumps(row, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n")
 
-    compile_ok_count = sum(1 for r in records if r["compile_status"] == "OK")
-    compile_error_count = sum(1 for r in records if r["compile_status"] == "ERROR")
-    entry_ok_count = sum(1 for r in records if r["entry_status"] == "OK")
-    entry_error_count = sum(1 for r in records if r["entry_status"] == "ERROR")
-    entry_skip_count = sum(1 for r in records if r["entry_status"] == "SKIP")
-    retries_used_count = sum(max(0, int(r.get("entry_attempts", 0)) - 1) for r in records)
-
-    summary = {
-        "schema": SUMMARY_SCHEMA,
-        "mode": mode,
-        "provider": provider,
-        "model": model,
-        "prompt_profile": prompt_profile,
-        "seed": seed,
-        "allow_fallback": allow_fallback,
-        "entry_timeout_sec": entry_timeout_sec,
-        "entry_retries": entry_retries,
-        "entry_script": str(selected_entry_script),
-        "total_cases": len(records),
-        "compile_ok_count": compile_ok_count,
-        "compile_error_count": compile_error_count,
-        "entry_ok_count": entry_ok_count,
-        "entry_error_count": entry_error_count,
-        "entry_skip_count": entry_skip_count,
-        "retries_used_count": retries_used_count,
-        "error_count": compile_error_count + entry_error_count,
-        "sha256_cases_jsonl": _sha256_file(cases_path_out),
-    }
+    summary = _build_summary(
+        records=records,
+        mode=mode,
+        provider=provider,
+        model=model,
+        prompt_profile=prompt_profile,
+        seed=seed,
+        allow_fallback=allow_fallback,
+        entry_timeout_sec=entry_timeout_sec,
+        entry_retries=entry_retries,
+        selected_entry_script=selected_entry_script,
+        cases_jsonl_sha256=_sha256_file(cases_path_out),
+    )
     _write_json(out_dir / "summary.json", summary)
 
     if summary["error_count"] > 0:
@@ -641,9 +713,9 @@ def run_thread_runner(
     log(
         "OK",
         (
-            f"phase=end STOP={stop} total={summary['total_cases']} compile_ok={compile_ok_count} "
-            f"compile_error={compile_error_count} entry_ok={entry_ok_count} "
-            f"entry_error={entry_error_count} entry_skip={entry_skip_count}"
+            f"phase=end STOP={stop} total={summary['total_cases']} compile_ok={summary['compile_ok_count']} "
+            f"compile_error={summary['compile_error_count']} entry_ok={summary['entry_ok_count']} "
+            f"entry_error={summary['entry_error_count']} entry_skip={summary['entry_skip_count']}"
         ),
     )
     return stop

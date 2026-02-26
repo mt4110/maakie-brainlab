@@ -67,6 +67,8 @@ Rules:
 
 - `cases.jsonl`（全caseの集計行）
 - `summary.json`
+- `cases.partial.jsonl`（caseごとに追記）
+- `summary.partial.json`（caseごとに更新）
 - `cases/<id>/compile/`
   - `il.compile.report.json`
   - `il.compile.request.normalized.json`

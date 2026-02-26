@@ -112,6 +112,10 @@ class TestILThreadRunnerV2(unittest.TestCase):
             self.assertTrue((case1 / "compile" / "il.compiled.json").exists())
             self.assertFalse((case0 / "entry").exists())
             self.assertFalse((case1 / "entry").exists())
+            self.assertTrue((out_dir / "cases.partial.jsonl").exists())
+            self.assertTrue((out_dir / "summary.partial.json").exists())
+            partial_lines = [x for x in (out_dir / "cases.partial.jsonl").read_text(encoding="utf-8").splitlines() if x.strip()]
+            self.assertEqual(len(partial_lines), 2)
 
     def test_run_executes_entry_for_compile_success(self):
         with tempfile.TemporaryDirectory() as tmp:
