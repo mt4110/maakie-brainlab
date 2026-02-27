@@ -71,6 +71,10 @@
 - 全体図: `docs/ops/S24-01-S24-10-THREAD-V1_PLAN.md`
 - 実行: `docs/ops/S24-01-S24-10-THREAD-V1_TASK.md`
 
-### S25 — Active (Thread v1)
+### S25 — Done ✅ (Thread v1)
 - 全体図: `docs/ops/S25-01-25-10-THREAD-V1_PLAN.md`
 - 実行: `docs/ops/S25-01-25-10-THREAD-V1_TASK.md`
+
+### S26 — Active (Thread v1)
+- 全体図: `docs/ops/S26-01-S26-02-THREAD-V1_PLAN.md`
+- 実行: `docs/ops/S26-01-S26-02-THREAD-V1_TASK.md`
