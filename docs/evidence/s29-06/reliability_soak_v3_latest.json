@@ -1,0 +1,44 @@
+{
+  "schema_version": "s29-reliability-soak-v3",
+  "captured_at_utc": "2026-02-27T11:07:48Z",
+  "git": {
+    "branch": "ops/S29-01-S29-10",
+    "head": "4d5916728a1831687c05062a875520825c77e1db"
+  },
+  "inputs": {
+    "history_json": "docs/evidence/s27-01/provider_canary_history.json",
+    "recovery_json": "docs/evidence/s29-01/canary_recovery_success_rate_slo_latest.json",
+    "min_runs": 6,
+    "target_runs": 24,
+    "max_consecutive_nonpass": 4,
+    "fail_rate_hard_threshold": 0.3,
+    "skip_rate_warn_threshold": 0.5
+  },
+  "metrics": {
+    "total_runs": 3,
+    "fail_runs": 0,
+    "skip_runs": 3,
+    "warn_runs": 0,
+    "fail_rate": 0.0,
+    "skip_rate": 1.0,
+    "max_consecutive_nonpass": 3,
+    "hour_bucket_counts": {
+      "04:00": 3
+    },
+    "recovery_status": "WARN",
+    "reason_code_counts": {
+      "MISSING_PROVIDER_ENV": 3
+    },
+    "env_gap_runs": 3,
+    "env_gap_ratio": 1.0,
+    "remaining_runs_to_target": 21
+  },
+  "summary": {
+    "status": "WARN",
+    "reason_code": "INSUFFICIENT_RUNS_ENV_GAP"
+  },
+  "artifact_names": {
+    "json": "reliability_soak_v3_latest.json",
+    "md": "reliability_soak_v3_latest.md"
+  }
+}

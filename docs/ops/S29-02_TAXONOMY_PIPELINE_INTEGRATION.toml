@@ -1,0 +1,18 @@
+schema_version = "s29-taxonomy-pipeline-integration-v1"
+cases_path = "data/eval/datasets/rag-eval-wall-v2__seed-medium__v0001/cases.jsonl"
+unknown_ratio_target = 0.03
+max_candidates = 12
+max_actions = 5
+pipeline_jsonl = "docs/evidence/s29-02/taxonomy_pipeline_candidates_latest.jsonl"
+pipeline_max_records = 12
+known_tags = [
+  "provider",
+  "network",
+  "schema",
+  "timeout",
+  "negative",
+  "ops",
+  "domain",
+  "policy",
+  "security",
+]

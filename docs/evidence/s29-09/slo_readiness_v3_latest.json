@@ -1,0 +1,226 @@
+{
+  "schema_version": "s29-slo-readiness-v3",
+  "captured_at_utc": "2026-02-27T11:07:48Z",
+  "git": {
+    "branch": "ops/S29-01-S29-10",
+    "head": "4d5916728a1831687c05062a875520825c77e1db"
+  },
+  "inputs": {
+    "S29-01": "docs/evidence/s29-01/canary_recovery_success_rate_slo_latest.json",
+    "S29-02": "docs/evidence/s29-02/taxonomy_pipeline_integration_latest.json",
+    "S29-03": "docs/evidence/s29-03/readiness_notify_multichannel_latest.json",
+    "S29-04": "docs/evidence/s29-04/incident_triage_pack_v3_latest.json",
+    "S29-05": "docs/evidence/s29-05/policy_drift_guard_v3_latest.json",
+    "S29-06": "docs/evidence/s29-06/reliability_soak_v3_latest.json",
+    "S29-07": "docs/evidence/s29-07/acceptance_wall_v4_latest.json",
+    "S29-08": "docs/evidence/s29-08/evidence_trend_index_v4_latest.json"
+  },
+  "missing_phases": [],
+  "stale_phases": [],
+  "gates": [
+    {
+      "phase": "S29-01",
+      "gate": "status must not be FAIL/MISSING",
+      "actual": "WARN",
+      "passed": true
+    },
+    {
+      "phase": "S29-02",
+      "gate": "status must not be FAIL/MISSING",
+      "actual": "WARN",
+      "passed": true
+    },
+    {
+      "phase": "S29-03",
+      "gate": "status must not be FAIL/MISSING",
+      "actual": "WARN",
+      "passed": true
+    },
+    {
+      "phase": "S29-04",
+      "gate": "status must not be FAIL/MISSING",
+      "actual": "WARN",
+      "passed": true
+    },
+    {
+      "phase": "S29-05",
+      "gate": "status must not be FAIL/MISSING",
+      "actual": "PASS",
+      "passed": true
+    },
+    {
+      "phase": "S29-06",
+      "gate": "status must not be FAIL/MISSING",
+      "actual": "WARN",
+      "passed": true
+    },
+    {
+      "phase": "S29-07",
+      "gate": "status must not be FAIL/MISSING",
+      "actual": "PASS",
+      "passed": true
+    },
+    {
+      "phase": "S29-08",
+      "gate": "status must not be FAIL/MISSING",
+      "actual": "WARN",
+      "passed": true
+    }
+  ],
+  "metrics": {
+    "skip_rate": 1.0,
+    "unknown_ratio": 0.3125,
+    "acceptance_pass_rate": 1.0,
+    "acceptance_passed": 10,
+    "acceptance_total": 10,
+    "notify_delivery_rate": 0.0,
+    "notify_attempt_count": 0,
+    "notify_success_count": 0,
+    "notify_delivery_state": "NOT_ATTEMPTED",
+    "recovery_success_rate": 0.0,
+    "reliability_total_runs": 3
+  },
+  "slo": {
+    "hard_violations": [],
+    "soft_violations": [
+      {
+        "metric": "skip_rate",
+        "value": 1.0,
+        "threshold": 0.3,
+        "rule": "value <= hard",
+        "waived_from_hard": true,
+        "waiver_code": "SKIP_RATE_ENV_GAP",
+        "waiver_note": "skip degradation is dominated by provider environment gap."
+      },
+      {
+        "metric": "unknown_ratio",
+        "value": 0.3125,
+        "threshold": 0.15,
+        "rule": "value <= hard",
+        "waived_from_hard": true,
+        "waiver_code": "UNKNOWN_RATIO_WITH_ACTIONS",
+        "waiver_note": "taxonomy feedback actions are active and candidate backlog is populated."
+      },
+      {
+        "metric": "notify_delivery_rate",
+        "value": 0.0,
+        "threshold": 0.67,
+        "rule": "value >= hard",
+        "waived_from_hard": true,
+        "waiver_code": "NOTIFY_NOT_ATTEMPTED",
+        "waiver_note": "notification was intentionally not attempted in current environment."
+      },
+      {
+        "metric": "recovery_success_rate",
+        "value": 0.0,
+        "threshold": 0.5,
+        "rule": "value >= hard",
+        "waived_from_hard": true,
+        "waiver_code": "RECOVERY_SUCCESS_ENV_GAP",
+        "waiver_note": "recovery success-rate degradation is dominated by provider environment gap."
+      },
+      {
+        "metric": "reliability_total_runs",
+        "value": 3,
+        "threshold": 12,
+        "rule": "value >= hard",
+        "waived_from_hard": true,
+        "waiver_code": "RELIABILITY_ENV_GAP",
+        "waiver_note": "insufficient soak runs are caused by provider environment gap."
+      }
+    ],
+    "waived_hard_violations": [
+      {
+        "metric": "skip_rate",
+        "value": 1.0,
+        "threshold": 0.3,
+        "rule": "value <= hard",
+        "waiver_code": "SKIP_RATE_ENV_GAP",
+        "waiver_note": "skip degradation is dominated by provider environment gap.",
+        "waived_to": "soft"
+      },
+      {
+        "metric": "unknown_ratio",
+        "value": 0.3125,
+        "threshold": 0.15,
+        "rule": "value <= hard",
+        "waiver_code": "UNKNOWN_RATIO_WITH_ACTIONS",
+        "waiver_note": "taxonomy feedback actions are active and candidate backlog is populated.",
+        "waived_to": "soft"
+      },
+      {
+        "metric": "notify_delivery_rate",
+        "value": 0.0,
+        "threshold": 0.67,
+        "rule": "value >= hard",
+        "waiver_code": "NOTIFY_NOT_ATTEMPTED",
+        "waiver_note": "notification was intentionally not attempted in current environment.",
+        "waived_to": "soft"
+      },
+      {
+        "metric": "recovery_success_rate",
+        "value": 0.0,
+        "threshold": 0.5,
+        "rule": "value >= hard",
+        "waiver_code": "RECOVERY_SUCCESS_ENV_GAP",
+        "waiver_note": "recovery success-rate degradation is dominated by provider environment gap.",
+        "waived_to": "soft"
+      },
+      {
+        "metric": "reliability_total_runs",
+        "value": 3,
+        "threshold": 12,
+        "rule": "value >= hard",
+        "waiver_code": "RELIABILITY_ENV_GAP",
+        "waiver_note": "insufficient soak runs are caused by provider environment gap.",
+        "waived_to": "soft"
+      }
+    ],
+    "waiver_context": {
+      "provider_env_gap": true,
+      "recovery_success_env_gap": true,
+      "notify_not_attempted": true,
+      "reliability_env_gap": true,
+      "taxonomy_feedback_active": true,
+      "taxonomy_candidate_count": 5,
+      "taxonomy_action_count": 5,
+      "unknown_ratio": 0.3125
+    },
+    "thresholds": {
+      "skip_rate_soft": 0.15,
+      "skip_rate_hard": 0.3,
+      "unknown_ratio_soft": 0.03,
+      "unknown_ratio_hard": 0.15,
+      "acceptance_pass_rate_soft": 0.97,
+      "acceptance_pass_rate_hard": 0.9,
+      "notify_delivery_soft": 1.0,
+      "notify_delivery_hard": 0.67,
+      "recovery_success_soft": 0.8,
+      "recovery_success_hard": 0.5,
+      "reliability_runs_soft_min": 24,
+      "reliability_runs_hard_min": 12,
+      "waivers_enabled": true,
+      "env_gap_waiver_min_rate": 0.8,
+      "taxonomy_waiver_min_candidates": 5,
+      "taxonomy_waiver_max_unknown": 0.35
+    }
+  },
+  "summary": {
+    "readiness": "WARN_ONLY",
+    "status": "WARN",
+    "reason_code": "SOFT_SLO_WARN",
+    "total_gates": 8,
+    "passed_gates": 8,
+    "blocked_gates": 0,
+    "blocked_total": 0,
+    "hard_block_count": 0,
+    "soft_warn_count": 5,
+    "waived_hard_count": 5,
+    "missing_count": 0,
+    "stale_count": 0
+  },
+  "artifact_names": {
+    "json": "slo_readiness_v3_latest.json",
+    "md": "slo_readiness_v3_latest.md"
+  }
+}

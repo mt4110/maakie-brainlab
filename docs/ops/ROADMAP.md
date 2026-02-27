@@ -87,6 +87,6 @@
 - 全体図: `docs/ops/S28-01-S28-10-THREAD-V5_PLAN.md`
 - 実行: `docs/ops/S28-01-S28-10-THREAD-V5_TASK.md`
 
-### S29 — Active (Thread v1: S29-01..S29-10)
-- 全体図: `docs/ops/S29-01-S29-10-THREAD-V1_PLAN.md`
-- 実行: `docs/ops/S29-01-S29-10-THREAD-V1_TASK.md`
+### S29 — Active (Thread v2: S29-01..S29-10)
+- 全体図: `docs/ops/S29-01-S29-10-THREAD-V2_PLAN.md`
+- 実行: `docs/ops/S29-01-S29-10-THREAD-V2_TASK.md`
