@@ -8,24 +8,7 @@ services:
     environment:
       RAG_DB_BACKEND: sqlite
       RAG_SQLITE_DB_PATH: /workspace/.local/rag_sqlite/index.sqlite3
-      # RAG_DB_BACKEND: postgres
-      # RAG_POSTGRES_DSN: postgresql://brainlab:brainlab@postgres:5432/brainlab
     command: ["bash", "-lc", "sleep infinity"]
-    # depends_on:
-    #   - postgres
-
-  # postgres:
-  #   image: pgvector/pgvector:pg16
-  #   restart: unless-stopped
-  #   environment:
-  #     POSTGRES_USER: brainlab
-  #     POSTGRES_PASSWORD: brainlab
-  #     POSTGRES_DB: brainlab
-  #   ports:
-  #     - "5432:5432"
-  #   volumes:
-  #     - rag_pg_data:/var/lib/postgresql/data
 
 volumes:
   rag_sqlite_data:
-  # rag_pg_data:
