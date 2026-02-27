@@ -37,6 +37,14 @@ REASON_DB_BACKEND_INVALID = "DB_BACKEND_INVALID"
 REASON_BUILD_INDEX_FAILED = "BUILD_INDEX_FAILED"
 
 
+def _to_text(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    return str(value)
+
+
 def to_repo_rel(repo_root: Path, value: str | Path) -> str:
     p = Path(value).resolve()
     root = repo_root.resolve()
@@ -214,14 +222,18 @@ def build_sqlite_index(
         "--overlap",
         str(int(overlap)),
     ]
-    cp = subprocess.run(
-        cmd,
-        cwd=str(repo_root),
-        capture_output=True,
-        text=True,
-        timeout=max(1, timeout_sec),
-        check=False,
-    )
+    try:
+        cp = subprocess.run(
+            cmd,
+            cwd=str(repo_root),
+            capture_output=True,
+            text=True,
+            timeout=max(1, timeout_sec),
+            check=False,
+        )
+    except subprocess.TimeoutExpired as exc:
+        out = _to_text(exc.stdout) + _to_text(exc.stderr)
+        return 124, out + f"\nERROR: timeout after {max(1, timeout_sec)}s\n"
     out = (cp.stdout or "") + (cp.stderr or "")
     return cp.returncode, out
 

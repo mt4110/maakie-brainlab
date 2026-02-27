@@ -1,7 +1,9 @@
 import importlib.util
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 
 def _load_module():
@@ -79,6 +81,28 @@ class S25RagTuningLoopTests(unittest.TestCase):
             run_dir = Path(td)
             with self.assertRaises(ValueError):
                 self.m.materialize_docs(run_dir, [{"path": "../x.md", "content": "x"}])
+
+    def test_build_sqlite_index_timeout_returns_124(self):
+        with tempfile.TemporaryDirectory() as td:
+            repo = Path(td)
+            raw_dir = repo / "raw"
+            idx_dir = repo / "idx"
+            raw_dir.mkdir(parents=True, exist_ok=True)
+            idx_dir.mkdir(parents=True, exist_ok=True)
+            exc = subprocess.TimeoutExpired(cmd=["python3"], timeout=1, output=b"partial", stderr=b"err")
+            with patch("subprocess.run", side_effect=exc):
+                rc, out = self.m.build_sqlite_index(
+                    repo_root=repo,
+                    raw_dir=raw_dir,
+                    index_dir=idx_dir,
+                    db_name="index.sqlite3",
+                    chunk_size=800,
+                    overlap=100,
+                    timeout_sec=1,
+                )
+        self.assertEqual(rc, 124)
+        self.assertIn("timeout", out)
+        self.assertIn("partial", out)
 
 
 if __name__ == "__main__":

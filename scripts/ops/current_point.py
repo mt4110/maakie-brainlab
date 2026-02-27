@@ -230,3 +230,4 @@ if __name__ == "__main__":
         main()
     except Exception as exc:
         print(f"ERROR: unhandled exception err={exc}", flush=True)
+        raise SystemExit(1)
