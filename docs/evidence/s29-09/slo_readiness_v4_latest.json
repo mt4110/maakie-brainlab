@@ -1,9 +1,9 @@
 {
   "schema_version": "s29-slo-readiness-v4",
-  "captured_at_utc": "2026-02-27T11:50:23Z",
+  "captured_at_utc": "2026-02-27T11:54:36Z",
   "git": {
-    "branch": "ops/S29-01-S29-10",
-    "head": "2971732a2c6df3a57166589d92e528ab65e49038"
+    "branch": "copilot/sub-pr-111",
+    "head": "6c7717c6883e19718890a07d81fa7dfad1f7d845"
   },
   "inputs": {
     "S29-01": "docs/evidence/s29-01/canary_recovery_success_rate_slo_latest.json",
