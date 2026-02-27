@@ -1,0 +1,138 @@
+{
+  "schema_version": "s27-acceptance-wall-v2",
+  "captured_at_utc": "2026-02-27T04:16:28.227051+00:00",
+  "git": {
+    "branch": "ops/S27-01-S27-10",
+    "head": "02f0f008326b975d7100e79201a4370e4f5c81aa"
+  },
+  "cases_file": "docs/ops/S27-07_ACCEPTANCE_CASES_V2.json",
+  "summary": {
+    "status": "PASS",
+    "reason_code": "",
+    "total_cases": 6,
+    "passed_cases": 6,
+    "failed_cases": 0,
+    "critical_failed": 0,
+    "severity_failed": {
+      "critical": 0,
+      "major": 0,
+      "minor": 0
+    },
+    "failure_counts": {}
+  },
+  "cases": [
+    {
+      "case_id": "S27A-001",
+      "title": "provider canary ops status allowed",
+      "severity": "critical",
+      "fallback": "Run S27-01 with strict provider env and verify credentials/env wiring.",
+      "status": "PASS",
+      "reason_code": "",
+      "artifact": "docs/evidence/s27-01/provider_canary_ops_latest.json",
+      "assertion": {
+        "path": "summary.status",
+        "op": "in",
+        "value": [
+          "PASS",
+          "WARN"
+        ]
+      },
+      "actual": "WARN",
+      "log_path": "s27a-001.log"
+    },
+    {
+      "case_id": "S27A-002",
+      "title": "medium eval v2 status allowed",
+      "severity": "critical",
+      "fallback": "Rebuild dataset v2/taxonomy map and rerun S27-02.",
+      "status": "PASS",
+      "reason_code": "",
+      "artifact": "docs/evidence/s27-02/medium_eval_wall_v2_latest.json",
+      "assertion": {
+        "path": "summary.status",
+        "op": "in",
+        "value": [
+          "PASS",
+          "WARN"
+        ]
+      },
+      "actual": "PASS",
+      "log_path": "s27a-002.log"
+    },
+    {
+      "case_id": "S27A-003",
+      "title": "schedule wrapper keeps readiness visible",
+      "severity": "major",
+      "fallback": "Run S27-03 manually and inspect fallback readiness source.",
+      "status": "PASS",
+      "reason_code": "",
+      "artifact": "docs/evidence/s27-03/release_readiness_schedule_latest.json",
+      "assertion": {
+        "path": "summary.status",
+        "op": "in",
+        "value": [
+          "PASS",
+          "WARN"
+        ]
+      },
+      "actual": "PASS",
+      "log_path": "s27a-003.log"
+    },
+    {
+      "case_id": "S27A-004",
+      "title": "triage pack keeps rollback command",
+      "severity": "major",
+      "fallback": "Regenerate triage pack and ensure rollback command mapping from canary base.",
+      "status": "PASS",
+      "reason_code": "",
+      "artifact": "docs/evidence/s27-04/incident_triage_pack_latest.json",
+      "assertion": {
+        "path": "rollback_command",
+        "op": "contains",
+        "value": "rollback-only"
+      },
+      "actual": "python3 scripts/ops/s25_langchain_poc.py --mode rollback-only",
+      "log_path": "s27a-004.log"
+    },
+    {
+      "case_id": "S27A-005",
+      "title": "policy drift guard is non-failing by default",
+      "severity": "minor",
+      "fallback": "Run S27-05 with baseline update or inspect high-impact drift files.",
+      "status": "PASS",
+      "reason_code": "",
+      "artifact": "docs/evidence/s27-05/policy_drift_guard_latest.json",
+      "assertion": {
+        "path": "summary.status",
+        "op": "neq",
+        "value": "FAIL"
+      },
+      "actual": "WARN",
+      "log_path": "s27a-005.log"
+    },
+    {
+      "case_id": "S27A-006",
+      "title": "soak result remains actionable",
+      "severity": "major",
+      "fallback": "Increase history window and rerun S27-06 to verify failure streaks.",
+      "status": "PASS",
+      "reason_code": "",
+      "artifact": "docs/evidence/s27-06/reliability_soak_latest.json",
+      "assertion": {
+        "path": "summary.status",
+        "op": "in",
+        "value": [
+          "PASS",
+          "WARN"
+        ]
+      },
+      "actual": "WARN",
+      "log_path": "s27a-006.log"
+    }
+  ],
+  "artifact_names": {
+    "json": "acceptance_wall_v2_latest.json",
+    "md": "acceptance_wall_v2_latest.md",
+    "run_dir": ".local/obs/s25-ops/s27-acceptance-wall-v2/s27-acceptance-wall-v2__20260227T041628Z__ops-s27-01-s27-10__02f0f00"
+  }
+}

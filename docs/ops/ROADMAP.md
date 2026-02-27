@@ -78,3 +78,7 @@
 ### S26 — Active (Thread v1: S26-01..S26-10)
 - 全体図: `docs/ops/S26-01-S26-02-THREAD-V1_PLAN.md`
 - 実行: `docs/ops/S26-01-S26-02-THREAD-V1_TASK.md`
+
+### S27 — Active (Thread v1: S27-01..S27-10)
+- 全体図: `docs/ops/S27-01-S27-10-THREAD-V1_PLAN.md`
+- 実行: `docs/ops/S27-01-S27-10-THREAD-V1_TASK.md`

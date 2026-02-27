@@ -1,0 +1,46 @@
+{
+  "schema_version": "s27-evidence-trend-history-v1",
+  "updated_at_utc": "2026-02-27T04:16:28Z",
+  "snapshots": [
+    {
+      "captured_at_utc": "2026-02-27T04:14:22Z",
+      "status": "WARN",
+      "counts": {
+        "present_count": 7,
+        "missing_count": 0,
+        "pass_count": 3,
+        "warn_count": 4,
+        "failed_count": 0
+      },
+      "phase_statuses": {
+        "S27-01": "WARN",
+        "S27-02": "PASS",
+        "S27-03": "WARN",
+        "S27-04": "WARN",
+        "S27-05": "PASS",
+        "S27-06": "WARN",
+        "S27-07": "PASS"
+      }
+    },
+    {
+      "captured_at_utc": "2026-02-27T04:16:28Z",
+      "status": "WARN",
+      "counts": {
+        "present_count": 7,
+        "missing_count": 0,
+        "pass_count": 3,
+        "warn_count": 4,
+        "failed_count": 0
+      },
+      "phase_statuses": {
+        "S27-01": "WARN",
+        "S27-02": "PASS",
+        "S27-03": "PASS",
+        "S27-04": "WARN",
+        "S27-05": "WARN",
+        "S27-06": "WARN",
+        "S27-07": "PASS"
+      }
+    }
+  ]
+}
