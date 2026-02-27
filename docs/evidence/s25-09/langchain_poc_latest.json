@@ -1,0 +1,81 @@
+{
+  "schema_version": "s25-langchain-poc-loop-v1",
+  "captured_at_utc": "2026-02-27T00:15:40Z",
+  "git": {
+    "branch": "ops/S25-01-25-10",
+    "head": "0e4909a2f7a34b41c410235d14ddb069175f1f64"
+  },
+  "config_path": "/Users/takemuramasaki/dev/maakie-brainlab/docs/ops/S25-09_LANGCHAIN_POC.toml",
+  "config_snapshot": {
+    "schema_version": "s25-langchain-poc-v1",
+    "poc": {
+      "id": "s25-09-langchain-poc-v1",
+      "top_k": 3
+    },
+    "index": {
+      "db_name": "index.sqlite3",
+      "chunk_size": 800,
+      "overlap": 100
+    },
+    "smoke": {
+      "question": "sample_note.md のバナナ価格を教えてください。",
+      "expected_source": "sample_note.md"
+    },
+    "docs": [
+      {
+        "path": "hello.md",
+        "content": "# Hello\nRAG (Retrieval-Augmented Generation) means generation with retrieval.\nUse citations and deterministic evidence.\n"
+      },
+      {
+        "path": "sample_note.md",
+        "content": "# Sample Note\nmake ingest moves files into data/raw.\nAfter ingest, build_index then run_eval are executed.\nBanana price is 120 yen.\n"
+      }
+    ]
+  },
+  "mode": "all",
+  "retrieval": {
+    "rows": 1,
+    "db_path": "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/langchain-poc/langchain-poc__20260227T001529Z__ops-s25-01-25-10__0e4909a/index/index.sqlite3",
+    "question": "sample_note.md のバナナ価格を教えてください。",
+    "expected_source": "sample_note.md",
+    "top_k": 3,
+    "sources": [
+      "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/langchain-poc/langchain-poc__20260227T001529Z__ops-s25-01-25-10__0e4909a/raw_docs/sample_note.md#chunk-0"
+    ]
+  },
+  "smoke": {
+    "poc": {
+      "status": "PASS",
+      "backend": "langchain-core",
+      "reason_code": "",
+      "matched_expected_source": true,
+      "expected_source": "sample_note.md",
+      "answer": "結論:\n- [langchain-core] # Sample Note\n\n根拠:\n- retrieved_chunks=1\n- 上位チャンクの先頭行を結論候補として採用\n\n参照:\n- /Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/langchain-poc/langchain-poc__20260227T001529Z__ops-s25-01-25-10__0e4909a/raw_docs/sample_note.md#chunk-0\n\n不確実性:\n- 回答は取得チャンク内の情報のみに制限",
+      "error": ""
+    },
+    "rollback": {
+      "status": "PASS",
+      "backend": "rollback-native",
+      "reason_code": "",
+      "matched_expected_source": true,
+      "expected_source": "sample_note.md",
+      "answer": "結論:\n- [rollback] # Sample Note\n\n根拠:\n- retrieved_chunks=1\n- 上位チャンクの先頭行を結論候補として採用\n\n参照:\n- /Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/langchain-poc/langchain-poc__20260227T001529Z__ops-s25-01-25-10__0e4909a/raw_docs/sample_note.md#chunk-0\n\n不確実性:\n- 回答は取得チャンク内の情報のみに制限",
+      "error": ""
+    }
+  },
+  "rollback": {
+    "command": "python3 scripts/ops/s25_langchain_poc.py --mode rollback-only",
+    "doc": "docs/ops/S25-09_LANGCHAIN_POC.md"
+  },
+  "summary": {
+    "status": "PASS",
+    "errors": [],
+    "warnings": []
+  },
+  "artifact_names": {
+    "json": "langchain_poc_latest.json",
+    "md": "langchain_poc_latest.md",
+    "run_dir": "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/langchain-poc/langchain-poc__20260227T001529Z__ops-s25-01-25-10__0e4909a"
+  },
+  "stop": 0
+}

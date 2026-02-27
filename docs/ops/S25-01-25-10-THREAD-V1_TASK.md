@@ -89,8 +89,8 @@ Last Updated: 2026-02-26
 
 ### S25-09 LangChain PoC
 
-- [ ] 最小接続フローを実装
-- [ ] rollback 手順を記述
+- [x] 最小接続フローを実装
+- [x] rollback 手順を記述
 
 ### S25-10 Closeout
 

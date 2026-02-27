@@ -1,0 +1,31 @@
+schema_version = "s25-langchain-poc-v1"
+
+[poc]
+id = "s25-09-langchain-poc-v1"
+top_k = 3
+
+[index]
+db_name = "index.sqlite3"
+chunk_size = 800
+overlap = 100
+
+[smoke]
+question = "sample_note.md のバナナ価格を教えてください。"
+expected_source = "sample_note.md"
+
+[[docs]]
+path = "hello.md"
+content = """
+# Hello
+RAG (Retrieval-Augmented Generation) means generation with retrieval.
+Use citations and deterministic evidence.
+"""
+
+[[docs]]
+path = "sample_note.md"
+content = """
+# Sample Note
+make ingest moves files into data/raw.
+After ingest, build_index then run_eval are executed.
+Banana price is 120 yen.
+"""
