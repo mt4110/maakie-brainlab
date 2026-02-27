@@ -1,0 +1,16 @@
+schema_version = "s28-taxonomy-feedback-loop-v1"
+cases_path = "data/eval/datasets/rag-eval-wall-v2__seed-medium__v0001/cases.jsonl"
+unknown_ratio_target = 0.10
+max_candidates = 12
+max_actions = 5
+known_tags = [
+  "provider",
+  "network",
+  "schema",
+  "timeout",
+  "negative",
+  "ops",
+  "domain",
+  "policy",
+  "security",
+]
