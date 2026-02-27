@@ -28,6 +28,7 @@ REASON_PATH_MISSING = "PATH_MISSING"
 REASON_ASSERTION_FAILED = "ASSERTION_FAILED"
 REASON_ARTIFACT_PATH_UNSAFE = "ARTIFACT_PATH_UNSAFE"
 REASON_ARTIFACT_OUTSIDE_REPO = "ARTIFACT_OUTSIDE_REPO"
+REASON_CASES_FILE_INVALID = "CASES_FILE_INVALID"
 
 ALLOWED_OPS = {"eq", "neq", "gte", "lte", "in", "contains", "truthy"}
 
@@ -295,6 +296,7 @@ def build_markdown(payload: Dict[str, Any]) -> str:
     lines.append("## Summary")
     lines.append("")
     lines.append(f"- acceptance: `{summary['passed_cases']}/{summary['total_cases']}`")
+    lines.append(f"- reason_code: `{summary.get('reason_code', '')}`")
     lines.append(f"- failure_taxonomy_entries: `{len(summary['failure_counts'])}`")
     lines.append("")
     lines.append("## Case Results")
@@ -308,11 +310,61 @@ def build_markdown(payload: Dict[str, Any]) -> str:
     lines.append("```md")
     lines.append("### S26-06 Acceptance Wall")
     lines.append(f"- acceptance: {summary['passed_cases']}/{summary['total_cases']}")
+    lines.append(f"- reason_code: {summary.get('reason_code', '')}")
     lines.append(f"- failure_taxonomy: {summary['failure_counts'] or 'none'}")
     lines.append(f"- artifact: docs/evidence/s26-06/{payload['artifact_names']['json']}")
     lines.append("```")
     lines.append("")
     return "\n".join(lines)
+
+
+def write_failure_artifacts(
+    *,
+    out_dir: Path,
+    repo_root: Path,
+    cases_path: Path,
+    reason_code: str,
+    message: str,
+) -> Dict[str, Any]:
+    payload: Dict[str, Any] = {
+        "schema_version": "s26-acceptance-wall-v1",
+        "captured_at_utc": utc_now().isoformat(),
+        "git": {
+            "branch": git_out(repo_root, ["branch", "--show-current"]),
+            "head": git_out(repo_root, ["rev-parse", "HEAD"]),
+        },
+        "cases_file": to_repo_rel(repo_root, cases_path),
+        "summary": {
+            "total_cases": 1,
+            "passed_cases": 0,
+            "failed_cases": 1,
+            "failure_counts": {reason_code: 1},
+            "reason_code": reason_code,
+        },
+        "cases": [
+            {
+                "case_id": "load_cases",
+                "title": "load acceptance cases",
+                "status": "FAIL",
+                "reason_code": reason_code,
+                "artifact": to_repo_rel(repo_root, cases_path),
+                "assertion": {},
+                "actual": message,
+                "log_path": "",
+            }
+        ],
+        "artifact_names": {
+            "json": "acceptance_wall_latest.json",
+            "md": "acceptance_wall_latest.md",
+            "run_dir": "",
+        },
+        "stop": 1,
+    }
+    out_json = out_dir / "acceptance_wall_latest.json"
+    out_md = out_dir / "acceptance_wall_latest.md"
+    out_json.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    out_md.write_text(build_markdown(payload), encoding="utf-8")
+    return payload
 
 
 def main() -> int:
@@ -330,11 +382,31 @@ def main() -> int:
     cases_path = (repo_root / args.cases_file).resolve()
     if not cases_path.exists():
         emit("ERROR", f"cases file missing path={cases_path}", events)
+        write_failure_artifacts(
+            out_dir=out_dir,
+            repo_root=repo_root,
+            cases_path=cases_path,
+            reason_code=REASON_CASE_INVALID,
+            message=f"cases file missing path={cases_path}",
+        )
         write_events(run_dir, events)
         write_summary(run_dir, meta, events, extra={"stop": 1, "reason_code": REASON_CASE_INVALID})
         return 1
 
-    schema, cases = load_cases(cases_path)
+    try:
+        schema, cases = load_cases(cases_path)
+    except Exception as exc:
+        emit("ERROR", f"cases file parse failed err={exc}", events)
+        write_failure_artifacts(
+            out_dir=out_dir,
+            repo_root=repo_root,
+            cases_path=cases_path,
+            reason_code=REASON_CASES_FILE_INVALID,
+            message=str(exc),
+        )
+        write_events(run_dir, events)
+        write_summary(run_dir, meta, events, extra={"stop": 1, "reason_code": REASON_CASES_FILE_INVALID})
+        return 1
     emit("OK", f"cases_loaded={len(cases)} schema={schema}", events)
 
     rows: List[Dict[str, Any]] = []
@@ -369,6 +441,9 @@ def main() -> int:
         rows.append(out)
 
     passed_cases = sum(1 for x in rows if x["status"] == "PASS")
+    reason_code = ""
+    if stop == 1:
+        reason_code = next((x["reason_code"] for x in rows if x.get("status") == "FAIL" and x.get("reason_code")), "")
 
     payload: Dict[str, Any] = {
         "schema_version": "s26-acceptance-wall-v1",
@@ -383,6 +458,7 @@ def main() -> int:
             "passed_cases": passed_cases,
             "failed_cases": len(rows) - passed_cases,
             "failure_counts": failure_counts,
+            "reason_code": reason_code,
         },
         "cases": rows,
         "artifact_names": {

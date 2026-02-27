@@ -77,6 +77,18 @@ class S26MediumEvalWallTests(unittest.TestCase):
         self.assertEqual(dist["tag_counts"]["basic"], 1)
         self.assertEqual(dist["tag_counts"]["negative"], 1)
 
+    def test_compute_distribution_dedupes_tags_per_case(self):
+        cases = [
+            {
+                "case_id": "a",
+                "query": "q",
+                "expectation": {"must_answer": True, "must_cite": True},
+                "tags": ["basic", "basic", "basic"],
+            }
+        ]
+        dist = self.m.compute_distribution(cases)
+        self.assertEqual(dist["tag_counts"]["basic"], 1)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,8 +1,8 @@
 # S26-09 Release Readiness (Latest)
 
-- CapturedAtUTC: `2026-02-27T02:44:04Z`
+- CapturedAtUTC: `2026-02-27T03:04:58Z`
 - Branch: `ops/S26-05-S26-06`
-- HeadSHA: `a08cc857a66433f18ad8bc366d5e70e84a9795c3`
+- HeadSHA: `3eb910875a27d40569142fb684e2e634c940c754`
 
 ## Decision
 

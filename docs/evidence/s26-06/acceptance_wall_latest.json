@@ -1,16 +1,17 @@
 {
   "schema_version": "s26-acceptance-wall-v1",
-  "captured_at_utc": "2026-02-27T02:44:04.602433+00:00",
+  "captured_at_utc": "2026-02-27T03:04:58.392422+00:00",
   "git": {
     "branch": "ops/S26-05-S26-06",
-    "head": "a08cc857a66433f18ad8bc366d5e70e84a9795c3"
+    "head": "3eb910875a27d40569142fb684e2e634c940c754"
   },
   "cases_file": "docs/ops/S26-06_ACCEPTANCE_CASES.json",
   "summary": {
     "total_cases": 7,
     "passed_cases": 7,
     "failed_cases": 0,
-    "failure_counts": {}
+    "failure_counts": {},
+    "reason_code": ""
   },
   "cases": [
     {
@@ -118,7 +119,7 @@
   "artifact_names": {
     "json": "acceptance_wall_latest.json",
     "md": "acceptance_wall_latest.md",
-    "run_dir": ".local/obs/s25-ops/s26-acceptance-wall/s26-acceptance-wall__20260227T024404Z__ops-s26-05-s26-06__a08cc85"
+    "run_dir": ".local/obs/s25-ops/s26-acceptance-wall/s26-acceptance-wall__20260227T030458Z__ops-s26-05-s26-06__3eb9108"
   },
   "stop": 0
 }

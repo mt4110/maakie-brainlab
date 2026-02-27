@@ -1,4 +1,8 @@
 import importlib.util
+import json
+import os
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -102,6 +106,31 @@ class S26AcceptanceWallTests(unittest.TestCase):
             )
             self.assertEqual(out["status"], "PASS")
             self.assertNotIn("/", out["log_path"])
+
+    def test_main_handles_malformed_cases_json(self):
+        repo_root = Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as td:
+            bad_cases = Path(td) / "bad_cases.json"
+            out_dir = Path(td) / "out"
+            bad_cases.write_text("{bad-json", encoding="utf-8")
+            cp = subprocess.run(
+                [
+                    sys.executable,
+                    str(repo_root / "scripts" / "ops" / "s26_acceptance_wall.py"),
+                    "--cases-file",
+                    str(bad_cases),
+                    "--out-dir",
+                    str(out_dir),
+                ],
+                cwd=str(repo_root),
+                env={**os.environ, "PYTHONPATH": "./src:."},
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(cp.returncode, 1)
+            payload = json.loads((out_dir / "acceptance_wall_latest.json").read_text(encoding="utf-8"))
+            self.assertEqual(payload["summary"]["reason_code"], self.m.REASON_CASES_FILE_INVALID)
 
 
 if __name__ == "__main__":

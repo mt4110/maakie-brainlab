@@ -150,10 +150,15 @@ def compute_distribution(cases: List[Dict[str, Any]]) -> Dict[str, Any]:
         if bool(exp.get("must_cite")):
             must_cite_true += 1
 
+        # Count each tag at most once per case to avoid inflated coverage.
+        seen_tags = set()
         for tag in list(case.get("tags") or []):
             name = str(tag).strip()
             if not name:
                 continue
+            if name in seen_tags:
+                continue
+            seen_tags.add(name)
             tag_counts[name] = int(tag_counts.get(name, 0)) + 1
 
     return {

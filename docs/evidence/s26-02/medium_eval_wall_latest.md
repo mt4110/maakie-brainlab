@@ -1,8 +1,8 @@
 # S26-02 Medium Eval Wall (Latest)
 
-- CapturedAtUTC: `2026-02-27T02:18:09Z`
-- Branch: `ops/S26-01-S26-02`
-- HeadSHA: `c2a004b33b9663faad5c42306a321601d7a2512f`
+- CapturedAtUTC: `2026-02-27T03:04:58Z`
+- Branch: `ops/S26-05-S26-06`
+- HeadSHA: `3eb910875a27d40569142fb684e2e634c940c754`
 - DatasetID: `rag-eval-wall-v1__seed-medium__v0001`
 - Config: `docs/ops/S26-02_MEDIUM_EVAL_WALL.toml`
 

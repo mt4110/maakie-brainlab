@@ -1,13 +1,14 @@
 # S26-06 Acceptance Wall (Latest)
 
-- CapturedAtUTC: `2026-02-27T02:44:04.602433+00:00`
+- CapturedAtUTC: `2026-02-27T03:04:58.392422+00:00`
 - Branch: `ops/S26-05-S26-06`
-- HeadSHA: `a08cc857a66433f18ad8bc366d5e70e84a9795c3`
+- HeadSHA: `3eb910875a27d40569142fb684e2e634c940c754`
 - CasesFile: `docs/ops/S26-06_ACCEPTANCE_CASES.json`
 
 ## Summary
 
 - acceptance: `7/7`
+- reason_code: ``
 - failure_taxonomy_entries: `0`
 
 ## Case Results
@@ -25,6 +26,7 @@
 ```md
 ### S26-06 Acceptance Wall
 - acceptance: 7/7
+- reason_code: 
 - failure_taxonomy: none
 - artifact: docs/evidence/s26-06/acceptance_wall_latest.json
 ```
