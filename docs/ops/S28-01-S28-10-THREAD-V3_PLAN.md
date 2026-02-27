@@ -5,23 +5,22 @@ Last Updated: 2026-02-27
 ## Goal
 
 - S28 v1 の成果を運用定着フェーズへ引き上げ、`WARN_ONLY` を `READY` へ収束させる。
-- S28-10 Exit v2 時点で、`recovery -> feedback -> notify -> triage -> drift -> soak -> acceptance -> trend -> slo -> closeout` の全経路を「実送信あり」「継続運転あり」で再現可能にする。
+- S28-10 Exit v3 時点で、`recovery -> feedback -> notify -> triage -> drift -> soak -> acceptance -> trend -> slo -> closeout` の全経路を「実送信あり」「継続運転あり」で再現可能にする。
 
 ## Current Point (as of 2026-02-27)
 
 - ブランチ: `ops/S28-01-S28-10`
-- 最新 SLO: `readiness=WARN_ONLY`, `reason_code=SOFT_SLO_WARN` (`docs/evidence/s28-09/slo_readiness_v2_latest.json`)
+- 最新 SLO: `readiness=BLOCKED`, `reason_code=HARD_SLO_VIOLATION` (`docs/evidence/s28-09/slo_readiness_v2_latest.json`)
 - 主要メトリクス:
   - `skip_rate=1.0`
   - `notify_delivery_rate=0.0`
-  - `unknown_ratio=0.0625`
+  - `unknown_ratio=0.3125`
   - `acceptance_pass_rate=1.0`
-- WARN 要因:
-  - S28-01: `RECOVERY_REQUIRED`
-  - S28-03: `NOTIFY_DRY_RUN`
-  - S28-04: `TRIAGE_ALERT`
-  - S28-05: `BASELINE_CREATED`
-  - S28-06: `INSUFFICIENT_RUNS`
+- HARD_BLOCK 要因:
+  - `skip_rate`
+  - `unknown_ratio`
+  - `notify_delivery_rate`
+  - `reliability_total_runs`
 
 ## Latest Execution Result (2026-02-27)
 
@@ -40,19 +39,19 @@ Last Updated: 2026-02-27
 - PR 作成/更新前に `ci-self up --ref "$(git branch --show-current)"` を実行し、全 green を確認してから進める。
 - 禁止ブランチ `codex/feat*` を使わない。
 
-## Completion Definition (S28-10 Exit v2)
+## Completion Definition (S28-10 Exit v3)
 
 - S28-09 の最終判定が `readiness=READY` になる。
 - `skip_rate <= 0.20` かつ `notify_delivery_rate >= 0.95`。
 - S28-06 で `total_runs >= 24`（単発観測から継続運転へ移行）。
 - S28-05 で baseline 初回作成 WARN を解消し、drift判定が通常運用状態で回る。
-- S28-10 closeout に Before/After・unresolved risk・S29 handoff を v2更新して固定する。
+- S28-10 closeout に Before/After・unresolved risk・S29 handoff を v3更新して固定する。
 
 ## Backward Phase Design (S28-10 -> S28-01)
 
-### S28-10 Closeout v2
+### S28-10 Closeout v3
 
-- v2 の改善値（skip率/通知配信率/連続稼働件数）を closeout artifact に固定する。
+- v3 の改善値（skip率/通知配信率/連続稼働件数）を closeout artifact に固定する。
 - unresolved risk を「残課題」「監視で許容」の2層で整理し、S29 handoff を具体化する。
 
 ### S28-09 SLO Readiness v3

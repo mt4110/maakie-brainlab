@@ -4,13 +4,15 @@ Last Updated: 2026-02-27
 
 ## Progress
 
-- S28-01-S28-10 v3: 88% (S28-01..S28-10 実装・テスト・中量実行まで完了。READY化とship前重検証が残り)
+- S28-01-S28-10 v3: 96% (S28-01..S28-10 実装・テスト・中量実行・`make verify-il` まで完了。PR body反映とci-self gateが残り)
 
 ## Latest Facts (2026-02-27)
 
 - `S28-09`: `BLOCKED` (`HARD_SLO_VIOLATION`, `hard_block_count=4`)
 - hard violations: `skip_rate`, `unknown_ratio`, `notify_delivery_rate`, `reliability_total_runs`
 - `S28-10`: `FAIL`（readiness=`BLOCKED`）で closeout artifact は更新済み
+- 主要値: `skip_rate=1.0`, `notify_delivery_rate=0.0`, `unknown_ratio=0.3125`, `reliability_total_runs=3`
+- `ci-self up --ref "$(git branch --show-current)"`: `HTTP 422 No ref found`（remote未pushのため ship gate 未達）
 
 ## Ritual 22-16-22-99
 
@@ -25,7 +27,7 @@ Last Updated: 2026-02-27
 - 進捗 SOT は本 TASK と PR body（`STATUS.md` には依存しない）。
 - 毎作業開始時に `make ops-now` を実行し、同じ形式で確認する。
 
-## Exit Metrics (v2)
+## Exit Metrics (v3)
 
 - `readiness=READY`
 - `skip_rate <= 0.20`
@@ -37,9 +39,9 @@ Last Updated: 2026-02-27
 
 ### S28-00 Kickoff
 
-- [x] S28 v2 PLAN/TASK を新規作成
-- [x] v1 evidence の WARN要因を抽出し、v2 DoD を固定
-- [ ] PR body に v2 の exit metrics ブロックを追加
+- [x] S28 v3 PLAN/TASK を新規作成
+- [x] v1 evidence の WARN要因を抽出し、v3 DoD を固定
+- [ ] PR body に v3 の exit metrics ブロックを追加
 
 ### S28-01 Provider Canary Recovery Strategy v2
 
@@ -86,7 +88,7 @@ Last Updated: 2026-02-27
 ### S28-07 Acceptance Wall v4
 
 - [x] 通知実送信・baseline確定・連続運転の受け入れケースを追加
-- [x] severity判定を v2 DoD に追従させる
+- [x] severity判定を v3 DoD に追従させる
 - [x] evidence（JSON/MD）を `docs/evidence/s28-07/` に保存
 - [x] unit tests を追加/更新（新ケース追加）
 
@@ -99,14 +101,14 @@ Last Updated: 2026-02-27
 
 ### S28-09 SLO Readiness v3
 
-- [x] READY条件を v2 Exit Metrics へ更新
+- [x] READY条件を v3 Exit Metrics へ更新
 - [x] hard/soft violation 判定を再調整
 - [x] evidence（JSON/MD）を `docs/evidence/s28-09/` に保存
 - [x] unit tests を追加/更新（gate一貫性）
 
-### S28-10 Closeout v2
+### S28-10 Closeout v3
 
-- [x] closeout note を v2反映
+- [x] closeout note を v3反映
 - [x] Before/After + unresolved risk + S29 handoff を更新
 - [x] evidence（JSON/MD）を `docs/evidence/s28-10/` に保存
 - [x] unit tests を追加/更新
@@ -142,9 +144,9 @@ Last Updated: 2026-02-27
 
 重量（ship前）:
 
-- [ ] `make verify-il`
+- [x] `make verify-il`
 - [ ] `source /path/to/your/nix/profile.d/nix-daemon.sh`
-- [ ] `ci-self up --ref "$(git branch --show-current)"`
+- [ ] `ci-self up --ref "$(git branch --show-current)"`（remote ref push 後に再実行）
 
 ## Evidence Policy
 

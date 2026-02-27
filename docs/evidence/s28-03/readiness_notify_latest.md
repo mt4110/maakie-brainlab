@@ -1,8 +1,8 @@
 # S28-03 Readiness Notify (Latest)
 
-- CapturedAtUTC: `2026-02-27T07:32:34Z`
+- CapturedAtUTC: `2026-02-27T07:40:33Z`
 - Branch: `ops/S28-01-S28-10`
-- HeadSHA: `fa136531e69807a535ac6f51146fdfbead621a06`
+- HeadSHA: `2bf4d6c11a1da872cb4c659a78f64e4486010e0b`
 
 ## Summary
 
@@ -13,7 +13,7 @@
 
 ## Message
 
-- payload: `[Ops Readiness] channel=#ops-release | readiness=WARN_ONLY | status=WARN | reason=SOFT_SLO_WARN | blocked_total=0 | schedule_status=PASS | schedule_reason=`
+- payload: `[Ops Readiness] channel=#ops-release | readiness=BLOCKED | status=FAIL | reason=HARD_SLO_VIOLATION | blocked_total=4 | schedule_status=PASS | schedule_reason=`
 
 ## PR Body Snippet
 
