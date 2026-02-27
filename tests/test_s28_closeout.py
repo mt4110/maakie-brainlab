@@ -1,0 +1,48 @@
+import importlib.util
+import json
+import tempfile
+import unittest
+from pathlib import Path
+
+
+def _load_module():
+    root = Path(__file__).resolve().parents[1]
+    path = root / "scripts" / "ops" / "s28_closeout.py"
+    spec = importlib.util.spec_from_file_location("s28_closeout", path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec is not None and spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+class S28CloseoutTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.m = _load_module()
+
+    def test_read_json_if_exists_missing(self):
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / "none.json"
+            self.assertEqual(self.m.read_json_if_exists(p), {})
+
+    def test_write_failure(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            out_dir = root / "out"
+            out_dir.mkdir(parents=True, exist_ok=True)
+            self.m.write_failure(
+                root,
+                out_dir,
+                root / "r.json",
+                root / "i.json",
+                self.m.REASON_READINESS_MISSING,
+                ["r1"],
+                ["h1"],
+            )
+            payload = json.loads((out_dir / "closeout_latest.json").read_text(encoding="utf-8"))
+            self.assertEqual(payload["summary"]["status"], "FAIL")
+            self.assertEqual(payload["summary"]["reason"], self.m.REASON_READINESS_MISSING)
+
+
+if __name__ == "__main__":
+    unittest.main()
