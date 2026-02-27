@@ -25,7 +25,7 @@ Last Updated: 2026-02-26
 | PR-B | S25-05 Regression Safety | 既存契約の回帰検知を強化 | `ops/*`, `tests/*`, `Makefile`, `docs/ops/*` | `make verify-il` 結果、`ops/required_checks_sot.sh check` の結果、既存契約破壊 0 件 | `make verify-il`, `bash ops/required_checks_sot.sh check` |
 | PR-C | S25-06 Acceptance Wall | 完成判定ケースを固定 | `tests/*`, `eval/*`, `docs/ops/*`, `docs/evidence/*` | acceptance case 数、pass/fail 内訳、失敗 taxonomy | `python3 -m unittest -v ...`, `python3 eval/run_eval.py --mode verify-only --provider mock --dataset ...` |
 | PR-D | S25-07 ML Experiment Loop | ML 実験テンプレートを固定 | `scripts/*`, `docs/ops/*`, `data/eval/*` | seed/config、1回目 run 指標、baseline 比較差分 | `make s25-ml-experiment` が再実行可能で、`docs/evidence/s25-07/*` を更新すること |
-| PR-E | S25-08 RAG Tuning Loop | RAG 調整 1 ループを固定 | `scripts/rag_pipeline.py`, `eval/*`, `docs/evidence/*`, `docs/ops/*` | tuning 前後の `pass_rate` / `latency` / failure code 差分 | `python3 eval/run_eval.py ...` の before/after 比較 |
+| PR-E | S25-08 RAG Tuning Loop | RAG 調整 1 ループを固定 | `scripts/ops/s25_rag_tuning_loop.py`, `docs/ops/S25-08_RAG_TUNING.toml`, `docs/evidence/*`, `docker-compose.yml` | baseline/candidate の hit_rate / latency 差分（SQLite）と evidence 出力 | `make s25-rag-tuning` が PASS し `docs/evidence/s25-08/*` を更新 |
 | PR-F | S25-09 LangChain PoC | LangChain 最小接続 + rollback 固定 | `src/*`, `scripts/*`, `docs/ops/*`, `tests/*` | 接続 smoke 成功、rollback 動線の実演結果 | PoC smoke + rollback smoke PASS |
 | PR-G | S25-10 Closeout | スレッド完了判定を固定 | `docs/ops/*`, `docs/evidence/*` | Before/After 表、未解決リスク、次スレ handoff | closeout evidence が PR body に揃う |
 

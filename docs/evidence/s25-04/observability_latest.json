@@ -49,9 +49,9 @@
     "current-point": {
       "schema_version": "s25-obs-contract-v1",
       "tool": "current-point",
-      "run_id": "current-point__20260226T234656Z__ops-s25-01-25-10__7544752",
-      "run_dir": "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/current-point/current-point__20260226T234656Z__ops-s25-01-25-10__7544752",
-      "captured_at_utc": "2026-02-26T23:46:56.439358+00:00",
+      "run_id": "current-point__20260226T235153Z__ops-s25-01-25-10__7544752",
+      "run_dir": "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/current-point/current-point__20260226T235153Z__ops-s25-01-25-10__7544752",
+      "captured_at_utc": "2026-02-26T23:51:53.598369+00:00",
       "branch": "ops/S25-01-25-10",
       "head": "754475298c2985d81a1e5c32250acb826fd063fd",
       "counts": {
@@ -90,9 +90,9 @@
     "obs-pr-summary": {
       "schema_version": "s25-obs-contract-v1",
       "tool": "obs-pr-summary",
-      "run_id": "obs-pr-summary__20260226T234656Z__ops-s25-01-25-10__7544752",
-      "run_dir": "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/obs-pr-summary/obs-pr-summary__20260226T234656Z__ops-s25-01-25-10__7544752",
-      "captured_at_utc": "2026-02-26T23:46:56.424084+00:00",
+      "run_id": "obs-pr-summary__20260226T235153Z__ops-s25-01-25-10__7544752",
+      "run_dir": "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/obs-pr-summary/obs-pr-summary__20260226T235153Z__ops-s25-01-25-10__7544752",
+      "captured_at_utc": "2026-02-26T23:51:53.585592+00:00",
       "branch": "ops/S25-01-25-10",
       "head": "754475298c2985d81a1e5c32250acb826fd063fd",
       "counts": {
@@ -107,6 +107,27 @@
           "json": "/Users/takemuramasaki/dev/maakie-brainlab/docs/evidence/s25-04/observability_latest.json",
           "md": "/Users/takemuramasaki/dev/maakie-brainlab/docs/evidence/s25-04/observability_latest.md"
         }
+      }
+    },
+    "rag-tuning": {
+      "schema_version": "s25-obs-contract-v1",
+      "tool": "rag-tuning",
+      "run_id": "rag-tuning__20260227T000529Z__ops-s25-01-25-10__df64ab4",
+      "run_dir": "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/rag-tuning/rag-tuning__20260227T000529Z__ops-s25-01-25-10__df64ab4",
+      "captured_at_utc": "2026-02-27T00:05:29.514584+00:00",
+      "branch": "ops/S25-01-25-10",
+      "head": "df64ab48d2c0ae200080cee2575ad76c250f85c1",
+      "counts": {
+        "OK": 9,
+        "WARN": 0,
+        "ERROR": 0,
+        "SKIP": 0
+      },
+      "events_total": 9,
+      "extra": {
+        "rag_tuning_json": "/Users/takemuramasaki/dev/maakie-brainlab/docs/evidence/s25-08/rag_tuning_latest.json",
+        "rag_tuning_md": "/Users/takemuramasaki/dev/maakie-brainlab/docs/evidence/s25-08/rag_tuning_latest.md",
+        "status": "PASS"
       }
     },
     "regression-safety": {

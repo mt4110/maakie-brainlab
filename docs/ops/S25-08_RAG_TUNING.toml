@@ -1,0 +1,60 @@
+# S25-08 RAG tuning loop SOT (human-editable)
+schema_version = "s25-rag-tuning-v1"
+
+[loop]
+id = "s25-08-rag-tuning-sqlite-v1"
+seed = 7
+
+[storage]
+backend = "sqlite"
+db_name = "index.sqlite3"
+
+[profiles.baseline]
+chunk_size = 1200
+overlap = 200
+top_k = 1
+
+[profiles.candidate]
+chunk_size = 800
+overlap = 100
+top_k = 3
+
+[evaluation]
+min_hit_rate_delta = -0.05
+
+[[docs]]
+path = "hello.md"
+content = """
+# Hello
+RAG (Retrieval-Augmented Generation) means generation with retrieval.
+Use citations and deterministic evidence.
+"""
+
+[[docs]]
+path = "sample_note.md"
+content = """
+# Sample Note
+make ingest moves files into data/raw.
+After ingest, build_index then run_eval are executed.
+Banana price is 120 yen.
+"""
+
+[[cases]]
+id = "R01"
+query = "hello.md の要点を教えてください。"
+expected_source = "hello.md"
+
+[[cases]]
+id = "R02"
+query = "RAG の正式名称は何ですか？"
+expected_source = "hello.md"
+
+[[cases]]
+id = "R03"
+query = "sample_note.md のバナナ価格を教えてください。"
+expected_source = "sample_note.md"
+
+[[cases]]
+id = "R04"
+query = "ingest のあとに何が走りますか？"
+expected_source = "sample_note.md"

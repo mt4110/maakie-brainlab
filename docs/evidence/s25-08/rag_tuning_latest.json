@@ -1,0 +1,203 @@
+{
+  "schema_version": "s25-rag-tuning-loop-v1",
+  "captured_at_utc": "2026-02-27T00:05:29Z",
+  "git": {
+    "branch": "ops/S25-01-25-10",
+    "head": "df64ab48d2c0ae200080cee2575ad76c250f85c1"
+  },
+  "config_path": "/Users/takemuramasaki/dev/maakie-brainlab/docs/ops/S25-08_RAG_TUNING.toml",
+  "config_snapshot": {
+    "schema_version": "s25-rag-tuning-v1",
+    "loop": {
+      "id": "s25-08-rag-tuning-sqlite-v1",
+      "seed": 7
+    },
+    "storage": {
+      "backend": "sqlite",
+      "db_name": "index.sqlite3"
+    },
+    "profiles": {
+      "baseline": {
+        "chunk_size": 1200,
+        "overlap": 200,
+        "top_k": 1
+      },
+      "candidate": {
+        "chunk_size": 800,
+        "overlap": 100,
+        "top_k": 3
+      }
+    },
+    "evaluation": {
+      "min_hit_rate_delta": -0.05
+    },
+    "docs": [
+      {
+        "path": "hello.md",
+        "content": "# Hello\nRAG (Retrieval-Augmented Generation) means generation with retrieval.\nUse citations and deterministic evidence.\n"
+      },
+      {
+        "path": "sample_note.md",
+        "content": "# Sample Note\nmake ingest moves files into data/raw.\nAfter ingest, build_index then run_eval are executed.\nBanana price is 120 yen.\n"
+      }
+    ],
+    "cases": [
+      {
+        "id": "R01",
+        "query": "hello.md の要点を教えてください。",
+        "expected_source": "hello.md"
+      },
+      {
+        "id": "R02",
+        "query": "RAG の正式名称は何ですか？",
+        "expected_source": "hello.md"
+      },
+      {
+        "id": "R03",
+        "query": "sample_note.md のバナナ価格を教えてください。",
+        "expected_source": "sample_note.md"
+      },
+      {
+        "id": "R04",
+        "query": "ingest のあとに何が走りますか？",
+        "expected_source": "sample_note.md"
+      }
+    ]
+  },
+  "profiles": {
+    "baseline": {
+      "status": "PASS",
+      "reason_code": "",
+      "build_rc": 0,
+      "build_log": "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/rag-tuning/rag-tuning__20260227T000529Z__ops-s25-01-25-10__df64ab4/baseline_build_index.log",
+      "metrics": {
+        "cases_total": 4,
+        "cases_with_expected_source": 4,
+        "hit_cases": 4,
+        "hit_rate": 1.0,
+        "avg_latency_ms": 0.6607087561860681,
+        "chunk_size": 1200,
+        "overlap": 200,
+        "top_k": 1,
+        "db_path": "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/rag-tuning/rag-tuning__20260227T000529Z__ops-s25-01-25-10__df64ab4/indexes/baseline/index.sqlite3"
+      },
+      "cases": [
+        {
+          "id": "R01",
+          "query": "hello.md の要点を教えてください。",
+          "expected_source": "hello.md",
+          "retrieved_sources": [
+            "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/rag-tuning/rag-tuning__20260227T000529Z__ops-s25-01-25-10__df64ab4/raw_docs/hello.md#chunk-0"
+          ],
+          "matched": true,
+          "latency_ms": 1.331
+        },
+        {
+          "id": "R02",
+          "query": "RAG の正式名称は何ですか？",
+          "expected_source": "hello.md",
+          "retrieved_sources": [
+            "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/rag-tuning/rag-tuning__20260227T000529Z__ops-s25-01-25-10__df64ab4/raw_docs/hello.md#chunk-0"
+          ],
+          "matched": true,
+          "latency_ms": 0.441
+        },
+        {
+          "id": "R03",
+          "query": "sample_note.md のバナナ価格を教えてください。",
+          "expected_source": "sample_note.md",
+          "retrieved_sources": [
+            "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/rag-tuning/rag-tuning__20260227T000529Z__ops-s25-01-25-10__df64ab4/raw_docs/sample_note.md#chunk-0"
+          ],
+          "matched": true,
+          "latency_ms": 0.422
+        },
+        {
+          "id": "R04",
+          "query": "ingest のあとに何が走りますか？",
+          "expected_source": "sample_note.md",
+          "retrieved_sources": [
+            "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/rag-tuning/rag-tuning__20260227T000529Z__ops-s25-01-25-10__df64ab4/raw_docs/sample_note.md#chunk-0"
+          ],
+          "matched": true,
+          "latency_ms": 0.45
+        }
+      ]
+    },
+    "candidate": {
+      "status": "PASS",
+      "reason_code": "",
+      "build_rc": 0,
+      "build_log": "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/rag-tuning/rag-tuning__20260227T000529Z__ops-s25-01-25-10__df64ab4/candidate_build_index.log",
+      "metrics": {
+        "cases_total": 4,
+        "cases_with_expected_source": 4,
+        "hit_cases": 4,
+        "hit_rate": 1.0,
+        "avg_latency_ms": 0.47990650637075305,
+        "chunk_size": 800,
+        "overlap": 100,
+        "top_k": 3,
+        "db_path": "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/rag-tuning/rag-tuning__20260227T000529Z__ops-s25-01-25-10__df64ab4/indexes/candidate/index.sqlite3"
+      },
+      "cases": [
+        {
+          "id": "R01",
+          "query": "hello.md の要点を教えてください。",
+          "expected_source": "hello.md",
+          "retrieved_sources": [
+            "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/rag-tuning/rag-tuning__20260227T000529Z__ops-s25-01-25-10__df64ab4/raw_docs/hello.md#chunk-0"
+          ],
+          "matched": true,
+          "latency_ms": 0.653
+        },
+        {
+          "id": "R02",
+          "query": "RAG の正式名称は何ですか？",
+          "expected_source": "hello.md",
+          "retrieved_sources": [
+            "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/rag-tuning/rag-tuning__20260227T000529Z__ops-s25-01-25-10__df64ab4/raw_docs/hello.md#chunk-0"
+          ],
+          "matched": true,
+          "latency_ms": 0.437
+        },
+        {
+          "id": "R03",
+          "query": "sample_note.md のバナナ価格を教えてください。",
+          "expected_source": "sample_note.md",
+          "retrieved_sources": [
+            "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/rag-tuning/rag-tuning__20260227T000529Z__ops-s25-01-25-10__df64ab4/raw_docs/sample_note.md#chunk-0"
+          ],
+          "matched": true,
+          "latency_ms": 0.423
+        },
+        {
+          "id": "R04",
+          "query": "ingest のあとに何が走りますか？",
+          "expected_source": "sample_note.md",
+          "retrieved_sources": [
+            "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/rag-tuning/rag-tuning__20260227T000529Z__ops-s25-01-25-10__df64ab4/raw_docs/sample_note.md#chunk-0"
+          ],
+          "matched": true,
+          "latency_ms": 0.407
+        }
+      ]
+    }
+  },
+  "comparison": {
+    "status": "PASS",
+    "delta_hit_rate": 0.0,
+    "delta_latency_ms": -0.180802249815315,
+    "min_hit_rate_delta": -0.05
+  },
+  "summary": {
+    "status": "PASS",
+    "errors": []
+  },
+  "artifact_names": {
+    "json": "rag_tuning_latest.json",
+    "md": "rag_tuning_latest.md",
+    "run_dir": "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/rag-tuning/rag-tuning__20260227T000529Z__ops-s25-01-25-10__df64ab4"
+  },
+  "stop": 0
+}

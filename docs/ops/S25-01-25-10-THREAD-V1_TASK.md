@@ -4,7 +4,7 @@ Last Updated: 2026-02-26
 
 ## Progress
 
-- S25-01-25-10: 75% (S25-01..S25-07 完了)
+- S25-01-25-10: 85% (S25-01..S25-08 完了)
 
 ## Ritual 22-16-22-99
 
@@ -78,8 +78,14 @@ Last Updated: 2026-02-26
 
 ### S25-08 RAG Tuning Loop
 
-- [ ] RAG パラメータ調整を 1 ループ実行
-- [ ] baseline 比較の evidence を保存
+- [x] RAG パラメータ調整を 1 ループ実行
+- [x] baseline 比較の evidence を保存
+  - tuning SOT (TOML): `docs/ops/S25-08_RAG_TUNING.toml`
+  - runner: `scripts/ops/s25_rag_tuning_loop.py`
+  - artifact: `docs/evidence/s25-08/rag_tuning_latest.md`
+  - gate: `make s25-rag-tuning`
+  - storage policy: `SOT=TOML / Evidence=JSON / SearchDB=SQLite`
+  - docker compose: `docker-compose.yml` (PostgreSQL example is commented out)
 
 ### S25-09 LangChain PoC
 

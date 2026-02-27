@@ -99,11 +99,15 @@ Last Updated: 2026-02-26
 - `docs/ops/S25-06_ACCEPTANCE_CASES.json`
 - `scripts/ops/s25_ml_experiment.py`
 - `docs/ops/S25-07_ML_EXPERIMENT_TEMPLATE.json`
+- `scripts/ops/s25_rag_tuning_loop.py`
+- `docs/ops/S25-08_RAG_TUNING.toml`
+- `docker-compose.yml`
 - `docs/ops/S25-04_OBSERVABILITY_CONTRACT.md`
 - `docs/evidence/s25-04/*`
 - `docs/evidence/s25-05/*`
 - `docs/evidence/s25-06/*`
 - `docs/evidence/s25-07/*`
+- `docs/evidence/s25-08/*`
 - `scripts/ops/current_point.py`
 - `Makefile`
 - `docs/ops/ROADMAP.md`
