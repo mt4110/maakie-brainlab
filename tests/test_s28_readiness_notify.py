@@ -1,4 +1,7 @@
 import importlib.util
+import json
+import os
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -63,6 +66,54 @@ class S28ReadinessNotifyTests(unittest.TestCase):
         self.assertEqual(self.m.delivery_state(sent=False, attempt_count=0, attempted=False), "NOT_ATTEMPTED")
         self.assertEqual(self.m.delivery_state(sent=False, attempt_count=1, attempted=True), "FAILED")
         self.assertEqual(self.m.delivery_state(sent=True, attempt_count=1, attempted=True), "SENT")
+
+    def test_send_requested_without_webhook_keeps_not_attempted(self):
+        root = Path(__file__).resolve().parents[1]
+        script = root / "scripts" / "ops" / "s28_readiness_notify.py"
+        with tempfile.TemporaryDirectory() as td:
+            tdir = Path(td)
+            out_dir = tdir / "out"
+            readiness = tdir / "readiness.json"
+            schedule = tdir / "schedule.json"
+            readiness.write_text(
+                json.dumps({"summary": {"readiness": "WARN_ONLY", "status": "WARN", "reason_code": "SOFT_SLO_WARN", "blocked_total": 1}}) + "\n",
+                encoding="utf-8",
+            )
+            schedule.write_text(json.dumps({"summary": {"status": "PASS", "reason_code": ""}}) + "\n", encoding="utf-8")
+
+            env = os.environ.copy()
+            env.pop("S28_READINESS_WEBHOOK_URL", None)
+            py_path = f"{root / 'src'}:{root}"
+            if env.get("PYTHONPATH"):
+                py_path = f"{py_path}:{env['PYTHONPATH']}"
+            env["PYTHONPATH"] = py_path
+            cp = subprocess.run(
+                [
+                    "python3",
+                    str(script),
+                    "--send",
+                    "--out-dir",
+                    str(out_dir),
+                    "--readiness-json",
+                    str(readiness),
+                    "--schedule-json",
+                    str(schedule),
+                    "--obs-root",
+                    str(tdir / "obs"),
+                ],
+                cwd=str(root),
+                env=env,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(cp.returncode, 0, msg=cp.stderr)
+
+            payload = json.loads((out_dir / "readiness_notify_latest.json").read_text(encoding="utf-8"))
+            self.assertEqual(payload["summary"]["reason_code"], self.m.REASON_WEBHOOK_NOT_CONFIGURED)
+            self.assertFalse(payload["notification"]["attempted"])
+            self.assertEqual(payload["notification"]["delivery_state"], "NOT_ATTEMPTED")
+            self.assertIsNone(payload["notification"]["delivery_rate"])
 
 
 if __name__ == "__main__":

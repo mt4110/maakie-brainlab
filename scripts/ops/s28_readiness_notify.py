@@ -235,7 +235,7 @@ def main() -> int:
 
     message = compose_message(str(args.channel), readiness, schedule)
     notify = {
-        "attempted": bool(args.send),
+        "attempted": False,
         "sent": False,
         "http_status": 0,
         "response_tail": "",
@@ -257,6 +257,7 @@ def main() -> int:
             reason_code = REASON_WEBHOOK_NOT_CONFIGURED
             emit("WARN", f"webhook env not configured env={args.webhook_env}", events)
         else:
+            notify["attempted"] = True
             notify_payload = {
                 "channel": str(args.channel),
                 "text": message,
