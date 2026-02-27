@@ -103,6 +103,10 @@ def chunk_text(text: str, chunk_size: int, overlap: int) -> List[Tuple[int, int,
     return chunker.chunk()
 
 def iter_documents(raw_dir: Path) -> Iterable[Path]:
+    if raw_dir.is_file():
+        if raw_dir.suffix.lower() in {".md", ".txt"}:
+            yield raw_dir
+        return
     for p in sorted(raw_dir.rglob("*")):
         if p.is_file() and p.suffix.lower() in {".md", ".txt"}:
             yield p

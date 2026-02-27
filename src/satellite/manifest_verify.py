@@ -78,7 +78,12 @@ def verify_manifest(source_id: str, date_str: str, project_root: Path) -> Dict[s
             actual_sha = hashlib.sha256(blob).hexdigest()
             if str(item.get("sha256") or "") != actual_sha:
                 errors.append(f"artifact sha mismatch: {rel}")
-            if int(item.get("bytes", -1) or -1) != len(blob):
+            try:
+                expected_bytes = int(item.get("bytes", -1) or -1)
+            except Exception:
+                errors.append(f"artifact bytes invalid: {rel}")
+                continue
+            if expected_bytes != len(blob):
                 errors.append(f"artifact size mismatch: {rel}")
 
     result = {

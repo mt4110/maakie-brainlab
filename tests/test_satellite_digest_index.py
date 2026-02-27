@@ -75,7 +75,15 @@ class SatelliteDigestIndexTests(unittest.TestCase):
         db_rel = index_summary["index"]["db"]
         db_path = self.root / db_rel
         self.assertTrue(db_path.exists())
-        self.assertGreaterEqual(int(index_summary["index"]["doc_count"]), 1)
+        self.assertEqual(int(index_summary["index"]["doc_count"]), 1)
+
+    def test_index_targets_only_requested_digest_date(self):
+        build_digest(self.source, self.date, self.root)
+        digest_dir = self.root / f"data/satellite/{self.source}/digest"
+        (digest_dir / "2026-02-26.md").write_text("# old\nlegacy content\n", encoding="utf-8")
+
+        index_summary = build_index_for_source(self.source, self.date, self.root, chunk_size=128, overlap=32)
+        self.assertEqual(int(index_summary["index"]["doc_count"]), 1)
 
 
 if __name__ == "__main__":

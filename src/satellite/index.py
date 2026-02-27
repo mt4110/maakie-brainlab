@@ -21,7 +21,7 @@ def build_index_for_source(source_id: str, date_str: str, project_root: Path, ch
         sys.executable,
         str((project_root / "src" / "build_index.py").resolve()),
         "--raw-dir",
-        str(digest_dir),
+        str(digest_md),
         "--index-dir",
         str(index_dir),
         "--db-name",
