@@ -4,13 +4,15 @@ Last Updated: 2026-02-27
 
 ## Progress
 
-- S29-01-S29-10 v3: 22% (Phase-1 Design Freeze 完了)
+- S29-01-S29-10 v3: 100% (Phase-1..5 実装・検証・ship gate 完了)
 
 ## Current Facts
 
 - S29 v2 closeout は `PASS`、readiness は `WARN_ONLY`。
 - v3 は waiver exit condition の実消化と `READY` 収束フェーズ。
 - Phase-1 で Exit条件・waiver分解・変更対象・PR body テンプレートを固定済み。
+- S29-01..S29-10 を再実行し、最新 artifact を更新済み（readiness は `WARN_ONLY` 維持）。
+- `python3 -m unittest -v tests/test_s29_*.py` と `make verify-il`、`ci-self up --ref "$(git branch --show-current)"` は green。
 - 進捗SOTは本TASKとPR body（`STATUS.md`は非SOT）。
 
 ## Ritual 22-16-22-99
@@ -36,29 +38,29 @@ Last Updated: 2026-02-27
 
 ### Phase-2 Implementation Batch
 
-- [ ] 2-1. S29-01 recovery success-rate 改善差分を実装
-- [ ] 2-2. S29-02 unknown ratio 改善差分を実装
-- [ ] 2-3. S29-03 multichannel 実送信成功差分を実装
-- [ ] 2-4. S29-04..10 連結ロジックを v3 更新
+- [x] 2-1. S29-01 recovery success-rate 改善差分を実装
+- [x] 2-2. S29-02 unknown ratio 改善差分を実装
+- [x] 2-3. S29-03 multichannel 実送信成功差分を実装
+- [x] 2-4. S29-04..10 連結ロジックを v3 更新
 
 ### Phase-3 Local Check Batch
 
-- [ ] 3-1. `make ops-now`
-- [ ] 3-2. `python3 -m unittest -v tests/test_s29_*.py`
-- [ ] 3-3. 主要 phase コマンドの再実行
+- [x] 3-1. `make ops-now`
+- [x] 3-2. `python3 -m unittest -v tests/test_s29_*.py`
+- [x] 3-3. 主要 phase コマンドの再実行
 
 ### Phase-4 End-to-End Verification
 
-- [ ] 4-1. S29-01..S29-10 を順次実行
-- [ ] 4-2. readiness / closeout artifact を検証
-- [ ] 4-3. waiver / unresolved risks / handoff を検証
+- [x] 4-1. S29-01..S29-10 を順次実行
+- [x] 4-2. readiness / closeout artifact を検証
+- [x] 4-3. waiver / unresolved risks / handoff を検証
 
 ### Phase-5 Ship Gate
 
-- [ ] 5-1. `make verify-il`
-- [ ] 5-2. `source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh`
-- [ ] 5-3. `ci-self up --ref "$(git branch --show-current)"`
-- [ ] 5-4. PR body を最終更新
+- [x] 5-1. `make verify-il`
+- [x] 5-2. `source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh`
+- [x] 5-3. `ci-self up --ref "$(git branch --show-current)"`
+- [x] 5-4. PR body を最終更新
 
 ## Phase-1 Freeze Output (2026-02-27)
 
@@ -149,3 +151,22 @@ Last Updated: 2026-02-27
 - 各 phase で `OK:/WARN:/ERROR:/SKIP:` を最低1行残す。
 - `SKIP` は理由を1行で明示する。
 - 進捗/判断/コマンド結果は PR body に固定する。
+
+## Latest Run Log (for PR body)
+
+- `OK: make ops-now`（task=`docs/ops/S29-01-S29-10-THREAD-V3_TASK.md`, progress=22% at run time）
+- `OK: python3 -m unittest -v tests/test_s29_*.py`（51 tests, all green）
+- `WARN: make s29-canary-recovery-success-rate-slo`（status=`WARN`, reason=`RECOVERY_REQUIRED`, trailing_nonpass=3, recovery_success_rate=0.0）
+- `WARN: make s29-taxonomy-pipeline-integration`（status=`WARN`, reason=`UNKNOWN_RATIO_ABOVE_TARGET`, unknown_ratio=0.3125）
+- `WARN: make s29-readiness-notify-multichannel`（status=`WARN`, reason=`NOTIFY_SEND_FAILED`, attempted_channels=2, sent_channels=0）
+- `WARN: make s29-incident-triage-pack-v3`（status=`WARN`, reason=`TRIAGE_ALERT`）
+- `OK: make s29-policy-drift-guard-v3`（status=`PASS`, reason=``, drift_total=0）
+- `WARN: make s29-reliability-soak-v3`（status=`WARN`, reason=`INSUFFICIENT_RUNS_ENV_GAP`, total_runs=3）
+- `OK: make s29-acceptance-wall-v4`（status=`PASS`, cases_total=10）
+- `WARN: make s29-evidence-trend-index-v4`（status=`WARN`, pass_warn_fail=2/5/0）
+- `WARN: make s29-slo-readiness-v3`（status=`WARN`, readiness=`WARN_ONLY`, waived_hard_count=5）
+- `OK: make s29-closeout`（status=`PASS`, readiness=`WARN_ONLY`, waiver_exit_condition_count=5）
+- `OK: make verify-il`（IL entrypoint guard/smoke/suite/selftest all green）
+- `OK: source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh`
+- `OK: ci-self up --ref \"$(git branch --show-current)\"`（verify run `22485065873` green）
+- `SKIP: pr_checks`（reason=`pr_not_found_for_branch` at ci-self run time）

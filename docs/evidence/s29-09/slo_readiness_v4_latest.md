@@ -1,8 +1,8 @@
 # S29-09 SLO Readiness v4 (Latest)
 
-- CapturedAtUTC: `2026-02-27T11:27:56Z`
+- CapturedAtUTC: `2026-02-27T11:50:23Z`
 - Branch: `ops/S29-01-S29-10`
-- HeadSHA: `d968bc83a6767578fffbc56c901cf072f5b33255`
+- HeadSHA: `2971732a2c6df3a57166589d92e528ab65e49038`
 
 ## Decision
 

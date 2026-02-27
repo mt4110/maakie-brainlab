@@ -1,9 +1,9 @@
 {
   "schema_version": "s29-readiness-notify-multichannel-v2",
-  "captured_at_utc": "2026-02-27T11:27:55Z",
+  "captured_at_utc": "2026-02-27T11:50:23Z",
   "git": {
     "branch": "ops/S29-01-S29-10",
-    "head": "d968bc83a6767578fffbc56c901cf072f5b33255"
+    "head": "2971732a2c6df3a57166589d92e528ab65e49038"
   },
   "inputs": {
     "readiness_json": "docs/evidence/s28-09/slo_readiness_v2_latest.json",

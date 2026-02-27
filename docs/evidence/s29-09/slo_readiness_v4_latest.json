@@ -1,9 +1,9 @@
 {
   "schema_version": "s29-slo-readiness-v4",
-  "captured_at_utc": "2026-02-27T11:27:56Z",
+  "captured_at_utc": "2026-02-27T11:50:23Z",
   "git": {
     "branch": "ops/S29-01-S29-10",
-    "head": "d968bc83a6767578fffbc56c901cf072f5b33255"
+    "head": "2971732a2c6df3a57166589d92e528ab65e49038"
   },
   "inputs": {
     "S29-01": "docs/evidence/s29-01/canary_recovery_success_rate_slo_latest.json",
@@ -45,7 +45,7 @@
     {
       "phase": "S29-05",
       "gate": "status must not be FAIL/MISSING",
-      "actual": "WARN",
+      "actual": "PASS",
       "passed": true
     },
     {
