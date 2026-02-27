@@ -1,9 +1,9 @@
 {
   "schema_version": "s28-policy-drift-guard-v2",
-  "captured_at_utc": "2026-02-27T07:07:33Z",
+  "captured_at_utc": "2026-02-27T07:32:34Z",
   "git": {
     "branch": "ops/S28-01-S28-10",
-    "head": "81102446eb5a9f461a4baf4b243286fc004d9ed4"
+    "head": "fa136531e69807a535ac6f51146fdfbead621a06"
   },
   "inputs": {
     "watch_files": [
@@ -16,34 +16,35 @@
       "Makefile"
     ],
     "baseline_file": "docs/evidence/s28-05/policy_drift_baseline_v2.json",
-    "fail_on_high_impact": false
+    "fail_on_high_impact": false,
+    "bootstrap_baseline": false
   },
   "current": {
     "files": {
       "docs/ops/S28-01_PROVIDER_CANARY_RECOVERY.toml": {
         "present": true,
-        "sha256": "e9d574b9f40fdb4bfa5601a1cfd1ec0d8fa8623bb5a88ad9e8ef01fe9e1ace81",
-        "size": 426
+        "sha256": "335c50f1d739a04a558ec1e364d45bfb6bc28b67c5619f93fe224ceca5d093c1",
+        "size": 427
       },
       "docs/ops/S28-02_TAXONOMY_FEEDBACK_LOOP.toml": {
         "present": true,
-        "sha256": "1db02dcc1723d61ceb99ba7409b30bab99fc38dce7ab24c3c183a6abfb780f62",
+        "sha256": "f5fb599f3b1c359f2c2abb35497c8dd4fd981b544303ea20b384361a8ad907b8",
         "size": 326
       },
       "docs/ops/S28-07_ACCEPTANCE_CASES_V3.json": {
         "present": true,
-        "sha256": "18a082d9ec054f7db89152ee317961a5b5162ba9cb586c81227291dd3853b5fe",
-        "size": 2227
+        "sha256": "aadb127b95255493404d228f8f8d87a67d959c938887cdac543ea663a0a40b00",
+        "size": 3308
       },
       "scripts/ops/s28_slo_readiness_v2.py": {
         "present": true,
-        "sha256": "5ecd0c4bad742edb30707b42268303ec268140c7f70c1fb42de799e624284eb2",
-        "size": 13675
+        "sha256": "9794c5cf93f11c41734c1a7af4f831708b0a9f52895a80c26e1b00048700b340",
+        "size": 15690
       },
       "scripts/ops/s28_readiness_notify.py": {
         "present": true,
-        "sha256": "4d2899ec478ef2587380d83cb99041c56fe97006fc085dc123a2705a52844b9b",
-        "size": 9427
+        "sha256": "87b680221f932a9c4e27d9e99a3292986d6700bd1d72727e4770942f39a3e763",
+        "size": 12213
       },
       ".github/workflows/run_always_1h.yml": {
         "present": true,
@@ -60,14 +61,24 @@
   "drift": {
     "added": [],
     "removed": [],
-    "changed": []
+    "changed": [
+      "docs/ops/S28-01_PROVIDER_CANARY_RECOVERY.toml",
+      "docs/ops/S28-02_TAXONOMY_FEEDBACK_LOOP.toml",
+      "docs/ops/S28-07_ACCEPTANCE_CASES_V3.json",
+      "scripts/ops/s28_readiness_notify.py",
+      "scripts/ops/s28_slo_readiness_v2.py"
+    ]
   },
   "summary": {
     "status": "WARN",
-    "reason_code": "BASELINE_CREATED",
-    "drift_total": 0,
-    "high_impact_changes": 0,
-    "high_impact_files": []
+    "reason_code": "HIGH_IMPACT_DRIFT",
+    "drift_total": 5,
+    "high_impact_changes": 2,
+    "high_impact_files": [
+      "scripts/ops/s28_readiness_notify.py",
+      "scripts/ops/s28_slo_readiness_v2.py"
+    ],
+    "baseline_state": "existing"
   },
   "artifact_names": {
     "json": "policy_drift_guard_v2_latest.json",

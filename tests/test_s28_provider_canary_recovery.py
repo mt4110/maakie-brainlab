@@ -31,6 +31,32 @@ class S28ProviderCanaryRecoveryTests(unittest.TestCase):
     def test_trailing_nonpass_streak_zero(self):
         self.assertEqual(self.m.trailing_nonpass_streak([{"status": "PASS"}]), 0)
 
+    def test_classify_skip_reason(self):
+        self.assertEqual(self.m.classify_skip_reason("MISSING_PROVIDER_ENV"), self.m.SKIP_CAUSE_ENV)
+        self.assertEqual(self.m.classify_skip_reason("POLICY_INVALID"), self.m.SKIP_CAUSE_CONFIG)
+        self.assertEqual(self.m.classify_skip_reason("NETWORK_TIMEOUT"), self.m.SKIP_CAUSE_RUNTIME)
+
+    def test_summarize_skip_causes_and_dominant(self):
+        rows = [
+            {"status": "SKIP", "reason_code": "MISSING_PROVIDER_ENV"},
+            {"status": "SKIP", "reason_code": "MISSING_PROVIDER_ENV"},
+            {"status": "SKIP", "reason_code": "NETWORK_TIMEOUT"},
+            {"status": "PASS", "reason_code": ""},
+        ]
+        counts = self.m.summarize_skip_causes(rows)
+        self.assertEqual(counts[self.m.SKIP_CAUSE_ENV], 2)
+        self.assertEqual(self.m.dominant_cause(counts), self.m.SKIP_CAUSE_ENV)
+
+    def test_build_recommended_actions_env(self):
+        actions = self.m.build_recommended_actions(
+            rollback_cmd="python3 rollback.py",
+            top_cause=self.m.SKIP_CAUSE_ENV,
+            trailing=4,
+            recovery_threshold=3,
+        )
+        self.assertTrue(any("env variables" in a for a in actions))
+        self.assertTrue(any("status transition to PASS" in a for a in actions))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -61,6 +61,46 @@ def read_json_if_exists(path: Path) -> Dict[str, Any]:
     return obj if isinstance(obj, dict) else {}
 
 
+def dedupe_lines(items: List[str]) -> List[str]:
+    out: List[str] = []
+    seen: set[str] = set()
+    for raw in items:
+        text = str(raw or "").strip()
+        if not text:
+            continue
+        key = text.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(text)
+    return out
+
+
+def derive_unresolved_risks(readiness: Dict[str, Any], index: Dict[str, Any]) -> List[str]:
+    risks: List[str] = []
+    slo = dict(readiness.get("slo", {}))
+    hard = list(slo.get("hard_violations", []))
+    soft = list(slo.get("soft_violations", []))
+    for row in hard:
+        metric = str(dict(row).get("metric") or "")
+        if metric:
+            risks.append(f"{metric} has hard SLO violation and requires immediate remediation.")
+    for row in soft:
+        metric = str(dict(row).get("metric") or "")
+        if metric:
+            risks.append(f"{metric} has soft SLO warning and requires ongoing monitoring.")
+
+    idx_summary = dict(index.get("summary", {}))
+    warn_count = int(idx_summary.get("warn_count", 0) or 0)
+    failed_count = int(idx_summary.get("failed_count", 0) or 0)
+    if failed_count > 0:
+        risks.append(f"Evidence trend includes {failed_count} failed phase(s); readiness can regress.")
+    if warn_count > 0:
+        risks.append(f"Evidence trend includes {warn_count} warning phase(s); continued hardening is required.")
+
+    return dedupe_lines(risks)
+
+
 def build_markdown(payload: Dict[str, Any]) -> str:
     summary = dict(payload.get("summary", {}))
     before_after = dict(payload.get("before_after", {}))
@@ -169,18 +209,18 @@ def main() -> int:
     readiness = read_json_if_exists(readiness_path)
     index = read_json_if_exists(index_path)
 
-    unresolved_risks = list(args.unresolved_risk) if args.unresolved_risk else list(DEFAULT_UNRESOLVED_RISKS)
+    manual_risks = list(args.unresolved_risk) if args.unresolved_risk else []
     handoff_items = list(args.handoff) if args.handoff else list(DEFAULT_HANDOFF)
 
     if not readiness:
         emit("ERROR", f"readiness missing path={readiness_path}", events)
-        write_failure(repo_root, out_dir, readiness_path, index_path, REASON_READINESS_MISSING, unresolved_risks, handoff_items)
+        write_failure(repo_root, out_dir, readiness_path, index_path, REASON_READINESS_MISSING, manual_risks or DEFAULT_UNRESOLVED_RISKS, handoff_items)
         write_events(run_dir, events)
         write_summary(run_dir, meta, events, extra={"status": "FAIL", "reason": REASON_READINESS_MISSING})
         return 1
     if not index:
         emit("ERROR", f"index missing path={index_path}", events)
-        write_failure(repo_root, out_dir, readiness_path, index_path, REASON_INDEX_MISSING, unresolved_risks, handoff_items)
+        write_failure(repo_root, out_dir, readiness_path, index_path, REASON_INDEX_MISSING, manual_risks or DEFAULT_UNRESOLVED_RISKS, handoff_items)
         write_events(run_dir, events)
         write_summary(run_dir, meta, events, extra={"status": "FAIL", "reason": REASON_INDEX_MISSING})
         return 1
@@ -194,6 +234,9 @@ def main() -> int:
         status = "PASS"
     else:
         status = "FAIL"
+
+    derived_risks = derive_unresolved_risks(readiness, index)
+    unresolved_risks = dedupe_lines(manual_risks + derived_risks + ([] if manual_risks else DEFAULT_UNRESOLVED_RISKS))
 
     before_after = {
         "before_scope": "S27-10 Exit (continuous canary ops+SLO)",
@@ -222,6 +265,9 @@ def main() -> int:
             "status": status,
             "readiness": readiness_state,
             "blocked_gates": blocked,
+            "readiness_reason_code": str(rsum.get("reason_code") or ""),
+            "unresolved_risk_count": len(unresolved_risks),
+            "handoff_count": len(handoff_items),
         },
         "artifact_names": {"json": "closeout_latest.json", "md": "closeout_latest.md"},
     }

@@ -25,6 +25,8 @@ DEFAULT_RECOVERY = "docs/evidence/s28-01/provider_canary_recovery_latest.json"
 
 REASON_HISTORY_MISSING = "HISTORY_MISSING"
 REASON_INSUFFICIENT_RUNS = "INSUFFICIENT_RUNS"
+REASON_INSUFFICIENT_RUNS_ENV_GAP = "INSUFFICIENT_RUNS_ENV_GAP"
+REASON_TARGET_RUNS_NOT_REACHED = "TARGET_RUNS_NOT_REACHED"
 REASON_CONSECUTIVE_NONPASS = "CONSECUTIVE_NONPASS"
 REASON_FAIL_RATE_HIGH = "FAIL_RATE_HIGH"
 REASON_SKIP_RATE_HIGH = "SKIP_RATE_HIGH"
@@ -79,6 +81,50 @@ def longest_consecutive_status(runs: List[Dict[str, Any]], target_statuses: set[
     return best
 
 
+def reason_code_counts(runs: List[Dict[str, Any]]) -> Dict[str, int]:
+    counts: Dict[str, int] = {}
+    for row in runs:
+        reason = str(row.get("reason_code") or "").strip()
+        if not reason:
+            continue
+        counts[reason] = int(counts.get(reason, 0)) + 1
+    return dict(sorted(counts.items(), key=lambda x: (-x[1], x[0])))
+
+
+def evaluate_reliability_status(
+    *,
+    history_present: bool,
+    total_runs: int,
+    min_runs: int,
+    target_runs: int,
+    max_consecutive_nonpass: int,
+    max_consecutive_threshold: int,
+    fail_rate: float,
+    fail_rate_hard_threshold: float,
+    skip_rate: float,
+    skip_rate_warn_threshold: float,
+    recovery_present: bool,
+    dominant_reason_code: str,
+) -> tuple[str, str]:
+    if not history_present:
+        return "WARN", REASON_HISTORY_MISSING
+    if total_runs < min_runs:
+        if dominant_reason_code == "MISSING_PROVIDER_ENV":
+            return "WARN", REASON_INSUFFICIENT_RUNS_ENV_GAP
+        return "WARN", REASON_INSUFFICIENT_RUNS
+    if max_consecutive_nonpass > max_consecutive_threshold:
+        return "FAIL", REASON_CONSECUTIVE_NONPASS
+    if fail_rate > fail_rate_hard_threshold:
+        return "FAIL", REASON_FAIL_RATE_HIGH
+    if skip_rate > skip_rate_warn_threshold:
+        return "WARN", REASON_SKIP_RATE_HIGH
+    if not recovery_present:
+        return "WARN", REASON_RECOVERY_SIGNAL_MISSING
+    if total_runs < target_runs:
+        return "WARN", REASON_TARGET_RUNS_NOT_REACHED
+    return "PASS", ""
+
+
 def build_markdown(payload: Dict[str, Any]) -> str:
     summary = dict(payload.get("summary", {}))
     metrics = dict(payload.get("metrics", {}))
@@ -109,6 +155,7 @@ def main() -> int:
     parser.add_argument("--history-json", default=DEFAULT_HISTORY)
     parser.add_argument("--recovery-json", default=DEFAULT_RECOVERY)
     parser.add_argument("--min-runs", type=int, default=6)
+    parser.add_argument("--target-runs", type=int, default=24)
     parser.add_argument("--max-consecutive-nonpass", type=int, default=4)
     parser.add_argument("--fail-rate-hard-threshold", type=float, default=0.30)
     parser.add_argument("--skip-rate-warn-threshold", type=float, default=0.50)
@@ -125,16 +172,8 @@ def main() -> int:
     recovery = read_json_if_exists(recovery_path)
     runs = list(hist.get("runs", [])) if isinstance(hist.get("runs"), list) else []
 
-    status = "PASS"
-    reason_code = ""
     if not hist:
-        status = "WARN"
-        reason_code = REASON_HISTORY_MISSING
         emit("WARN", f"history missing path={history_path}", events)
-    elif len(runs) < int(args.min_runs):
-        status = "WARN"
-        reason_code = REASON_INSUFFICIENT_RUNS
-        emit("WARN", f"insufficient runs total={len(runs)} min={args.min_runs}", events)
 
     total_runs = len(runs)
     fail_runs = sum(1 for x in runs if str(x.get("status") or "").upper() == "FAIL")
@@ -151,19 +190,25 @@ def main() -> int:
         hour_bucket_counts[key] = int(hour_bucket_counts.get(key, 0)) + 1
 
     recovery_status = str(dict(recovery.get("summary", {})).get("status") or "")
+    reason_counts = reason_code_counts(runs)
+    dominant_reason_code = next(iter(reason_counts.keys()), "")
+    status, reason_code = evaluate_reliability_status(
+        history_present=bool(hist),
+        total_runs=total_runs,
+        min_runs=int(args.min_runs),
+        target_runs=max(int(args.target_runs), int(args.min_runs)),
+        max_consecutive_nonpass=max_consecutive_nonpass,
+        max_consecutive_threshold=int(args.max_consecutive_nonpass),
+        fail_rate=fail_rate,
+        fail_rate_hard_threshold=float(args.fail_rate_hard_threshold),
+        skip_rate=skip_rate,
+        skip_rate_warn_threshold=float(args.skip_rate_warn_threshold),
+        recovery_present=bool(recovery),
+        dominant_reason_code=dominant_reason_code,
+    )
 
-    if max_consecutive_nonpass > int(args.max_consecutive_nonpass):
-        status = "FAIL"
-        reason_code = REASON_CONSECUTIVE_NONPASS
-    elif fail_rate > float(args.fail_rate_hard_threshold):
-        status = "FAIL"
-        reason_code = REASON_FAIL_RATE_HIGH
-    elif total_runs >= int(args.min_runs) and skip_rate > float(args.skip_rate_warn_threshold) and status != "FAIL":
-        status = "WARN"
-        reason_code = REASON_SKIP_RATE_HIGH
-    elif not recovery and status == "PASS":
-        status = "WARN"
-        reason_code = REASON_RECOVERY_SIGNAL_MISSING
+    if reason_code in {REASON_INSUFFICIENT_RUNS, REASON_INSUFFICIENT_RUNS_ENV_GAP}:
+        emit("WARN", f"insufficient runs total={total_runs} min={args.min_runs}", events)
 
     if status == "FAIL":
         emit("ERROR", f"soak v2 FAIL reason={reason_code}", events)
@@ -183,6 +228,7 @@ def main() -> int:
             "history_json": to_repo_rel(repo_root, history_path),
             "recovery_json": to_repo_rel(repo_root, recovery_path),
             "min_runs": int(args.min_runs),
+            "target_runs": max(int(args.target_runs), int(args.min_runs)),
             "max_consecutive_nonpass": int(args.max_consecutive_nonpass),
             "fail_rate_hard_threshold": float(args.fail_rate_hard_threshold),
             "skip_rate_warn_threshold": float(args.skip_rate_warn_threshold),
@@ -197,6 +243,8 @@ def main() -> int:
             "max_consecutive_nonpass": max_consecutive_nonpass,
             "hour_bucket_counts": dict(sorted(hour_bucket_counts.items(), key=lambda x: x[0])),
             "recovery_status": recovery_status,
+            "reason_code_counts": reason_counts,
+            "remaining_runs_to_target": max(0, max(int(args.target_runs), int(args.min_runs)) - total_runs),
         },
         "summary": {"status": status, "reason_code": reason_code},
         "artifact_names": {"json": "reliability_soak_v2_latest.json", "md": "reliability_soak_v2_latest.md"},

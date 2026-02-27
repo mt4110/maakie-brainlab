@@ -1,5 +1,7 @@
 import importlib.util
+import tempfile
 import unittest
+from pathlib import Path
 
 
 def _load_module():
@@ -27,6 +29,30 @@ class S28ReadinessNotifyTests(unittest.TestCase):
         )
         self.assertIn("channel=#ops", msg)
         self.assertIn("readiness=READY", msg)
+
+    def test_resolve_primary_or_fallback(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            primary = root / "primary.json"
+            fallback = root / "fallback.json"
+            fallback.write_text('{"summary":{"status":"WARN"}}\n', encoding="utf-8")
+            doc, resolved, used_fallback = self.m.resolve_primary_or_fallback(primary, fallback)
+            self.assertEqual(doc["summary"]["status"], "WARN")
+            self.assertEqual(resolved, fallback)
+            self.assertTrue(used_fallback)
+
+    def test_deliver_with_retries(self):
+        state = {"calls": 0}
+
+        def sender():
+            state["calls"] += 1
+            if state["calls"] < 3:
+                return {"sent": False, "http_status": 500, "response_tail": "", "error": "boom"}
+            return {"sent": True, "http_status": 200, "response_tail": "ok", "error": ""}
+
+        out = self.m.deliver_with_retries(sender, max_retries=3, retry_backoff_sec=0.0, sleep_fn=lambda _: None)
+        self.assertTrue(out["sent"])
+        self.assertEqual(out["attempt_count"], 3)
 
 
 if __name__ == "__main__":

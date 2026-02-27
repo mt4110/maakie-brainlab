@@ -32,6 +32,16 @@ class S28PolicyDriftGuardV2Tests(unittest.TestCase):
             diff = self.m.diff_scans(s1, s2)
             self.assertEqual(diff["changed"], ["b.txt"])
 
+    def test_high_impact_paths(self):
+        drift = {
+            "added": ["Makefile"],
+            "removed": [],
+            "changed": ["scripts/ops/s28_readiness_notify.py", "x.txt"],
+        }
+        hits = self.m.high_impact_paths(drift)
+        self.assertIn("Makefile", hits)
+        self.assertIn("scripts/ops/s28_readiness_notify.py", hits)
+
 
 if __name__ == "__main__":
     unittest.main()

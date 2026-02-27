@@ -39,6 +39,11 @@ class S28AcceptanceWallV3Tests(unittest.TestCase):
         self.assertEqual(self.m.normalize_severity("critical"), "critical")
         self.assertEqual(self.m.normalize_severity("bad"), "critical")
 
+    def test_evaluate_assertion_len_ops(self):
+        self.assertTrue(self.m.evaluate_assertion([1, 2, 3], "len_gte", 2))
+        self.assertTrue(self.m.evaluate_assertion([1], "len_lte", 1))
+        self.assertFalse(self.m.evaluate_assertion([1], "len_gte", 2))
+
 
 if __name__ == "__main__":
     unittest.main()

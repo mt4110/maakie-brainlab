@@ -43,6 +43,19 @@ class S28CloseoutTests(unittest.TestCase):
             self.assertEqual(payload["summary"]["status"], "FAIL")
             self.assertEqual(payload["summary"]["reason"], self.m.REASON_READINESS_MISSING)
 
+    def test_derive_unresolved_risks(self):
+        risks = self.m.derive_unresolved_risks(
+            {
+                "slo": {
+                    "hard_violations": [{"metric": "notify_delivery_rate"}],
+                    "soft_violations": [{"metric": "skip_rate"}],
+                }
+            },
+            {"summary": {"warn_count": 2, "failed_count": 0}},
+        )
+        self.assertTrue(any("notify_delivery_rate" in r for r in risks))
+        self.assertTrue(any("skip_rate" in r for r in risks))
+
 
 if __name__ == "__main__":
     unittest.main()

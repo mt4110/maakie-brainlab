@@ -24,6 +24,19 @@ class S28IncidentTriagePackV2Tests(unittest.TestCase):
         self.assertEqual(rows[0][0], "B")
         self.assertEqual(rows[0][1], 3)
 
+    def test_dedupe_actions(self):
+        out = self.m.dedupe_actions(["A", "a", "B"])
+        self.assertEqual(out, ["A", "B"])
+
+    def test_build_priority_actions(self):
+        actions = self.m.build_priority_actions(
+            {"recommended_actions": ["r1", "r1", "r2"]},
+            {"collection_actions": ["c1"]},
+            {"summary": {"status": "WARN", "reason_code": "NOTIFY_SEND_FAILED"}},
+        )
+        self.assertTrue(any("r1" == a for a in actions))
+        self.assertTrue(any("Configure readiness webhook" in a for a in actions))
+
 
 if __name__ == "__main__":
     unittest.main()

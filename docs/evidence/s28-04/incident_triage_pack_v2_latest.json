@@ -1,9 +1,9 @@
 {
   "schema_version": "s28-incident-triage-pack-v2",
-  "captured_at_utc": "2026-02-27T07:07:33Z",
+  "captured_at_utc": "2026-02-27T07:32:34Z",
   "git": {
     "branch": "ops/S28-01-S28-10",
-    "head": "81102446eb5a9f461a4baf4b243286fc004d9ed4"
+    "head": "fa136531e69807a535ac6f51146fdfbead621a06"
   },
   "inputs": {
     "recovery_json": "docs/evidence/s28-01/provider_canary_recovery_latest.json",
@@ -15,33 +15,51 @@
   "top_reasons": [
     {
       "reason_code": "MISSING_PROVIDER_ENV",
-      "count": 1
+      "count": 1,
+      "severity": "major"
     },
     {
       "reason_code": "NOTIFY_DRY_RUN",
-      "count": 1
+      "count": 1,
+      "severity": "minor"
     },
     {
       "reason_code": "RECOVERY_REQUIRED",
-      "count": 1
+      "count": 1,
+      "severity": "major"
     },
     {
       "reason_code": "SKIP_RATE_HIGH",
-      "count": 1
+      "count": 1,
+      "severity": "major"
+    },
+    {
+      "reason_code": "UNKNOWN_RATIO_ABOVE_TARGET",
+      "count": 1,
+      "severity": "major"
     }
   ],
+  "alerts_by_severity": {
+    "critical": 0,
+    "major": 4,
+    "minor": 1
+  },
   "priority_actions": [
-    "Validate provider env variables and credentials wiring.",
-    "Run strict canary once and verify status transition to PASS.",
+    "Validate provider env variables (`base_url/api_key/model`) in runtime and CI contexts.",
+    "Run strict canary once and verify status transition to PASS after recovery action.",
+    "Keep rollback path ready: python3 scripts/ops/s25_langchain_poc.py --mode rollback-only",
     "Collect at least 2 additional labeled cases for taxonomy 'provider'.",
     "Collect at least 1 additional labeled cases for taxonomy 'network'.",
-    "Configure readiness webhook and re-run notification dispatch."
+    "Collect at least 1 additional labeled cases for taxonomy 'schema'.",
+    "Configure readiness webhook and enable re-delivery with retries.",
+    "Resolve notification issue: NOTIFY_DRY_RUN."
   ],
   "summary": {
     "status": "WARN",
     "reason_code": "TRIAGE_ALERT",
     "missing_inputs": 0,
-    "alerts": 4
+    "alerts": 5,
+    "critical_alerts": 0
   },
   "artifact_names": {
     "json": "incident_triage_pack_v2_latest.json",

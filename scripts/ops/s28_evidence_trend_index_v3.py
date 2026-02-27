@@ -10,6 +10,7 @@ Goal:
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import json
 import time
 from pathlib import Path
@@ -70,13 +71,35 @@ def infer_status(doc: Dict[str, Any]) -> str:
     return "PASS"
 
 
+def parse_captured_at_epoch(value: str) -> float:
+    text = str(value or "").strip()
+    if not text:
+        return 0.0
+    try:
+        return dt.datetime.fromisoformat(text.replace("Z", "+00:00")).timestamp()
+    except Exception:
+        return 0.0
+
+
+def is_stale(captured_at_utc: str, now_epoch: float, stale_hours: float) -> bool:
+    if stale_hours <= 0:
+        return False
+    ts = parse_captured_at_epoch(captured_at_utc)
+    if ts <= 0:
+        return True
+    age_sec = max(0.0, float(now_epoch) - ts)
+    return age_sec > float(stale_hours) * 3600.0
+
+
 def count_statuses(rows: List[Dict[str, Any]]) -> Dict[str, int]:
-    out = {"present_count": 0, "missing_count": 0, "pass_count": 0, "warn_count": 0, "failed_count": 0}
+    out = {"present_count": 0, "missing_count": 0, "pass_count": 0, "warn_count": 0, "failed_count": 0, "stale_count": 0}
     for row in rows:
         if not bool(row.get("present")):
             out["missing_count"] += 1
             continue
         out["present_count"] += 1
+        if bool(row.get("stale")):
+            out["stale_count"] += 1
         st = str(row.get("status") or "").upper()
         if st == "FAIL":
             out["failed_count"] += 1
@@ -88,7 +111,11 @@ def count_statuses(rows: List[Dict[str, Any]]) -> Dict[str, int]:
 
 
 def overall_status(counts: Dict[str, int]) -> str:
-    if int(counts.get("missing_count", 0)) > 0 or int(counts.get("failed_count", 0)) > 0:
+    if (
+        int(counts.get("missing_count", 0)) > 0
+        or int(counts.get("failed_count", 0)) > 0
+        or int(counts.get("stale_count", 0)) > 0
+    ):
         return "FAIL"
     if int(counts.get("warn_count", 0)) > 0:
         return "WARN"
@@ -135,6 +162,7 @@ def main() -> int:
     parser.add_argument("--out-dir", default=DEFAULT_OUT_DIR)
     parser.add_argument("--history-file", default=DEFAULT_HISTORY_FILE)
     parser.add_argument("--max-history", type=int, default=100)
+    parser.add_argument("--stale-hours", type=float, default=6.0)
     parser.add_argument("--obs-root", default=DEFAULT_OBS_ROOT)
     args = parser.parse_args()
 
@@ -144,27 +172,35 @@ def main() -> int:
     run_dir, meta, events = make_run_context(repo_root, tool="s28-evidence-trend-index-v3", obs_root=args.obs_root)
 
     rows: List[Dict[str, Any]] = []
+    now_epoch = time.time()
     for phase, rel_artifact in PHASE_ARTIFACTS:
         path = (repo_root / rel_artifact).resolve()
         doc = read_json_if_exists(path)
         if not doc:
             emit("ERROR", f"phase={phase} artifact missing path={path}", events)
-            rows.append({"phase": phase, "artifact": rel_artifact, "present": False, "status": "MISSING", "captured_at_utc": ""})
+            rows.append(
+                {"phase": phase, "artifact": rel_artifact, "present": False, "status": "MISSING", "captured_at_utc": "", "stale": False}
+            )
             continue
         status = infer_status(doc)
+        captured = str(doc.get("captured_at_utc") or "")
+        stale = is_stale(captured, now_epoch=now_epoch, stale_hours=float(args.stale_hours))
         level = "OK"
         if status == "FAIL":
             level = "ERROR"
         elif status == "WARN":
             level = "WARN"
-        emit(level, f"phase={phase} status={status}", events)
+        if stale:
+            level = "ERROR"
+        emit(level, f"phase={phase} status={status} stale={stale}", events)
         rows.append(
             {
                 "phase": phase,
                 "artifact": rel_artifact,
                 "present": True,
                 "status": status,
-                "captured_at_utc": str(doc.get("captured_at_utc") or ""),
+                "captured_at_utc": captured,
+                "stale": stale,
             }
         )
 

@@ -28,6 +28,19 @@ REASON_ALL_INPUTS_MISSING = "ALL_INPUTS_MISSING"
 REASON_PARTIAL_INPUTS_MISSING = "PARTIAL_INPUTS_MISSING"
 REASON_TRIAGE_ALERT = "TRIAGE_ALERT"
 
+REASON_SEVERITY = {
+    "RECOVERY_COMMAND_FAILED": "critical",
+    "GATES_BLOCKED": "critical",
+    "HARD_SLO_VIOLATION": "critical",
+    "RECOVERY_REQUIRED": "major",
+    "SKIP_RATE_HIGH": "major",
+    "UNKNOWN_RATIO_ABOVE_TARGET": "major",
+    "NOTIFY_SEND_FAILED": "major",
+    "NOTIFY_DRY_RUN": "minor",
+    "BASELINE_CREATED": "minor",
+    "INSUFFICIENT_RUNS": "minor",
+}
+
 
 def to_repo_rel(repo_root: Path, value: str | Path) -> str:
     p = Path(value).resolve()
@@ -61,6 +74,41 @@ def count_reason(reason_counts: Dict[str, int], code: str) -> None:
 def top_reason_codes(reason_counts: Dict[str, int], limit: int = 5) -> List[Tuple[str, int]]:
     rows = sorted(reason_counts.items(), key=lambda x: (-x[1], x[0]))
     return rows[: max(1, int(limit))]
+
+
+def reason_severity(reason_code: str) -> str:
+    code = str(reason_code or "").upper()
+    return str(REASON_SEVERITY.get(code, "major"))
+
+
+def dedupe_actions(actions: List[str], limit: int = 8) -> List[str]:
+    out: List[str] = []
+    seen: set[str] = set()
+    for raw in actions:
+        text = str(raw or "").strip()
+        if not text:
+            continue
+        key = text.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(text)
+        if len(out) >= max(1, int(limit)):
+            break
+    return out
+
+
+def build_priority_actions(recovery: Dict[str, Any], taxonomy: Dict[str, Any], notify: Dict[str, Any]) -> List[str]:
+    actions: List[str] = []
+    actions.extend([str(item) for item in list(recovery.get("recommended_actions", []))[:3]])
+    actions.extend([str(item) for item in list(taxonomy.get("collection_actions", []))[:3]])
+    notify_sum = dict(notify.get("summary", {}))
+    notify_reason = str(notify_sum.get("reason_code") or "")
+    if str(notify_sum.get("status") or "") != "PASS":
+        actions.append("Configure readiness webhook and enable re-delivery with retries.")
+        if notify_reason:
+            actions.append(f"Resolve notification issue: {notify_reason}.")
+    return dedupe_actions(actions, limit=8)
 
 
 def build_markdown(payload: Dict[str, Any]) -> str:
@@ -147,17 +195,19 @@ def main() -> int:
         if reason:
             reason_counts[reason] = int(reason_counts.get(reason, 0)) + max(1, cnt)
 
-    priority_actions: List[str] = []
-    for item in list(recovery.get("recommended_actions", []))[:2]:
-        priority_actions.append(str(item))
-    for item in list(taxonomy.get("collection_actions", []))[:2]:
-        priority_actions.append(str(item))
-    notify_sum = dict(notify.get("summary", {}))
-    if str(notify_sum.get("status") or "") != "PASS":
-        priority_actions.append("Configure readiness webhook and re-run notification dispatch.")
+    priority_actions = build_priority_actions(recovery, taxonomy, notify)
 
-    top_rows = [{"reason_code": key, "count": count} for key, count in top_reason_codes(reason_counts, limit=int(args.top_limit))]
+    top_rows = [
+        {"reason_code": key, "count": count, "severity": reason_severity(key)}
+        for key, count in top_reason_codes(reason_counts, limit=int(args.top_limit))
+    ]
     alerts = len(top_rows)
+    alerts_by_severity = {"critical": 0, "major": 0, "minor": 0}
+    for row in top_rows:
+        sev = str(row.get("severity") or "major")
+        if sev not in alerts_by_severity:
+            sev = "major"
+        alerts_by_severity[sev] = int(alerts_by_severity[sev]) + 1
 
     if len(missing_inputs) == 4:
         status = "FAIL"
@@ -194,12 +244,14 @@ def main() -> int:
         },
         "missing_inputs": missing_inputs,
         "top_reasons": top_rows,
+        "alerts_by_severity": alerts_by_severity,
         "priority_actions": priority_actions,
         "summary": {
             "status": status,
             "reason_code": reason_code,
             "missing_inputs": len(missing_inputs),
             "alerts": alerts,
+            "critical_alerts": int(alerts_by_severity.get("critical", 0)),
         },
         "artifact_names": {
             "json": "incident_triage_pack_v2_latest.json",

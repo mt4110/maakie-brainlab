@@ -37,6 +37,11 @@ REASON_RECOVERY_REQUIRED = "RECOVERY_REQUIRED"
 REASON_RECOVERY_COMMAND_FAILED = "RECOVERY_COMMAND_FAILED"
 REASON_SKIP_RATE_HIGH = "SKIP_RATE_HIGH"
 
+SKIP_CAUSE_ENV = "env"
+SKIP_CAUSE_CONFIG = "config"
+SKIP_CAUSE_RUNTIME = "runtime"
+SKIP_CAUSE_UNKNOWN = "unknown"
+
 
 def to_repo_rel(repo_root: Path, value: str | Path) -> str:
     p = Path(value).resolve()
@@ -79,6 +84,58 @@ def trailing_nonpass_streak(runs: List[Dict[str, Any]]) -> int:
             break
         streak += 1
     return streak
+
+
+def classify_skip_reason(reason_code: str) -> str:
+    code = str(reason_code or "").upper()
+    if not code:
+        return SKIP_CAUSE_UNKNOWN
+    if "ENV" in code or "CREDENTIAL" in code or "API_KEY" in code:
+        return SKIP_CAUSE_ENV
+    if "CONFIG" in code or "SCHEMA" in code or "POLICY" in code:
+        return SKIP_CAUSE_CONFIG
+    if "TIMEOUT" in code or "NETWORK" in code or "HTTP" in code:
+        return SKIP_CAUSE_RUNTIME
+    return SKIP_CAUSE_UNKNOWN
+
+
+def summarize_skip_causes(runs: List[Dict[str, Any]]) -> Dict[str, int]:
+    counts = {
+        SKIP_CAUSE_ENV: 0,
+        SKIP_CAUSE_CONFIG: 0,
+        SKIP_CAUSE_RUNTIME: 0,
+        SKIP_CAUSE_UNKNOWN: 0,
+    }
+    for row in runs:
+        if str(row.get("status") or "").upper() != "SKIP":
+            continue
+        cause = classify_skip_reason(str(row.get("reason_code") or ""))
+        counts[cause] = int(counts.get(cause, 0)) + 1
+    return counts
+
+
+def dominant_cause(counts: Dict[str, int]) -> str:
+    rows = sorted(counts.items(), key=lambda x: (-int(x[1]), x[0]))
+    if not rows or int(rows[0][1]) <= 0:
+        return SKIP_CAUSE_UNKNOWN
+    return str(rows[0][0])
+
+
+def build_recommended_actions(rollback_cmd: str, top_cause: str, trailing: int, recovery_threshold: int) -> List[str]:
+    actions: List[str] = []
+    if top_cause == SKIP_CAUSE_ENV:
+        actions.append("Validate provider env variables (`base_url/api_key/model`) in runtime and CI contexts.")
+    elif top_cause == SKIP_CAUSE_CONFIG:
+        actions.append("Validate provider canary config/policy file schema and referenced paths.")
+    elif top_cause == SKIP_CAUSE_RUNTIME:
+        actions.append("Investigate provider/network instability and tune timeout/backoff policy.")
+    else:
+        actions.append("Inspect latest canary logs and classify dominant skip/fail reason before retry.")
+
+    if trailing >= recovery_threshold:
+        actions.append("Run strict canary once and verify status transition to PASS after recovery action.")
+    actions.append(f"Keep rollback path ready: {rollback_cmd}")
+    return actions
 
 
 def run_recovery_command(repo_root: Path, command: str, timeout_sec: int) -> Dict[str, Any]:
@@ -206,11 +263,14 @@ def main() -> int:
     if not rollback_cmd:
         rollback_cmd = str(base_summary.get("rollback_command") or DEFAULT_ROLLBACK_CMD)
 
-    recommended_actions = [
-        "Validate provider env variables and credentials wiring.",
-        "Run strict canary once and verify status transition to PASS.",
-        f"Keep rollback path ready: {rollback_cmd}",
-    ]
+    skip_cause_counts = summarize_skip_causes(sample)
+    top_cause = dominant_cause(skip_cause_counts)
+    recommended_actions = build_recommended_actions(
+        rollback_cmd=rollback_cmd,
+        top_cause=top_cause,
+        trailing=trailing,
+        recovery_threshold=recovery_threshold,
+    )
 
     recovery_exec: Dict[str, Any] = {
         "attempted": False,
@@ -278,6 +338,8 @@ def main() -> int:
             "fail_rate": fail_rate,
             "trailing_nonpass_streak": trailing,
             "base_skip_rate": float(trend_src.get("skip_rate", 0.0) or 0.0),
+            "skip_cause_counts": skip_cause_counts,
+            "dominant_skip_cause": top_cause,
         },
         "recovery": recovery_exec,
         "recommended_actions": recommended_actions,
@@ -285,6 +347,7 @@ def main() -> int:
             "status": status,
             "reason_code": reason_code,
             "missing_inputs": len(missing_inputs),
+            "dominant_skip_cause": top_cause,
         },
         "artifact_names": {
             "json": "provider_canary_recovery_latest.json",

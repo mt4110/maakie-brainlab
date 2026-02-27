@@ -1,8 +1,8 @@
 # S28-01 Provider Canary Recovery (Latest)
 
-- CapturedAtUTC: `2026-02-27T07:09:13Z`
+- CapturedAtUTC: `2026-02-27T07:32:33Z`
 - Branch: `ops/S28-01-S28-10`
-- HeadSHA: `81102446eb5a9f461a4baf4b243286fc004d9ed4`
+- HeadSHA: `fa136531e69807a535ac6f51146fdfbead621a06`
 
 ## Summary
 
@@ -13,8 +13,8 @@
 
 ## Recommended Actions
 
-- Validate provider env variables and credentials wiring.
-- Run strict canary once and verify status transition to PASS.
+- Validate provider env variables (`base_url/api_key/model`) in runtime and CI contexts.
+- Run strict canary once and verify status transition to PASS after recovery action.
 - Keep rollback path ready: python3 scripts/ops/s25_langchain_poc.py --mode rollback-only
 
 ## PR Body Snippet

@@ -46,6 +46,21 @@ class S28TaxonomyFeedbackLoopTests(unittest.TestCase):
         self.assertTrue(ok)
         self.assertEqual(reason, "")
 
+    def test_candidate_priority_prefers_more_unknown_tags(self):
+        known = {"provider", "network"}
+        a = {"case_id": "a", "tags": ["provider", "new-x"], "query": "q"}
+        b = {"case_id": "b", "tags": ["provider"], "query": "long query"}
+        self.assertGreater(self.m.candidate_priority(a, known), self.m.candidate_priority(b, known))
+
+    def test_dedupe_candidates(self):
+        rows = [
+            {"case_id": "c1", "tags": ["unknown"], "query": "a"},
+            {"case_id": "c1", "tags": ["unknown"], "query": "b"},
+            {"case_id": "c2", "tags": ["unknown"], "query": "c"},
+        ]
+        deduped = self.m.dedupe_candidates(rows)
+        self.assertEqual(len(deduped), 2)
+
 
 if __name__ == "__main__":
     unittest.main()

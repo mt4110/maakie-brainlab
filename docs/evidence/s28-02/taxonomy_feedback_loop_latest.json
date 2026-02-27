@@ -1,9 +1,9 @@
 {
   "schema_version": "s28-taxonomy-feedback-loop-v1",
-  "captured_at_utc": "2026-02-27T07:07:33Z",
+  "captured_at_utc": "2026-02-27T07:32:34Z",
   "git": {
     "branch": "ops/S28-01-S28-10",
-    "head": "81102446eb5a9f461a4baf4b243286fc004d9ed4"
+    "head": "fa136531e69807a535ac6f51146fdfbead621a06"
   },
   "inputs": {
     "config": "docs/ops/S28-02_TAXONOMY_FEEDBACK_LOOP.toml",
@@ -20,23 +20,17 @@
       "security",
       "timeout"
     ],
-    "unknown_ratio_target": 0.1
+    "unknown_ratio_target": 0.05
   },
   "metrics": {
-    "unknown_ratio": 0.0625,
+    "unknown_ratio": 0.3125,
+    "unknown_ratio_upstream": 0.0625,
+    "unknown_ratio_cases": 0.3125,
     "candidate_count": 5,
-    "total_cases_scanned": 16
+    "total_cases_scanned": 16,
+    "unknown_like_cases": 5
   },
   "candidates": [
-    {
-      "case_id": "m203",
-      "tags": [
-        "basic",
-        "schema"
-      ],
-      "query": "レスポンス JSON のキー欠落時に優先して確認すべき箇所は？",
-      "suggested_taxonomy": "schema"
-    },
     {
       "case_id": "m205",
       "tags": [
@@ -67,6 +61,15 @@
       "suggested_taxonomy": "network"
     },
     {
+      "case_id": "m203",
+      "tags": [
+        "basic",
+        "schema"
+      ],
+      "query": "レスポンス JSON のキー欠落時に優先して確認すべき箇所は？",
+      "suggested_taxonomy": "schema"
+    },
+    {
       "case_id": "m216",
       "tags": [
         "ops",
@@ -80,11 +83,12 @@
     "Collect at least 2 additional labeled cases for taxonomy 'provider'.",
     "Collect at least 1 additional labeled cases for taxonomy 'network'.",
     "Collect at least 1 additional labeled cases for taxonomy 'schema'.",
-    "Collect at least 1 additional labeled cases for taxonomy 'unknown'."
+    "Collect at least 1 additional labeled cases for taxonomy 'unknown'.",
+    "Promote top unknown candidates to incident triage backlog and assign owner."
   ],
   "summary": {
-    "status": "PASS",
-    "reason_code": "",
+    "status": "WARN",
+    "reason_code": "UNKNOWN_RATIO_ABOVE_TARGET",
     "missing_inputs": 0
   },
   "artifact_names": {

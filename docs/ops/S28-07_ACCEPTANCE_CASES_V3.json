@@ -48,6 +48,30 @@
       "fallback": "Run S28-06 and inspect max_consecutive_nonpass + reason_code.",
       "artifact": "docs/evidence/s28-06/reliability_soak_v2_latest.json",
       "assertion": {"path": "summary.status", "op": "in", "value": ["PASS", "WARN"]}
+    },
+    {
+      "id": "S28A-007",
+      "title": "readiness notify tracks delivery attempts",
+      "severity": "minor",
+      "fallback": "Run S28-03 and verify notification.attempt_count is emitted.",
+      "artifact": "docs/evidence/s28-03/readiness_notify_latest.json",
+      "assertion": {"path": "notification.attempt_count", "op": "gte", "value": 0}
+    },
+    {
+      "id": "S28A-008",
+      "title": "reliability soak reports remaining run gap",
+      "severity": "minor",
+      "fallback": "Run S28-06 and verify remaining_runs_to_target is emitted.",
+      "artifact": "docs/evidence/s28-06/reliability_soak_v2_latest.json",
+      "assertion": {"path": "metrics.remaining_runs_to_target", "op": "gte", "value": 0}
+    },
+    {
+      "id": "S28A-009",
+      "title": "triage pack includes severity buckets",
+      "severity": "major",
+      "fallback": "Run S28-04 and verify alerts_by_severity is emitted.",
+      "artifact": "docs/evidence/s28-04/incident_triage_pack_v2_latest.json",
+      "assertion": {"path": "alerts_by_severity", "op": "truthy", "value": true}
     }
   ]
 }

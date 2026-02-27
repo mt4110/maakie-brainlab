@@ -30,6 +30,11 @@ class S28EvidenceTrendIndexV3Tests(unittest.TestCase):
         self.assertEqual(counts["missing_count"], 1)
         self.assertEqual(self.m.overall_status(counts), "FAIL")
 
+    def test_is_stale(self):
+        now = 1_000_000.0
+        self.assertTrue(self.m.is_stale("", now_epoch=now, stale_hours=1.0))
+        self.assertFalse(self.m.is_stale("1970-01-12T13:46:40Z", now_epoch=1_000_001.0, stale_hours=1.0))
+
 
 if __name__ == "__main__":
     unittest.main()

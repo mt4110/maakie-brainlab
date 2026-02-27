@@ -22,7 +22,7 @@ DEFAULT_CASES_FILE = "docs/ops/S28-07_ACCEPTANCE_CASES_V3.json"
 DEFAULT_OUT_DIR = "docs/evidence/s28-07"
 
 SEVERITIES = {"critical", "major", "minor"}
-ALLOWED_OPS = {"eq", "neq", "gte", "lte", "in", "contains", "truthy"}
+ALLOWED_OPS = {"eq", "neq", "gte", "lte", "in", "contains", "truthy", "len_gte", "len_lte"}
 
 REASON_CASE_INVALID = "CASE_INVALID"
 REASON_CASES_FILE_INVALID = "CASES_FILE_INVALID"
@@ -109,6 +109,8 @@ def validate_case(case: Dict[str, Any]) -> Tuple[bool, str]:
         return False, f"assertion.op invalid: {op}"
     if op != "truthy" and "value" not in assertion:
         return False, "assertion.value missing"
+    if op in {"len_gte", "len_lte"} and not str(assertion.get("path") or "").strip():
+        return False, "assertion.path missing"
     if op not in {"truthy"} and not str(assertion.get("path") or "").strip():
         return False, "assertion.path missing"
     return True, ""
@@ -176,6 +178,16 @@ def evaluate_assertion(actual: Any, op: str, expected: Any) -> bool:
         return str(expected) in str(actual)
     if op == "truthy":
         return bool(actual)
+    if op == "len_gte":
+        try:
+            return len(actual) >= int(expected)
+        except Exception:
+            return False
+    if op == "len_lte":
+        try:
+            return len(actual) <= int(expected)
+        except Exception:
+            return False
     return False
 
 
@@ -266,7 +278,8 @@ def run_case(repo_root: Path, case: Dict[str, Any], run_dir: Path) -> Dict[str, 
         }
 
     actual: Any = doc
-    if op != "truthy":
+    use_path = bool(path) and (op != "truthy" or bool(path))
+    if use_path:
         ok, resolved = resolve_path(doc, path)
         if not ok:
             reason = REASON_PATH_MISSING

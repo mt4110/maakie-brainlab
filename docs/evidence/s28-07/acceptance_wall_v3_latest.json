@@ -1,16 +1,16 @@
 {
   "schema_version": "s28-acceptance-wall-v3",
-  "captured_at_utc": "2026-02-27T07:07:33.485965+00:00",
+  "captured_at_utc": "2026-02-27T07:32:34.365661+00:00",
   "git": {
     "branch": "ops/S28-01-S28-10",
-    "head": "81102446eb5a9f461a4baf4b243286fc004d9ed4"
+    "head": "fa136531e69807a535ac6f51146fdfbead621a06"
   },
   "cases_file": "docs/ops/S28-07_ACCEPTANCE_CASES_V3.json",
   "summary": {
     "status": "PASS",
     "reason_code": "",
-    "total_cases": 6,
-    "passed_cases": 6,
+    "total_cases": 9,
+    "passed_cases": 9,
     "failed_cases": 0,
     "critical_failed": 0,
     "severity_failed": {
@@ -56,7 +56,7 @@
           "WARN"
         ]
       },
-      "actual": "PASS",
+      "actual": "WARN",
       "log_path": "s28a-002.log"
     },
     {
@@ -88,56 +88,16 @@
         "op": "truthy",
         "value": true
       },
-      "actual": {
-        "schema_version": "s28-incident-triage-pack-v2",
-        "captured_at_utc": "2026-02-27T07:07:33Z",
-        "git": {
-          "branch": "ops/S28-01-S28-10",
-          "head": "81102446eb5a9f461a4baf4b243286fc004d9ed4"
-        },
-        "inputs": {
-          "recovery_json": "docs/evidence/s28-01/provider_canary_recovery_latest.json",
-          "taxonomy_json": "docs/evidence/s28-02/taxonomy_feedback_loop_latest.json",
-          "notify_json": "docs/evidence/s28-03/readiness_notify_latest.json",
-          "triage_v1_json": "docs/evidence/s27-04/incident_triage_pack_latest.json"
-        },
-        "missing_inputs": [],
-        "top_reasons": [
-          {
-            "reason_code": "MISSING_PROVIDER_ENV",
-            "count": 1
-          },
-          {
-            "reason_code": "NOTIFY_DRY_RUN",
-            "count": 1
-          },
-          {
-            "reason_code": "RECOVERY_REQUIRED",
-            "count": 1
-          },
-          {
-            "reason_code": "SKIP_RATE_HIGH",
-            "count": 1
-          }
-        ],
-        "priority_actions": [
-          "Validate provider env variables and credentials wiring.",
-          "Run strict canary once and verify status transition to PASS.",
-          "Collect at least 2 additional labeled cases for taxonomy 'provider'.",
-          "Collect at least 1 additional labeled cases for taxonomy 'network'.",
-          "Configure readiness webhook and re-run notification dispatch."
-        ],
-        "summary": {
-          "status": "WARN",
-          "reason_code": "TRIAGE_ALERT",
-          "missing_inputs": 0,
-          "alerts": 4
-        },
-        "artifact_names": {
-          "json": "incident_triage_pack_v2_latest.json",
-          "md": "incident_triage_pack_v2_latest.md"
-        }
-      },
+      "actual": [
+        "Validate provider env variables (`base_url/api_key/model`) in runtime and CI contexts.",
+        "Run strict canary once and verify status transition to PASS after recovery action.",
+        "Keep rollback path ready: python3 scripts/ops/s25_langchain_poc.py --mode rollback-only",
+        "Collect at least 2 additional labeled cases for taxonomy 'provider'.",
+        "Collect at least 1 additional labeled cases for taxonomy 'network'.",
+        "Collect at least 1 additional labeled cases for taxonomy 'schema'.",
+        "Configure readiness webhook and enable re-delivery with retries.",
+        "Resolve notification issue: NOTIFY_DRY_RUN."
+      ],
       "log_path": "s28a-004.log"
     },
     {
@@ -174,11 +134,63 @@
       },
       "actual": "WARN",
       "log_path": "s28a-006.log"
+    },
+    {
+      "case_id": "S28A-007",
+      "title": "readiness notify tracks delivery attempts",
+      "severity": "minor",
+      "fallback": "Run S28-03 and verify notification.attempt_count is emitted.",
+      "status": "PASS",
+      "reason_code": "",
+      "artifact": "docs/evidence/s28-03/readiness_notify_latest.json",
+      "assertion": {
+        "path": "notification.attempt_count",
+        "op": "gte",
+        "value": 0
+      },
+      "actual": 0,
+      "log_path": "s28a-007.log"
+    },
+    {
+      "case_id": "S28A-008",
+      "title": "reliability soak reports remaining run gap",
+      "severity": "minor",
+      "fallback": "Run S28-06 and verify remaining_runs_to_target is emitted.",
+      "status": "PASS",
+      "reason_code": "",
+      "artifact": "docs/evidence/s28-06/reliability_soak_v2_latest.json",
+      "assertion": {
+        "path": "metrics.remaining_runs_to_target",
+        "op": "gte",
+        "value": 0
+      },
+      "actual": 21,
+      "log_path": "s28a-008.log"
+    },
+    {
+      "case_id": "S28A-009",
+      "title": "triage pack includes severity buckets",
+      "severity": "major",
+      "fallback": "Run S28-04 and verify alerts_by_severity is emitted.",
+      "status": "PASS",
+      "reason_code": "",
+      "artifact": "docs/evidence/s28-04/incident_triage_pack_v2_latest.json",
+      "assertion": {
+        "path": "alerts_by_severity",
+        "op": "truthy",
+        "value": true
+      },
+      "actual": {
+        "critical": 0,
+        "major": 4,
+        "minor": 1
+      },
+      "log_path": "s28a-009.log"
     }
   ],
   "artifact_names": {
     "json": "acceptance_wall_v3_latest.json",
     "md": "acceptance_wall_v3_latest.md",
-    "run_dir": ".local/obs/s25-ops/s28-acceptance-wall-v3/s28-acceptance-wall-v3__20260227T070733Z__ops-s28-01-s28-10__8110244"
+    "run_dir": ".local/obs/s25-ops/s28-acceptance-wall-v3/s28-acceptance-wall-v3__20260227T073234Z__ops-s28-01-s28-10__fa13653"
   }
 }

@@ -1,6 +1,6 @@
 {
   "schema_version": "s28-evidence-trend-history-v3",
-  "updated_at_utc": "2026-02-27T07:07:33Z",
+  "updated_at_utc": "2026-02-27T07:32:34Z",
   "snapshots": [
     {
       "captured_at_utc": "2026-02-27T07:07:33Z",
@@ -15,6 +15,27 @@
       "phase_statuses": {
         "S28-01": "WARN",
         "S28-02": "PASS",
+        "S28-03": "WARN",
+        "S28-04": "WARN",
+        "S28-05": "WARN",
+        "S28-06": "WARN",
+        "S28-07": "PASS"
+      }
+    },
+    {
+      "captured_at_utc": "2026-02-27T07:32:34Z",
+      "status": "WARN",
+      "counts": {
+        "present_count": 7,
+        "missing_count": 0,
+        "pass_count": 1,
+        "warn_count": 6,
+        "failed_count": 0,
+        "stale_count": 0
+      },
+      "phase_statuses": {
+        "S28-01": "WARN",
+        "S28-02": "WARN",
         "S28-03": "WARN",
         "S28-04": "WARN",
         "S28-05": "WARN",

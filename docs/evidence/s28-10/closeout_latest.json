@@ -1,9 +1,9 @@
 {
   "schema_version": "s28-closeout-v1",
-  "captured_at_utc": "2026-02-27T07:07:44Z",
+  "captured_at_utc": "2026-02-27T07:34:11Z",
   "git": {
     "branch": "ops/S28-01-S28-10",
-    "head": "81102446eb5a9f461a4baf4b243286fc004d9ed4"
+    "head": "fa136531e69807a535ac6f51146fdfbead621a06"
   },
   "inputs": {
     "readiness_json": "docs/evidence/s28-09/slo_readiness_v2_latest.json",
@@ -15,9 +15,14 @@
     "before_phases_present": 10,
     "after_phases_present": 10,
     "after_failed_count": 0,
-    "after_warn_count": 5
+    "after_warn_count": 6
   },
   "unresolved_risks": [
+    "skip_rate has hard SLO violation and requires immediate remediation.",
+    "unknown_ratio has hard SLO violation and requires immediate remediation.",
+    "notify_delivery_rate has hard SLO violation and requires immediate remediation.",
+    "reliability_total_runs has hard SLO violation and requires immediate remediation.",
+    "Evidence trend includes 6 warning phase(s); continued hardening is required.",
     "provider env 未設定時の SKIP 常態化は運用継続監視が必要。",
     "長時間高負荷時の retry/backoff 最適値は追加検証が必要。",
     "unknown taxonomy の恒常的発生はデータ収集強化が必要。"
@@ -28,9 +33,12 @@
     "S29-03: readiness 通知のマルチチャネル配信と再送制御を導入する。"
   ],
   "summary": {
-    "status": "PASS",
-    "readiness": "WARN_ONLY",
-    "blocked_gates": 0
+    "status": "FAIL",
+    "readiness": "BLOCKED",
+    "blocked_gates": 4,
+    "readiness_reason_code": "HARD_SLO_VIOLATION",
+    "unresolved_risk_count": 8,
+    "handoff_count": 3
   },
   "artifact_names": {
     "json": "closeout_latest.json",

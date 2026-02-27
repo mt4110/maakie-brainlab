@@ -1,17 +1,17 @@
 {
   "schema_version": "s28-provider-canary-recovery-v1",
-  "captured_at_utc": "2026-02-27T07:09:13Z",
+  "captured_at_utc": "2026-02-27T07:32:33Z",
   "git": {
     "branch": "ops/S28-01-S28-10",
-    "head": "81102446eb5a9f461a4baf4b243286fc004d9ed4"
+    "head": "fa136531e69807a535ac6f51146fdfbead621a06"
   },
   "inputs": {
     "canary_ops_json": "docs/evidence/s27-01/provider_canary_ops_latest.json",
     "history_json": "docs/evidence/s27-01/provider_canary_history.json",
     "config": "docs/ops/S28-01_PROVIDER_CANARY_RECOVERY.toml",
-    "window_size": 6,
+    "window_size": 12,
     "recovery_threshold": 3,
-    "skip_rate_warn_threshold": 0.5
+    "skip_rate_warn_threshold": 0.2
   },
   "trend": {
     "window_count": 3,
@@ -20,7 +20,14 @@
     "skip_rate": 1.0,
     "fail_rate": 0.0,
     "trailing_nonpass_streak": 3,
-    "base_skip_rate": 1.0
+    "base_skip_rate": 1.0,
+    "skip_cause_counts": {
+      "env": 3,
+      "config": 0,
+      "runtime": 0,
+      "unknown": 0
+    },
+    "dominant_skip_cause": "env"
   },
   "recovery": {
     "attempted": false,
@@ -31,14 +38,15 @@
     "stderr_tail": ""
   },
   "recommended_actions": [
-    "Validate provider env variables and credentials wiring.",
-    "Run strict canary once and verify status transition to PASS.",
+    "Validate provider env variables (`base_url/api_key/model`) in runtime and CI contexts.",
+    "Run strict canary once and verify status transition to PASS after recovery action.",
     "Keep rollback path ready: python3 scripts/ops/s25_langchain_poc.py --mode rollback-only"
   ],
   "summary": {
     "status": "WARN",
     "reason_code": "RECOVERY_REQUIRED",
-    "missing_inputs": 0
+    "missing_inputs": 0,
+    "dominant_skip_cause": "env"
   },
   "artifact_names": {
     "json": "provider_canary_recovery_latest.json",

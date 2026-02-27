@@ -103,7 +103,30 @@ def build_collection_actions(candidates: List[Dict[str, Any]], max_actions: int)
     actions: List[str] = []
     for tax, cnt in sorted(grouped.items(), key=lambda x: (-x[1], x[0])):
         actions.append(f"Collect at least {cnt} additional labeled cases for taxonomy '{tax}'.")
+    if candidates:
+        actions.append("Promote top unknown candidates to incident triage backlog and assign owner.")
     return actions[: max(1, int(max_actions))]
+
+
+def candidate_priority(row: Dict[str, Any], known_tags: set[str]) -> Tuple[int, int, str]:
+    tags = [str(x).strip().lower() for x in list(row.get("tags") or []) if str(x).strip()]
+    unknown_tag_count = sum(1 for t in tags if t not in known_tags and t != "unknown")
+    query_len = len(str(row.get("query") or ""))
+    case_id = str(row.get("case_id") or "")
+    return (unknown_tag_count, query_len, case_id)
+
+
+def dedupe_candidates(candidates: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    out: List[Dict[str, Any]] = []
+    seen: set[str] = set()
+    for row in candidates:
+        cid = str(row.get("case_id") or "").strip()
+        key = cid or json.dumps(row, sort_keys=True, ensure_ascii=False)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(row)
+    return out
 
 
 def validate_config(cfg: Dict[str, Any]) -> Tuple[bool, str]:
@@ -232,12 +255,14 @@ def main() -> int:
     known_tags = {str(x).strip().lower() for x in list(cfg.get("known_tags") or []) if str(x).strip()}
     max_candidates = int(cfg.get("max_candidates", 12) or 12)
     candidates: List[Dict[str, Any]] = []
+    unknown_like_count = 0
     for row in cases:
         tags = [str(x).strip() for x in list(row.get("tags") or []) if str(x).strip()]
         low_tags = {t.lower() for t in tags}
         unknown_like = "unknown" in low_tags or bool(low_tags - known_tags)
         if not unknown_like:
             continue
+        unknown_like_count += 1
         candidates.append(
             {
                 "case_id": str(row.get("case_id") or ""),
@@ -246,12 +271,16 @@ def main() -> int:
                 "suggested_taxonomy": suggest_taxonomy(tags, str(row.get("query") or "")),
             }
         )
-        if len(candidates) >= max_candidates:
-            break
+    candidates = dedupe_candidates(candidates)
+    candidates = sorted(candidates, key=lambda r: candidate_priority(r, known_tags), reverse=True)
+    if len(candidates) > max_candidates:
+        candidates = candidates[:max_candidates]
 
     collection_actions = build_collection_actions(candidates, int(cfg.get("max_actions", 5) or 5))
 
     target = float(cfg.get("unknown_ratio_target", 0.1) or 0.1)
+    case_unknown_ratio = 0.0 if not cases else round(float(unknown_like_count) / float(len(cases)), 4)
+    unknown_ratio_effective = round(max(float(unknown_ratio), float(case_unknown_ratio)), 4)
     status = "PASS"
     reason_code = ""
     if missing_inputs:
@@ -259,12 +288,16 @@ def main() -> int:
         reason_code = REASON_INPUT_MISSING
         for name in missing_inputs:
             emit("WARN", f"missing input={name}", events)
-    elif unknown_ratio > target:
+    elif unknown_ratio_effective > target:
         status = "WARN"
         reason_code = REASON_UNKNOWN_RATIO_ABOVE_TARGET
-        emit("WARN", f"unknown ratio above target ratio={unknown_ratio} target={target}", events)
+        emit(
+            "WARN",
+            f"unknown ratio above target upstream={unknown_ratio} cases={case_unknown_ratio} effective={unknown_ratio_effective} target={target}",
+            events,
+        )
     else:
-        emit("OK", f"taxonomy feedback PASS ratio={unknown_ratio}", events)
+        emit("OK", f"taxonomy feedback PASS effective_ratio={unknown_ratio_effective}", events)
 
     payload: Dict[str, Any] = {
         "schema_version": "s28-taxonomy-feedback-loop-v1",
@@ -278,9 +311,12 @@ def main() -> int:
             "unknown_ratio_target": target,
         },
         "metrics": {
-            "unknown_ratio": round(unknown_ratio, 4),
+            "unknown_ratio": unknown_ratio_effective,
+            "unknown_ratio_upstream": round(unknown_ratio, 4),
+            "unknown_ratio_cases": case_unknown_ratio,
             "candidate_count": len(candidates),
             "total_cases_scanned": len(cases),
+            "unknown_like_cases": unknown_like_count,
         },
         "candidates": candidates,
         "collection_actions": collection_actions,

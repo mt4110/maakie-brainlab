@@ -117,12 +117,23 @@ def to_int(value: Any, default: int = 0) -> int:
         return int(default)
 
 
+def compute_notify_delivery_rate(*, notify_sent: bool, notify_attempt_count: int, notify_attempted: bool) -> float:
+    attempts = max(0, int(notify_attempt_count))
+    if attempts <= 0:
+        if notify_attempted:
+            return 1.0 if notify_sent else 0.0
+        return 0.0
+    success = 1 if notify_sent else 0
+    return round(success / float(attempts), 4)
+
+
 def evaluate_slo(
     *,
     skip_rate: float,
     unknown_ratio: float,
     acceptance_pass_rate: float,
     notify_delivery_rate: float,
+    reliability_total_runs: int,
     skip_soft: float,
     skip_hard: float,
     unknown_soft: float,
@@ -131,6 +142,8 @@ def evaluate_slo(
     acceptance_hard: float,
     notify_soft: float,
     notify_hard: float,
+    reliability_runs_soft_min: int,
+    reliability_runs_hard_min: int,
 ) -> Dict[str, List[Dict[str, Any]]]:
     hard: List[Dict[str, Any]] = []
     soft: List[Dict[str, Any]] = []
@@ -154,6 +167,25 @@ def evaluate_slo(
         hard.append({"metric": "notify_delivery_rate", "value": notify_delivery_rate, "threshold": notify_hard, "rule": "value >= hard"})
     elif notify_delivery_rate < notify_soft:
         soft.append({"metric": "notify_delivery_rate", "value": notify_delivery_rate, "threshold": notify_soft, "rule": "value >= soft"})
+
+    if reliability_total_runs < reliability_runs_hard_min:
+        hard.append(
+            {
+                "metric": "reliability_total_runs",
+                "value": reliability_total_runs,
+                "threshold": reliability_runs_hard_min,
+                "rule": "value >= hard",
+            }
+        )
+    elif reliability_total_runs < reliability_runs_soft_min:
+        soft.append(
+            {
+                "metric": "reliability_total_runs",
+                "value": reliability_total_runs,
+                "threshold": reliability_runs_soft_min,
+                "rule": "value >= soft",
+            }
+        )
 
     return {"hard": hard, "soft": soft}
 
@@ -182,6 +214,7 @@ def build_markdown(payload: Dict[str, Any]) -> str:
     lines.append(f"- unknown_ratio: `{metrics.get('unknown_ratio', 0.0)}`")
     lines.append(f"- acceptance_pass_rate: `{metrics.get('acceptance_pass_rate', 0.0)}`")
     lines.append(f"- notify_delivery_rate: `{metrics.get('notify_delivery_rate', 0.0)}`")
+    lines.append(f"- reliability_total_runs: `{metrics.get('reliability_total_runs', 0)}`")
     lines.append("")
     return "\n".join(lines)
 
@@ -190,14 +223,16 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-dir", default=DEFAULT_OUT_DIR)
     parser.add_argument("--obs-root", default=DEFAULT_OBS_ROOT)
-    parser.add_argument("--skip-rate-soft", type=float, default=0.50)
-    parser.add_argument("--skip-rate-hard", type=float, default=1.00)
-    parser.add_argument("--unknown-ratio-soft", type=float, default=0.10)
+    parser.add_argument("--skip-rate-soft", type=float, default=0.20)
+    parser.add_argument("--skip-rate-hard", type=float, default=0.50)
+    parser.add_argument("--unknown-ratio-soft", type=float, default=0.05)
     parser.add_argument("--unknown-ratio-hard", type=float, default=0.25)
     parser.add_argument("--acceptance-pass-rate-soft", type=float, default=0.95)
     parser.add_argument("--acceptance-pass-rate-hard", type=float, default=0.85)
-    parser.add_argument("--notify-delivery-soft", type=float, default=1.00)
-    parser.add_argument("--notify-delivery-hard", type=float, default=0.00)
+    parser.add_argument("--notify-delivery-soft", type=float, default=0.95)
+    parser.add_argument("--notify-delivery-hard", type=float, default=0.50)
+    parser.add_argument("--reliability-runs-soft-min", type=int, default=24)
+    parser.add_argument("--reliability-runs-hard-min", type=int, default=12)
     args = parser.parse_args()
 
     repo_root = Path(git_out(Path.cwd(), ["rev-parse", "--show-toplevel"]) or Path.cwd()).resolve()
@@ -237,13 +272,25 @@ def main() -> int:
     d01 = docs.get("S28-01", {})
     d02 = docs.get("S28-02", {})
     d03 = docs.get("S28-03", {})
+    d06 = docs.get("S28-06", {})
     d07 = docs.get("S28-07", {})
 
     skip_rate = to_float(dict(d01.get("trend", {})).get("skip_rate", 0.0), 0.0)
     unknown_ratio = to_float(dict(d02.get("metrics", {})).get("unknown_ratio", 0.0), 0.0)
 
-    notify_sent = bool(dict(d03.get("notification", {})).get("sent", False))
-    notify_delivery_rate = 1.0 if notify_sent else 0.0
+    notify_doc = dict(d03.get("notification", {}))
+    notify_sent = bool(notify_doc.get("sent", False))
+    notify_attempted = bool(notify_doc.get("attempted", False))
+    notify_attempt_count = to_int(notify_doc.get("attempt_count", 0), 0)
+    if notify_attempt_count <= 0 and notify_attempted:
+        notify_attempt_count = 1
+    notify_success_count = 1 if notify_sent else 0
+    notify_delivery_rate = compute_notify_delivery_rate(
+        notify_sent=notify_sent,
+        notify_attempt_count=notify_attempt_count,
+        notify_attempted=notify_attempted,
+    )
+    reliability_total_runs = to_int(dict(d06.get("metrics", {})).get("total_runs", 0), 0)
 
     acc_sum = dict(d07.get("summary", {}))
     acc_total = to_int(acc_sum.get("total_cases", 0), 0)
@@ -255,6 +302,7 @@ def main() -> int:
         unknown_ratio=unknown_ratio,
         acceptance_pass_rate=acceptance_pass_rate,
         notify_delivery_rate=notify_delivery_rate,
+        reliability_total_runs=reliability_total_runs,
         skip_soft=float(args.skip_rate_soft),
         skip_hard=float(args.skip_rate_hard),
         unknown_soft=float(args.unknown_ratio_soft),
@@ -263,6 +311,8 @@ def main() -> int:
         acceptance_hard=float(args.acceptance_pass_rate_hard),
         notify_soft=float(args.notify_delivery_soft),
         notify_hard=float(args.notify_delivery_hard),
+        reliability_runs_soft_min=max(int(args.reliability_runs_soft_min), 1),
+        reliability_runs_hard_min=max(int(args.reliability_runs_hard_min), 1),
     )
 
     hard = list(slo_eval.get("hard", []))
@@ -306,6 +356,9 @@ def main() -> int:
             "acceptance_passed": acc_passed,
             "acceptance_total": acc_total,
             "notify_delivery_rate": notify_delivery_rate,
+            "notify_attempt_count": notify_attempt_count,
+            "notify_success_count": notify_success_count,
+            "reliability_total_runs": reliability_total_runs,
         },
         "slo": {
             "hard_violations": hard,
@@ -319,6 +372,8 @@ def main() -> int:
                 "acceptance_pass_rate_hard": float(args.acceptance_pass_rate_hard),
                 "notify_delivery_soft": float(args.notify_delivery_soft),
                 "notify_delivery_hard": float(args.notify_delivery_hard),
+                "reliability_runs_soft_min": max(int(args.reliability_runs_soft_min), 1),
+                "reliability_runs_hard_min": max(int(args.reliability_runs_hard_min), 1),
             },
         },
         "summary": {

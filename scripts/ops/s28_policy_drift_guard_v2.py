@@ -39,6 +39,7 @@ HIGH_IMPACT_FILES = {
 }
 
 REASON_BASELINE_CREATED = "BASELINE_CREATED"
+REASON_BASELINE_BOOTSTRAPPED = "BASELINE_BOOTSTRAPPED"
 REASON_DRIFT_DETECTED = "DRIFT_DETECTED"
 REASON_HIGH_IMPACT_DRIFT = "HIGH_IMPACT_DRIFT"
 
@@ -107,6 +108,11 @@ def diff_scans(old_scan: Dict[str, Any], new_scan: Dict[str, Any]) -> Dict[str, 
     return {"added": added, "removed": removed, "changed": changed}
 
 
+def high_impact_paths(drift: Dict[str, List[str]]) -> List[str]:
+    rows = set(drift.get("added", [])) | set(drift.get("removed", [])) | set(drift.get("changed", []))
+    return sorted([p for p in rows if p in HIGH_IMPACT_FILES])
+
+
 def build_markdown(payload: Dict[str, Any]) -> str:
     summary = dict(payload.get("summary", {}))
     drift = dict(payload.get("drift", {}))
@@ -140,6 +146,7 @@ def main() -> int:
     parser.add_argument("--obs-root", default=DEFAULT_OBS_ROOT)
     parser.add_argument("--fail-on-high-impact", action="store_true")
     parser.add_argument("--update-baseline", action="store_true")
+    parser.add_argument("--bootstrap-baseline", action="store_true")
     args = parser.parse_args()
 
     repo_root = Path(git_out(Path.cwd(), ["rev-parse", "--show-toplevel"]) or Path.cwd()).resolve()
@@ -154,11 +161,19 @@ def main() -> int:
     status = "PASS"
     reason_code = ""
     drift = {"added": [], "removed": [], "changed": []}
+    baseline_state = "existing"
 
     if not baseline:
-        status = "WARN"
-        reason_code = REASON_BASELINE_CREATED
-        emit("WARN", "baseline not found; creating baseline", events)
+        baseline_state = "created"
+        if args.bootstrap_baseline:
+            status = "PASS"
+            reason_code = REASON_BASELINE_BOOTSTRAPPED
+            baseline_state = "bootstrapped"
+            emit("OK", "baseline bootstrapped", events)
+        else:
+            status = "WARN"
+            reason_code = REASON_BASELINE_CREATED
+            emit("WARN", "baseline not found; creating baseline", events)
         baseline_doc = {
             "schema_version": "s28-policy-drift-baseline-v2",
             "created_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
@@ -168,7 +183,7 @@ def main() -> int:
     else:
         drift = diff_scans({"files": baseline.get("files", {})}, current_scan)
         drift_total = len(drift["added"]) + len(drift["removed"]) + len(drift["changed"])
-        high_impact = [p for p in drift["changed"] if p in HIGH_IMPACT_FILES]
+        high_impact = high_impact_paths(drift)
         if drift_total > 0:
             status = "WARN"
             reason_code = REASON_DRIFT_DETECTED
@@ -190,7 +205,7 @@ def main() -> int:
             baseline_path.write_text(json.dumps(new_base, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
             emit("OK", "baseline updated", events)
 
-    high_impact_changes = [p for p in drift.get("changed", []) if p in HIGH_IMPACT_FILES]
+    high_impact_changes = high_impact_paths(drift)
     drift_total = len(drift.get("added", [])) + len(drift.get("removed", [])) + len(drift.get("changed", []))
 
     payload: Dict[str, Any] = {
@@ -204,6 +219,7 @@ def main() -> int:
             "watch_files": WATCH_FILES,
             "baseline_file": to_repo_rel(repo_root, baseline_path),
             "fail_on_high_impact": bool(args.fail_on_high_impact),
+            "bootstrap_baseline": bool(args.bootstrap_baseline),
         },
         "current": current_scan,
         "drift": drift,
@@ -213,6 +229,7 @@ def main() -> int:
             "drift_total": drift_total,
             "high_impact_changes": len(high_impact_changes),
             "high_impact_files": high_impact_changes,
+            "baseline_state": baseline_state,
         },
         "artifact_names": {
             "json": "policy_drift_guard_v2_latest.json",

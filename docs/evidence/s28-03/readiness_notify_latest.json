@@ -1,15 +1,20 @@
 {
   "schema_version": "s28-readiness-notify-v1",
-  "captured_at_utc": "2026-02-27T07:07:33Z",
+  "captured_at_utc": "2026-02-27T07:32:34Z",
   "git": {
     "branch": "ops/S28-01-S28-10",
-    "head": "81102446eb5a9f461a4baf4b243286fc004d9ed4"
+    "head": "fa136531e69807a535ac6f51146fdfbead621a06"
   },
   "inputs": {
-    "readiness_json": "docs/evidence/s27-09/slo_readiness_latest.json",
+    "readiness_json": "docs/evidence/s28-09/slo_readiness_v2_latest.json",
+    "readiness_primary_json": "docs/evidence/s28-09/slo_readiness_v2_latest.json",
+    "readiness_fallback_json": "docs/evidence/s27-09/slo_readiness_latest.json",
+    "readiness_fallback_used": false,
     "schedule_json": "docs/evidence/s27-03/release_readiness_schedule_latest.json",
     "webhook_env": "S28_READINESS_WEBHOOK_URL",
-    "send": false
+    "send": false,
+    "max_retries": 2,
+    "retry_backoff_sec": 1.0
   },
   "channel": "#ops-release",
   "message": "[Ops Readiness] channel=#ops-release | readiness=WARN_ONLY | status=WARN | reason=SOFT_SLO_WARN | blocked_total=0 | schedule_status=PASS | schedule_reason=",
@@ -18,7 +23,9 @@
     "sent": false,
     "http_status": 0,
     "response_tail": "",
-    "error": ""
+    "error": "",
+    "attempt_count": 0,
+    "attempts": []
   },
   "summary": {
     "status": "WARN",

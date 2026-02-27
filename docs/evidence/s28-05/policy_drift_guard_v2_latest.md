@@ -1,18 +1,18 @@
 # S28-05 Policy Drift Guard v2 (Latest)
 
-- CapturedAtUTC: `2026-02-27T07:07:33Z`
+- CapturedAtUTC: `2026-02-27T07:32:34Z`
 - Branch: `ops/S28-01-S28-10`
-- HeadSHA: `81102446eb5a9f461a4baf4b243286fc004d9ed4`
+- HeadSHA: `fa136531e69807a535ac6f51146fdfbead621a06`
 
 ## Summary
 
 - status: `WARN`
-- reason_code: `BASELINE_CREATED`
-- drift_total: `0`
-- high_impact_changes: `0`
+- reason_code: `HIGH_IMPACT_DRIFT`
+- drift_total: `5`
+- high_impact_changes: `2`
 
 ## Drift
 
 - added: `[]`
 - removed: `[]`
-- changed: `[]`
+- changed: `['docs/ops/S28-01_PROVIDER_CANARY_RECOVERY.toml', 'docs/ops/S28-02_TAXONOMY_FEEDBACK_LOOP.toml', 'docs/ops/S28-07_ACCEPTANCE_CASES_V3.json', 'scripts/ops/s28_readiness_notify.py', 'scripts/ops/s28_slo_readiness_v2.py']`

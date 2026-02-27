@@ -22,7 +22,8 @@ from scripts.ops.obs_contract import DEFAULT_OBS_ROOT, emit, git_out, make_run_c
 
 
 DEFAULT_OUT_DIR = "docs/evidence/s28-03"
-DEFAULT_READINESS = "docs/evidence/s27-09/slo_readiness_latest.json"
+DEFAULT_READINESS = "docs/evidence/s28-09/slo_readiness_v2_latest.json"
+DEFAULT_READINESS_FALLBACK = "docs/evidence/s27-09/slo_readiness_latest.json"
 DEFAULT_SCHEDULE = "docs/evidence/s27-03/release_readiness_schedule_latest.json"
 
 REASON_READINESS_MISSING = "READINESS_MISSING"
@@ -52,6 +53,16 @@ def read_json_if_exists(path: Path) -> Dict[str, Any]:
     except Exception:
         return {}
     return obj if isinstance(obj, dict) else {}
+
+
+def resolve_primary_or_fallback(primary: Path, fallback: Path) -> tuple[Dict[str, Any], Path, bool]:
+    primary_doc = read_json_if_exists(primary)
+    if primary_doc:
+        return primary_doc, primary, False
+    fallback_doc = read_json_if_exists(fallback)
+    if fallback_doc:
+        return fallback_doc, fallback, True
+    return {}, primary, False
 
 
 def compose_message(channel: str, readiness: Dict[str, Any], schedule: Dict[str, Any]) -> str:
@@ -101,6 +112,38 @@ def post_webhook(url: str, payload: Dict[str, Any], timeout_sec: int) -> Dict[st
         }
 
 
+def deliver_with_retries(
+    send_once,
+    *,
+    max_retries: int,
+    retry_backoff_sec: float,
+    sleep_fn=time.sleep,
+) -> Dict[str, Any]:
+    attempts: List[Dict[str, Any]] = []
+    retry_n = max(0, int(max_retries))
+    backoff = max(0.0, float(retry_backoff_sec))
+
+    final = {"sent": False, "http_status": 0, "response_tail": "", "error": ""}
+    for idx in range(retry_n + 1):
+        current = dict(send_once())
+        current["attempt"] = idx + 1
+        attempts.append(current)
+        final = current
+        if bool(current.get("sent")):
+            break
+        if idx < retry_n and backoff > 0:
+            sleep_fn(backoff)
+
+    return {
+        "sent": bool(final.get("sent")),
+        "http_status": int(final.get("http_status", 0) or 0),
+        "response_tail": str(final.get("response_tail", ""))[-600:],
+        "error": str(final.get("error", "")),
+        "attempt_count": len(attempts),
+        "attempts": attempts,
+    }
+
+
 def build_markdown(payload: Dict[str, Any]) -> str:
     summary = dict(payload.get("summary", {}))
     notify = dict(payload.get("notification", {}))
@@ -141,10 +184,13 @@ def main() -> int:
     parser.add_argument("--out-dir", default=DEFAULT_OUT_DIR)
     parser.add_argument("--obs-root", default=DEFAULT_OBS_ROOT)
     parser.add_argument("--readiness-json", default=DEFAULT_READINESS)
+    parser.add_argument("--readiness-fallback-json", default=DEFAULT_READINESS_FALLBACK)
     parser.add_argument("--schedule-json", default=DEFAULT_SCHEDULE)
     parser.add_argument("--channel", default="#ops-release")
     parser.add_argument("--webhook-env", default="S28_READINESS_WEBHOOK_URL")
     parser.add_argument("--timeout-sec", type=int, default=10)
+    parser.add_argument("--max-retries", type=int, default=2)
+    parser.add_argument("--retry-backoff-sec", type=float, default=1.0)
     parser.add_argument("--send", action="store_true")
     args = parser.parse_args()
 
@@ -154,8 +200,9 @@ def main() -> int:
     run_dir, meta, events = make_run_context(repo_root, tool="s28-readiness-notify", obs_root=args.obs_root)
 
     readiness_path = (repo_root / str(args.readiness_json)).resolve()
+    readiness_fallback_path = (repo_root / str(args.readiness_fallback_json)).resolve()
     schedule_path = (repo_root / str(args.schedule_json)).resolve()
-    readiness = read_json_if_exists(readiness_path)
+    readiness, readiness_resolved_path, used_fallback = resolve_primary_or_fallback(readiness_path, readiness_fallback_path)
     schedule = read_json_if_exists(schedule_path)
 
     status = "PASS"
@@ -163,7 +210,9 @@ def main() -> int:
     if not readiness:
         status = "FAIL"
         reason_code = REASON_READINESS_MISSING
-        emit("ERROR", f"readiness missing path={readiness_path}", events)
+        emit("ERROR", f"readiness missing primary={readiness_path} fallback={readiness_fallback_path}", events)
+    elif used_fallback:
+        emit("WARN", f"readiness fallback used path={readiness_fallback_path}", events)
 
     message = compose_message(str(args.channel), readiness, schedule)
     notify = {
@@ -172,6 +221,8 @@ def main() -> int:
         "http_status": 0,
         "response_tail": "",
         "error": "",
+        "attempt_count": 0,
+        "attempts": [],
     }
 
     webhook_url = str(os.environ.get(str(args.webhook_env), "") or "")
@@ -193,15 +244,28 @@ def main() -> int:
                     "branch": git_out(repo_root, ["branch", "--show-current"]),
                 },
             }
-            notify = {**notify, **post_webhook(webhook_url, notify_payload, int(args.timeout_sec))}
+            notify_result = deliver_with_retries(
+                lambda: post_webhook(webhook_url, notify_payload, int(args.timeout_sec)),
+                max_retries=int(args.max_retries),
+                retry_backoff_sec=float(args.retry_backoff_sec),
+            )
+            notify = {**notify, **notify_result}
             if notify.get("sent"):
                 status = "PASS"
                 reason_code = ""
-                emit("OK", f"notification delivered status={notify.get('http_status')}", events)
+                emit(
+                    "OK",
+                    f"notification delivered status={notify.get('http_status')} attempts={notify.get('attempt_count', 0)}",
+                    events,
+                )
             else:
                 status = "WARN"
                 reason_code = REASON_NOTIFY_SEND_FAILED
-                emit("WARN", f"notification failed status={notify.get('http_status')} err={notify.get('error')}", events)
+                emit(
+                    "WARN",
+                    f"notification failed status={notify.get('http_status')} attempts={notify.get('attempt_count', 0)} err={notify.get('error')}",
+                    events,
+                )
 
     payload: Dict[str, Any] = {
         "schema_version": "s28-readiness-notify-v1",
@@ -211,10 +275,15 @@ def main() -> int:
             "head": git_out(repo_root, ["rev-parse", "HEAD"]),
         },
         "inputs": {
-            "readiness_json": to_repo_rel(repo_root, readiness_path),
+            "readiness_json": to_repo_rel(repo_root, readiness_resolved_path),
+            "readiness_primary_json": to_repo_rel(repo_root, readiness_path),
+            "readiness_fallback_json": to_repo_rel(repo_root, readiness_fallback_path),
+            "readiness_fallback_used": used_fallback,
             "schedule_json": to_repo_rel(repo_root, schedule_path),
             "webhook_env": str(args.webhook_env),
             "send": bool(args.send),
+            "max_retries": int(args.max_retries),
+            "retry_backoff_sec": float(args.retry_backoff_sec),
         },
         "channel": str(args.channel),
         "message": message,
