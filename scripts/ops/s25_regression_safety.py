@@ -35,6 +35,19 @@ def utc_now() -> dt.datetime:
     return dt.datetime.now(dt.timezone.utc)
 
 
+def to_repo_rel(repo_root: Path, value: str | Path) -> str:
+    p = Path(value).resolve()
+    root = repo_root.resolve()
+    try:
+        rel = p.relative_to(root)
+    except ValueError:
+        return ""
+    rel_posix = rel.as_posix()
+    if ".." in Path(rel_posix).parts:
+        return ""
+    return rel_posix
+
+
 def run_command(cmd: str, repo_root: Path, log_path: Path) -> Dict[str, Any]:
     t0 = utc_now()
     cp = subprocess.run(["bash", "-lc", cmd], cwd=str(repo_root), capture_output=True, text=True, check=False)
@@ -48,13 +61,14 @@ def run_command(cmd: str, repo_root: Path, log_path: Path) -> Dict[str, Any]:
         "duration_sec": round((t1 - t0).total_seconds(), 3),
         "started_at_utc": t0.isoformat(),
         "ended_at_utc": t1.isoformat(),
-        "log_path": str(log_path),
+        "log_path": to_repo_rel(repo_root, log_path),
     }
 
 
-def read_required_contexts(repo_root: Path) -> Tuple[List[str], List[str]]:
+def read_required_contexts(repo_root: Path) -> Tuple[List[str], List[str], List[str]]:
     docs_contexts: List[str] = []
     ruleset_contexts: List[str] = []
+    read_errors: List[str] = []
 
     docs_path = repo_root / "docs" / "ops" / "CI_REQUIRED_CHECKS.md"
     ruleset_path = repo_root / "ops" / "ruleset_required_status_checks.json"
@@ -68,18 +82,18 @@ def read_required_contexts(repo_root: Path) -> Tuple[List[str], List[str]]:
                 if not s or s.startswith("#"):
                     continue
                 docs_contexts.append(s)
-    except Exception:
-        pass
+    except Exception as exc:
+        read_errors.append(f"docs SOT read failed path={to_repo_rel(repo_root, docs_path)} err={exc}")
 
     try:
         obj = json.loads(ruleset_path.read_text(encoding="utf-8"))
         items = obj.get("required_status_checks", [])
         if isinstance(items, list):
             ruleset_contexts = [str(x).strip() for x in items if str(x).strip()]
-    except Exception:
-        pass
+    except Exception as exc:
+        read_errors.append(f"ruleset SOT read failed path={to_repo_rel(repo_root, ruleset_path)} err={exc}")
 
-    return sorted(set(docs_contexts)), sorted(set(ruleset_contexts))
+    return sorted(set(docs_contexts)), sorted(set(ruleset_contexts)), read_errors
 
 
 def detect_contract_breaks(docs_contexts: List[str], ruleset_contexts: List[str]) -> List[str]:
@@ -160,7 +174,11 @@ def main() -> None:
             stop = 1
             emit("ERROR", f"done[{i}] rc={res['rc']} duration={res['duration_sec']}s", events)
 
-    docs_contexts, ruleset_contexts = read_required_contexts(repo_root)
+    docs_contexts, ruleset_contexts, read_errors = read_required_contexts(repo_root)
+    if read_errors:
+        stop = 1
+        for msg in read_errors:
+            emit("ERROR", msg, events)
     contract_breaks = detect_contract_breaks(docs_contexts, ruleset_contexts)
     if contract_breaks:
         stop = 1
@@ -194,7 +212,7 @@ def main() -> None:
         "artifact_names": {
             "json": "regression_safety_latest.json",
             "md": "regression_safety_latest.md",
-            "run_dir": str(run_dir),
+            "run_dir": to_repo_rel(repo_root, run_dir),
         },
         "stop": stop,
     }
@@ -217,8 +235,8 @@ def main() -> None:
         meta,
         events,
         extra={
-            "regression_json": str(out_json),
-            "regression_md": str(out_md),
+            "regression_json": to_repo_rel(repo_root, out_json),
+            "regression_md": to_repo_rel(repo_root, out_md),
             "stop": stop,
             "commands_total": len(command_results),
         },

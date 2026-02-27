@@ -39,6 +39,34 @@ def utc_now() -> dt.datetime:
     return dt.datetime.now(dt.timezone.utc)
 
 
+def to_repo_rel(repo_root: Path, value: str | Path) -> str:
+    p = Path(value).resolve()
+    root = repo_root.resolve()
+    try:
+        rel = p.relative_to(root)
+    except ValueError:
+        return ""
+    rel_posix = rel.as_posix()
+    if ".." in Path(rel_posix).parts:
+        return ""
+    return rel_posix
+
+
+def sanitize_command_for_payload(cmd: List[str], repo_root: Path) -> List[str]:
+    out: List[str] = []
+    for token in cmd:
+        text = str(token)
+        if not text:
+            continue
+        p = Path(text)
+        if p.is_absolute():
+            rel = to_repo_rel(repo_root, p)
+            out.append(rel or p.name)
+        else:
+            out.append(text)
+    return out
+
+
 def _metric_by_path(obj: Dict[str, Any], path: str) -> Optional[float]:
     cur: Any = obj
     for part in str(path).split("."):
@@ -270,6 +298,7 @@ def main() -> None:
     emit("OK", f"template={template_path}", events)
 
     cmd = build_bench_cmd(repo_root, run_dir, tpl, seed_override=args.seed)
+    cmd_for_payload = sanitize_command_for_payload(cmd, repo_root)
     exp_cfg = dict(tpl.get("config", {}))
     seed = int(exp_cfg.get("seed", 7)) if args.seed is None else int(args.seed)
     (run_dir / "experiment.command.txt").write_text(" ".join(cmd) + "\n", encoding="utf-8")
@@ -323,12 +352,12 @@ def main() -> None:
         },
         "experiment": {
             "experiment_id": str(tpl.get("experiment_id") or ""),
-            "template_path": str(template_path),
+            "template_path": to_repo_rel(repo_root, template_path),
             "seed": seed,
-            "command": cmd,
+            "command": cmd_for_payload,
             "rerun_command": f"make s25-ml-experiment",
         },
-        "bench_summary_path": str(bench_summary_path),
+        "bench_summary_path": to_repo_rel(repo_root, bench_summary_path),
         "bench_summary": summary_obj,
         "threshold_results": threshold_results,
         "summary": {
@@ -341,7 +370,7 @@ def main() -> None:
         "artifact_names": {
             "json": "ml_experiment_latest.json",
             "md": "ml_experiment_latest.md",
-            "run_dir": str(run_dir),
+            "run_dir": to_repo_rel(repo_root, run_dir),
         },
         "stop": 0 if status == "PASS" else 1,
     }
@@ -364,8 +393,8 @@ def main() -> None:
         meta,
         events,
         extra={
-            "ml_experiment_json": str(out_json),
-            "ml_experiment_md": str(out_md),
+            "ml_experiment_json": to_repo_rel(repo_root, out_json),
+            "ml_experiment_md": to_repo_rel(repo_root, out_md),
             "status": status,
             "reason_code": reason_code,
         },

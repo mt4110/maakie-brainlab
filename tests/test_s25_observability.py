@@ -65,9 +65,9 @@ class S25ObservabilityTests(unittest.TestCase):
                 baseline_path=baseline,
                 out_dir=root / "docs" / "evidence" / "s25-04",
             )
-            self.assertTrue(Path(out["json"]).exists())
-            self.assertTrue(Path(out["md"]).exists())
-            md = Path(out["md"]).read_text(encoding="utf-8")
+            self.assertTrue((root / out["json"]).exists())
+            self.assertTrue((root / out["md"]).exists())
+            md = (root / out["md"]).read_text(encoding="utf-8")
             self.assertIn("S25-04 Observability", md)
             self.assertIn("current-point", md)
 

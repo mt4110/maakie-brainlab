@@ -1,15 +1,15 @@
 {
   "schema_version": "s25-regression-safety-v1",
-  "captured_at_utc": "2026-02-26T23:46:51.418755+00:00",
+  "captured_at_utc": "2026-02-27T01:11:40.359336+00:00",
   "git": {
     "branch": "ops/S25-01-25-10",
-    "head": "754475298c2985d81a1e5c32250acb826fd063fd"
+    "head": "3261f6f9720514bfcedefa08c1beb8be2b1ed3c3"
   },
   "summary": {
     "total_commands": 4,
     "passed_commands": 4,
     "failed_commands": 0,
-    "total_duration_sec": 1.922,
+    "total_duration_sec": 1.58,
     "contract_breaks": []
   },
   "required_contexts": {
@@ -29,43 +29,43 @@
       "command": "make verify-il",
       "rc": 0,
       "status": "PASS",
-      "duration_sec": 0.607,
-      "started_at_utc": "2026-02-26T23:46:49.494025+00:00",
-      "ended_at_utc": "2026-02-26T23:46:50.101289+00:00",
-      "log_path": "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/regression-safety/regression-safety__20260226T234649Z__ops-s25-01-25-10__7544752/01_make_verify_il.log"
+      "duration_sec": 0.709,
+      "started_at_utc": "2026-02-27T01:11:38.776463+00:00",
+      "ended_at_utc": "2026-02-27T01:11:39.485134+00:00",
+      "log_path": ".local/obs/s25-ops/regression-safety/regression-safety__20260227T011138Z__ops-s25-01-25-10__3261f6f/01_make_verify_il.log"
     },
     {
       "command": "bash ops/required_checks_sot.sh check",
       "rc": 0,
       "status": "PASS",
-      "duration_sec": 1.124,
-      "started_at_utc": "2026-02-26T23:46:50.101712+00:00",
-      "ended_at_utc": "2026-02-26T23:46:51.225623+00:00",
-      "log_path": "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/regression-safety/regression-safety__20260226T234649Z__ops-s25-01-25-10__7544752/02_bash_ops_required_checks_sot_sh_check.log"
+      "duration_sec": 0.666,
+      "started_at_utc": "2026-02-27T01:11:39.485738+00:00",
+      "ended_at_utc": "2026-02-27T01:11:40.152066+00:00",
+      "log_path": ".local/obs/s25-ops/regression-safety/regression-safety__20260227T011138Z__ops-s25-01-25-10__3261f6f/02_bash_ops_required_checks_sot_sh_check.log"
     },
     {
       "command": "python3 ops/ci/check_required_checks_contract.py",
       "rc": 0,
       "status": "PASS",
-      "duration_sec": 0.051,
-      "started_at_utc": "2026-02-26T23:46:51.226616+00:00",
-      "ended_at_utc": "2026-02-26T23:46:51.277566+00:00",
-      "log_path": "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/regression-safety/regression-safety__20260226T234649Z__ops-s25-01-25-10__7544752/03_python3_ops_ci_check_required_checks_contract_py.log"
+      "duration_sec": 0.045,
+      "started_at_utc": "2026-02-27T01:11:40.152567+00:00",
+      "ended_at_utc": "2026-02-27T01:11:40.197870+00:00",
+      "log_path": ".local/obs/s25-ops/regression-safety/regression-safety__20260227T011138Z__ops-s25-01-25-10__3261f6f/03_python3_ops_ci_check_required_checks_contract_py.log"
     },
     {
       "command": "python3 -m unittest -v tests/test_required_checks_contract.py",
       "rc": 0,
       "status": "PASS",
-      "duration_sec": 0.14,
-      "started_at_utc": "2026-02-26T23:46:51.277941+00:00",
-      "ended_at_utc": "2026-02-26T23:46:51.418330+00:00",
-      "log_path": "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/regression-safety/regression-safety__20260226T234649Z__ops-s25-01-25-10__7544752/04_python3_m_unittest_v_tests_test_required_checks_contract_py.log"
+      "duration_sec": 0.16,
+      "started_at_utc": "2026-02-27T01:11:40.198335+00:00",
+      "ended_at_utc": "2026-02-27T01:11:40.358684+00:00",
+      "log_path": ".local/obs/s25-ops/regression-safety/regression-safety__20260227T011138Z__ops-s25-01-25-10__3261f6f/04_python3_m_unittest_v_tests_test_required_checks_contract_py.log"
     }
   ],
   "artifact_names": {
     "json": "regression_safety_latest.json",
     "md": "regression_safety_latest.md",
-    "run_dir": "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/s25-ops/regression-safety/regression-safety__20260226T234649Z__ops-s25-01-25-10__7544752"
+    "run_dir": ".local/obs/s25-ops/regression-safety/regression-safety__20260227T011138Z__ops-s25-01-25-10__3261f6f"
   },
   "stop": 0
 }

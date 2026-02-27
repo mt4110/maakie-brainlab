@@ -16,7 +16,7 @@ import re
 import sqlite3
 import subprocess
 import time
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any, Dict, List, Tuple
 
 try:
@@ -34,6 +34,48 @@ DEFAULT_TIMEOUT_SEC = 120
 REASON_CONFIG_INVALID = "CONFIG_INVALID"
 REASON_DB_BACKEND_INVALID = "DB_BACKEND_INVALID"
 REASON_BUILD_INDEX_FAILED = "BUILD_INDEX_FAILED"
+
+
+def to_repo_rel(repo_root: Path, value: str | Path) -> str:
+    p = Path(value).resolve()
+    root = repo_root.resolve()
+    try:
+        rel = p.relative_to(root)
+    except ValueError:
+        return ""
+    rel_posix = rel.as_posix()
+    if ".." in Path(rel_posix).parts:
+        return ""
+    return rel_posix
+
+
+def is_safe_rel_path(value: str) -> bool:
+    p = Path(value.strip())
+    if p.is_absolute():
+        return False
+    return ".." not in p.parts
+
+
+def normalize_rel_path(value: str) -> str:
+    return PurePosixPath((value or "").replace("\\", "/")).as_posix().lstrip("./")
+
+
+def source_matches_expected(expected_source: str, source_path: str) -> bool:
+    expected = normalize_rel_path(expected_source)
+    if not expected:
+        return False
+    got = normalize_rel_path(source_path)
+    return got == expected or got.endswith(f"/{expected}")
+
+
+def normalize_source_ref_for_payload(repo_root: Path, source_ref: str) -> str:
+    source = str(source_ref or "")
+    path_part, sep, tail = source.partition("#chunk-")
+    rel = to_repo_rel(repo_root, path_part) if path_part else ""
+    path_out = rel or normalize_rel_path(path_part)
+    if not sep:
+        return path_out
+    return f"{path_out}#chunk-{tail}"
 
 
 def extract_terms(question: str) -> List[str]:
@@ -110,6 +152,14 @@ def validate_config(cfg: Dict[str, Any]) -> Tuple[bool, str]:
         return False, "evaluation.min_hit_rate_delta invalid"
     if not isinstance(docs, list) or not docs:
         return False, "docs missing"
+    for idx, item in enumerate(docs, start=1):
+        if not isinstance(item, dict):
+            return False, f"docs[{idx}] invalid"
+        rel = str(item.get("path") or "").strip()
+        if not rel:
+            return False, f"docs[{idx}].path missing"
+        if not is_safe_rel_path(rel):
+            return False, f"docs[{idx}].path unsafe"
     if not isinstance(cases, list) or not cases:
         return False, "cases missing"
     return True, ""
@@ -118,12 +168,17 @@ def validate_config(cfg: Dict[str, Any]) -> Tuple[bool, str]:
 def materialize_docs(run_dir: Path, docs: List[Dict[str, Any]]) -> Path:
     raw_dir = run_dir / "raw_docs"
     raw_dir.mkdir(parents=True, exist_ok=True)
+    raw_root = raw_dir.resolve()
     for item in docs:
         rel = str(item.get("path") or "").strip()
         content = str(item.get("content") or "")
         if not rel:
             continue
+        if not is_safe_rel_path(rel):
+            raise ValueError(f"unsafe docs.path: {rel}")
         path = (raw_dir / rel).resolve()
+        if path != raw_root and raw_root not in path.parents:
+            raise ValueError(f"docs.path escapes raw_dir: {rel}")
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content, encoding="utf-8")
     return raw_dir
@@ -229,7 +284,7 @@ def evaluate_profile(
             "status": "FAIL",
             "reason_code": REASON_BUILD_INDEX_FAILED,
             "build_rc": rc,
-            "build_log": str(run_dir / f"{profile_name}_build_index.log"),
+            "build_log": to_repo_rel(repo_root, run_dir / f"{profile_name}_build_index.log"),
             "metrics": {},
             "cases": [],
         }
@@ -253,18 +308,20 @@ def evaluate_profile(
             total += 1
             for src in sources:
                 path_part = src.split("#chunk-", 1)[0]
-                if path_part.endswith(expected) or expected in path_part:
+                if source_matches_expected(expected, path_part):
                     matched = True
                     break
             if matched:
                 hits += 1
+
+        sources_for_payload = [normalize_source_ref_for_payload(repo_root, src) for src in sources]
 
         rows.append(
             {
                 "id": cid,
                 "query": q,
                 "expected_source": expected,
-                "retrieved_sources": sources,
+                "retrieved_sources": sources_for_payload,
                 "matched": matched,
                 "latency_ms": round(latency_ms, 3),
             }
@@ -276,7 +333,7 @@ def evaluate_profile(
         "status": "PASS",
         "reason_code": "",
         "build_rc": 0,
-        "build_log": str(run_dir / f"{profile_name}_build_index.log"),
+        "build_log": to_repo_rel(repo_root, run_dir / f"{profile_name}_build_index.log"),
         "metrics": {
             "cases_total": len(cases),
             "cases_with_expected_source": total,
@@ -286,7 +343,7 @@ def evaluate_profile(
             "chunk_size": int(profile["chunk_size"]),
             "overlap": int(profile["overlap"]),
             "top_k": int(profile["top_k"]),
-            "db_path": str(db_path),
+            "db_path": to_repo_rel(repo_root, db_path),
         },
         "cases": rows,
     }
@@ -395,7 +452,13 @@ def main() -> None:
 
     docs = list(cfg.get("docs", []))
     cases = list(cfg.get("cases", []))
-    raw_dir = materialize_docs(run_dir, docs)
+    try:
+        raw_dir = materialize_docs(run_dir, docs)
+    except Exception as exc:
+        emit("ERROR", f"materialize_docs failed err={exc}", events)
+        write_events(run_dir, events)
+        write_summary(run_dir, meta, events, extra={"stop": 1, "reason_code": REASON_CONFIG_INVALID})
+        return
     emit("OK", f"raw_docs_materialized={raw_dir}", events)
     emit("OK", f"cases_loaded={len(cases)}", events)
 
@@ -448,7 +511,7 @@ def main() -> None:
             "branch": git_out(repo_root, ["branch", "--show-current"]),
             "head": git_out(repo_root, ["rev-parse", "HEAD"]),
         },
-        "config_path": str(config_path),
+        "config_path": to_repo_rel(repo_root, config_path),
         "config_snapshot": cfg,
         "profiles": {
             "baseline": baseline,
@@ -462,7 +525,7 @@ def main() -> None:
         "artifact_names": {
             "json": "rag_tuning_latest.json",
             "md": "rag_tuning_latest.md",
-            "run_dir": str(run_dir),
+            "run_dir": to_repo_rel(repo_root, run_dir),
         },
         "stop": 0 if status == "PASS" else 1,
     }
@@ -485,8 +548,8 @@ def main() -> None:
         meta,
         events,
         extra={
-            "rag_tuning_json": str(out_json),
-            "rag_tuning_md": str(out_md),
+            "rag_tuning_json": to_repo_rel(repo_root, out_json),
+            "rag_tuning_md": to_repo_rel(repo_root, out_md),
             "status": status,
         },
     )

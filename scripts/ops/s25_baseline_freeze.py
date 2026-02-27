@@ -44,6 +44,19 @@ def utc_now() -> dt.datetime:
     return dt.datetime.now(dt.timezone.utc)
 
 
+def to_repo_rel(repo_root: Path, value: str | Path) -> str:
+    p = Path(value).resolve()
+    root = repo_root.resolve()
+    try:
+        rel = p.relative_to(root)
+    except ValueError:
+        return ""
+    rel_posix = rel.as_posix()
+    if ".." in Path(rel_posix).parts:
+        return ""
+    return rel_posix
+
+
 def utc_stamp(now: dt.datetime) -> str:
     return now.strftime("%Y%m%dT%H%M%SZ")
 
@@ -76,14 +89,14 @@ def parse_eval_summary(output: str, repo_root: Path) -> Dict[str, Any]:
                 total = passed + failed + skipped
                 pass_rate = (passed / total) if total > 0 else None
                 return {
-                    "run_dir": str(run_dir),
+                    "run_dir": to_repo_rel(repo_root, run_dir),
                     "counts": counts,
                     "total": total,
                     "pass_rate": pass_rate,
                 }
             except Exception:
-                return {"run_dir": str(run_dir)}
-        return {"run_dir": str(run_dir)}
+                return {"run_dir": to_repo_rel(repo_root, run_dir)}
+        return {"run_dir": to_repo_rel(repo_root, run_dir)}
     return {}
 
 
@@ -114,7 +127,7 @@ def run_command(cmd: str, repo_root: Path, log_path: Path) -> Dict[str, Any]:
         "started_at_utc": t0.isoformat(),
         "ended_at_utc": t1.isoformat(),
         "duration_sec": round((t1 - t0).total_seconds(), 3),
-        "log_path": str(log_path),
+        "log_path": to_repo_rel(repo_root, log_path),
     }
 
     if "unittest" in cmd:
@@ -237,7 +250,7 @@ def main() -> None:
         "artifact_names": {
             "json": "baseline_latest.json",
             "md": "baseline_latest.md",
-            "run_dir": str(run_dir),
+            "run_dir": to_repo_rel(repo_root, run_dir),
         },
         "stop": stop,
     }
@@ -261,8 +274,8 @@ def main() -> None:
         meta,
         events,
         extra={
-            "baseline_json": str(latest_json),
-            "baseline_md": str(latest_md),
+            "baseline_json": to_repo_rel(repo_root, latest_json),
+            "baseline_md": to_repo_rel(repo_root, latest_md),
             "stop": stop,
             "commands_total": len(results),
         },

@@ -10,7 +10,31 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List
 
-from scripts.ops.obs_contract import DEFAULT_OBS_ROOT, emit, make_run_context, write_events, write_summary
+from scripts.ops.obs_contract import DEFAULT_OBS_ROOT, emit, git_out, make_run_context, write_events, write_summary
+
+
+def to_repo_rel(repo_root: Path, value: str | Path) -> str:
+    p = Path(value).resolve()
+    root = repo_root.resolve()
+    try:
+        rel = p.relative_to(root)
+    except ValueError:
+        return ""
+    rel_posix = rel.as_posix()
+    if ".." in Path(rel_posix).parts:
+        return ""
+    return rel_posix
+
+
+def sanitize_paths(repo_root: Path, value: Any) -> Any:
+    if isinstance(value, dict):
+        return {k: sanitize_paths(repo_root, v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [sanitize_paths(repo_root, v) for v in value]
+    if isinstance(value, str) and value.startswith("/"):
+        rel = to_repo_rel(repo_root, value)
+        return rel or value
+    return value
 
 
 def _load_json(path: Path) -> Dict[str, Any]:
@@ -45,10 +69,11 @@ def write_observability_report(
 ) -> Dict[str, Any]:
     out_dir.mkdir(parents=True, exist_ok=True)
     baseline = _load_json(baseline_path)
+    latest_sanitized = sanitize_paths(repo_root, latest)
     report = {
         "schema_version": "s25-obs-report-v1",
-        "baseline_json": str(baseline_path),
-        "tools": latest,
+        "baseline_json": to_repo_rel(repo_root, baseline_path),
+        "tools": latest_sanitized,
     }
     out_json = out_dir / "observability_latest.json"
     out_md = out_dir / "observability_latest.md"
@@ -57,7 +82,7 @@ def write_observability_report(
     lines: List[str] = []
     lines.append("# S25-04 Observability Summary (Latest)")
     lines.append("")
-    lines.append(f"- baseline_json: `{baseline_path}`")
+    lines.append(f"- baseline_json: `{to_repo_rel(repo_root, baseline_path)}`")
     lines.append("")
     lines.append("## Tools")
     lines.append("")
@@ -75,7 +100,7 @@ def write_observability_report(
     lines.append("")
     lines.append("```md")
     lines.append("### S25-04 Observability")
-    lines.append(f"- baseline: {baseline_path}")
+    lines.append(f"- baseline: {to_repo_rel(repo_root, baseline_path)}")
     if latest:
         for tool, obj in sorted(latest.items()):
             counts = obj.get("counts", {})
@@ -90,10 +115,7 @@ def write_observability_report(
     lines.append("```")
     lines.append("")
     out_md.write_text("\n".join(lines), encoding="utf-8")
-    return {
-        "json": str(out_json),
-        "md": str(out_md),
-    }
+    return {"json": to_repo_rel(repo_root, out_json), "md": to_repo_rel(repo_root, out_md)}
 
 
 def main() -> None:
@@ -107,7 +129,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    repo_root = Path.cwd().resolve()
+    repo_root = Path(git_out(Path.cwd(), ["rev-parse", "--show-toplevel"]) or Path.cwd()).resolve()
     run_dir, meta, events = make_run_context(repo_root, tool="obs-pr-summary", obs_root=args.obs_root)
 
     baseline_path = (repo_root / args.baseline_json).resolve()

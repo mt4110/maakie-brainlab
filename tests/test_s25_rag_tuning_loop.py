@@ -1,4 +1,5 @@
 import importlib.util
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -41,6 +42,12 @@ class S25RagTuningLoopTests(unittest.TestCase):
         self.assertFalse(ok2)
         self.assertIn("sqlite", why2)
 
+        bad2 = dict(cfg)
+        bad2["docs"] = [{"path": "../escape.md", "content": "x"}]
+        ok3, why3 = self.m.validate_config(bad2)
+        self.assertFalse(ok3)
+        self.assertIn("unsafe", why3)
+
     def test_compare_profiles(self):
         base = {"metrics": {"hit_rate": 0.5, "avg_latency_ms": 10}}
         cand = {"metrics": {"hit_rate": 0.7, "avg_latency_ms": 12}}
@@ -50,6 +57,16 @@ class S25RagTuningLoopTests(unittest.TestCase):
 
         comp2 = self.m.compare_profiles(base, cand, min_hit_rate_delta=0.3)
         self.assertEqual(comp2["status"], "FAIL")
+
+    def test_source_matches_expected_exact_suffix(self):
+        self.assertTrue(self.m.source_matches_expected("sample_note.md", "raw/sample_note.md"))
+        self.assertFalse(self.m.source_matches_expected("sample_note.md", "raw/not_sample_note.md"))
+
+    def test_materialize_docs_rejects_escape(self):
+        with tempfile.TemporaryDirectory() as td:
+            run_dir = Path(td)
+            with self.assertRaises(ValueError):
+                self.m.materialize_docs(run_dir, [{"path": "../x.md", "content": "x"}])
 
 
 if __name__ == "__main__":

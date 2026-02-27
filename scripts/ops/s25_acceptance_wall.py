@@ -32,6 +32,19 @@ def utc_now() -> dt.datetime:
     return dt.datetime.now(dt.timezone.utc)
 
 
+def to_repo_rel(repo_root: Path, value: str | Path) -> str:
+    p = Path(value).resolve()
+    root = repo_root.resolve()
+    try:
+        rel = p.relative_to(root)
+    except ValueError:
+        return ""
+    rel_posix = rel.as_posix()
+    if ".." in Path(rel_posix).parts:
+        return ""
+    return rel_posix
+
+
 def load_cases(path: Path) -> Tuple[str, List[Dict[str, Any]]]:
     obj = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(obj, dict):
@@ -194,7 +207,7 @@ def main() -> None:
                     "command": cmd,
                     "rc": rc,
                     "duration_sec": duration_sec,
-                    "log_path": str(log_path),
+                    "log_path": to_repo_rel(repo_root, log_path),
                 }
             )
             continue
@@ -211,7 +224,7 @@ def main() -> None:
                 "command": cmd,
                 "rc": rc,
                 "duration_sec": 0.0,
-                "log_path": str(log_path),
+                "log_path": to_repo_rel(repo_root, log_path),
             }
         )
 
@@ -225,7 +238,7 @@ def main() -> None:
             "branch": git_out(repo_root, ["branch", "--show-current"]),
             "head": git_out(repo_root, ["rev-parse", "HEAD"]),
         },
-        "cases_file": str(cases_path),
+        "cases_file": to_repo_rel(repo_root, cases_path),
         "summary": {
             "total_cases": len(results),
             "passed_cases": passed,
@@ -237,7 +250,7 @@ def main() -> None:
         "artifact_names": {
             "json": "acceptance_wall_latest.json",
             "md": "acceptance_wall_latest.md",
-            "run_dir": str(run_dir),
+            "run_dir": to_repo_rel(repo_root, run_dir),
         },
         "stop": stop,
     }
@@ -260,8 +273,8 @@ def main() -> None:
         meta,
         events,
         extra={
-            "acceptance_json": str(out_json),
-            "acceptance_md": str(out_md),
+            "acceptance_json": to_repo_rel(repo_root, out_json),
+            "acceptance_md": to_repo_rel(repo_root, out_md),
             "stop": stop,
             "cases_total": len(results),
         },

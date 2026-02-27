@@ -1,4 +1,5 @@
 import importlib.util
+import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -37,6 +38,12 @@ class S25LangChainPocTests(unittest.TestCase):
         self.assertFalse(ok2)
         self.assertIn("schema_version", why2)
 
+        bad2 = dict(cfg)
+        bad2["docs"] = [{"path": "../escape.md", "content": "x"}]
+        ok3, why3 = self.m.validate_config(bad2)
+        self.assertFalse(ok3)
+        self.assertIn("unsafe", why3)
+
     def test_evaluate_smoke_match(self):
         flow = {
             "status": "PASS",
@@ -56,6 +63,23 @@ class S25LangChainPocTests(unittest.TestCase):
         result = self.m.evaluate_smoke(flow, rows=rows, expected_source="sample_note.md")
         self.assertEqual(result["status"], "PASS")
         self.assertTrue(result["matched_expected_source"])
+
+    def test_source_match_avoids_substring_false_positive(self):
+        rows = [
+            {
+                "source": "raw/not_sample_note.md#chunk-0",
+                "path": "raw/not_sample_note.md",
+                "text": "x",
+                "score": 0.0,
+            }
+        ]
+        self.assertFalse(self.m.source_matches(rows, "sample_note.md"))
+
+    def test_materialize_docs_rejects_escape(self):
+        with tempfile.TemporaryDirectory() as td:
+            run_dir = Path(td)
+            with self.assertRaises(ValueError):
+                self.m.materialize_docs(run_dir, [{"path": "../x.md", "content": "x"}])
 
     def test_run_langchain_poc_without_dependency(self):
         rows = [
