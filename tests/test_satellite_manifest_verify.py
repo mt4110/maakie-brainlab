@@ -63,6 +63,33 @@ class SatelliteManifestVerifyTests(unittest.TestCase):
         self.assertFalse(ng["ok"])
         self.assertTrue(any("sha mismatch" in err for err in ng["errors"]))
 
+    def test_verify_manifest_rejects_non_list_artifacts(self):
+        manifest_path = self.root / f"data/satellite/{self.source}/manifests/{self.date}.manifest.json"
+        payload = {
+            "run_id": self.run_id,
+            "date": self.date,
+            "source_id": self.source,
+            "config_sha": self.config_sha,
+            "code_version": self.code_version,
+            "artifacts": {"path": self.rel_artifact},
+        }
+        manifest_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+        out = verify_manifest(self.source, self.date, self.root)
+        self.assertFalse(out["ok"])
+        self.assertTrue(any("artifacts is not a list" in err for err in out["errors"]))
+
+    def test_verify_manifest_missing_creates_verify_parent(self):
+        source = "missing_src"
+        date = "2026-02-28"
+        out = verify_manifest(source, date, self.root)
+        self.assertFalse(out["ok"])
+        verify_path = self.root / f"data/satellite/{source}/manifests/{date}.verify.json"
+        self.assertTrue(verify_path.exists())
+        persisted = json.loads(verify_path.read_text(encoding="utf-8"))
+        self.assertFalse(persisted["ok"])
+        self.assertTrue(any("manifest missing" in err for err in persisted["errors"]))
+
 
 if __name__ == "__main__":
     unittest.main()

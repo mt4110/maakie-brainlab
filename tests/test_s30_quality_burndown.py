@@ -85,6 +85,31 @@ class S30QualityBurndownTests(unittest.TestCase):
         self.assertEqual(summary["remaining_checks"], 0)
         self.assertEqual(sum(1 for c in checks if not c["done"]), 0)
 
+    def test_evaluate_checks_empty_notify_channels_warn(self):
+        checks = self.m.evaluate_checks(
+            closeout={"summary": {"waived_hard_count": 0, "unresolved_risk_count": 0}},
+            readiness={
+                "metrics": {
+                    "skip_rate": 0.01,
+                    "notify_delivery_rate": 1.0,
+                    "recovery_success_rate": 1.0,
+                    "reliability_total_runs": 30,
+                },
+                "slo": {"waived_hard_violations": []},
+            },
+            canary={"trend": {"trailing_nonpass_streak": 0, "env_skip_rate": 0.0}},
+            taxonomy={"metrics": {"unknown_ratio": 0.01, "candidate_count": 1}},
+            notify={
+                "channels": [],
+                "inputs": {"max_retries": 3, "retry_backoff_sec": 1.0},
+            },
+            soak={"metrics": {"total_runs": 30}, "summary": {"status": "PASS"}},
+            trend={"summary": {"warn_count": 0}},
+        )
+        by_id = {row["id"]: row for row in checks}
+        self.assertEqual(by_id["WVR-03"]["status"], "WARN")
+        self.assertFalse(by_id["WVR-03"]["done"])
+
 
 if __name__ == "__main__":
     unittest.main()

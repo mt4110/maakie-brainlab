@@ -99,7 +99,7 @@ def evaluate_checks(
     unknown_ratio = to_float(dict(taxonomy.get("metrics", {})).get("unknown_ratio", 0.0), 0.0)
 
     channels = list(notify.get("channels", []))
-    all_webhook_ok = True
+    all_webhook_ok = len(channels) > 0
     for row in channels:
         item = dict(row)
         attempted = bool(item.get("attempted", False))

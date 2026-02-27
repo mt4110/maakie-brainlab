@@ -10,10 +10,6 @@ from satellite.manifest import compute_config_sha, generate_run_id
 REQUIRED_FIELDS = {"run_id", "date", "source_id", "config_sha", "code_version", "artifacts"}
 
 
-def _to_list(value: Any) -> List[Any]:
-    return value if isinstance(value, list) else []
-
-
 def verify_manifest(source_id: str, date_str: str, project_root: Path) -> Dict[str, Any]:
     manifest_path = project_root / f"data/satellite/{source_id}/manifests/{date_str}.manifest.json"
     verify_path = project_root / f"data/satellite/{source_id}/manifests/{date_str}.verify.json"
@@ -58,7 +54,12 @@ def verify_manifest(source_id: str, date_str: str, project_root: Path) -> Dict[s
         except Exception as exc:
             errors.append(f"config_sha check failed: {exc}")
 
-        artifacts = _to_list(payload.get("artifacts"))
+        artifacts: List[Any] = []
+        artifacts_value: Any = payload.get("artifacts")
+        if not isinstance(artifacts_value, list):
+            errors.append("artifacts is not a list")
+        else:
+            artifacts = artifacts_value
         paths = [str(dict(row).get("path") or "") for row in artifacts]
         if paths != sorted(paths):
             errors.append("artifacts are not sorted by path")
@@ -88,6 +89,7 @@ def verify_manifest(source_id: str, date_str: str, project_root: Path) -> Dict[s
         "error_count": len(errors),
         "errors": errors,
     }
+    verify_path.parent.mkdir(parents=True, exist_ok=True)
     verify_path.write_text(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return result
 
