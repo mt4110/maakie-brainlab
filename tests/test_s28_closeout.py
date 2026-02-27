@@ -49,12 +49,14 @@ class S28CloseoutTests(unittest.TestCase):
                 "slo": {
                     "hard_violations": [{"metric": "notify_delivery_rate"}],
                     "soft_violations": [{"metric": "skip_rate"}],
+                    "waived_hard_violations": [{"metric": "unknown_ratio", "waiver_code": "UNKNOWN_RATIO_WITH_ACTIONS"}],
                 }
             },
             {"summary": {"warn_count": 2, "failed_count": 0}},
         )
         self.assertTrue(any("notify_delivery_rate" in r for r in risks))
         self.assertTrue(any("skip_rate" in r for r in risks))
+        self.assertTrue(any("UNKNOWN_RATIO_WITH_ACTIONS" in r for r in risks))
 
 
 if __name__ == "__main__":

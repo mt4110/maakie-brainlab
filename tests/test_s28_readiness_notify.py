@@ -54,6 +54,16 @@ class S28ReadinessNotifyTests(unittest.TestCase):
         self.assertTrue(out["sent"])
         self.assertEqual(out["attempt_count"], 3)
 
+    def test_compute_delivery_rate(self):
+        self.assertIsNone(self.m.compute_delivery_rate(sent=False, attempt_count=0, attempted=False))
+        self.assertEqual(self.m.compute_delivery_rate(sent=False, attempt_count=2, attempted=True), 0.0)
+        self.assertEqual(self.m.compute_delivery_rate(sent=True, attempt_count=2, attempted=True), 0.5)
+
+    def test_delivery_state(self):
+        self.assertEqual(self.m.delivery_state(sent=False, attempt_count=0, attempted=False), "NOT_ATTEMPTED")
+        self.assertEqual(self.m.delivery_state(sent=False, attempt_count=1, attempted=True), "FAILED")
+        self.assertEqual(self.m.delivery_state(sent=True, attempt_count=1, attempted=True), "SENT")
+
 
 if __name__ == "__main__":
     unittest.main()

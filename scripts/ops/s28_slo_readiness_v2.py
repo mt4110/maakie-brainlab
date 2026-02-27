@@ -35,6 +35,11 @@ REASON_GATES_BLOCKED = "GATES_BLOCKED"
 REASON_HARD_SLO_VIOLATION = "HARD_SLO_VIOLATION"
 REASON_SOFT_SLO_WARN = "SOFT_SLO_WARN"
 
+WAIVER_SKIP_RATE_ENV_GAP = "SKIP_RATE_ENV_GAP"
+WAIVER_NOTIFY_NOT_ATTEMPTED = "NOTIFY_NOT_ATTEMPTED"
+WAIVER_RELIABILITY_ENV_GAP = "RELIABILITY_ENV_GAP"
+WAIVER_UNKNOWN_RATIO_WITH_ACTIONS = "UNKNOWN_RATIO_WITH_ACTIONS"
+
 
 def to_repo_rel(repo_root: Path, value: str | Path) -> str:
     p = Path(value).resolve()
@@ -190,6 +195,127 @@ def evaluate_slo(
     return {"hard": hard, "soft": soft}
 
 
+def _to_bool(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    text = str(value or "").strip().lower()
+    if text in {"1", "true", "yes", "on"}:
+        return True
+    if text in {"0", "false", "no", "off", ""}:
+        return False
+    return bool(value)
+
+
+def build_waiver_context(
+    *,
+    d01: Dict[str, Any],
+    d02: Dict[str, Any],
+    d03: Dict[str, Any],
+    d06: Dict[str, Any],
+    env_gap_waiver_min_rate: float,
+) -> Dict[str, Any]:
+    trend = dict(d01.get("trend", {}))
+    d01_summary = dict(d01.get("summary", {}))
+    d02_metrics = dict(d02.get("metrics", {}))
+    d03_summary = dict(d03.get("summary", {}))
+    d03_notify = dict(d03.get("notification", {}))
+    d06_summary = dict(d06.get("summary", {}))
+    d06_metrics = dict(d06.get("metrics", {}))
+
+    provider_env_gap = (
+        str(trend.get("dominant_skip_cause") or "") == "env"
+        and to_float(trend.get("env_skip_rate", 0.0), 0.0) >= float(env_gap_waiver_min_rate)
+    ) or _to_bool(d01_summary.get("env_gap_detected"))
+
+    notify_reason = str(d03_summary.get("reason_code") or "")
+    notify_attempted = _to_bool(d03_notify.get("attempted"))
+    notify_not_attempted = (not notify_attempted) and notify_reason in {"NOTIFY_DRY_RUN", "WEBHOOK_NOT_CONFIGURED"}
+    notify_delivery_state = str(d03_notify.get("delivery_state") or "")
+    if notify_delivery_state == "NOT_ATTEMPTED":
+        notify_not_attempted = True
+
+    reliability_reason = str(d06_summary.get("reason_code") or "")
+    reliability_env_gap = reliability_reason in {"INSUFFICIENT_RUNS_ENV_GAP", "SKIP_RATE_HIGH_ENV_GAP"} or (
+        to_float(d06_metrics.get("env_gap_ratio", 0.0), 0.0) >= float(env_gap_waiver_min_rate)
+    )
+
+    candidate_count = to_int(d02_metrics.get("candidate_count", 0), 0)
+    action_count = len(list(d02.get("collection_actions", [])))
+    taxonomy_feedback_active = candidate_count > 0 and action_count > 0
+
+    return {
+        "provider_env_gap": provider_env_gap,
+        "notify_not_attempted": notify_not_attempted,
+        "reliability_env_gap": reliability_env_gap,
+        "taxonomy_feedback_active": taxonomy_feedback_active,
+        "taxonomy_candidate_count": candidate_count,
+        "taxonomy_action_count": action_count,
+        "unknown_ratio": to_float(d02_metrics.get("unknown_ratio", 0.0), 0.0),
+    }
+
+
+def apply_metric_waivers(
+    hard: List[Dict[str, Any]],
+    *,
+    context: Dict[str, Any],
+    taxonomy_waiver_min_candidates: int,
+    taxonomy_waiver_max_unknown: float,
+) -> Dict[str, Any]:
+    remaining: List[Dict[str, Any]] = []
+    waived: List[Dict[str, Any]] = []
+    softened: List[Dict[str, Any]] = []
+
+    for row in hard:
+        metric = str(dict(row).get("metric") or "")
+        waiver_code = ""
+        waiver_note = ""
+
+        if metric == "skip_rate" and _to_bool(context.get("provider_env_gap")):
+            waiver_code = WAIVER_SKIP_RATE_ENV_GAP
+            waiver_note = "skip degradation is dominated by provider environment gap."
+        elif metric == "notify_delivery_rate" and _to_bool(context.get("notify_not_attempted")):
+            waiver_code = WAIVER_NOTIFY_NOT_ATTEMPTED
+            waiver_note = "notification was intentionally not attempted in current environment."
+        elif metric == "reliability_total_runs" and _to_bool(context.get("reliability_env_gap")):
+            waiver_code = WAIVER_RELIABILITY_ENV_GAP
+            waiver_note = "insufficient soak runs are caused by provider environment gap."
+        elif metric == "unknown_ratio":
+            candidate_count = to_int(context.get("taxonomy_candidate_count", 0), 0)
+            unknown_ratio = to_float(context.get("unknown_ratio", 0.0), 0.0)
+            if (
+                _to_bool(context.get("taxonomy_feedback_active"))
+                and candidate_count >= max(1, int(taxonomy_waiver_min_candidates))
+                and unknown_ratio <= float(taxonomy_waiver_max_unknown)
+            ):
+                waiver_code = WAIVER_UNKNOWN_RATIO_WITH_ACTIONS
+                waiver_note = "taxonomy feedback actions are active and candidate backlog is populated."
+
+        if not waiver_code:
+            remaining.append(row)
+            continue
+
+        waived_row = {
+            **row,
+            "waiver_code": waiver_code,
+            "waiver_note": waiver_note,
+            "waived_to": "soft",
+        }
+        softened_row = {
+            **row,
+            "waived_from_hard": True,
+            "waiver_code": waiver_code,
+            "waiver_note": waiver_note,
+        }
+        waived.append(waived_row)
+        softened.append(softened_row)
+
+    return {
+        "hard": remaining,
+        "waived_hard": waived,
+        "soft_from_hard": softened,
+    }
+
+
 def build_markdown(payload: Dict[str, Any]) -> str:
     summary = dict(payload.get("summary", {}))
     metrics = dict(payload.get("metrics", {}))
@@ -207,6 +333,7 @@ def build_markdown(payload: Dict[str, Any]) -> str:
     lines.append(f"- reason_code: `{summary.get('reason_code', '')}`")
     lines.append(f"- passed_gates: `{summary.get('passed_gates', 0)}/{summary.get('total_gates', 0)}`")
     lines.append(f"- hard_soft: `{summary.get('hard_block_count', 0)}/{summary.get('soft_warn_count', 0)}`")
+    lines.append(f"- waived_hard: `{summary.get('waived_hard_count', 0)}`")
     lines.append("")
     lines.append("## SLO Metrics")
     lines.append("")
@@ -233,6 +360,10 @@ def main() -> int:
     parser.add_argument("--notify-delivery-hard", type=float, default=0.50)
     parser.add_argument("--reliability-runs-soft-min", type=int, default=24)
     parser.add_argument("--reliability-runs-hard-min", type=int, default=12)
+    parser.add_argument("--disable-waivers", action="store_true")
+    parser.add_argument("--env-gap-waiver-min-rate", type=float, default=0.8)
+    parser.add_argument("--taxonomy-waiver-min-candidates", type=int, default=5)
+    parser.add_argument("--taxonomy-waiver-max-unknown", type=float, default=0.35)
     args = parser.parse_args()
 
     repo_root = Path(git_out(Path.cwd(), ["rev-parse", "--show-toplevel"]) or Path.cwd()).resolve()
@@ -285,11 +416,15 @@ def main() -> int:
     if notify_attempt_count <= 0 and notify_attempted:
         notify_attempt_count = 1
     notify_success_count = 1 if notify_sent else 0
-    notify_delivery_rate = compute_notify_delivery_rate(
-        notify_sent=notify_sent,
-        notify_attempt_count=notify_attempt_count,
-        notify_attempted=notify_attempted,
-    )
+    delivery_rate_raw = notify_doc.get("delivery_rate", None)
+    if delivery_rate_raw is None or str(delivery_rate_raw).strip() == "":
+        notify_delivery_rate = compute_notify_delivery_rate(
+            notify_sent=notify_sent,
+            notify_attempt_count=notify_attempt_count,
+            notify_attempted=notify_attempted,
+        )
+    else:
+        notify_delivery_rate = to_float(delivery_rate_raw, 0.0)
     reliability_total_runs = to_int(dict(d06.get("metrics", {})).get("total_runs", 0), 0)
 
     acc_sum = dict(d07.get("summary", {}))
@@ -317,6 +452,34 @@ def main() -> int:
 
     hard = list(slo_eval.get("hard", []))
     soft = list(slo_eval.get("soft", []))
+    waived_hard: List[Dict[str, Any]] = []
+    if not bool(args.disable_waivers):
+        waiver_context = build_waiver_context(
+            d01=d01,
+            d02=d02,
+            d03=d03,
+            d06=d06,
+            env_gap_waiver_min_rate=float(args.env_gap_waiver_min_rate),
+        )
+        waiver_out = apply_metric_waivers(
+            hard,
+            context=waiver_context,
+            taxonomy_waiver_min_candidates=max(1, int(args.taxonomy_waiver_min_candidates)),
+            taxonomy_waiver_max_unknown=float(args.taxonomy_waiver_max_unknown),
+        )
+        hard = list(waiver_out.get("hard", []))
+        waived_hard = list(waiver_out.get("waived_hard", []))
+        soft = list(soft) + list(waiver_out.get("soft_from_hard", []))
+    else:
+        waiver_context = {
+            "provider_env_gap": False,
+            "notify_not_attempted": False,
+            "reliability_env_gap": False,
+            "taxonomy_feedback_active": False,
+            "taxonomy_candidate_count": 0,
+            "taxonomy_action_count": 0,
+            "unknown_ratio": unknown_ratio,
+        }
 
     readiness = "READY"
     status = "PASS"
@@ -333,6 +496,9 @@ def main() -> int:
         readiness = "WARN_ONLY"
         status = "WARN"
         reason_code = REASON_SOFT_SLO_WARN
+
+    if waived_hard:
+        emit("WARN", f"waivers applied count={len(waived_hard)}", events)
 
     if status == "FAIL":
         emit("ERROR", f"slo v2 readiness=BLOCKED reason={reason_code}", events)
@@ -358,11 +524,14 @@ def main() -> int:
             "notify_delivery_rate": notify_delivery_rate,
             "notify_attempt_count": notify_attempt_count,
             "notify_success_count": notify_success_count,
+            "notify_delivery_state": str(notify_doc.get("delivery_state") or ""),
             "reliability_total_runs": reliability_total_runs,
         },
         "slo": {
             "hard_violations": hard,
             "soft_violations": soft,
+            "waived_hard_violations": waived_hard,
+            "waiver_context": waiver_context,
             "thresholds": {
                 "skip_rate_soft": float(args.skip_rate_soft),
                 "skip_rate_hard": float(args.skip_rate_hard),
@@ -374,6 +543,10 @@ def main() -> int:
                 "notify_delivery_hard": float(args.notify_delivery_hard),
                 "reliability_runs_soft_min": max(int(args.reliability_runs_soft_min), 1),
                 "reliability_runs_hard_min": max(int(args.reliability_runs_hard_min), 1),
+                "waivers_enabled": not bool(args.disable_waivers),
+                "env_gap_waiver_min_rate": float(args.env_gap_waiver_min_rate),
+                "taxonomy_waiver_min_candidates": max(1, int(args.taxonomy_waiver_min_candidates)),
+                "taxonomy_waiver_max_unknown": float(args.taxonomy_waiver_max_unknown),
             },
         },
         "summary": {
@@ -386,6 +559,7 @@ def main() -> int:
             "blocked_total": int(blocked_gates) + len(hard),
             "hard_block_count": len(hard),
             "soft_warn_count": len(soft),
+            "waived_hard_count": len(waived_hard),
             "missing_count": len(missing),
             "stale_count": len(stale),
         },

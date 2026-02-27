@@ -144,6 +144,23 @@ def deliver_with_retries(
     }
 
 
+def compute_delivery_rate(*, sent: bool, attempt_count: int, attempted: bool) -> float | None:
+    attempts = max(0, int(attempt_count))
+    if attempts > 0:
+        return round((1 if sent else 0) / float(attempts), 4)
+    if attempted:
+        return 1.0 if sent else 0.0
+    return None
+
+
+def delivery_state(*, sent: bool, attempt_count: int, attempted: bool) -> str:
+    if sent:
+        return "SENT"
+    if max(0, int(attempt_count)) > 0 or attempted:
+        return "FAILED"
+    return "NOT_ATTEMPTED"
+
+
 def build_markdown(payload: Dict[str, Any]) -> str:
     summary = dict(payload.get("summary", {}))
     notify = dict(payload.get("notification", {}))
@@ -159,6 +176,8 @@ def build_markdown(payload: Dict[str, Any]) -> str:
     lines.append(f"- status: `{summary.get('status', '')}`")
     lines.append(f"- reason_code: `{summary.get('reason_code', '')}`")
     lines.append(f"- notify_sent: `{notify.get('sent', False)}`")
+    lines.append(f"- delivery_state: `{notify.get('delivery_state', '')}`")
+    lines.append(f"- delivery_rate: `{notify.get('delivery_rate', None)}`")
     lines.append(f"- channel: `{payload.get('channel', '')}`")
     lines.append("")
     lines.append("## Message")
@@ -223,6 +242,8 @@ def main() -> int:
         "error": "",
         "attempt_count": 0,
         "attempts": [],
+        "delivery_rate": None,
+        "delivery_state": "NOT_ATTEMPTED",
     }
 
     webhook_url = str(os.environ.get(str(args.webhook_env), "") or "")
@@ -266,6 +287,17 @@ def main() -> int:
                     f"notification failed status={notify.get('http_status')} attempts={notify.get('attempt_count', 0)} err={notify.get('error')}",
                     events,
                 )
+
+    notify["delivery_rate"] = compute_delivery_rate(
+        sent=bool(notify.get("sent")),
+        attempt_count=int(notify.get("attempt_count", 0) or 0),
+        attempted=bool(notify.get("attempted")),
+    )
+    notify["delivery_state"] = delivery_state(
+        sent=bool(notify.get("sent")),
+        attempt_count=int(notify.get("attempt_count", 0) or 0),
+        attempted=bool(notify.get("attempted")),
+    )
 
     payload: Dict[str, Any] = {
         "schema_version": "s28-readiness-notify-v1",

@@ -1,9 +1,9 @@
 {
   "schema_version": "s28-reliability-soak-v2",
-  "captured_at_utc": "2026-02-27T07:40:33Z",
+  "captured_at_utc": "2026-02-27T08:06:03Z",
   "git": {
     "branch": "ops/S28-01-S28-10",
-    "head": "2bf4d6c11a1da872cb4c659a78f64e4486010e0b"
+    "head": "55d5d962dd6b70a577e42f33ae301a6ab76e4f7d"
   },
   "inputs": {
     "history_json": "docs/evidence/s27-01/provider_canary_history.json",
@@ -29,6 +29,8 @@
     "reason_code_counts": {
       "MISSING_PROVIDER_ENV": 3
     },
+    "env_gap_runs": 3,
+    "env_gap_ratio": 1.0,
     "remaining_runs_to_target": 21
   },
   "summary": {

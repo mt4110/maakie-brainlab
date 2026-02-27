@@ -35,6 +35,9 @@ class S28ReliabilitySoakV2Tests(unittest.TestCase):
         ]
         counts = self.m.reason_code_counts(rows)
         self.assertEqual(counts["MISSING_PROVIDER_ENV"], 2)
+        profile = self.m.env_gap_profile(rows)
+        self.assertEqual(profile["env_gap_runs"], 2)
+        self.assertAlmostEqual(profile["env_gap_ratio"], 0.6667, places=4)
 
     def test_evaluate_reliability_status_target_runs(self):
         status, reason = self.m.evaluate_reliability_status(
@@ -50,9 +53,29 @@ class S28ReliabilitySoakV2Tests(unittest.TestCase):
             skip_rate_warn_threshold=0.5,
             recovery_present=True,
             dominant_reason_code="",
+            env_gap_ratio=0.0,
         )
         self.assertEqual(status, "WARN")
         self.assertEqual(reason, self.m.REASON_TARGET_RUNS_NOT_REACHED)
+
+    def test_evaluate_reliability_status_skip_env_gap(self):
+        status, reason = self.m.evaluate_reliability_status(
+            history_present=True,
+            total_runs=12,
+            min_runs=6,
+            target_runs=24,
+            max_consecutive_nonpass=1,
+            max_consecutive_threshold=4,
+            fail_rate=0.0,
+            fail_rate_hard_threshold=0.3,
+            skip_rate=0.9,
+            skip_rate_warn_threshold=0.5,
+            recovery_present=True,
+            dominant_reason_code="MISSING_PROVIDER_ENV",
+            env_gap_ratio=0.9,
+        )
+        self.assertEqual(status, "WARN")
+        self.assertEqual(reason, self.m.REASON_SKIP_RATE_HIGH_ENV_GAP)
 
 
 if __name__ == "__main__":

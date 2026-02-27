@@ -36,6 +36,7 @@ REASON_INPUT_MISSING = "INPUT_MISSING"
 REASON_RECOVERY_REQUIRED = "RECOVERY_REQUIRED"
 REASON_RECOVERY_COMMAND_FAILED = "RECOVERY_COMMAND_FAILED"
 REASON_SKIP_RATE_HIGH = "SKIP_RATE_HIGH"
+REASON_SKIP_RATE_HIGH_ENV_GAP = "SKIP_RATE_HIGH_ENV_GAP"
 
 SKIP_CAUSE_ENV = "env"
 SKIP_CAUSE_CONFIG = "config"
@@ -112,6 +113,22 @@ def summarize_skip_causes(runs: List[Dict[str, Any]]) -> Dict[str, int]:
         cause = classify_skip_reason(str(row.get("reason_code") or ""))
         counts[cause] = int(counts.get(cause, 0)) + 1
     return counts
+
+
+def env_skip_metrics(runs: List[Dict[str, Any]]) -> Dict[str, float | int]:
+    skip_runs = [row for row in runs if str(row.get("status") or "").upper() == "SKIP"]
+    skip_total = len(skip_runs)
+    env_skip_runs = sum(
+        1
+        for row in skip_runs
+        if classify_skip_reason(str(row.get("reason_code") or "")) == SKIP_CAUSE_ENV
+    )
+    env_skip_rate = 0.0 if skip_total == 0 else round(env_skip_runs / float(skip_total), 4)
+    return {
+        "skip_total": skip_total,
+        "env_skip_runs": env_skip_runs,
+        "env_skip_rate": env_skip_rate,
+    }
 
 
 def dominant_cause(counts: Dict[str, int]) -> str:
@@ -264,7 +281,9 @@ def main() -> int:
         rollback_cmd = str(base_summary.get("rollback_command") or DEFAULT_ROLLBACK_CMD)
 
     skip_cause_counts = summarize_skip_causes(sample)
+    env_metrics = env_skip_metrics(sample)
     top_cause = dominant_cause(skip_cause_counts)
+    env_gap_detected = bool(top_cause == SKIP_CAUSE_ENV and float(env_metrics.get("env_skip_rate", 0.0)) >= 0.8)
     recommended_actions = build_recommended_actions(
         rollback_cmd=rollback_cmd,
         top_cause=top_cause,
@@ -305,7 +324,7 @@ def main() -> int:
             emit(level, f"recovery exec status={recovery_exec.get('status')} rc={recovery_exec.get('returncode')}", events)
     elif float(trend_src.get("skip_rate", skip_rate)) > skip_rate_warn_threshold:
         status = "WARN"
-        reason_code = REASON_SKIP_RATE_HIGH
+        reason_code = REASON_SKIP_RATE_HIGH_ENV_GAP if env_gap_detected else REASON_SKIP_RATE_HIGH
         emit("WARN", f"skip rate high skip_rate={trend_src.get('skip_rate', skip_rate)}", events)
     else:
         emit("OK", "recovery strategy status=PASS", events)
@@ -340,6 +359,8 @@ def main() -> int:
             "base_skip_rate": float(trend_src.get("skip_rate", 0.0) or 0.0),
             "skip_cause_counts": skip_cause_counts,
             "dominant_skip_cause": top_cause,
+            "env_skip_runs": int(env_metrics.get("env_skip_runs", 0)),
+            "env_skip_rate": float(env_metrics.get("env_skip_rate", 0.0)),
         },
         "recovery": recovery_exec,
         "recommended_actions": recommended_actions,
@@ -348,6 +369,7 @@ def main() -> int:
             "reason_code": reason_code,
             "missing_inputs": len(missing_inputs),
             "dominant_skip_cause": top_cause,
+            "env_gap_detected": env_gap_detected,
         },
         "artifact_names": {
             "json": "provider_canary_recovery_latest.json",

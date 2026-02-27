@@ -1,9 +1,9 @@
 {
   "schema_version": "s28-provider-canary-recovery-v1",
-  "captured_at_utc": "2026-02-27T07:40:33Z",
+  "captured_at_utc": "2026-02-27T08:06:03Z",
   "git": {
     "branch": "ops/S28-01-S28-10",
-    "head": "2bf4d6c11a1da872cb4c659a78f64e4486010e0b"
+    "head": "55d5d962dd6b70a577e42f33ae301a6ab76e4f7d"
   },
   "inputs": {
     "canary_ops_json": "docs/evidence/s27-01/provider_canary_ops_latest.json",
@@ -27,7 +27,9 @@
       "runtime": 0,
       "unknown": 0
     },
-    "dominant_skip_cause": "env"
+    "dominant_skip_cause": "env",
+    "env_skip_runs": 3,
+    "env_skip_rate": 1.0
   },
   "recovery": {
     "attempted": false,
@@ -46,7 +48,8 @@
     "status": "WARN",
     "reason_code": "RECOVERY_REQUIRED",
     "missing_inputs": 0,
-    "dominant_skip_cause": "env"
+    "dominant_skip_cause": "env",
+    "env_gap_detected": true
   },
   "artifact_names": {
     "json": "provider_canary_recovery_latest.json",

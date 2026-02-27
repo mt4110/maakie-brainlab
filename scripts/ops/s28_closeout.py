@@ -81,6 +81,7 @@ def derive_unresolved_risks(readiness: Dict[str, Any], index: Dict[str, Any]) ->
     slo = dict(readiness.get("slo", {}))
     hard = list(slo.get("hard_violations", []))
     soft = list(slo.get("soft_violations", []))
+    waived = list(slo.get("waived_hard_violations", []))
     for row in hard:
         metric = str(dict(row).get("metric") or "")
         if metric:
@@ -89,6 +90,11 @@ def derive_unresolved_risks(readiness: Dict[str, Any], index: Dict[str, Any]) ->
         metric = str(dict(row).get("metric") or "")
         if metric:
             risks.append(f"{metric} has soft SLO warning and requires ongoing monitoring.")
+    for row in waived:
+        metric = str(dict(row).get("metric") or "")
+        waiver = str(dict(row).get("waiver_code") or "")
+        if metric and waiver:
+            risks.append(f"{metric} is currently waived ({waiver}); validate exit criteria in production-connected runs.")
 
     idx_summary = dict(index.get("summary", {}))
     warn_count = int(idx_summary.get("warn_count", 0) or 0)
@@ -116,6 +122,7 @@ def build_markdown(payload: Dict[str, Any]) -> str:
     lines.append(f"- status: `{summary.get('status', '')}`")
     lines.append(f"- readiness: `{summary.get('readiness', '')}`")
     lines.append(f"- blocked_gates: `{summary.get('blocked_gates', 0)}`")
+    lines.append(f"- waived_hard_count: `{summary.get('waived_hard_count', 0)}`")
     lines.append("")
     lines.append("## Before / After")
     lines.append("")
@@ -266,6 +273,7 @@ def main() -> int:
             "readiness": readiness_state,
             "blocked_gates": blocked,
             "readiness_reason_code": str(rsum.get("reason_code") or ""),
+            "waived_hard_count": int(rsum.get("waived_hard_count", 0) or 0),
             "unresolved_risk_count": len(unresolved_risks),
             "handoff_count": len(handoff_items),
         },

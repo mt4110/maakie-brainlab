@@ -30,6 +30,7 @@ REASON_TARGET_RUNS_NOT_REACHED = "TARGET_RUNS_NOT_REACHED"
 REASON_CONSECUTIVE_NONPASS = "CONSECUTIVE_NONPASS"
 REASON_FAIL_RATE_HIGH = "FAIL_RATE_HIGH"
 REASON_SKIP_RATE_HIGH = "SKIP_RATE_HIGH"
+REASON_SKIP_RATE_HIGH_ENV_GAP = "SKIP_RATE_HIGH_ENV_GAP"
 REASON_RECOVERY_SIGNAL_MISSING = "RECOVERY_SIGNAL_MISSING"
 
 
@@ -91,6 +92,16 @@ def reason_code_counts(runs: List[Dict[str, Any]]) -> Dict[str, int]:
     return dict(sorted(counts.items(), key=lambda x: (-x[1], x[0])))
 
 
+def env_gap_profile(runs: List[Dict[str, Any]]) -> Dict[str, float | int]:
+    total_runs = len(runs)
+    env_gap_runs = sum(1 for row in runs if str(row.get("reason_code") or "").upper() == "MISSING_PROVIDER_ENV")
+    env_gap_ratio = 0.0 if total_runs <= 0 else round(env_gap_runs / float(total_runs), 4)
+    return {
+        "env_gap_runs": env_gap_runs,
+        "env_gap_ratio": env_gap_ratio,
+    }
+
+
 def evaluate_reliability_status(
     *,
     history_present: bool,
@@ -105,6 +116,7 @@ def evaluate_reliability_status(
     skip_rate_warn_threshold: float,
     recovery_present: bool,
     dominant_reason_code: str,
+    env_gap_ratio: float,
 ) -> tuple[str, str]:
     if not history_present:
         return "WARN", REASON_HISTORY_MISSING
@@ -117,6 +129,8 @@ def evaluate_reliability_status(
     if fail_rate > fail_rate_hard_threshold:
         return "FAIL", REASON_FAIL_RATE_HIGH
     if skip_rate > skip_rate_warn_threshold:
+        if env_gap_ratio >= 0.8:
+            return "WARN", REASON_SKIP_RATE_HIGH_ENV_GAP
         return "WARN", REASON_SKIP_RATE_HIGH
     if not recovery_present:
         return "WARN", REASON_RECOVERY_SIGNAL_MISSING
@@ -192,6 +206,7 @@ def main() -> int:
     recovery_status = str(dict(recovery.get("summary", {})).get("status") or "")
     reason_counts = reason_code_counts(runs)
     dominant_reason_code = next(iter(reason_counts.keys()), "")
+    env_gap = env_gap_profile(runs)
     status, reason_code = evaluate_reliability_status(
         history_present=bool(hist),
         total_runs=total_runs,
@@ -205,6 +220,7 @@ def main() -> int:
         skip_rate_warn_threshold=float(args.skip_rate_warn_threshold),
         recovery_present=bool(recovery),
         dominant_reason_code=dominant_reason_code,
+        env_gap_ratio=float(env_gap.get("env_gap_ratio", 0.0)),
     )
 
     if reason_code in {REASON_INSUFFICIENT_RUNS, REASON_INSUFFICIENT_RUNS_ENV_GAP}:
@@ -244,6 +260,8 @@ def main() -> int:
             "hour_bucket_counts": dict(sorted(hour_bucket_counts.items(), key=lambda x: x[0])),
             "recovery_status": recovery_status,
             "reason_code_counts": reason_counts,
+            "env_gap_runs": int(env_gap.get("env_gap_runs", 0)),
+            "env_gap_ratio": float(env_gap.get("env_gap_ratio", 0.0)),
             "remaining_runs_to_target": max(0, max(int(args.target_runs), int(args.min_runs)) - total_runs),
         },
         "summary": {"status": status, "reason_code": reason_code},

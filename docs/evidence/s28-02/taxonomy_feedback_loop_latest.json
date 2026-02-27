@@ -1,9 +1,9 @@
 {
   "schema_version": "s28-taxonomy-feedback-loop-v1",
-  "captured_at_utc": "2026-02-27T07:40:33Z",
+  "captured_at_utc": "2026-02-27T08:06:03Z",
   "git": {
     "branch": "ops/S28-01-S28-10",
-    "head": "2bf4d6c11a1da872cb4c659a78f64e4486010e0b"
+    "head": "55d5d962dd6b70a577e42f33ae301a6ab76e4f7d"
   },
   "inputs": {
     "config": "docs/ops/S28-02_TAXONOMY_FEEDBACK_LOOP.toml",

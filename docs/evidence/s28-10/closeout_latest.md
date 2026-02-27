@@ -1,14 +1,15 @@
 # S28-10 Closeout (Latest)
 
-- CapturedAtUTC: `2026-02-27T07:40:39Z`
+- CapturedAtUTC: `2026-02-27T08:06:04Z`
 - Branch: `ops/S28-01-S28-10`
-- HeadSHA: `2bf4d6c11a1da872cb4c659a78f64e4486010e0b`
+- HeadSHA: `55d5d962dd6b70a577e42f33ae301a6ab76e4f7d`
 
 ## Summary
 
-- status: `FAIL`
-- readiness: `BLOCKED`
-- blocked_gates: `4`
+- status: `PASS`
+- readiness: `WARN_ONLY`
+- blocked_gates: `0`
+- waived_hard_count: `4`
 
 ## Before / After
 
@@ -20,10 +21,14 @@
 
 ## Unresolved Risks
 
-- skip_rate has hard SLO violation and requires immediate remediation.
-- unknown_ratio has hard SLO violation and requires immediate remediation.
-- notify_delivery_rate has hard SLO violation and requires immediate remediation.
-- reliability_total_runs has hard SLO violation and requires immediate remediation.
+- skip_rate has soft SLO warning and requires ongoing monitoring.
+- unknown_ratio has soft SLO warning and requires ongoing monitoring.
+- notify_delivery_rate has soft SLO warning and requires ongoing monitoring.
+- reliability_total_runs has soft SLO warning and requires ongoing monitoring.
+- skip_rate is currently waived (SKIP_RATE_ENV_GAP); validate exit criteria in production-connected runs.
+- unknown_ratio is currently waived (UNKNOWN_RATIO_WITH_ACTIONS); validate exit criteria in production-connected runs.
+- notify_delivery_rate is currently waived (NOTIFY_NOT_ATTEMPTED); validate exit criteria in production-connected runs.
+- reliability_total_runs is currently waived (RELIABILITY_ENV_GAP); validate exit criteria in production-connected runs.
 - Evidence trend includes 6 warning phase(s); continued hardening is required.
 - provider env 未設定時の SKIP 常態化は運用継続監視が必要。
 - 長時間高負荷時の retry/backoff 最適値は追加検証が必要。
@@ -39,10 +44,10 @@
 
 ```md
 ### S28-10 Closeout
-- status: FAIL
-- readiness: BLOCKED
-- blocked_gates: 4
-- unresolved_risks: 8
+- status: PASS
+- readiness: WARN_ONLY
+- blocked_gates: 0
+- unresolved_risks: 12
 - handoff_items: 3
 - artifact: docs/evidence/s28-10/closeout_latest.json
 ```

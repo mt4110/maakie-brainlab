@@ -1,8 +1,8 @@
 # S28-07 Acceptance Wall v3 (Latest)
 
-- CapturedAtUTC: `2026-02-27T07:40:34.012729+00:00`
+- CapturedAtUTC: `2026-02-27T08:06:03.909847+00:00`
 - Branch: `ops/S28-01-S28-10`
-- HeadSHA: `2bf4d6c11a1da872cb4c659a78f64e4486010e0b`
+- HeadSHA: `55d5d962dd6b70a577e42f33ae301a6ab76e4f7d`
 - CasesFile: `docs/ops/S28-07_ACCEPTANCE_CASES_V3.json`
 
 ## Summary

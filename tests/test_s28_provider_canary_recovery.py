@@ -46,6 +46,9 @@ class S28ProviderCanaryRecoveryTests(unittest.TestCase):
         counts = self.m.summarize_skip_causes(rows)
         self.assertEqual(counts[self.m.SKIP_CAUSE_ENV], 2)
         self.assertEqual(self.m.dominant_cause(counts), self.m.SKIP_CAUSE_ENV)
+        env = self.m.env_skip_metrics(rows)
+        self.assertEqual(env["env_skip_runs"], 2)
+        self.assertAlmostEqual(env["env_skip_rate"], 0.6667, places=4)
 
     def test_build_recommended_actions_env(self):
         actions = self.m.build_recommended_actions(

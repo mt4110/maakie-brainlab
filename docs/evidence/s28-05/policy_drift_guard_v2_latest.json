@@ -1,9 +1,9 @@
 {
   "schema_version": "s28-policy-drift-guard-v2",
-  "captured_at_utc": "2026-02-27T07:40:33Z",
+  "captured_at_utc": "2026-02-27T08:06:03Z",
   "git": {
     "branch": "ops/S28-01-S28-10",
-    "head": "2bf4d6c11a1da872cb4c659a78f64e4486010e0b"
+    "head": "55d5d962dd6b70a577e42f33ae301a6ab76e4f7d"
   },
   "inputs": {
     "watch_files": [
@@ -38,13 +38,13 @@
       },
       "scripts/ops/s28_slo_readiness_v2.py": {
         "present": true,
-        "sha256": "0f9f6cec9cb43530ae5592103f9e3f1c240ed698417881a68896a1cbececccca",
-        "size": 16163
+        "sha256": "7a34557347ee3cc3a503218d657957566e9d93c5737d3fb238389b0c82761583",
+        "size": 23474
       },
       "scripts/ops/s28_readiness_notify.py": {
         "present": true,
-        "sha256": "87b680221f932a9c4e27d9e99a3292986d6700bd1d72727e4770942f39a3e763",
-        "size": 12213
+        "sha256": "54f139de91a519df1d072a7ef65ea0830124843159f35026829498bd94a1482c",
+        "size": 13367
       },
       ".github/workflows/run_always_1h.yml": {
         "present": true,
