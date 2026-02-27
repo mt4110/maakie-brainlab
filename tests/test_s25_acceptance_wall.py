@@ -1,8 +1,10 @@
 import importlib.util
 import json
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 
 def _load_module():
@@ -68,6 +70,16 @@ class S25AcceptanceWallTests(unittest.TestCase):
             self.assertEqual(schema, "s25-acceptance-cases-v1")
             self.assertEqual(len(cases), 1)
             self.assertEqual(cases[0]["id"], "A01")
+
+    def test_run_case_command_timeout_bytes(self):
+        with tempfile.TemporaryDirectory() as td:
+            exc = subprocess.TimeoutExpired(cmd=["bash"], timeout=1, output=b"partial", stderr=b"stderr")
+            with patch("subprocess.run", side_effect=exc):
+                rc, out = self.m.run_case_command("sleep 9", repo_root=Path(td), timeout_sec=1)
+        self.assertEqual(rc, 124)
+        self.assertIn("partial", out)
+        self.assertIn("stderr", out)
+        self.assertIn("timeout", out)
 
 
 if __name__ == "__main__":

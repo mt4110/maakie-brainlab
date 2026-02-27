@@ -41,6 +41,14 @@ def utc_now() -> dt.datetime:
     return dt.datetime.now(dt.timezone.utc)
 
 
+def _to_text(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    return str(value)
+
+
 def to_repo_rel(repo_root: Path, value: str | Path) -> str:
     p = Path(value).resolve()
     root = repo_root.resolve()
@@ -187,7 +195,7 @@ def run_bench(cmd: List[str], repo_root: Path, run_dir: Path, timeout_sec: int, 
     except subprocess.TimeoutExpired as exc:
         timed_out = True
         rc = 124
-        out = (exc.stdout or "") + (exc.stderr or "")
+        out = _to_text(exc.stdout) + _to_text(exc.stderr)
         output = out + f"\nERROR: timeout after {max(1, timeout_sec)}s\n"
     t1 = utc_now()
     (run_dir / "01_ml_experiment.log").write_text(output, encoding="utf-8")

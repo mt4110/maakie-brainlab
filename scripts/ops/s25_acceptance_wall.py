@@ -33,6 +33,14 @@ def utc_now() -> dt.datetime:
     return dt.datetime.now(dt.timezone.utc)
 
 
+def _to_text(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    return str(value)
+
+
 def to_repo_rel(repo_root: Path, value: str | Path) -> str:
     p = Path(value).resolve()
     root = repo_root.resolve()
@@ -90,7 +98,7 @@ def run_case_command(cmd: str, repo_root: Path, timeout_sec: int) -> Tuple[int, 
         output = (cp.stdout or "") + (cp.stderr or "")
         return cp.returncode, output
     except subprocess.TimeoutExpired as exc:
-        out = (exc.stdout or "") + (exc.stderr or "")
+        out = _to_text(exc.stdout) + _to_text(exc.stderr)
         return 124, out + f"\nERROR: timeout after {timeout_sec}s\n"
 
 

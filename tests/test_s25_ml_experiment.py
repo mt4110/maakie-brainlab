@@ -73,12 +73,13 @@ class S25MLExperimentTests(unittest.TestCase):
             run_dir = repo / ".local" / "obs" / "run"
             run_dir.mkdir(parents=True, exist_ok=True)
             cmd = ["python3", "-c", "print('x')"]
-            timeout_exc = subprocess.TimeoutExpired(cmd=cmd, timeout=1, output="partial", stderr="err")
+            timeout_exc = subprocess.TimeoutExpired(cmd=cmd, timeout=1, output=b"partial", stderr=b"err")
             with patch("subprocess.run", side_effect=timeout_exc):
                 out = self.m.run_bench(cmd=cmd, repo_root=repo, run_dir=run_dir, timeout_sec=1, seed=7)
             self.assertEqual(out["rc"], 124)
             self.assertTrue(out["timed_out"])
             self.assertIn("timeout", out["output"])
+            self.assertIn("partial", out["output"])
             self.assertTrue((run_dir / "01_ml_experiment.log").exists())
 
 
