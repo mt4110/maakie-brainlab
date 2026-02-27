@@ -34,6 +34,10 @@ DEFAULT_HANDOFF = [
 ]
 
 
+REASON_READINESS_MISSING = "READINESS_MISSING"
+REASON_INDEX_MISSING = "INDEX_MISSING"
+
+
 def to_repo_rel(repo_root: Path, value: str | Path) -> str:
     p = Path(value).resolve()
     root = repo_root.resolve()
@@ -139,6 +143,55 @@ def build_markdown(payload: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def write_failure_artifacts(
+    *,
+    repo_root: Path,
+    out_dir: Path,
+    readiness_path: Path,
+    index_path: Path,
+    reason: str,
+    unresolved_risks: List[str],
+    handoff_items: List[str],
+) -> None:
+    payload: Dict[str, Any] = {
+        "schema_version": "s26-closeout-v1",
+        "captured_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "git": {
+            "branch": git_out(repo_root, ["branch", "--show-current"]),
+            "head": git_out(repo_root, ["rev-parse", "HEAD"]),
+        },
+        "inputs": {
+            "readiness_json": to_repo_rel(repo_root, readiness_path),
+            "index_json": to_repo_rel(repo_root, index_path),
+        },
+        "before_after": {
+            "before_scope": "S26-04 Exit (core orchestration only)",
+            "after_scope": "S26-10 Exit (regression/acceptance/reliability/readiness/closeout)",
+            "after_scope_detail": "S26-01..07(indexed) + S26-08(index) + S26-09(readiness) + S26-10(closeout)",
+            "before_phases_present": 0,
+            "after_phases_present": 0,
+            "after_failed_count": 0,
+            "after_warn_count": 0,
+        },
+        "unresolved_risks": list(unresolved_risks),
+        "next_thread_handoff": list(handoff_items),
+        "summary": {
+            "status": "FAIL",
+            "readiness": "BLOCKED",
+            "blocked_gates": 1,
+            "reason": reason,
+        },
+        "artifact_names": {
+            "json": "closeout_latest.json",
+            "md": "closeout_latest.md",
+        },
+    }
+    out_json = out_dir / "closeout_latest.json"
+    out_md = out_dir / "closeout_latest.md"
+    out_json.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    out_md.write_text(build_markdown(payload), encoding="utf-8")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-dir", default=DEFAULT_OUT_DIR)
@@ -158,16 +211,36 @@ def main() -> int:
     index_path = (repo_root / args.index_json).resolve()
     readiness = read_json_if_exists(readiness_path)
     index = read_json_if_exists(index_path)
+    unresolved_risks = list(args.unresolved_risk) if args.unresolved_risk else list(DEFAULT_UNRESOLVED_RISKS)
+    handoff_items = list(args.handoff) if args.handoff else list(DEFAULT_HANDOFF)
 
     if not readiness:
         emit("ERROR", f"readiness missing path={readiness_path}", events)
+        write_failure_artifacts(
+            repo_root=repo_root,
+            out_dir=out_dir,
+            readiness_path=readiness_path,
+            index_path=index_path,
+            reason=REASON_READINESS_MISSING,
+            unresolved_risks=unresolved_risks,
+            handoff_items=handoff_items,
+        )
         write_events(run_dir, events)
-        write_summary(run_dir, meta, events, extra={"status": "FAIL", "reason": "READINESS_MISSING"})
+        write_summary(run_dir, meta, events, extra={"status": "FAIL", "reason": REASON_READINESS_MISSING})
         return 1
     if not index:
         emit("ERROR", f"evidence index missing path={index_path}", events)
+        write_failure_artifacts(
+            repo_root=repo_root,
+            out_dir=out_dir,
+            readiness_path=readiness_path,
+            index_path=index_path,
+            reason=REASON_INDEX_MISSING,
+            unresolved_risks=unresolved_risks,
+            handoff_items=handoff_items,
+        )
         write_events(run_dir, events)
-        write_summary(run_dir, meta, events, extra={"status": "FAIL", "reason": "INDEX_MISSING"})
+        write_summary(run_dir, meta, events, extra={"status": "FAIL", "reason": REASON_INDEX_MISSING})
         return 1
 
     readiness_summary = dict(readiness.get("summary", {}))
@@ -182,9 +255,6 @@ def main() -> int:
     if bool(readiness):
         after_present += 1  # S26-09 readiness artifact loaded
     after_present += 1  # S26-10 closeout artifact generation in progress
-
-    unresolved_risks = list(args.unresolved_risk) if args.unresolved_risk else list(DEFAULT_UNRESOLVED_RISKS)
-    handoff_items = list(args.handoff) if args.handoff else list(DEFAULT_HANDOFF)
 
     readiness_state = str(readiness_summary.get("readiness") or "BLOCKED")
     blocked = int(readiness_summary.get("blocked_gates", 0))

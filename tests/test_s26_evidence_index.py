@@ -38,6 +38,14 @@ class S26EvidenceIndexTests(unittest.TestCase):
         self.assertIn("S26-08", md)
         self.assertIn("PASS", md)
 
+    def test_infer_phase_status_falls_back_to_stop_and_fail_counts(self):
+        status_05 = self.m.infer_phase_status("S26-05", {"summary": {"failed_commands": 1}, "stop": 1})
+        self.assertEqual(status_05, "FAIL")
+        status_06 = self.m.infer_phase_status("S26-06", {"summary": {"failed_cases": 2}})
+        self.assertEqual(status_06, "FAIL")
+        status_ok = self.m.infer_phase_status("S26-06", {"summary": {"failed_cases": 0}, "stop": 0})
+        self.assertEqual(status_ok, "PASS")
+
 
 if __name__ == "__main__":
     unittest.main()

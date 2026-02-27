@@ -1,4 +1,5 @@
 import importlib.util
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -57,6 +58,26 @@ class S26CloseoutTests(unittest.TestCase):
         md = self.m.build_markdown(payload)
         self.assertIn("S26-10", md)
         self.assertIn("READY", md)
+
+    def test_write_failure_artifacts_writes_closeout_payload(self):
+        with tempfile.TemporaryDirectory() as td:
+            repo = Path(td)
+            out_dir = repo / "out"
+            out_dir.mkdir(parents=True, exist_ok=True)
+            readiness = repo / "missing_readiness.json"
+            index = repo / "missing_index.json"
+            self.m.write_failure_artifacts(
+                repo_root=repo,
+                out_dir=out_dir,
+                readiness_path=readiness,
+                index_path=index,
+                reason=self.m.REASON_READINESS_MISSING,
+                unresolved_risks=["r1"],
+                handoff_items=["h1"],
+            )
+            payload = json.loads((out_dir / "closeout_latest.json").read_text(encoding="utf-8"))
+            self.assertEqual(payload["summary"]["status"], "FAIL")
+            self.assertEqual(payload["summary"]["reason"], self.m.REASON_READINESS_MISSING)
 
 
 if __name__ == "__main__":

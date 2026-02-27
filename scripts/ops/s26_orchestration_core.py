@@ -12,7 +12,6 @@ from __future__ import annotations
 import argparse
 import json
 import subprocess
-import sys
 import time
 from pathlib import Path
 from typing import Any, Dict, List
@@ -145,17 +144,17 @@ def main() -> int:
     commands = [
         (
             STEP_PROVIDER,
-            [sys.executable, str((repo_root / "scripts/ops/s26_provider_canary.py").resolve())],
+            ["python3", "scripts/ops/s26_provider_canary.py"],
             ["python3", "scripts/ops/s26_provider_canary.py"],
         ),
         (
             STEP_MEDIUM,
-            [sys.executable, str((repo_root / "scripts/ops/s26_medium_eval_wall.py").resolve())],
+            ["python3", "scripts/ops/s26_medium_eval_wall.py"],
             ["python3", "scripts/ops/s26_medium_eval_wall.py"],
         ),
         (
             STEP_ROLLBACK,
-            [sys.executable, str((repo_root / "scripts/ops/s26_rollback_artifact.py").resolve())],
+            ["python3", "scripts/ops/s26_rollback_artifact.py"],
             ["python3", "scripts/ops/s26_rollback_artifact.py"],
         ),
     ]

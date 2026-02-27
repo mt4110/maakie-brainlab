@@ -1,15 +1,15 @@
 {
   "schema_version": "s26-regression-safety-v1",
-  "captured_at_utc": "2026-02-27T03:23:27.239922+00:00",
+  "captured_at_utc": "2026-02-27T03:33:03.019557+00:00",
   "git": {
     "branch": "ops/S26-05-S26-06",
-    "head": "da8b651872e89285070085d2bf52564506c830f5"
+    "head": "8af969292a66335f055382f1a5b2e2bdfa330a7c"
   },
   "summary": {
     "total_commands": 11,
     "passed_commands": 11,
     "failed_commands": 0,
-    "total_duration_sec": 1.138,
+    "total_duration_sec": 1.101,
     "contract_breaks": [],
     "marker_files": [
       "docs/ops/S26-01-S26-02-THREAD-V1_PLAN.md",
@@ -21,106 +21,106 @@
       "command": "make ops-now",
       "rc": 0,
       "status": "PASS",
-      "duration_sec": 0.101,
-      "started_at_utc": "2026-02-27T03:23:26.095635+00:00",
-      "ended_at_utc": "2026-02-27T03:23:26.197126+00:00",
-      "log_path": ".local/obs/s25-ops/s26-regression-safety/s26-regression-safety__20260227T032326Z__ops-s26-05-s26-06__da8b651/01_make_ops_now.log"
+      "duration_sec": 0.09,
+      "started_at_utc": "2026-02-27T03:33:01.912733+00:00",
+      "ended_at_utc": "2026-02-27T03:33:02.002763+00:00",
+      "log_path": ".local/obs/s25-ops/s26-regression-safety/s26-regression-safety__20260227T033301Z__ops-s26-05-s26-06__8af9692/01_make_ops_now.log"
     },
     {
       "command": "python3 -m unittest -v tests/test_s26_provider_canary.py",
       "rc": 0,
       "status": "PASS",
-      "duration_sec": 0.274,
-      "started_at_utc": "2026-02-27T03:23:26.197595+00:00",
-      "ended_at_utc": "2026-02-27T03:23:26.471618+00:00",
-      "log_path": ".local/obs/s25-ops/s26-regression-safety/s26-regression-safety__20260227T032326Z__ops-s26-05-s26-06__da8b651/02_python3_m_unittest_v_tests_test_s26_provider_canary_py.log"
+      "duration_sec": 0.317,
+      "started_at_utc": "2026-02-27T03:33:02.003177+00:00",
+      "ended_at_utc": "2026-02-27T03:33:02.320453+00:00",
+      "log_path": ".local/obs/s25-ops/s26-regression-safety/s26-regression-safety__20260227T033301Z__ops-s26-05-s26-06__8af9692/02_python3_m_unittest_v_tests_test_s26_provider_canary_py.log"
     },
     {
       "command": "python3 -m unittest -v tests/test_s26_medium_eval_wall.py",
       "rc": 0,
       "status": "PASS",
-      "duration_sec": 0.122,
-      "started_at_utc": "2026-02-27T03:23:26.472083+00:00",
-      "ended_at_utc": "2026-02-27T03:23:26.593963+00:00",
-      "log_path": ".local/obs/s25-ops/s26-regression-safety/s26-regression-safety__20260227T032326Z__ops-s26-05-s26-06__da8b651/03_python3_m_unittest_v_tests_test_s26_medium_eval_wall_py.log"
+      "duration_sec": 0.121,
+      "started_at_utc": "2026-02-27T03:33:02.320881+00:00",
+      "ended_at_utc": "2026-02-27T03:33:02.442093+00:00",
+      "log_path": ".local/obs/s25-ops/s26-regression-safety/s26-regression-safety__20260227T033301Z__ops-s26-05-s26-06__8af9692/03_python3_m_unittest_v_tests_test_s26_medium_eval_wall_py.log"
     },
     {
       "command": "python3 -m unittest -v tests/test_s26_rollback_artifact.py",
       "rc": 0,
       "status": "PASS",
-      "duration_sec": 0.058,
-      "started_at_utc": "2026-02-27T03:23:26.594348+00:00",
-      "ended_at_utc": "2026-02-27T03:23:26.652472+00:00",
-      "log_path": ".local/obs/s25-ops/s26-regression-safety/s26-regression-safety__20260227T032326Z__ops-s26-05-s26-06__da8b651/04_python3_m_unittest_v_tests_test_s26_rollback_artifact_py.log"
+      "duration_sec": 0.05,
+      "started_at_utc": "2026-02-27T03:33:02.442453+00:00",
+      "ended_at_utc": "2026-02-27T03:33:02.492547+00:00",
+      "log_path": ".local/obs/s25-ops/s26-regression-safety/s26-regression-safety__20260227T033301Z__ops-s26-05-s26-06__8af9692/04_python3_m_unittest_v_tests_test_s26_rollback_artifact_py.log"
     },
     {
       "command": "python3 -m unittest -v tests/test_s26_orchestration_core.py",
       "rc": 0,
       "status": "PASS",
-      "duration_sec": 0.07,
-      "started_at_utc": "2026-02-27T03:23:26.652972+00:00",
-      "ended_at_utc": "2026-02-27T03:23:26.723362+00:00",
-      "log_path": ".local/obs/s25-ops/s26-regression-safety/s26-regression-safety__20260227T032326Z__ops-s26-05-s26-06__da8b651/05_python3_m_unittest_v_tests_test_s26_orchestration_core_py.log"
+      "duration_sec": 0.067,
+      "started_at_utc": "2026-02-27T03:33:02.493013+00:00",
+      "ended_at_utc": "2026-02-27T03:33:02.559820+00:00",
+      "log_path": ".local/obs/s25-ops/s26-regression-safety/s26-regression-safety__20260227T033301Z__ops-s26-05-s26-06__8af9692/05_python3_m_unittest_v_tests_test_s26_orchestration_core_py.log"
     },
     {
       "command": "python3 -m unittest -v tests/test_s26_regression_safety.py",
       "rc": 0,
       "status": "PASS",
-      "duration_sec": 0.056,
-      "started_at_utc": "2026-02-27T03:23:26.723784+00:00",
-      "ended_at_utc": "2026-02-27T03:23:26.780069+00:00",
-      "log_path": ".local/obs/s25-ops/s26-regression-safety/s26-regression-safety__20260227T032326Z__ops-s26-05-s26-06__da8b651/06_python3_m_unittest_v_tests_test_s26_regression_safety_py.log"
+      "duration_sec": 0.05,
+      "started_at_utc": "2026-02-27T03:33:02.560265+00:00",
+      "ended_at_utc": "2026-02-27T03:33:02.610589+00:00",
+      "log_path": ".local/obs/s25-ops/s26-regression-safety/s26-regression-safety__20260227T033301Z__ops-s26-05-s26-06__8af9692/06_python3_m_unittest_v_tests_test_s26_regression_safety_py.log"
     },
     {
       "command": "python3 -m unittest -v tests/test_s26_acceptance_wall.py",
       "rc": 0,
       "status": "PASS",
-      "duration_sec": 0.15,
-      "started_at_utc": "2026-02-27T03:23:26.780598+00:00",
-      "ended_at_utc": "2026-02-27T03:23:26.930339+00:00",
-      "log_path": ".local/obs/s25-ops/s26-regression-safety/s26-regression-safety__20260227T032326Z__ops-s26-05-s26-06__da8b651/07_python3_m_unittest_v_tests_test_s26_acceptance_wall_py.log"
+      "duration_sec": 0.128,
+      "started_at_utc": "2026-02-27T03:33:02.611050+00:00",
+      "ended_at_utc": "2026-02-27T03:33:02.738722+00:00",
+      "log_path": ".local/obs/s25-ops/s26-regression-safety/s26-regression-safety__20260227T033301Z__ops-s26-05-s26-06__8af9692/07_python3_m_unittest_v_tests_test_s26_acceptance_wall_py.log"
     },
     {
       "command": "python3 -m unittest -v tests/test_s26_reliability_report.py",
       "rc": 0,
       "status": "PASS",
-      "duration_sec": 0.14,
-      "started_at_utc": "2026-02-27T03:23:26.930913+00:00",
-      "ended_at_utc": "2026-02-27T03:23:27.070564+00:00",
-      "log_path": ".local/obs/s25-ops/s26-regression-safety/s26-regression-safety__20260227T032326Z__ops-s26-05-s26-06__da8b651/08_python3_m_unittest_v_tests_test_s26_reliability_report_py.log"
+      "duration_sec": 0.119,
+      "started_at_utc": "2026-02-27T03:33:02.739116+00:00",
+      "ended_at_utc": "2026-02-27T03:33:02.858579+00:00",
+      "log_path": ".local/obs/s25-ops/s26-regression-safety/s26-regression-safety__20260227T033301Z__ops-s26-05-s26-06__8af9692/08_python3_m_unittest_v_tests_test_s26_reliability_report_py.log"
     },
     {
       "command": "python3 -m unittest -v tests/test_s26_evidence_index.py",
       "rc": 0,
       "status": "PASS",
-      "duration_sec": 0.056,
-      "started_at_utc": "2026-02-27T03:23:27.071027+00:00",
-      "ended_at_utc": "2026-02-27T03:23:27.127445+00:00",
-      "log_path": ".local/obs/s25-ops/s26-regression-safety/s26-regression-safety__20260227T032326Z__ops-s26-05-s26-06__da8b651/09_python3_m_unittest_v_tests_test_s26_evidence_index_py.log"
+      "duration_sec": 0.047,
+      "started_at_utc": "2026-02-27T03:33:02.858950+00:00",
+      "ended_at_utc": "2026-02-27T03:33:02.905902+00:00",
+      "log_path": ".local/obs/s25-ops/s26-regression-safety/s26-regression-safety__20260227T033301Z__ops-s26-05-s26-06__8af9692/09_python3_m_unittest_v_tests_test_s26_evidence_index_py.log"
     },
     {
       "command": "python3 -m unittest -v tests/test_s26_release_readiness.py",
       "rc": 0,
       "status": "PASS",
-      "duration_sec": 0.055,
-      "started_at_utc": "2026-02-27T03:23:27.128039+00:00",
-      "ended_at_utc": "2026-02-27T03:23:27.182798+00:00",
-      "log_path": ".local/obs/s25-ops/s26-regression-safety/s26-regression-safety__20260227T032326Z__ops-s26-05-s26-06__da8b651/10_python3_m_unittest_v_tests_test_s26_release_readiness_py.log"
+      "duration_sec": 0.047,
+      "started_at_utc": "2026-02-27T03:33:02.906276+00:00",
+      "ended_at_utc": "2026-02-27T03:33:02.953027+00:00",
+      "log_path": ".local/obs/s25-ops/s26-regression-safety/s26-regression-safety__20260227T033301Z__ops-s26-05-s26-06__8af9692/10_python3_m_unittest_v_tests_test_s26_release_readiness_py.log"
     },
     {
       "command": "python3 -m unittest -v tests/test_s26_closeout.py",
       "rc": 0,
       "status": "PASS",
-      "duration_sec": 0.056,
-      "started_at_utc": "2026-02-27T03:23:27.183254+00:00",
-      "ended_at_utc": "2026-02-27T03:23:27.239170+00:00",
-      "log_path": ".local/obs/s25-ops/s26-regression-safety/s26-regression-safety__20260227T032326Z__ops-s26-05-s26-06__da8b651/11_python3_m_unittest_v_tests_test_s26_closeout_py.log"
+      "duration_sec": 0.065,
+      "started_at_utc": "2026-02-27T03:33:02.953445+00:00",
+      "ended_at_utc": "2026-02-27T03:33:03.018880+00:00",
+      "log_path": ".local/obs/s25-ops/s26-regression-safety/s26-regression-safety__20260227T033301Z__ops-s26-05-s26-06__8af9692/11_python3_m_unittest_v_tests_test_s26_closeout_py.log"
     }
   ],
   "artifact_names": {
     "json": "regression_safety_latest.json",
     "md": "regression_safety_latest.md",
-    "run_dir": ".local/obs/s25-ops/s26-regression-safety/s26-regression-safety__20260227T032326Z__ops-s26-05-s26-06__da8b651"
+    "run_dir": ".local/obs/s25-ops/s26-regression-safety/s26-regression-safety__20260227T033301Z__ops-s26-05-s26-06__8af9692"
   },
   "stop": 0
 }

@@ -54,6 +54,27 @@ def read_json_if_exists(path: Path) -> Dict[str, Any]:
     return obj if isinstance(obj, dict) else {}
 
 
+def _to_int(value: Any, default: int = 0) -> int:
+    try:
+        return int(value)
+    except Exception:
+        return int(default)
+
+
+def infer_phase_status(phase: str, doc: Dict[str, Any]) -> str:
+    summary = dict(doc.get("summary", {}))
+    status = str(summary.get("status") or "").strip().upper()
+    if status:
+        return status
+
+    stop = _to_int(doc.get("stop", 0), 0)
+    failed_cases = _to_int(summary.get("failed_cases", 0), 0)
+    failed_commands = _to_int(summary.get("failed_commands", 0), 0)
+    if stop > 0 or failed_cases > 0 or failed_commands > 0:
+        return "FAIL"
+    return "PASS"
+
+
 def build_markdown(payload: Dict[str, Any]) -> str:
     summary = payload["summary"]
     lines: List[str] = []
@@ -124,8 +145,7 @@ def main() -> int:
             )
             continue
 
-        summary = dict(doc.get("summary", {}))
-        status = str(summary.get("status") or "PASS")
+        status = infer_phase_status(phase, doc)
         if status == "FAIL":
             failed_count += 1
             emit("ERROR", f"phase={phase} status=FAIL", events)

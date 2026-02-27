@@ -118,6 +118,8 @@ def validate_config(cfg: Dict[str, Any]) -> Tuple[bool, str]:
         return False, "policy.timeout_sec must be > 0"
     if int(policy.get("max_inflight", 0)) <= 0:
         return False, "policy.max_inflight must be > 0"
+    if int(policy.get("max_inflight", 0)) != 1:
+        return False, "policy.max_inflight must be 1 (serial runner)"
 
     retryable = policy.get("retryable_reason_codes")
     non_retryable = policy.get("non_retryable_reason_codes")
@@ -125,6 +127,10 @@ def validate_config(cfg: Dict[str, Any]) -> Tuple[bool, str]:
         return False, "policy.retryable_reason_codes missing"
     if not isinstance(non_retryable, list) or not non_retryable:
         return False, "policy.non_retryable_reason_codes missing"
+    retryable_set = {str(x) for x in retryable}
+    non_retryable_set = {str(x) for x in non_retryable}
+    if retryable_set & non_retryable_set:
+        return False, "policy retryable/non_retryable overlap"
 
     if not isinstance(rollback, dict):
         return False, "rollback missing"
@@ -221,8 +227,12 @@ def extract_content(result_json: Any) -> str:
     return str(message.get("content") or "")
 
 
-def should_retry(reason_code: str, retryable_codes: List[str]) -> bool:
-    return reason_code in set(str(x) for x in retryable_codes)
+def should_retry(reason_code: str, retryable_codes: List[str], non_retryable_codes: List[str]) -> bool:
+    retryable = {str(x) for x in retryable_codes}
+    non_retryable = {str(x) for x in non_retryable_codes}
+    if reason_code in non_retryable:
+        return False
+    return reason_code in retryable
 
 
 def run_case_with_retry(
@@ -250,6 +260,7 @@ def run_case_with_retry(
         }
 
     retryable_codes = [str(x) for x in policy.get("retryable_reason_codes", [])]
+    non_retryable_codes = [str(x) for x in policy.get("non_retryable_reason_codes", [])]
     timeout_sec = int(policy.get("timeout_sec", DEFAULT_TIMEOUT_SEC))
     max_retries = int(policy.get("max_retries", 0))
     backoff_ms = int(policy.get("retry_backoff_ms", 0))
@@ -328,7 +339,7 @@ def run_case_with_retry(
         final_text = text
         final_status = http_status
 
-        retry = should_retry(reason_code, retryable_codes)
+        retry = should_retry(reason_code, retryable_codes, non_retryable_codes)
         if retry and attempt_index < max_attempts:
             backoff = (backoff_ms / 1000.0) * attempt_index
             if jitter_ms > 0:
@@ -338,7 +349,7 @@ def run_case_with_retry(
             continue
         break
 
-    if should_retry(final_reason, retryable_codes) and circuit_open_sec > 0:
+    if should_retry(final_reason, retryable_codes, non_retryable_codes) and circuit_open_sec > 0:
         circuit_state["open_until"] = now_fn() + float(circuit_open_sec)
 
     return {
@@ -486,41 +497,18 @@ def main() -> int:
     provider_cfg = dict(cfg.get("provider", {}))
     runtime = resolve_provider_runtime(provider_cfg, env=dict(os.environ))
 
-    if requests is None:
-        emit("WARN", "requests unavailable; canary skipped", events)
-        payload = {
-            "schema_version": "s26-provider-canary-result-v1",
-            "captured_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-            "git": {"branch": git_out(repo_root, ["branch", "--show-current"]), "head": git_out(repo_root, ["rev-parse", "HEAD"])},
-            "config_path": to_repo_rel(repo_root, config_path),
-            "policy": {"hash": _policy_hash(policy), "value": policy},
-            "provider": sanitize_runtime(runtime),
-            "cases": [],
-            "summary": {
-                "status": "SKIP",
-                "passed_cases": 0,
-                "failed_cases": 0,
-                "skipped_cases": 0,
-                "reason_code": REASON_REQUESTS_UNAVAILABLE,
-            },
-            "rollback": {"command": str(dict(cfg.get("rollback", {})).get("command") or "")},
-            "artifact_names": {"json": "provider_canary_latest.json", "md": "provider_canary_latest.md"},
-        }
-        json_path = out_dir / "provider_canary_latest.json"
-        md_path = out_dir / "provider_canary_latest.md"
-        json_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-        md_path.write_text(build_markdown(payload), encoding="utf-8")
-        write_events(run_dir, events)
-        write_summary(run_dir, meta, events, extra={"status": "SKIP", "reason_code": REASON_REQUESTS_UNAVAILABLE})
-        emit("OK", f"artifact_json={json_path}", events)
-        emit("OK", f"artifact_md={md_path}", events)
-        return 0
-
     if runtime.get("missing"):
         missing = ",".join(runtime.get("missing", []))
         msg = f"provider env missing={missing}; canary skipped"
         if args.strict_provider_env:
             emit("ERROR", msg, events)
+            write_failure_artifacts(
+                repo_root=repo_root,
+                out_dir=out_dir,
+                config_path=config_path,
+                reason_code=REASON_MISSING_PROVIDER_ENV,
+                errors=[msg],
+            )
             write_events(run_dir, events)
             write_summary(run_dir, meta, events, extra={"stop": 1, "reason_code": REASON_MISSING_PROVIDER_ENV})
             return 1
@@ -549,6 +537,36 @@ def main() -> int:
         md_path.write_text(build_markdown(payload), encoding="utf-8")
         write_events(run_dir, events)
         write_summary(run_dir, meta, events, extra={"status": "SKIP", "reason_code": REASON_MISSING_PROVIDER_ENV})
+        emit("OK", f"artifact_json={json_path}", events)
+        emit("OK", f"artifact_md={md_path}", events)
+        return 0
+
+    if requests is None:
+        emit("WARN", "requests unavailable; canary skipped", events)
+        payload = {
+            "schema_version": "s26-provider-canary-result-v1",
+            "captured_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "git": {"branch": git_out(repo_root, ["branch", "--show-current"]), "head": git_out(repo_root, ["rev-parse", "HEAD"])},
+            "config_path": to_repo_rel(repo_root, config_path),
+            "policy": {"hash": _policy_hash(policy), "value": policy},
+            "provider": sanitize_runtime(runtime),
+            "cases": [],
+            "summary": {
+                "status": "SKIP",
+                "passed_cases": 0,
+                "failed_cases": 0,
+                "skipped_cases": int(len(cfg.get("cases", []))),
+                "reason_code": REASON_REQUESTS_UNAVAILABLE,
+            },
+            "rollback": {"command": str(dict(cfg.get("rollback", {})).get("command") or "")},
+            "artifact_names": {"json": "provider_canary_latest.json", "md": "provider_canary_latest.md"},
+        }
+        json_path = out_dir / "provider_canary_latest.json"
+        md_path = out_dir / "provider_canary_latest.md"
+        json_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        md_path.write_text(build_markdown(payload), encoding="utf-8")
+        write_events(run_dir, events)
+        write_summary(run_dir, meta, events, extra={"status": "SKIP", "reason_code": REASON_REQUESTS_UNAVAILABLE})
         emit("OK", f"artifact_json={json_path}", events)
         emit("OK", f"artifact_md={md_path}", events)
         return 0

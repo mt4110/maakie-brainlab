@@ -1,8 +1,8 @@
 # S26-01 Provider Canary (Latest)
 
-- CapturedAtUTC: `2026-02-27T03:23:25Z`
+- CapturedAtUTC: `2026-02-27T03:32:17Z`
 - Branch: `ops/S26-05-S26-06`
-- HeadSHA: `da8b651872e89285070085d2bf52564506c830f5`
+- HeadSHA: `8af969292a66335f055382f1a5b2e2bdfa330a7c`
 - Config: `docs/ops/S26-01_PROVIDER_CANARY.toml`
 - PolicyHash: `170f1b5a842ef87edbb6297c0fbf1331a9d90dc683eec54340bf86300b6e4c79`
 
