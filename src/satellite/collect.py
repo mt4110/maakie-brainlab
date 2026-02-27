@@ -55,9 +55,11 @@ def detect_code_version(project_root: Path) -> str:
             text=True,
             check=False,
         )
+        if dirty.returncode == 0:
+            return head
         if dirty.returncode == 1:
             return f"{head}-dirty"
-        return head
+        return default
     except Exception:
         return default
 

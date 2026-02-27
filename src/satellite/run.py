@@ -23,7 +23,11 @@ def run_pipeline(
 
     manifest_check = verify_manifest(source_id, date_str, project_root)
     if not manifest_check.get("ok"):
-        raise RuntimeError("manifest verification failed")
+        raw_errors = manifest_check.get("errors")
+        errors = raw_errors if isinstance(raw_errors, list) else []
+        preview = "; ".join(str(x) for x in errors[:3]) if errors else "unknown"
+        error_count = int(manifest_check.get("error_count", len(errors)) or len(errors))
+        raise RuntimeError(f"manifest verification failed: error_count={error_count} errors={preview}")
 
     Normalizer(source_id, date_str, project_root).run()
     gate = run_gate(source_id, date_str, project_root)

@@ -56,6 +56,15 @@ require_japanese=false
         self.assertTrue((self.root / f"data/satellite/{self.source}/digest/{self.date}.md").exists())
         self.assertTrue((self.root / f"data/satellite/{self.source}/index/index.sqlite3").exists())
 
+    @patch("satellite.run.verify_manifest", return_value={"ok": False, "error_count": 2, "errors": ["e1", "e2"]})
+    @patch("satellite.run.Collector.run", return_value=None)
+    def test_run_pipeline_manifest_failure_includes_errors(self, _mock_collect, _mock_verify):
+        with self.assertRaises(RuntimeError) as ctx:
+            run_pipeline(self.source, self.date, self.root, chunk_size=128, overlap=32)
+        msg = str(ctx.exception)
+        self.assertIn("error_count=2", msg)
+        self.assertIn("e1", msg)
+
 
 if __name__ == "__main__":
     unittest.main()

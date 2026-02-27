@@ -58,6 +58,15 @@ class TestSatelliteCollect(unittest.TestCase):
         version = detect_code_version(self.root)
         self.assertEqual(version, "abc123def456-dirty")
 
+    @patch("satellite.collect.subprocess.run")
+    def test_detect_code_version_fallback_on_git_status_error(self, mock_run):
+        mock_run.side_effect = [
+            CompletedProcess(args=["git"], returncode=0, stdout="abc123def456\n", stderr=""),
+            CompletedProcess(args=["git"], returncode=128, stdout="", stderr="fatal: not a git repository"),
+        ]
+        version = detect_code_version(self.root)
+        self.assertEqual(version, "v1-dev")
+
     @patch("satellite.collect.Collector.fetch_feed")
     def test_collector_run_with_fixture(self, mock_fetch):
         """Test full run using local fixture (no network)."""

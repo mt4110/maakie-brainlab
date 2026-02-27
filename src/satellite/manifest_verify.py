@@ -60,17 +60,32 @@ def verify_manifest(source_id: str, date_str: str, project_root: Path) -> Dict[s
             errors.append("artifacts is not a list")
         else:
             artifacts = artifacts_value
-        paths = [str(dict(row).get("path") or "") for row in artifacts]
+
+        artifact_items: List[Dict[str, Any]] = []
+        for idx, row in enumerate(artifacts):
+            if not isinstance(row, dict):
+                errors.append(f"artifact entry is not an object: index={idx}")
+                continue
+            artifact_items.append(row)
+
+        paths = [str(row.get("path") or "") for row in artifact_items]
         if paths != sorted(paths):
             errors.append("artifacts are not sorted by path")
 
-        for row in artifacts:
-            item = dict(row)
+        root_resolved = project_root.resolve()
+        for item in artifact_items:
             rel = str(item.get("path") or "")
             if not rel:
                 errors.append("artifact missing path")
                 continue
-            file_path = (project_root / rel).resolve()
+            rel_path = Path(rel)
+            if rel_path.is_absolute():
+                errors.append(f"artifact path must be relative: {rel}")
+                continue
+            file_path = (project_root / rel_path).resolve()
+            if root_resolved not in file_path.parents:
+                errors.append(f"artifact path escapes project root: {rel}")
+                continue
             if not file_path.exists():
                 errors.append(f"artifact missing file: {rel}")
                 continue

@@ -100,6 +100,28 @@ class SatelliteManifestVerifyTests(unittest.TestCase):
         self.assertFalse(out["ok"])
         self.assertTrue(any("artifact bytes invalid" in err for err in out["errors"]))
 
+    def test_verify_manifest_rejects_non_object_artifact_entry(self):
+        manifest_path = self.root / f"data/satellite/{self.source}/manifests/{self.date}.manifest.json"
+        payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+        payload["artifacts"] = ["bad-entry"]
+        manifest_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+        out = verify_manifest(self.source, self.date, self.root)
+        self.assertFalse(out["ok"])
+        self.assertTrue(any("artifact entry is not an object" in err for err in out["errors"]))
+
+    def test_verify_manifest_rejects_path_escape(self):
+        manifest_path = self.root / f"data/satellite/{self.source}/manifests/{self.date}.manifest.json"
+        payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+        payload["artifacts"][0]["path"] = "../outside.txt"
+        payload["artifacts"][0]["sha256"] = "x"
+        payload["artifacts"][0]["bytes"] = 1
+        manifest_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+        out = verify_manifest(self.source, self.date, self.root)
+        self.assertFalse(out["ok"])
+        self.assertTrue(any("artifact path escapes project root" in err for err in out["errors"]))
+
 
 if __name__ == "__main__":
     unittest.main()

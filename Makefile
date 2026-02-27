@@ -255,11 +255,13 @@ sat-normalize:
 	@test -n "$(SOURCE)" || (echo "ERROR: SOURCE is required. usage: make sat-normalize SOURCE=<source_id> [DATE=YYYY-MM-DD]" && exit 2)
 	$(PYENV) $(PY) -m satellite.normalize "$(SOURCE)" --date "$(SAT_DATE)"
 
-sat-manifest:
-	@test -n "$(SOURCE)" || (echo "ERROR: SOURCE is required. usage: make sat-manifest SOURCE=<source_id> [DATE=YYYY-MM-DD]" && exit 2)
+sat-verify-manifest:
+	@test -n "$(SOURCE)" || (echo "ERROR: SOURCE is required. usage: make sat-verify-manifest SOURCE=<source_id> [DATE=YYYY-MM-DD]" && exit 2)
 	$(PYENV) $(PY) -m satellite.manifest_verify "$(SOURCE)" --date "$(SAT_DATE)"
 
-sat-verify: sat-manifest
+sat-manifest: sat-verify-manifest
+
+sat-verify: sat-verify-manifest
 
 sat-gate:
 	@test -n "$(SOURCE)" || (echo "ERROR: SOURCE is required. usage: make sat-gate SOURCE=<source_id> [DATE=YYYY-MM-DD]" && exit 2)
