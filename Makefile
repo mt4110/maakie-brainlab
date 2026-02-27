@@ -2,7 +2,7 @@
 .PHONY: sat-collect sat-normalize sat-gate sat-store sat-digest sat-index sat-run
 .PHONY: server-start server-stop server-status log ingest ask
 .PHONY: ai-smoke ai-verify
-.PHONY: s22-16-ship phase-ship ops-now s25-baseline-freeze s25-obs-summary s25-regression-safety s25-acceptance-wall s25-ml-experiment s25-rag-tuning s25-langchain-poc s26-provider-canary s26-medium-eval-wall s26-rollback-artifact s26-orchestration-core bench-il-compile tune-il-compile-prompt il-thread-smoke il-thread-replay-check verify-il-thread-v2
+.PHONY: s22-16-ship phase-ship ops-now s25-baseline-freeze s25-obs-summary s25-regression-safety s25-acceptance-wall s25-ml-experiment s25-rag-tuning s25-langchain-poc s26-provider-canary s26-medium-eval-wall s26-rollback-artifact s26-orchestration-core s26-regression-safety s26-acceptance-wall s26-reliability-report s26-evidence-index s26-release-readiness s26-closeout bench-il-compile tune-il-compile-prompt il-thread-smoke il-thread-replay-check verify-il-thread-v2
 
 PY=.venv/bin/python
 PYENV=PYTHONPATH=./src:.
@@ -116,6 +116,24 @@ s26-rollback-artifact:
 
 s26-orchestration-core:
 	$(PYENV) $(PY) scripts/ops/s26_orchestration_core.py
+
+s26-regression-safety:
+	$(PYENV) $(PY) scripts/ops/s26_regression_safety.py
+
+s26-acceptance-wall:
+	$(PYENV) $(PY) scripts/ops/s26_acceptance_wall.py
+
+s26-reliability-report:
+	$(PYENV) $(PY) scripts/ops/s26_reliability_report.py
+
+s26-evidence-index:
+	$(PYENV) $(PY) scripts/ops/s26_evidence_index.py
+
+s26-release-readiness:
+	$(PYENV) $(PY) scripts/ops/s26_release_readiness.py
+
+s26-closeout:
+	$(PYENV) $(PY) scripts/ops/s26_closeout.py
 
 bootstrap:
 	# S20-08: Canonical bootstrap via uv (using system python only to install uv)

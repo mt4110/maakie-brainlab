@@ -1,0 +1,80 @@
+{
+  "schema_version": "s26-release-readiness-v1",
+  "captured_at_utc": "2026-02-27T02:44:04Z",
+  "git": {
+    "branch": "ops/S26-05-S26-06",
+    "head": "a08cc857a66433f18ad8bc366d5e70e84a9795c3"
+  },
+  "inputs": {
+    "S26-01": "docs/evidence/s26-01/provider_canary_latest.json",
+    "S26-02": "docs/evidence/s26-02/medium_eval_wall_latest.json",
+    "S26-03": "docs/evidence/s26-03/rollback_artifact_latest.json",
+    "S26-04": "docs/evidence/s26-04/orchestration_core_latest.json",
+    "S26-05": "docs/evidence/s26-05/regression_safety_latest.json",
+    "S26-06": "docs/evidence/s26-06/acceptance_wall_latest.json",
+    "S26-07": "docs/evidence/s26-07/reliability_report_latest.json",
+    "S26-08": "docs/evidence/s26-08/evidence_index_latest.json"
+  },
+  "missing_phases": [],
+  "gates": [
+    {
+      "phase": "S26-01",
+      "gate": "canary status PASS/SKIP",
+      "actual": "SKIP",
+      "passed": true
+    },
+    {
+      "phase": "S26-02",
+      "gate": "medium eval status PASS",
+      "actual": "PASS",
+      "passed": true
+    },
+    {
+      "phase": "S26-03",
+      "gate": "rollback artifact status PASS",
+      "actual": "PASS",
+      "passed": true
+    },
+    {
+      "phase": "S26-04",
+      "gate": "orchestration status PASS",
+      "actual": "PASS",
+      "passed": true
+    },
+    {
+      "phase": "S26-05",
+      "gate": "regression stop flag == 0",
+      "actual": 0,
+      "passed": true
+    },
+    {
+      "phase": "S26-06",
+      "gate": "acceptance failed_cases == 0",
+      "actual": 0,
+      "passed": true
+    },
+    {
+      "phase": "S26-07",
+      "gate": "reliability status PASS/WARN",
+      "actual": "WARN",
+      "passed": true
+    },
+    {
+      "phase": "S26-08",
+      "gate": "evidence index status PASS/WARN",
+      "actual": "WARN",
+      "passed": true
+    }
+  ],
+  "rollback_command": "python3 scripts/ops/s25_langchain_poc.py --mode rollback-only",
+  "summary": {
+    "readiness": "READY",
+    "total_gates": 8,
+    "passed_gates": 8,
+    "blocked_gates": 0
+  },
+  "artifact_names": {
+    "json": "release_readiness_latest.json",
+    "md": "release_readiness_latest.md"
+  }
+}

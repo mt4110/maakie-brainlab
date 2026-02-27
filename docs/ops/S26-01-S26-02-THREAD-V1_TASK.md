@@ -1,10 +1,10 @@
-# S26-01-S26-04 THREAD v1 TASK — Precision AI Orchestration Core
+# S26-01-S26-10 THREAD v1 TASK — Precision AI Orchestration Core to Closeout
 
 Last Updated: 2026-02-27
 
 ## Progress
 
-- S26-01-S26-02: 88% (S26-01..04 の最小骨格、evidence、verify-il まで完了)
+- S26-01-S26-10: 98% (S26-01..10 実装/evidence 完了、ship前最終 gate のみ残し)
 
 ## Ritual 22-16-22-99
 
@@ -61,11 +61,48 @@ Last Updated: 2026-02-27
 - [x] evidence（JSON/MD）を `docs/evidence/s26-04/` に保存
 - [x] unit tests を追加（helper レベル）
 
-### S26-04 Closeout
+### S26-05 Regression Safety
 
-- [ ] Before/After（品質・速度・運用負荷）を PR body に固定
-- [ ] unresolved risk と次スレ handoff を記述
-- [ ] closeout artifact を `docs/evidence/s26-closeout/` に保存
+- [x] `scripts/ops/s26_regression_safety.py` を追加
+- [x] non-blocking 契約チェックを実装
+- [x] evidence（JSON/MD）を `docs/evidence/s26-05/` に保存
+- [x] unit tests を追加
+
+### S26-06 Acceptance Wall
+
+- [x] acceptance cases（JSON）を追加
+- [x] `scripts/ops/s26_acceptance_wall.py` を追加
+- [x] evidence（JSON/MD）を `docs/evidence/s26-06/` に保存
+- [x] unit tests を追加
+
+### S26-07 Reliability Report
+
+- [x] `scripts/ops/s26_reliability_report.py` を追加
+- [x] canary reason_code 分布/成功率を集計
+- [x] evidence（JSON/MD）を `docs/evidence/s26-07/` に保存
+- [x] unit tests を追加
+
+### S26-08 Evidence Index
+
+- [x] `scripts/ops/s26_evidence_index.py` を追加
+- [x] S26-01..07 の artifact index を生成
+- [x] evidence（JSON/MD）を `docs/evidence/s26-08/` に保存
+- [x] unit tests を追加
+
+### S26-09 Release Readiness
+
+- [x] `scripts/ops/s26_release_readiness.py` を追加
+- [x] S26-01..08 の gate 判定（READY/BLOCKED）を固定
+- [x] evidence（JSON/MD）を `docs/evidence/s26-09/` に保存
+- [x] unit tests を追加
+
+### S26-10 Closeout
+
+- [x] closeout note を `docs/ops/S26-10_CLOSEOUT.md` に追加
+- [x] `scripts/ops/s26_closeout.py` を追加
+- [x] Before/After + unresolved risk + handoff を artifact 化
+- [x] evidence（JSON/MD）を `docs/evidence/s26-10/` に保存
+- [x] unit tests を追加
 
 ## Validation Commands
 
@@ -76,6 +113,12 @@ Last Updated: 2026-02-27
 - [x] `python3 -m unittest -v tests/test_s26_medium_eval_wall.py`
 - [x] `python3 -m unittest -v tests/test_s26_rollback_artifact.py`
 - [x] `python3 -m unittest -v tests/test_s26_orchestration_core.py`
+- [x] `python3 -m unittest -v tests/test_s26_regression_safety.py`
+- [x] `python3 -m unittest -v tests/test_s26_acceptance_wall.py`
+- [x] `python3 -m unittest -v tests/test_s26_reliability_report.py`
+- [x] `python3 -m unittest -v tests/test_s26_evidence_index.py`
+- [x] `python3 -m unittest -v tests/test_s26_release_readiness.py`
+- [x] `python3 -m unittest -v tests/test_s26_closeout.py`
 
 中量（必要時）:
 
@@ -83,6 +126,12 @@ Last Updated: 2026-02-27
 - [x] `make s26-medium-eval-wall`
 - [x] `make s26-rollback-artifact`
 - [x] `make s26-orchestration-core`
+- [x] `make s26-regression-safety`
+- [x] `make s26-acceptance-wall`
+- [x] `make s26-reliability-report`
+- [x] `make s26-evidence-index`
+- [x] `make s26-release-readiness`
+- [x] `make s26-closeout`
 
 重量（ship前）:
 

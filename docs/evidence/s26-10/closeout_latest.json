@@ -1,0 +1,38 @@
+{
+  "schema_version": "s26-closeout-v1",
+  "captured_at_utc": "2026-02-27T02:44:04Z",
+  "git": {
+    "branch": "ops/S26-05-S26-06",
+    "head": "a08cc857a66433f18ad8bc366d5e70e84a9795c3"
+  },
+  "inputs": {
+    "readiness_json": "docs/evidence/s26-09/release_readiness_latest.json",
+    "index_json": "docs/evidence/s26-08/evidence_index_latest.json"
+  },
+  "before_after": {
+    "before_scope": "S26-04 Exit (core orchestration only)",
+    "after_scope": "S26-10 Exit (regression/acceptance/reliability/readiness/closeout)",
+    "before_phases_present": 4,
+    "after_phases_present": 7,
+    "after_failed_count": 0,
+    "after_warn_count": 1
+  },
+  "unresolved_risks": [
+    "provider env が未設定の場合、canary は SKIP となり実接続品質は未検証のまま残る。",
+    "長時間/高負荷での retry/backoff 妥当性は別スレッドで継続検証が必要。"
+  ],
+  "next_thread_handoff": [
+    "S27-01: provider 実接続 canary を定常運用化し、SKIP率を継続監視する。",
+    "S27-02: medium eval wall を運用データで拡張し、失敗 taxonomy の粒度を上げる。",
+    "S27-03: release-readiness を CI 定期実行へ昇格する。"
+  ],
+  "summary": {
+    "status": "PASS",
+    "readiness": "READY",
+    "blocked_gates": 0
+  },
+  "artifact_names": {
+    "json": "closeout_latest.json",
+    "md": "closeout_latest.md"
+  }
+}

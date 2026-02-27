@@ -1,0 +1,78 @@
+{
+  "schema_version": "s26-evidence-index-v1",
+  "captured_at_utc": "2026-02-27T02:44:04Z",
+  "git": {
+    "branch": "ops/S26-05-S26-06",
+    "head": "a08cc857a66433f18ad8bc366d5e70e84a9795c3"
+  },
+  "phases": [
+    {
+      "phase": "S26-01",
+      "artifact": "docs/evidence/s26-01/provider_canary_latest.json",
+      "present": true,
+      "status": "SKIP",
+      "schema_version": "s26-provider-canary-result-v1",
+      "captured_at_utc": "2026-02-27T02:18:09Z"
+    },
+    {
+      "phase": "S26-02",
+      "artifact": "docs/evidence/s26-02/medium_eval_wall_latest.json",
+      "present": true,
+      "status": "PASS",
+      "schema_version": "s26-medium-eval-wall-result-v1",
+      "captured_at_utc": "2026-02-27T02:18:09Z"
+    },
+    {
+      "phase": "S26-03",
+      "artifact": "docs/evidence/s26-03/rollback_artifact_latest.json",
+      "present": true,
+      "status": "PASS",
+      "schema_version": "s26-rollback-artifact-v1",
+      "captured_at_utc": "2026-02-27T02:18:09Z"
+    },
+    {
+      "phase": "S26-04",
+      "artifact": "docs/evidence/s26-04/orchestration_core_latest.json",
+      "present": true,
+      "status": "PASS",
+      "schema_version": "s26-orchestration-core-v1",
+      "captured_at_utc": "2026-02-27T02:18:09Z"
+    },
+    {
+      "phase": "S26-05",
+      "artifact": "docs/evidence/s26-05/regression_safety_latest.json",
+      "present": true,
+      "status": "PASS",
+      "schema_version": "s26-regression-safety-v1",
+      "captured_at_utc": "2026-02-27T02:44:04.525788+00:00"
+    },
+    {
+      "phase": "S26-06",
+      "artifact": "docs/evidence/s26-06/acceptance_wall_latest.json",
+      "present": true,
+      "status": "PASS",
+      "schema_version": "s26-acceptance-wall-v1",
+      "captured_at_utc": "2026-02-27T02:44:04.602433+00:00"
+    },
+    {
+      "phase": "S26-07",
+      "artifact": "docs/evidence/s26-07/reliability_report_latest.json",
+      "present": true,
+      "status": "WARN",
+      "schema_version": "s26-reliability-report-v1",
+      "captured_at_utc": "2026-02-27T02:43:31Z"
+    }
+  ],
+  "summary": {
+    "status": "WARN",
+    "phases_total": 7,
+    "present_count": 7,
+    "missing_count": 0,
+    "failed_count": 0,
+    "warn_count": 1
+  },
+  "artifact_names": {
+    "json": "evidence_index_latest.json",
+    "md": "evidence_index_latest.md"
+  }
+}
