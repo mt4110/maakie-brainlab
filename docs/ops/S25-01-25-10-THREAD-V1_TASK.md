@@ -1,10 +1,10 @@
 # S25-01-25-10 THREAD v1 TASK — Current-Point Ops + ML/RAG/LangChain Backward Design
 
-Last Updated: 2026-02-26
+Last Updated: 2026-02-27
 
 ## Progress
 
-- S25-01-25-10: 85% (S25-01..S25-08 完了)
+- S25-01-25-10: 100% (S25-01..S25-10 完了)
 
 ## Ritual 22-16-22-99
 
@@ -94,16 +94,16 @@ Last Updated: 2026-02-26
 
 ### S25-10 Closeout
 
-- [ ] Before/After 比較を PR body に固定
-- [ ] 未解決リスクと次スレ handoff を記載
-- [ ] closeout コミットを作成
+- [x] Before/After 比較を PR body に固定
+- [x] 未解決リスクと次スレ handoff を記載
+- [x] closeout コミットを作成
 
 ## Validation Commands
 
 軽量（毎PR）:
 
 - [x] `python3 scripts/ops/current_point.py`
-- [ ] `python3 -m unittest -v tests/test_il_entry_smoke.py`
+- [x] `python3 tests/test_il_entry_smoke.py`
 
 中量（必要時）:
 
@@ -112,7 +112,7 @@ Last Updated: 2026-02-26
 重量（ship前）:
 
 - [x] `make verify-il`
-- [ ] `source /path/to/your/nix/profile.d/nix-daemon.sh`
+- [x] `source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh`
 - [ ] `ci-self up --ref "$(git branch --show-current)"`
 
 ## Evidence Policy
