@@ -1,9 +1,9 @@
 {
   "schema_version": "s28-closeout-v1",
-  "captured_at_utc": "2026-02-27T10:16:34Z",
+  "captured_at_utc": "2026-02-27T10:30:33Z",
   "git": {
     "branch": "ops/S28-01-S28-10",
-    "head": "2a3af57247941708ebc55133a88ee4900018b6aa"
+    "head": "d5065ad84191b3738c1ce27f09af2e12cb0372c6"
   },
   "inputs": {
     "readiness_json": "docs/evidence/s28-09/slo_readiness_v2_latest.json",
