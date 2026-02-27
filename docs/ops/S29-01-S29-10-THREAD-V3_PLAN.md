@@ -32,12 +32,42 @@ Last Updated: 2026-02-27
 
 ## Completion Definition (S29-10 Exit v3)
 
-- `S29-09` で `readiness=READY` を第一目標とする。
-- `S29-03` で `attempted_channels >= 2` かつ `sent_channels >= 1` を達成する。
-- `S29-06` で `total_runs >= 12`（hard min 到達）を達成する。
-- `S29-02` で `unknown_ratio <= 0.15`（hard threshold 以下）を達成する。
-- `S29-01` で `recovery_success_rate >= 0.50`（hard threshold 以上）を達成する。
+- `S29-09` で `readiness=READY` を第一目標とする（hard/soft violation を 0 件にする）。
+- READY 収束の最終しきい値（soft gate）:
+  - `S29-03`: `notify_delivery_rate >= 1.0` かつ `attempted_channels >= 2` かつ `sent_channels >= 1`
+  - `S29-06`: `total_runs >= 24`
+  - `S29-02`: `unknown_ratio <= 0.03`
+  - `S29-01`: `recovery_success_rate >= 0.80`
+- waiver 脱却の最低しきい値（hard gate）:
+  - `S29-03`: `attempted_channels >= 2` かつ `sent_channels >= 1`
+  - `S29-06`: `total_runs >= 12`
+  - `S29-02`: `unknown_ratio <= 0.15`
+  - `S29-01`: `recovery_success_rate >= 0.50`
 - `tests/test_s29_*.py`, `make verify-il`, `ci-self` が green。
+
+## Phase-1 Freeze Outputs (2026-02-27)
+
+### 1-1. v3 Exit条件（READY判定）固定
+
+- READY 判定は `s29_slo_readiness_v3.py` の soft threshold を準拠基準に固定する。
+- ただし実行管理上は hard threshold 到達を中間ゲートとして扱い、waiver 5件の消化順を固定する。
+- 判定の source of truth は `docs/evidence/s29-09/slo_readiness_v4_latest.json` の `summary/slo/metrics` とする。
+
+### 1-2. v2 waiver 5件の exit condition を実施項目へ分解
+
+| Metric | Waiver Code | Exit Condition | v3 実施項目 |
+| --- | --- | --- | --- |
+| `skip_rate` | `SKIP_RATE_ENV_GAP` | Keep trailing non-pass streak below 3. | `S29-01` で env gap の原因別対処を適用し、`trend.trailing_nonpass < 3` を維持する。 |
+| `unknown_ratio` | `UNKNOWN_RATIO_WITH_ACTIONS` | Reduce unknown_ratio to <= 0.03 with additional labeled samples. | `S29-02` で owner/action に沿って追加ラベル収集を進め、`unknown_ratio <= 0.03` を達成する。 |
+| `notify_delivery_rate` | `NOTIFY_ENDPOINT_GAP` | Configure channel webhooks and verify each channel returns 2xx at least once. | `S29-03` で 2チャネル以上送信し、最小1チャネルで 2xx 成功を記録する。 |
+| `recovery_success_rate` | `RECOVERY_SUCCESS_ENV_GAP` | Keep trailing non-pass streak below 3. | `S29-01` で recovery attempt サンプルを増やし、`success_rate >= 0.80` を満たす。 |
+| `reliability_total_runs` | `RELIABILITY_ENV_GAP` | Collect additional canary history samples and rerun S29-06. | `S29-06` で観測 run を追加し、`total_runs >= 24` を達成する。 |
+
+### 1-3. 変更対象（script/test/evidence）確定
+
+- Phase-1（今回）: 設計凍結 docs のみ（`PLAN/TASK`）。
+- Phase-2（実装）: `scripts/ops/s29_*.py`, `tests/test_s29_*.py`。
+- Phase-3/4（実行証跡）: `docs/evidence/s29-01/*` ... `docs/evidence/s29-10/*`。
 
 ## Backward Design (S29-10 -> S29-01)
 

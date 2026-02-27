@@ -4,12 +4,13 @@ Last Updated: 2026-02-27
 
 ## Progress
 
-- S29-01-S29-10 v3: 0% (planning kickoff)
+- S29-01-S29-10 v3: 22% (Phase-1 Design Freeze 完了)
 
 ## Current Facts
 
 - S29 v2 closeout は `PASS`、readiness は `WARN_ONLY`。
 - v3 は waiver exit condition の実消化と `READY` 収束フェーズ。
+- Phase-1 で Exit条件・waiver分解・変更対象・PR body テンプレートを固定済み。
 - 進捗SOTは本TASKとPR body（`STATUS.md`は非SOT）。
 
 ## Ritual 22-16-22-99
@@ -28,10 +29,10 @@ Last Updated: 2026-02-27
 
 ### Phase-1 Design Freeze
 
-- [ ] 1-1. v3 Exit条件（READY判定）を固定
-- [ ] 1-2. v2 waiver 5件の exit condition を実施項目へ分解
-- [ ] 1-3. 変更対象（script/test/evidence）を確定
-- [ ] 1-4. PR body 記録テンプレート（OK/WARN/ERROR/SKIP）を更新
+- [x] 1-1. v3 Exit条件（READY判定）を固定
+- [x] 1-2. v2 waiver 5件の exit condition を実施項目へ分解
+- [x] 1-3. 変更対象（script/test/evidence）を確定
+- [x] 1-4. PR body 記録テンプレート（OK/WARN/ERROR/SKIP）を更新
 
 ### Phase-2 Implementation Batch
 
@@ -58,6 +59,77 @@ Last Updated: 2026-02-27
 - [ ] 5-2. `source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh`
 - [ ] 5-3. `ci-self up --ref "$(git branch --show-current)"`
 - [ ] 5-4. PR body を最終更新
+
+## Phase-1 Freeze Output (2026-02-27)
+
+### 1-1. Exit条件（READY判定）固定
+
+- READY 収束条件（soft gate）:
+  - `recovery_success_rate >= 0.80`
+  - `unknown_ratio <= 0.03`
+  - `notify_delivery_rate >= 1.0` + `attempted_channels >= 2` + `sent_channels >= 1`
+  - `reliability_total_runs >= 24`
+- 中間ゲート（hard gate / waiver脱却）:
+  - `recovery_success_rate >= 0.50`
+  - `unknown_ratio <= 0.15`
+  - `attempted_channels >= 2` + `sent_channels >= 1`
+  - `reliability_total_runs >= 12`
+
+### 1-2. v2 waiver 5件 -> v3 実施項目
+
+- `skip_rate (SKIP_RATE_ENV_GAP)`: `S29-01` で `trailing_nonpass < 3` を達成/維持。
+- `unknown_ratio (UNKNOWN_RATIO_WITH_ACTIONS)`: `S29-02` で追加ラベル収集を実施し `unknown_ratio <= 0.03` へ収束。
+- `notify_delivery_rate (NOTIFY_ENDPOINT_GAP)`: `S29-03` で 2チャネル以上送信し、最小1チャネルで 2xx 成功を記録。
+- `recovery_success_rate (RECOVERY_SUCCESS_ENV_GAP)`: `S29-01` で recovery 試行サンプルを増やし `success_rate >= 0.80` を満たす。
+- `reliability_total_runs (RELIABILITY_ENV_GAP)`: `S29-06` で観測 run を積み増し `total_runs >= 24` を達成。
+
+### 1-3. 変更対象確定
+
+- Phase-1（今回）: `docs/ops/S29-01-S29-10-THREAD-V3_PLAN.md`, `docs/ops/S29-01-S29-10-THREAD-V3_TASK.md`
+- Phase-2（実装）: `scripts/ops/s29_*.py`, `tests/test_s29_*.py`
+- Phase-3/4（証跡更新）: `docs/evidence/s29-01/*` ... `docs/evidence/s29-10/*`
+
+### 1-4. PR body 記録テンプレート（OK/WARN/ERROR/SKIP）
+
+```md
+### S29-01..S29-10 Thread v3
+- OK: <実行成功したコマンドと主要メトリクス>
+- WARN: <WARN理由 + 継続アクション>
+- ERROR: <失敗コマンド + 原因 + 再実行結果>
+- SKIP: <未実行項目 + 理由>
+
+### S29-01 Canary Recovery Success-rate SLO v3
+- command: `make s29-canary-recovery-success-rate-slo`
+- status: <PASS/WARN/FAIL>
+- metrics: trailing_nonpass=<n>, recovery_success_rate=<v>, attempts=<n>
+- artifact: `docs/evidence/s29-01/canary_recovery_success_rate_slo_latest.json`
+
+### S29-02 Taxonomy Pipeline Integration v3
+- command: `make s29-taxonomy-pipeline-integration`
+- status: <PASS/WARN/FAIL>
+- metrics: unknown_ratio=<v>, candidate_count=<n>, action_count=<n>
+- artifact: `docs/evidence/s29-02/taxonomy_pipeline_integration_latest.json`
+
+### S29-03 Readiness Notify Multi-channel v3
+- command: `make s29-readiness-notify-multichannel`
+- status: <PASS/WARN/FAIL>
+- metrics: attempted_channels=<n>, sent_channels=<n>, delivery_rate=<v>
+- artifact: `docs/evidence/s29-03/readiness_notify_multichannel_latest.json`
+
+### S29-09 SLO Readiness v3
+- command: `make s29-slo-readiness-v3`
+- status: <PASS/WARN/FAIL>
+- readiness: <READY/WARN_ONLY/BLOCKED>
+- summary: waived_hard_count=<n>, waived_with_exit_condition_count=<n>
+- artifact: `docs/evidence/s29-09/slo_readiness_v4_latest.json`
+
+### S29-10 Closeout v3
+- command: `make s29-closeout`
+- status: <PASS/FAIL>
+- readiness: <READY/WARN_ONLY/BLOCKED>
+- summary: waiver_exit_condition_count=<n>, unresolved_risk_count=<n>, handoff_count=<n>
+- artifact: `docs/evidence/s29-10/closeout_latest.json`
+```
 
 ## Validation Commands
 
