@@ -1,0 +1,41 @@
+{
+  "schema_version": "s25-ml-experiment-template-v1",
+  "experiment_id": "s25-07-il-compile-bench-v1",
+  "description": "Deterministic ML experiment template using il_compile_bench.",
+  "input": {
+    "cases_path": "tests/fixtures/il_compile/bench_cases.jsonl"
+  },
+  "config": {
+    "provider": "rule_based",
+    "model": "rule_based_v1",
+    "prompt_profile": "v1",
+    "seed": 7,
+    "expand_factor": 0,
+    "allow_fallback": true
+  },
+  "evaluation": {
+    "required_summary_schema": "IL_COMPILE_BENCH_SUMMARY_v2",
+    "thresholds": [
+      {
+        "metric": "expected_match_rate",
+        "op": ">=",
+        "value": 1.0
+      },
+      {
+        "metric": "reproducible_rate",
+        "op": ">=",
+        "value": 1.0
+      },
+      {
+        "metric": "il_validity_rate",
+        "op": ">=",
+        "value": 0.8
+      },
+      {
+        "metric": "objective_score",
+        "op": ">=",
+        "value": 0.9
+      }
+    ]
+  }
+}

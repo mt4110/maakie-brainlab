@@ -1,0 +1,45 @@
+{
+  "schema_version": "s25-acceptance-cases-v1",
+  "description": "Minimal acceptance wall for S25 thread readiness",
+  "cases": [
+    {
+      "id": "A01",
+      "title": "Current point is observable",
+      "category": "ops",
+      "command": "make ops-now",
+      "must_pass": true,
+      "pass_regex": "OK: progress="
+    },
+    {
+      "id": "A02",
+      "title": "Baseline freeze is reproducible",
+      "category": "baseline",
+      "command": "make s25-baseline-freeze",
+      "must_pass": true,
+      "pass_regex": "OK: baseline_freeze completed"
+    },
+    {
+      "id": "A03",
+      "title": "Observability summary is generated",
+      "category": "observability",
+      "command": "make s25-obs-summary",
+      "must_pass": true,
+      "pass_regex": "OK: observability_md="
+    },
+    {
+      "id": "A04",
+      "title": "Regression safety contract is green",
+      "category": "safety",
+      "command": "make s25-regression-safety",
+      "must_pass": true,
+      "pass_regex": "OK: regression_safety completed"
+    },
+    {
+      "id": "A05",
+      "title": "IL thread suite stays green",
+      "category": "core",
+      "command": "make verify-il-thread-v2",
+      "must_pass": true
+    }
+  ]
+}

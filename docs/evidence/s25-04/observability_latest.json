@@ -1,0 +1,177 @@
+{
+  "schema_version": "s25-obs-report-v1",
+  "baseline_json": "docs/evidence/s25-03/baseline_latest.json",
+  "tools": {
+    "acceptance-wall": {
+      "schema_version": "s25-obs-contract-v1",
+      "tool": "acceptance-wall",
+      "run_id": "acceptance-wall__20260227T011137Z__ops-s25-01-25-10__3261f6f",
+      "run_dir": ".local/obs/s25-ops/acceptance-wall/acceptance-wall__20260227T011137Z__ops-s25-01-25-10__3261f6f",
+      "captured_at_utc": "2026-02-27T01:11:37.799783+00:00",
+      "branch": "ops/S25-01-25-10",
+      "head": "3261f6f9720514bfcedefa08c1beb8be2b1ed3c3",
+      "counts": {
+        "OK": 16,
+        "WARN": 0,
+        "ERROR": 0,
+        "SKIP": 0
+      },
+      "events_total": 16,
+      "extra": {
+        "acceptance_json": "docs/evidence/s25-06/acceptance_wall_latest.json",
+        "acceptance_md": "docs/evidence/s25-06/acceptance_wall_latest.md",
+        "stop": 0,
+        "cases_total": 5
+      }
+    },
+    "baseline-freeze": {
+      "schema_version": "s25-obs-contract-v1",
+      "tool": "baseline-freeze",
+      "run_id": "baseline-freeze__20260227T011532Z__ops-s25-01-25-10__ae5c5b8",
+      "run_dir": ".local/obs/s25-ops/baseline-freeze/baseline-freeze__20260227T011532Z__ops-s25-01-25-10__ae5c5b8",
+      "captured_at_utc": "2026-02-27T01:15:32.154307+00:00",
+      "branch": "ops/S25-01-25-10",
+      "head": "ae5c5b867e5927c416478a5e6ec3ab64bc3386cc",
+      "counts": {
+        "OK": 14,
+        "WARN": 0,
+        "ERROR": 0,
+        "SKIP": 0
+      },
+      "events_total": 14,
+      "extra": {
+        "baseline_json": "docs/evidence/s25-03/baseline_latest.json",
+        "baseline_md": "docs/evidence/s25-03/baseline_latest.md",
+        "stop": 0,
+        "commands_total": 5
+      }
+    },
+    "current-point": {
+      "schema_version": "s25-obs-contract-v1",
+      "tool": "current-point",
+      "run_id": "current-point__20260227T011532Z__ops-s25-01-25-10__ae5c5b8",
+      "run_dir": ".local/obs/s25-ops/current-point/current-point__20260227T011532Z__ops-s25-01-25-10__ae5c5b8",
+      "captured_at_utc": "2026-02-27T01:15:32.239052+00:00",
+      "branch": "ops/S25-01-25-10",
+      "head": "ae5c5b867e5927c416478a5e6ec3ab64bc3386cc",
+      "counts": {
+        "OK": 7,
+        "WARN": 0,
+        "ERROR": 0,
+        "SKIP": 1
+      },
+      "events_total": 8,
+      "extra": {
+        "snapshot_file": "snapshot.json"
+      }
+    },
+    "langchain-poc": {
+      "schema_version": "s25-obs-contract-v1",
+      "tool": "langchain-poc",
+      "run_id": "langchain-poc__20260227T011154Z__ops-s25-01-25-10__3261f6f",
+      "run_dir": ".local/obs/s25-ops/langchain-poc/langchain-poc__20260227T011154Z__ops-s25-01-25-10__3261f6f",
+      "captured_at_utc": "2026-02-27T01:11:54.499610+00:00",
+      "branch": "ops/S25-01-25-10",
+      "head": "3261f6f9720514bfcedefa08c1beb8be2b1ed3c3",
+      "counts": {
+        "OK": 10,
+        "WARN": 0,
+        "ERROR": 0,
+        "SKIP": 0
+      },
+      "events_total": 10,
+      "extra": {
+        "langchain_poc_json": "docs/evidence/s25-09/langchain_poc_latest.json",
+        "langchain_poc_md": "docs/evidence/s25-09/langchain_poc_latest.md",
+        "status": "PASS"
+      }
+    },
+    "ml-experiment": {
+      "schema_version": "s25-obs-contract-v1",
+      "tool": "ml-experiment",
+      "run_id": "ml-experiment__20260227T011147Z__ops-s25-01-25-10__3261f6f",
+      "run_dir": ".local/obs/s25-ops/ml-experiment/ml-experiment__20260227T011147Z__ops-s25-01-25-10__3261f6f",
+      "captured_at_utc": "2026-02-27T01:11:47.994530+00:00",
+      "branch": "ops/S25-01-25-10",
+      "head": "3261f6f9720514bfcedefa08c1beb8be2b1ed3c3",
+      "counts": {
+        "OK": 8,
+        "WARN": 0,
+        "ERROR": 0,
+        "SKIP": 0
+      },
+      "events_total": 8,
+      "extra": {
+        "ml_experiment_json": "docs/evidence/s25-07/ml_experiment_latest.json",
+        "ml_experiment_md": "docs/evidence/s25-07/ml_experiment_latest.md",
+        "status": "PASS",
+        "reason_code": ""
+      }
+    },
+    "obs-pr-summary": {
+      "schema_version": "s25-obs-contract-v1",
+      "tool": "obs-pr-summary",
+      "run_id": "obs-pr-summary__20260227T011138Z__ops-s25-01-25-10__3261f6f",
+      "run_dir": ".local/obs/s25-ops/obs-pr-summary/obs-pr-summary__20260227T011138Z__ops-s25-01-25-10__3261f6f",
+      "captured_at_utc": "2026-02-27T01:11:38.682244+00:00",
+      "branch": "ops/S25-01-25-10",
+      "head": "3261f6f9720514bfcedefa08c1beb8be2b1ed3c3",
+      "counts": {
+        "OK": 4,
+        "WARN": 0,
+        "ERROR": 0,
+        "SKIP": 0
+      },
+      "events_total": 4,
+      "extra": {
+        "outputs": {
+          "json": "docs/evidence/s25-04/observability_latest.json",
+          "md": "docs/evidence/s25-04/observability_latest.md"
+        }
+      }
+    },
+    "rag-tuning": {
+      "schema_version": "s25-obs-contract-v1",
+      "tool": "rag-tuning",
+      "run_id": "rag-tuning__20260227T011151Z__ops-s25-01-25-10__3261f6f",
+      "run_dir": ".local/obs/s25-ops/rag-tuning/rag-tuning__20260227T011151Z__ops-s25-01-25-10__3261f6f",
+      "captured_at_utc": "2026-02-27T01:11:51.143436+00:00",
+      "branch": "ops/S25-01-25-10",
+      "head": "3261f6f9720514bfcedefa08c1beb8be2b1ed3c3",
+      "counts": {
+        "OK": 9,
+        "WARN": 0,
+        "ERROR": 0,
+        "SKIP": 0
+      },
+      "events_total": 9,
+      "extra": {
+        "rag_tuning_json": "docs/evidence/s25-08/rag_tuning_latest.json",
+        "rag_tuning_md": "docs/evidence/s25-08/rag_tuning_latest.md",
+        "status": "PASS"
+      }
+    },
+    "regression-safety": {
+      "schema_version": "s25-obs-contract-v1",
+      "tool": "regression-safety",
+      "run_id": "regression-safety__20260227T011530Z__ops-s25-01-25-10__ae5c5b8",
+      "run_dir": ".local/obs/s25-ops/regression-safety/regression-safety__20260227T011530Z__ops-s25-01-25-10__ae5c5b8",
+      "captured_at_utc": "2026-02-27T01:15:30.204614+00:00",
+      "branch": "ops/S25-01-25-10",
+      "head": "ae5c5b867e5927c416478a5e6ec3ab64bc3386cc",
+      "counts": {
+        "OK": 13,
+        "WARN": 0,
+        "ERROR": 0,
+        "SKIP": 0
+      },
+      "events_total": 13,
+      "extra": {
+        "regression_json": "docs/evidence/s25-05/regression_safety_latest.json",
+        "regression_md": "docs/evidence/s25-05/regression_safety_latest.md",
+        "stop": 0,
+        "commands_total": 4
+      }
+    }
+  }
+}

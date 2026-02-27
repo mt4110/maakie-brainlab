@@ -2,7 +2,7 @@
 .PHONY: sat-collect sat-normalize sat-gate sat-store sat-digest sat-index sat-run
 .PHONY: server-start server-stop server-status log ingest ask
 .PHONY: ai-smoke ai-verify
-.PHONY: s22-16-ship phase-ship bench-il-compile tune-il-compile-prompt il-thread-smoke il-thread-replay-check verify-il-thread-v2
+.PHONY: s22-16-ship phase-ship ops-now s25-baseline-freeze s25-obs-summary s25-regression-safety s25-acceptance-wall s25-ml-experiment s25-rag-tuning s25-langchain-poc bench-il-compile tune-il-compile-prompt il-thread-smoke il-thread-replay-check verify-il-thread-v2
 
 PY=.venv/bin/python
 PYENV=PYTHONPATH=./src:.
@@ -80,6 +80,30 @@ phase-ship:
 	COMMIT_MESSAGE="$(COMMIT_MESSAGE)" \
 	INCLUDE_UNTRACKED="$(INCLUDE_UNTRACKED)" \
 	$(PYENV) $(PY) ops/phase_ship.py --phase "$(PHASE)"
+
+ops-now:
+	$(PYENV) $(PY) scripts/ops/current_point.py
+
+s25-baseline-freeze:
+	$(PYENV) $(PY) scripts/ops/s25_baseline_freeze.py
+
+s25-obs-summary:
+	$(PYENV) $(PY) scripts/ops/s25_obs_pr_summary.py
+
+s25-regression-safety:
+	$(PYENV) $(PY) scripts/ops/s25_regression_safety.py
+
+s25-acceptance-wall:
+	$(PYENV) $(PY) scripts/ops/s25_acceptance_wall.py
+
+s25-ml-experiment:
+	$(PYENV) $(PY) scripts/ops/s25_ml_experiment.py
+
+s25-rag-tuning:
+	$(PYENV) $(PY) scripts/ops/s25_rag_tuning_loop.py
+
+s25-langchain-poc:
+	$(PYENV) $(PY) scripts/ops/s25_langchain_poc.py
 
 bootstrap:
 	# S20-08: Canonical bootstrap via uv (using system python only to install uv)

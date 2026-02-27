@@ -1,0 +1,96 @@
+{
+  "schema_version": "s25-closeout-v1",
+  "captured_at_utc": "2026-02-27T00:50:44Z",
+  "git": {
+    "branch": "ops/S25-01-25-10",
+    "head": "61d65521b98b3b91d5c59de3a8596284ae2f4661"
+  },
+  "baseline_ref": "docs/evidence/s25-03/baseline_latest.json",
+  "phase_artifacts": {
+    "s25_04_observability": "docs/evidence/s25-04/observability_latest.json",
+    "s25_05_regression_safety": "docs/evidence/s25-05/regression_safety_latest.json",
+    "s25_06_acceptance_wall": "docs/evidence/s25-06/acceptance_wall_latest.json",
+    "s25_07_ml_experiment": "docs/evidence/s25-07/ml_experiment_latest.json",
+    "s25_08_rag_tuning": "docs/evidence/s25-08/rag_tuning_latest.json",
+    "s25_09_langchain_poc": "docs/evidence/s25-09/langchain_poc_latest.json"
+  },
+  "before_after": {
+    "quality": {
+      "before": {
+        "baseline_eval_pass_rate": 1.0,
+        "baseline_commands_passed": "5/5"
+      },
+      "after": {
+        "acceptance_wall": "5/5 PASS",
+        "ml_experiment_status": "PASS",
+        "rag_tuning_status": "PASS",
+        "langchain_poc_smoke": "PASS",
+        "rollback_smoke": "PASS"
+      },
+      "delta_vs_baseline": "better",
+      "reason": "S25-07..S25-09 の品質ゲートが追加され、全て PASS で固定された"
+    },
+    "speed": {
+      "before": {
+        "rag_baseline_avg_latency_ms": 0.6607087561860681
+      },
+      "after": {
+        "rag_candidate_avg_latency_ms": 0.47990650637075305
+      },
+      "delta_ms": -0.180802249815315,
+      "delta_vs_baseline": "better",
+      "reason": "RAG tuning candidate が baseline より低レイテンシ"
+    },
+    "ops_load": {
+      "before": {
+        "langchain_rollback_command": "not_fixed"
+      },
+      "after": {
+        "langchain_rollback_command": "python3 scripts/ops/s25_langchain_poc.py --mode rollback-only"
+      },
+      "delta_vs_baseline": "better",
+      "reason": "PoC失敗時の切戻しを1コマンド化"
+    }
+  },
+  "unresolved_risks": [
+    {
+      "id": "RISK-S25-10-01",
+      "title": "LangChain接続が local deterministic lambda 中心",
+      "impact": "外部LLM連携時のI/Oエラーやモデル差分の挙動は未評価",
+      "mitigation": "次スレで provider 実接続の canary smoke を追加",
+      "owner_phase": "next-thread/PoC-hardening"
+    },
+    {
+      "id": "RISK-S25-10-02",
+      "title": "評価データセットが seed-mini 中心",
+      "impact": "ドメイン拡張時に品質変動を捉えきれない可能性",
+      "mitigation": "次スレで medium dataset を追加し回帰閾値を再調整",
+      "owner_phase": "next-thread/eval-scale"
+    }
+  ],
+  "handoff": [
+    "S26-01: LangChain provider 実接続の canary smoke と timeout/retry ポリシー固定",
+    "S26-02: RAG/ML/LangChain 共通の medium dataset で評価壁を拡張",
+    "S26-03: rollback 実演ログを CI artifact として常時収集"
+  ],
+  "rollback": {
+    "command": "python3 scripts/ops/s25_langchain_poc.py --mode rollback-only",
+    "path": "docs/ops/S25-09_LANGCHAIN_POC.md"
+  },
+  "pr_body_block": [
+    "### S25-10 Closeout",
+    "- baseline: docs/evidence/s25-03/baseline_latest.json",
+    "- quality_before_after: baseline eval 1.0 -> acceptance 5/5 + ML/RAG/LangChain PASS",
+    "- speed_before_after: rag latency 0.661ms -> 0.480ms (delta -0.181ms)",
+    "- ops_load_before_after: rollback path not fixed -> 1-command rollback fixed",
+    "- unresolved_risks: 2 (provider実接続未評価 / dataset小規模)",
+    "- handoff: S26-01..03",
+    "- rollback: python3 scripts/ops/s25_langchain_poc.py --mode rollback-only",
+    "- artifact: docs/evidence/s25-10/closeout_latest.json"
+  ],
+  "summary": {
+    "status": "PASS",
+    "thread_completion": "S25-01..S25-10 complete"
+  },
+  "stop": 0
+}

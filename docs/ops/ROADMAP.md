@@ -12,6 +12,8 @@
 
 - **横断ルール（凡例）** → `docs/ops/PR_WORKFLOW.md` / `docs/ops/CI_REQUIRED_CHECKS.md` / repo ルート `SPEC.md`
 
+- **今の地点（branch + task + progress + 次アクション）** → `make ops-now`
+
 ## シリーズ俯瞰（自動生成）
 
 ### S7 — TBD
@@ -68,3 +70,7 @@
 ### S24 — Active (Thread v1)
 - 全体図: `docs/ops/S24-01-S24-10-THREAD-V1_PLAN.md`
 - 実行: `docs/ops/S24-01-S24-10-THREAD-V1_TASK.md`
+
+### S25 — Active (Thread v1)
+- 全体図: `docs/ops/S25-01-25-10-THREAD-V1_PLAN.md`
+- 実行: `docs/ops/S25-01-25-10-THREAD-V1_TASK.md`
