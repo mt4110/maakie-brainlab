@@ -1,5 +1,6 @@
 import importlib.util
 import unittest
+from unittest import mock
 
 
 def _load_module():
@@ -86,6 +87,24 @@ class S28SLOReadinessV2Tests(unittest.TestCase):
         )
         self.assertEqual(len(rows), 8)
         self.assertFalse(next(r for r in rows if r["phase"] == "S28-03")["passed"])
+
+    def test_is_stale_artifact_accepts_ancestor_head(self):
+        with mock.patch.object(self.m.subprocess, "run", return_value=mock.Mock(returncode=0)):
+            stale = self.m.is_stale_artifact(
+                {"git": {"head": "1111111111111111111111111111111111111111"}},
+                current_head="2222222222222222222222222222222222222222",
+                repo_root=self.m.Path("."),
+            )
+        self.assertFalse(stale)
+
+    def test_is_stale_artifact_marks_diverged_head(self):
+        with mock.patch.object(self.m.subprocess, "run", return_value=mock.Mock(returncode=1)):
+            stale = self.m.is_stale_artifact(
+                {"git": {"head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}},
+                current_head="bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                repo_root=self.m.Path("."),
+            )
+        self.assertTrue(stale)
 
     def test_build_waiver_context(self):
         context = self.m.build_waiver_context(

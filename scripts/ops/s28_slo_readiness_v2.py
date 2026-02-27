@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 import time
 from pathlib import Path
 from typing import Any, Dict, List
@@ -64,13 +65,36 @@ def read_json_if_exists(path: Path) -> Dict[str, Any]:
     return obj if isinstance(obj, dict) else {}
 
 
-def is_stale_artifact(doc: Dict[str, Any], current_head: str) -> bool:
+def head_relation(repo_root: Path, artifact_head: str, current_head: str) -> str:
+    art = str(artifact_head or "").strip()
+    cur = str(current_head or "").strip()
+    if not art or not cur:
+        return "unknown"
+    if art == cur:
+        return "exact"
+    try:
+        cp = subprocess.run(
+            ["git", "merge-base", "--is-ancestor", art, cur],
+            cwd=str(repo_root),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except Exception:
+        return "unknown"
+    if int(cp.returncode) == 0:
+        return "ancestor"
+    return "diverged"
+
+
+def is_stale_artifact(doc: Dict[str, Any], current_head: str, repo_root: Path) -> bool:
     if not current_head:
         return False
     doc_head = str(dict(doc.get("git", {})).get("head") or "")
     if not doc_head:
         return False
-    return doc_head != current_head
+    relation = head_relation(repo_root, doc_head, current_head)
+    return relation in {"diverged", "unknown"}
 
 
 def infer_status(doc: Dict[str, Any]) -> str:
@@ -384,11 +408,14 @@ def main() -> int:
             emit("ERROR", f"missing phase={phase} path={path}", events)
             docs[phase] = {}
             continue
-        if is_stale_artifact(doc, current_head):
+        reln = head_relation(repo_root, str(dict(doc.get("git", {})).get("head") or ""), current_head)
+        if is_stale_artifact(doc, current_head, repo_root):
             stale.append(phase)
             emit("ERROR", f"stale phase={phase}", events)
             docs[phase] = {}
             continue
+        if reln == "ancestor":
+            emit("WARN", f"head behind but acceptable phase={phase}", events)
         docs[phase] = doc
         emit("OK", f"loaded phase={phase}", events)
 
