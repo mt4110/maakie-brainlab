@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """
-S29-02 taxonomy feedback pipeline integration.
+S29-02 taxonomy feedback pipeline integration v2.
 
 Goal:
 - Reduce taxonomy unknown by extracting candidate cases and concrete collection actions.
 - Export integration-ready records for data generation pipeline consumption.
+- Assign owner/action metadata for triage and execution.
 """
 
 from __future__ import annotations
@@ -32,6 +33,14 @@ REASON_CONFIG_INVALID = "CONFIG_INVALID"
 REASON_INPUT_MISSING = "INPUT_MISSING"
 REASON_UNKNOWN_RATIO_ABOVE_TARGET = "UNKNOWN_RATIO_ABOVE_TARGET"
 REASON_PIPELINE_WRITE_FAILED = "PIPELINE_WRITE_FAILED"
+
+DEFAULT_OWNER_BY_TAXONOMY = {
+    "provider": "ml-platform",
+    "network": "sre-network",
+    "schema": "data-platform",
+    "timeout": "runtime-core",
+    "unknown": "ops-triage",
+}
 
 
 def _read_toml(path: Path) -> Dict[str, Any]:
@@ -111,6 +120,31 @@ def build_collection_actions(candidates: List[Dict[str, Any]], max_actions: int)
     return actions[: max(1, int(max_actions))]
 
 
+def assign_owner(taxonomy: str, owner_map: Dict[str, str]) -> str:
+    key = str(taxonomy or "unknown").strip().lower() or "unknown"
+    return str(owner_map.get(key, owner_map.get("unknown", "ops-triage")))
+
+
+def build_structured_actions(candidates: List[Dict[str, Any]], owner_map: Dict[str, str], max_actions: int) -> List[Dict[str, Any]]:
+    grouped: Dict[str, int] = {}
+    for row in candidates:
+        tax = str(row.get("suggested_taxonomy") or "unknown")
+        grouped[tax] = int(grouped.get(tax, 0)) + 1
+    out: List[Dict[str, Any]] = []
+    for tax, cnt in sorted(grouped.items(), key=lambda x: (-x[1], x[0])):
+        out.append(
+            {
+                "taxonomy": tax,
+                "owner": assign_owner(tax, owner_map),
+                "action": "collect_labeled_cases",
+                "target_cases": cnt,
+            }
+        )
+        if len(out) >= max(1, int(max_actions)):
+            break
+    return out
+
+
 def candidate_priority(row: Dict[str, Any], known_tags: set[str]) -> Tuple[int, int, str]:
     tags = [str(x).strip().lower() for x in list(row.get("tags") or []) if str(x).strip()]
     unknown_tag_count = sum(1 for t in tags if t not in known_tags and t != "unknown")
@@ -132,17 +166,20 @@ def dedupe_candidates(candidates: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return out
 
 
-def build_pipeline_records(candidates: List[Dict[str, Any]], limit: int) -> List[Dict[str, Any]]:
+def build_pipeline_records(candidates: List[Dict[str, Any]], limit: int, owner_map: Dict[str, str]) -> List[Dict[str, Any]]:
     out: List[Dict[str, Any]] = []
     for idx, row in enumerate(candidates[: max(0, int(limit))]):
+        tax = str(row.get("suggested_taxonomy") or "unknown")
         out.append(
             {
                 "record_id": f"s29-taxonomy-{idx+1:04d}",
                 "source_thread": "S29-02",
                 "case_id": str(row.get("case_id") or ""),
                 "query": str(row.get("query") or ""),
-                "suggested_taxonomy": str(row.get("suggested_taxonomy") or "unknown"),
+                "suggested_taxonomy": tax,
                 "tags": list(row.get("tags") or []),
+                "owner": assign_owner(tax, owner_map),
+                "next_action": "collect_labeled_cases",
             }
         )
     return out
@@ -156,7 +193,8 @@ def write_jsonl(path: Path, rows: List[Dict[str, Any]]) -> None:
 
 
 def validate_config(cfg: Dict[str, Any]) -> Tuple[bool, str]:
-    if str(cfg.get("schema_version") or "") != "s29-taxonomy-pipeline-integration-v1":
+    schema_version = str(cfg.get("schema_version") or "")
+    if schema_version not in {"s29-taxonomy-pipeline-integration-v1", "s29-taxonomy-pipeline-integration-v2"}:
         return False, "schema_version mismatch"
     if not str(cfg.get("cases_path") or "").strip():
         return False, "cases_path missing"
@@ -176,7 +214,7 @@ def build_markdown(payload: Dict[str, Any]) -> str:
     metrics = dict(payload.get("metrics", {}))
     pipeline = dict(payload.get("pipeline", {}))
     lines: List[str] = []
-    lines.append("# S29-02 Taxonomy Pipeline Integration (Latest)")
+    lines.append("# S29-02 Taxonomy Pipeline Integration v2 (Latest)")
     lines.append("")
     lines.append(f"- CapturedAtUTC: `{payload.get('captured_at_utc', '')}`")
     lines.append(f"- Branch: `{payload.get('git', {}).get('branch', '')}`")
@@ -189,6 +227,7 @@ def build_markdown(payload: Dict[str, Any]) -> str:
     lines.append(f"- unknown_ratio: `{metrics.get('unknown_ratio', 0.0)}`")
     lines.append(f"- candidate_count: `{metrics.get('candidate_count', 0)}`")
     lines.append(f"- pipeline_records: `{pipeline.get('record_count', 0)}`")
+    lines.append(f"- action_count: `{len(list(payload.get('collection_actions_v2', [])))}`")
     lines.append(f"- pipeline_jsonl: `{pipeline.get('jsonl', '')}`")
     lines.append("")
     lines.append("## Collection Actions")
@@ -201,12 +240,13 @@ def build_markdown(payload: Dict[str, Any]) -> str:
     lines.append("## PR Body Snippet")
     lines.append("")
     lines.append("```md")
-    lines.append("### S29-02 Taxonomy Pipeline Integration")
+    lines.append("### S29-02 Taxonomy Pipeline Integration v2")
     lines.append(f"- status: {summary.get('status', '')}")
     lines.append(f"- reason_code: {summary.get('reason_code', '')}")
     lines.append(f"- unknown_ratio: {metrics.get('unknown_ratio', 0.0)}")
     lines.append(f"- candidate_count: {metrics.get('candidate_count', 0)}")
     lines.append(f"- pipeline_records: {pipeline.get('record_count', 0)}")
+    lines.append(f"- action_count: {len(list(payload.get('collection_actions_v2', [])))}")
     lines.append(f"- artifact: docs/evidence/s29-02/{payload.get('artifact_names', {}).get('json', '')}")
     lines.append("```")
     lines.append("")
@@ -284,6 +324,15 @@ def main() -> int:
             emit("WARN", f"cases parse failed err={exc}", events)
 
     known_tags = {str(x).strip().lower() for x in list(cfg.get("known_tags") or []) if str(x).strip()}
+    owner_map_cfg = cfg.get("owner_by_taxonomy")
+    owner_map: Dict[str, str] = dict(DEFAULT_OWNER_BY_TAXONOMY)
+    if isinstance(owner_map_cfg, dict):
+        for key, value in owner_map_cfg.items():
+            k = str(key or "").strip().lower()
+            v = str(value or "").strip()
+            if k and v:
+                owner_map[k] = v
+
     max_candidates = int(cfg.get("max_candidates", 12) or 12)
     candidates: List[Dict[str, Any]] = []
     unknown_like_count = 0
@@ -308,8 +357,13 @@ def main() -> int:
         candidates = candidates[:max_candidates]
 
     collection_actions = build_collection_actions(candidates, int(cfg.get("max_actions", 5) or 5))
+    collection_actions_v2 = build_structured_actions(candidates, owner_map, int(cfg.get("max_actions", 5) or 5))
     pipeline_path = (repo_root / str(cfg.get("pipeline_jsonl", args.pipeline_jsonl) or args.pipeline_jsonl)).resolve()
-    pipeline_records = build_pipeline_records(candidates, int(cfg.get("pipeline_max_records", max_candidates) or max_candidates))
+    pipeline_records = build_pipeline_records(
+        candidates,
+        int(cfg.get("pipeline_max_records", max_candidates) or max_candidates),
+        owner_map=owner_map,
+    )
     pipeline_written = False
 
     target = float(cfg.get("unknown_ratio_target", 0.1) or 0.1)
@@ -343,8 +397,16 @@ def main() -> int:
             status = "WARN"
             reason_code = REASON_PIPELINE_WRITE_FAILED
 
+    exit_conditions: List[str] = []
+    if reason_code == REASON_INPUT_MISSING:
+        exit_conditions.append("Restore medium/cases inputs and rerun S29-02.")
+    if reason_code == REASON_UNKNOWN_RATIO_ABOVE_TARGET:
+        exit_conditions.append(f"Reduce unknown_ratio to <= {target:.2f} with additional labeled samples.")
+    if reason_code == REASON_PIPELINE_WRITE_FAILED:
+        exit_conditions.append("Fix pipeline JSONL write path/permission and rerun S29-02.")
+
     payload: Dict[str, Any] = {
-        "schema_version": "s29-taxonomy-pipeline-integration-v1",
+        "schema_version": "s29-taxonomy-pipeline-integration-v2",
         "captured_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "git": {"branch": git_out(repo_root, ["branch", "--show-current"]), "head": git_out(repo_root, ["rev-parse", "HEAD"])} ,
         "inputs": {
@@ -353,6 +415,7 @@ def main() -> int:
             "cases_path": to_repo_rel(repo_root, cases_path),
             "pipeline_jsonl": to_repo_rel(repo_root, pipeline_path),
             "known_tags": sorted(known_tags),
+            "owner_by_taxonomy": owner_map,
             "unknown_ratio_target": target,
         },
         "metrics": {
@@ -367,16 +430,21 @@ def main() -> int:
         },
         "candidates": candidates,
         "collection_actions": collection_actions,
+        "collection_actions_v2": collection_actions_v2,
         "pipeline": {
             "jsonl": to_repo_rel(repo_root, pipeline_path),
             "record_count": len(pipeline_records),
             "written": pipeline_written,
             "records_preview": pipeline_records[:3],
         },
+        "constraints": {
+            "exit_conditions": exit_conditions,
+        },
         "summary": {
             "status": status,
             "reason_code": reason_code,
             "missing_inputs": len(missing_inputs),
+            "exit_condition_count": len(exit_conditions),
         },
         "artifact_names": {
             "json": "taxonomy_pipeline_integration_latest.json",

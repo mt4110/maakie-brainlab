@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """
-S29-03 readiness notification dispatcher.
+S29-03 readiness notification dispatcher v2.
 
 Goal:
 - Build consistent readiness message payload for ops channel.
-- Optionally deliver payload to webhook while keeping non-blocking behavior.
+- Record multichannel send attempts for readiness evidence.
+- Keep behavior non-blocking even when webhook is not configured.
 """
 
 from __future__ import annotations
@@ -32,6 +33,7 @@ REASON_NOTIFY_DRY_RUN = "NOTIFY_DRY_RUN"
 REASON_WEBHOOK_NOT_CONFIGURED = "WEBHOOK_NOT_CONFIGURED"
 REASON_NOTIFY_SEND_FAILED = "NOTIFY_SEND_FAILED"
 REASON_NOTIFY_SEND_PARTIAL = "NOTIFY_SEND_PARTIAL"
+REASON_ATTEMPTED_CHANNELS_BELOW_MIN = "ATTEMPTED_CHANNELS_BELOW_MIN"
 
 SENSITIVE_PATTERNS = [
     re.compile(r"(?i)(api[_-]?key\s*[=:]\s*)([^\s,;]+)"),
@@ -243,12 +245,50 @@ def aggregate_channel_delivery(channel_results: List[Dict[str, Any]]) -> Dict[st
     }
 
 
+def missing_webhook_attempt(*, channel: str, message: str, webhook_env: str) -> Dict[str, Any]:
+    attempt = {
+        "sent": False,
+        "http_status": 0,
+        "response_tail": "",
+        "error": "webhook env not configured",
+        "attempt": 1,
+    }
+    return {
+        "channel": channel,
+        "message": message,
+        "webhook_env": webhook_env,
+        "attempted": True,
+        "sent": False,
+        "http_status": 0,
+        "response_tail": "",
+        "error": "webhook env not configured",
+        "attempt_count": 1,
+        "attempts": [attempt],
+        "delivery_rate": 0.0,
+        "delivery_state": "FAILED",
+    }
+
+
+def build_exit_conditions(reason_code: str, min_attempted_channels: int) -> List[str]:
+    code = str(reason_code or "")
+    if code == REASON_NOTIFY_DRY_RUN:
+        return ["Run with --send and configure channel webhook env variables."]
+    if code == REASON_ATTEMPTED_CHANNELS_BELOW_MIN:
+        return [f"Attempt delivery for at least {max(1, int(min_attempted_channels))} channels in one run."]
+    if code in {REASON_WEBHOOK_NOT_CONFIGURED, REASON_NOTIFY_SEND_FAILED, REASON_NOTIFY_SEND_PARTIAL}:
+        return [
+            "Configure channel webhooks and verify each channel returns 2xx at least once.",
+            "Keep retries enabled and capture failing channel/error in triage.",
+        ]
+    return []
+
+
 def build_markdown(payload: Dict[str, Any]) -> str:
     summary = dict(payload.get("summary", {}))
     notify = dict(payload.get("notification", {}))
     channels = list(payload.get("channels", []))
     lines: List[str] = []
-    lines.append("# S29-03 Readiness Notify Multi-channel (Latest)")
+    lines.append("# S29-03 Readiness Notify Multi-channel v2 (Latest)")
     lines.append("")
     lines.append(f"- CapturedAtUTC: `{payload.get('captured_at_utc', '')}`")
     lines.append(f"- Branch: `{payload.get('git', {}).get('branch', '')}`")
@@ -261,6 +301,7 @@ def build_markdown(payload: Dict[str, Any]) -> str:
     lines.append(f"- notify_sent: `{notify.get('sent', False)}`")
     lines.append(f"- delivery_state: `{notify.get('delivery_state', '')}`")
     lines.append(f"- delivery_rate: `{notify.get('delivery_rate', None)}`")
+    lines.append(f"- attempted_channels: `{notify.get('attempted_channels', 0)}`")
     lines.append(f"- sent_channels: `{notify.get('sent_channels', 0)}/{notify.get('total_channels', 0)}`")
     lines.append("")
     lines.append("## Channels")
@@ -280,10 +321,11 @@ def build_markdown(payload: Dict[str, Any]) -> str:
     lines.append("## PR Body Snippet")
     lines.append("")
     lines.append("```md")
-    lines.append("### S29-03 Readiness Notify Multi-channel")
+    lines.append("### S29-03 Readiness Notify Multi-channel v2")
     lines.append(f"- status: {summary.get('status', '')}")
     lines.append(f"- reason_code: {summary.get('reason_code', '')}")
     lines.append(f"- notify_sent: {notify.get('sent', False)}")
+    lines.append(f"- attempted_channels: {notify.get('attempted_channels', 0)}")
     lines.append(f"- sent_channels: {notify.get('sent_channels', 0)}/{notify.get('total_channels', 0)}")
     lines.append(f"- artifact: docs/evidence/s29-03/{payload.get('artifact_names', {}).get('json', '')}")
     lines.append("```")
@@ -305,6 +347,7 @@ def main() -> int:
     parser.add_argument("--timeout-sec", type=int, default=10)
     parser.add_argument("--max-retries", type=int, default=2)
     parser.add_argument("--retry-backoff-sec", type=float, default=1.0)
+    parser.add_argument("--min-attempted-channels", type=int, default=2)
     parser.add_argument("--send", action="store_true")
     parser.add_argument("--include-response-tail", action="store_true")
     args = parser.parse_args()
@@ -365,22 +408,7 @@ def main() -> int:
                 msg = compose_message(channel, readiness, schedule)
 
                 if not webhook_url:
-                    channel_results.append(
-                        {
-                            "channel": channel,
-                            "message": msg,
-                            "webhook_env": channel_env,
-                            "attempted": False,
-                            "sent": False,
-                            "http_status": 0,
-                            "response_tail": "",
-                            "error": "",
-                            "attempt_count": 0,
-                            "attempts": [],
-                            "delivery_rate": None,
-                            "delivery_state": "NOT_ATTEMPTED",
-                        }
-                    )
+                    channel_results.append(missing_webhook_attempt(channel=channel, message=msg, webhook_env=channel_env))
                     emit("WARN", f"webhook env not configured channel={channel} env={channel_env}", events)
                     continue
 
@@ -434,10 +462,10 @@ def main() -> int:
                     )
 
             delivery = aggregate_channel_delivery(channel_results)
-            if int(delivery.get("attempted_channels", 0)) == 0:
+            if int(delivery.get("attempted_channels", 0)) < max(1, int(args.min_attempted_channels)):
                 status = "WARN"
-                reason_code = REASON_WEBHOOK_NOT_CONFIGURED
-            elif int(delivery.get("failed_channels", 0)) > 0:
+                reason_code = REASON_ATTEMPTED_CHANNELS_BELOW_MIN
+            elif int(delivery.get("sent_channels", 0)) > 0 and int(delivery.get("failed_channels", 0)) > 0:
                 status = "WARN"
                 reason_code = REASON_NOTIFY_SEND_PARTIAL
             elif bool(delivery.get("sent")):
@@ -448,9 +476,10 @@ def main() -> int:
                 reason_code = REASON_NOTIFY_SEND_FAILED
 
     notify = aggregate_channel_delivery(channel_results)
+    exit_conditions = build_exit_conditions(reason_code, int(args.min_attempted_channels))
 
     payload: Dict[str, Any] = {
-        "schema_version": "s29-readiness-notify-multichannel-v1",
+        "schema_version": "s29-readiness-notify-multichannel-v2",
         "captured_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "git": {
             "branch": git_out(repo_root, ["branch", "--show-current"]),
@@ -469,13 +498,18 @@ def main() -> int:
             "include_response_tail": bool(args.include_response_tail),
             "max_retries": int(args.max_retries),
             "retry_backoff_sec": float(args.retry_backoff_sec),
+            "min_attempted_channels": max(1, int(args.min_attempted_channels)),
         },
         "channels": channel_results,
         "notification": notify,
+        "constraints": {
+            "exit_conditions": exit_conditions,
+        },
         "summary": {
             "status": status,
             "reason_code": reason_code,
             "notify_sent": bool(notify.get("sent")),
+            "attempted_channels": int(notify.get("attempted_channels", 0)),
             "sent_channels": int(notify.get("sent_channels", 0)),
             "total_channels": int(notify.get("total_channels", 0)),
             "readiness": str(dict(readiness.get("summary", {})).get("readiness") or ""),

@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """
-S29-08 evidence trend index v4.
+S29-08 evidence trend index v5.
 
 Goal:
 - Index S29-01..S29-07 latest artifacts.
 - Track missing/failed/warn trends across runs.
+- Detect phase-level regressions against previous snapshot.
 """
 
 from __future__ import annotations
@@ -20,16 +21,16 @@ from scripts.ops.obs_contract import DEFAULT_OBS_ROOT, emit, git_out, make_run_c
 
 
 DEFAULT_OUT_DIR = "docs/evidence/s29-08"
-DEFAULT_HISTORY_FILE = "evidence_trend_history_v4.json"
+DEFAULT_HISTORY_FILE = "evidence_trend_history_v5.json"
 
 PHASE_ARTIFACTS: List[Tuple[str, str]] = [
     ("S29-01", "docs/evidence/s29-01/canary_recovery_success_rate_slo_latest.json"),
     ("S29-02", "docs/evidence/s29-02/taxonomy_pipeline_integration_latest.json"),
     ("S29-03", "docs/evidence/s29-03/readiness_notify_multichannel_latest.json"),
-    ("S29-04", "docs/evidence/s29-04/incident_triage_pack_v3_latest.json"),
-    ("S29-05", "docs/evidence/s29-05/policy_drift_guard_v3_latest.json"),
-    ("S29-06", "docs/evidence/s29-06/reliability_soak_v3_latest.json"),
-    ("S29-07", "docs/evidence/s29-07/acceptance_wall_v4_latest.json"),
+    ("S29-04", "docs/evidence/s29-04/incident_triage_pack_v4_latest.json"),
+    ("S29-05", "docs/evidence/s29-05/policy_drift_guard_v4_latest.json"),
+    ("S29-06", "docs/evidence/s29-06/reliability_soak_v4_latest.json"),
+    ("S29-07", "docs/evidence/s29-07/acceptance_wall_v5_latest.json"),
 ]
 
 
@@ -128,10 +129,33 @@ def overall_status(counts: Dict[str, int]) -> str:
     return "PASS"
 
 
+def status_rank(status: str) -> int:
+    st = str(status or "").upper()
+    if st in {"FAIL", "MISSING"}:
+        return 2
+    if st == "WARN":
+        return 1
+    return 0
+
+
+def detect_regressed_phases(rows: List[Dict[str, Any]], prev_snapshot: Dict[str, Any]) -> List[str]:
+    prev_statuses = dict(prev_snapshot.get("phase_statuses", {}))
+    regressed: List[str] = []
+    for row in rows:
+        phase = str(row.get("phase") or "")
+        cur = str(row.get("status") or "")
+        prev = str(prev_statuses.get(phase) or "")
+        if not phase or not prev:
+            continue
+        if status_rank(cur) > status_rank(prev):
+            regressed.append(phase)
+    return sorted(regressed)
+
+
 def build_markdown(payload: Dict[str, Any]) -> str:
     summary = dict(payload.get("summary", {}))
     lines: List[str] = []
-    lines.append("# S29-08 Evidence Trend Index v4 (Latest)")
+    lines.append("# S29-08 Evidence Trend Index v5 (Latest)")
     lines.append("")
     lines.append(f"- CapturedAtUTC: `{payload.get('captured_at_utc', '')}`")
     lines.append(f"- Branch: `{payload.get('git', {}).get('branch', '')}`")
@@ -142,6 +166,7 @@ def build_markdown(payload: Dict[str, Any]) -> str:
     lines.append(f"- status: `{summary.get('status', '')}`")
     lines.append(f"- present_missing: `{summary.get('present_count', 0)}/{summary.get('missing_count', 0)}`")
     lines.append(f"- pass_warn_fail: `{summary.get('pass_count', 0)}/{summary.get('warn_count', 0)}/{summary.get('failed_count', 0)}`")
+    lines.append(f"- regressed_phases: `{summary.get('regressed_phase_count', 0)}`")
     lines.append(f"- history_size: `{summary.get('history_size', 0)}`")
     lines.append("")
     lines.append("## Phase Statuses")
@@ -152,10 +177,11 @@ def build_markdown(payload: Dict[str, Any]) -> str:
     lines.append("## PR Body Snippet")
     lines.append("")
     lines.append("```md")
-    lines.append("### S29-08 Evidence Trend Index v4")
+    lines.append("### S29-08 Evidence Trend Index v5")
     lines.append(f"- status: {summary.get('status', '')}")
     lines.append(f"- present_missing: {summary.get('present_count', 0)}/{summary.get('missing_count', 0)}")
     lines.append(f"- pass_warn_fail: {summary.get('pass_count', 0)}/{summary.get('warn_count', 0)}/{summary.get('failed_count', 0)}")
+    lines.append(f"- regressed_phases: {summary.get('regressed_phase_count', 0)}")
     lines.append(f"- history_size: {summary.get('history_size', 0)}")
     lines.append(f"- artifact: docs/evidence/s29-08/{payload.get('artifact_names', {}).get('json', '')}")
     lines.append("```")
@@ -175,7 +201,7 @@ def main() -> int:
     repo_root = Path(git_out(Path.cwd(), ["rev-parse", "--show-toplevel"]) or Path.cwd()).resolve()
     out_dir = (repo_root / args.out_dir).resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
-    run_dir, meta, events = make_run_context(repo_root, tool="s29-evidence-trend-index-v4", obs_root=args.obs_root)
+    run_dir, meta, events = make_run_context(repo_root, tool="s29-evidence-trend-index-v5", obs_root=args.obs_root)
 
     rows: List[Dict[str, Any]] = []
     now_epoch = time.time()
@@ -225,12 +251,16 @@ def main() -> int:
         "phase_statuses": {row["phase"]: row["status"] for row in rows},
     }
     prev = snapshots[-1] if snapshots else {}
+    regressed_phases = detect_regressed_phases(rows, prev)
+    if status == "PASS" and regressed_phases:
+        status = "WARN"
+        snapshot["status"] = status
     snapshots.append(snapshot)
     max_history = max(1, int(args.max_history))
     if len(snapshots) > max_history:
         snapshots = snapshots[-max_history:]
     history_doc = {
-        "schema_version": "s29-evidence-trend-history-v4",
+        "schema_version": "s29-evidence-trend-history-v5",
         "updated_at_utc": now,
         "snapshots": snapshots,
     }
@@ -243,7 +273,7 @@ def main() -> int:
     }
 
     payload: Dict[str, Any] = {
-        "schema_version": "s29-evidence-trend-index-v4",
+        "schema_version": "s29-evidence-trend-index-v5",
         "captured_at_utc": now,
         "git": {"branch": git_out(repo_root, ["branch", "--show-current"]), "head": git_out(repo_root, ["rev-parse", "HEAD"])} ,
         "phases": rows,
@@ -251,17 +281,19 @@ def main() -> int:
             "path": to_repo_rel(repo_root, history_path),
             "size": len(snapshots),
             "deltas": deltas,
+            "regressed_phases": regressed_phases,
         },
         "summary": {
             "status": status,
             "history_size": len(snapshots),
+            "regressed_phase_count": len(regressed_phases),
             **counts,
         },
-        "artifact_names": {"json": "evidence_trend_index_v4_latest.json", "md": "evidence_trend_index_v4_latest.md", "history": str(args.history_file)},
+        "artifact_names": {"json": "evidence_trend_index_v5_latest.json", "md": "evidence_trend_index_v5_latest.md", "history": str(args.history_file)},
     }
 
-    out_json = out_dir / "evidence_trend_index_v4_latest.json"
-    out_md = out_dir / "evidence_trend_index_v4_latest.md"
+    out_json = out_dir / "evidence_trend_index_v5_latest.json"
+    out_md = out_dir / "evidence_trend_index_v5_latest.md"
     out_json.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     out_md.write_text(build_markdown(payload), encoding="utf-8")
     emit("OK", f"artifact_json={out_json}", events)
@@ -269,7 +301,7 @@ def main() -> int:
     emit("OK", f"history_json={history_path}", events)
 
     write_events(run_dir, events)
-    write_summary(run_dir, meta, events, extra={"status": status, **counts})
+    write_summary(run_dir, meta, events, extra={"status": status, "regressed_phase_count": len(regressed_phases), **counts})
     return 0 if status != "FAIL" else 1
 
 

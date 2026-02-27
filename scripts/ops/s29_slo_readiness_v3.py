@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """
-S29-09 SLO-based readiness decision v3.
+S29-09 SLO-based readiness decision v4.
 
 Goal:
 - Aggregate S29 phase artifacts into READY / WARN_ONLY / BLOCKED.
 - Add notification delivery signal to SLO evaluation.
+- Require explicit exit conditions for waived hard violations.
 """
 
 from __future__ import annotations
@@ -25,11 +26,11 @@ ARTIFACTS = {
     "S29-01": "docs/evidence/s29-01/canary_recovery_success_rate_slo_latest.json",
     "S29-02": "docs/evidence/s29-02/taxonomy_pipeline_integration_latest.json",
     "S29-03": "docs/evidence/s29-03/readiness_notify_multichannel_latest.json",
-    "S29-04": "docs/evidence/s29-04/incident_triage_pack_v3_latest.json",
-    "S29-05": "docs/evidence/s29-05/policy_drift_guard_v3_latest.json",
-    "S29-06": "docs/evidence/s29-06/reliability_soak_v3_latest.json",
-    "S29-07": "docs/evidence/s29-07/acceptance_wall_v4_latest.json",
-    "S29-08": "docs/evidence/s29-08/evidence_trend_index_v4_latest.json",
+    "S29-04": "docs/evidence/s29-04/incident_triage_pack_v4_latest.json",
+    "S29-05": "docs/evidence/s29-05/policy_drift_guard_v4_latest.json",
+    "S29-06": "docs/evidence/s29-06/reliability_soak_v4_latest.json",
+    "S29-07": "docs/evidence/s29-07/acceptance_wall_v5_latest.json",
+    "S29-08": "docs/evidence/s29-08/evidence_trend_index_v5_latest.json",
 }
 
 REASON_GATES_BLOCKED = "GATES_BLOCKED"
@@ -38,6 +39,7 @@ REASON_SOFT_SLO_WARN = "SOFT_SLO_WARN"
 
 WAIVER_SKIP_RATE_ENV_GAP = "SKIP_RATE_ENV_GAP"
 WAIVER_NOTIFY_NOT_ATTEMPTED = "NOTIFY_NOT_ATTEMPTED"
+WAIVER_NOTIFY_ENDPOINT_GAP = "NOTIFY_ENDPOINT_GAP"
 WAIVER_RELIABILITY_ENV_GAP = "RELIABILITY_ENV_GAP"
 WAIVER_UNKNOWN_RATIO_WITH_ACTIONS = "UNKNOWN_RATIO_WITH_ACTIONS"
 WAIVER_RECOVERY_SUCCESS_ENV_GAP = "RECOVERY_SUCCESS_ENV_GAP"
@@ -163,6 +165,7 @@ def evaluate_slo(
     unknown_ratio: float,
     acceptance_pass_rate: float,
     notify_delivery_rate: float,
+    notify_attempted_channels: int,
     recovery_success_rate: float,
     reliability_total_runs: int,
     skip_soft: float,
@@ -173,6 +176,8 @@ def evaluate_slo(
     acceptance_hard: float,
     notify_soft: float,
     notify_hard: float,
+    notify_attempted_soft_min: int,
+    notify_attempted_hard_min: int,
     recovery_success_soft: float,
     recovery_success_hard: float,
     reliability_runs_soft_min: int,
@@ -200,6 +205,25 @@ def evaluate_slo(
         hard.append({"metric": "notify_delivery_rate", "value": notify_delivery_rate, "threshold": notify_hard, "rule": "value >= hard"})
     elif notify_delivery_rate < notify_soft:
         soft.append({"metric": "notify_delivery_rate", "value": notify_delivery_rate, "threshold": notify_soft, "rule": "value >= soft"})
+
+    if notify_attempted_channels < notify_attempted_hard_min:
+        hard.append(
+            {
+                "metric": "notify_attempted_channels",
+                "value": notify_attempted_channels,
+                "threshold": notify_attempted_hard_min,
+                "rule": "value >= hard",
+            }
+        )
+    elif notify_attempted_channels < notify_attempted_soft_min:
+        soft.append(
+            {
+                "metric": "notify_attempted_channels",
+                "value": notify_attempted_channels,
+                "threshold": notify_attempted_soft_min,
+                "rule": "value >= soft",
+            }
+        )
 
     if recovery_success_rate < recovery_success_hard:
         hard.append(
@@ -253,6 +277,15 @@ def _to_bool(value: Any) -> bool:
     return bool(value)
 
 
+def first_exit_condition(doc: Dict[str, Any]) -> str:
+    rows = list(dict(doc.get("constraints", {})).get("exit_conditions", []))
+    for item in rows:
+        text = str(item or "").strip()
+        if text:
+            return text
+    return ""
+
+
 def build_waiver_context(
     *,
     d01: Dict[str, Any],
@@ -282,10 +315,22 @@ def build_waiver_context(
 
     notify_reason = str(d03_summary.get("reason_code") or "")
     notify_attempted = _to_bool(d03_notify.get("attempted"))
+    notify_sent_channels = to_int(d03_notify.get("sent_channels", 0), 0)
     notify_not_attempted = (not notify_attempted) and notify_reason in {"NOTIFY_DRY_RUN", "WEBHOOK_NOT_CONFIGURED"}
     notify_delivery_state = str(d03_notify.get("delivery_state") or "")
     if notify_delivery_state == "NOT_ATTEMPTED":
         notify_not_attempted = True
+    notify_endpoint_gap = (
+        notify_attempted
+        and notify_sent_channels <= 0
+        and notify_reason in {"WEBHOOK_NOT_CONFIGURED", "NOTIFY_SEND_FAILED", "NOTIFY_SEND_PARTIAL"}
+    )
+    for row in list(d03.get("channels", [])):
+        if not isinstance(row, dict):
+            continue
+        if "webhook env not configured" in str(row.get("error") or "").lower():
+            notify_endpoint_gap = True
+            break
 
     reliability_reason = str(d06_summary.get("reason_code") or "")
     reliability_env_gap = reliability_reason in {"INSUFFICIENT_RUNS_ENV_GAP", "SKIP_RATE_HIGH_ENV_GAP"} or (
@@ -295,16 +340,26 @@ def build_waiver_context(
     candidate_count = to_int(d02_metrics.get("candidate_count", 0), 0)
     action_count = len(list(d02.get("collection_actions", [])))
     taxonomy_feedback_active = candidate_count > 0 and action_count > 0
+    exit_conditions_by_metric = {
+        "skip_rate": first_exit_condition(d01),
+        "recovery_success_rate": first_exit_condition(d01),
+        "unknown_ratio": first_exit_condition(d02),
+        "notify_delivery_rate": first_exit_condition(d03),
+        "notify_attempted_channels": first_exit_condition(d03),
+        "reliability_total_runs": first_exit_condition(d06),
+    }
 
     return {
         "provider_env_gap": provider_env_gap,
         "recovery_success_env_gap": recovery_success_env_gap,
         "notify_not_attempted": notify_not_attempted,
+        "notify_endpoint_gap": notify_endpoint_gap,
         "reliability_env_gap": reliability_env_gap,
         "taxonomy_feedback_active": taxonomy_feedback_active,
         "taxonomy_candidate_count": candidate_count,
         "taxonomy_action_count": action_count,
         "unknown_ratio": to_float(d02_metrics.get("unknown_ratio", 0.0), 0.0),
+        "exit_conditions_by_metric": exit_conditions_by_metric,
     }
 
 
@@ -333,6 +388,12 @@ def apply_metric_waivers(
         elif metric == "notify_delivery_rate" and _to_bool(context.get("notify_not_attempted")):
             waiver_code = WAIVER_NOTIFY_NOT_ATTEMPTED
             waiver_note = "notification was intentionally not attempted in current environment."
+        elif metric == "notify_delivery_rate" and _to_bool(context.get("notify_endpoint_gap")):
+            waiver_code = WAIVER_NOTIFY_ENDPOINT_GAP
+            waiver_note = "notification endpoint is unavailable in current environment."
+        elif metric == "notify_attempted_channels" and _to_bool(context.get("notify_not_attempted")):
+            waiver_code = WAIVER_NOTIFY_NOT_ATTEMPTED
+            waiver_note = "notification attempts were intentionally skipped in current environment."
         elif metric == "reliability_total_runs" and _to_bool(context.get("reliability_env_gap")):
             waiver_code = WAIVER_RELIABILITY_ENV_GAP
             waiver_note = "insufficient soak runs are caused by provider environment gap."
@@ -351,10 +412,17 @@ def apply_metric_waivers(
             remaining.append(row)
             continue
 
+        exit_condition = str(dict(context.get("exit_conditions_by_metric", {})).get(metric) or "").strip()
+        if not exit_condition:
+            # Do not allow a waiver without a concrete exit condition.
+            remaining.append(row)
+            continue
+
         waived_row = {
             **row,
             "waiver_code": waiver_code,
             "waiver_note": waiver_note,
+            "waiver_exit_condition": exit_condition,
             "waived_to": "soft",
         }
         softened_row = {
@@ -362,6 +430,7 @@ def apply_metric_waivers(
             "waived_from_hard": True,
             "waiver_code": waiver_code,
             "waiver_note": waiver_note,
+            "waiver_exit_condition": exit_condition,
         }
         waived.append(waived_row)
         softened.append(softened_row)
@@ -377,7 +446,7 @@ def build_markdown(payload: Dict[str, Any]) -> str:
     summary = dict(payload.get("summary", {}))
     metrics = dict(payload.get("metrics", {}))
     lines: List[str] = []
-    lines.append("# S29-09 SLO Readiness v3 (Latest)")
+    lines.append("# S29-09 SLO Readiness v4 (Latest)")
     lines.append("")
     lines.append(f"- CapturedAtUTC: `{payload.get('captured_at_utc', '')}`")
     lines.append(f"- Branch: `{payload.get('git', {}).get('branch', '')}`")
@@ -398,6 +467,7 @@ def build_markdown(payload: Dict[str, Any]) -> str:
     lines.append(f"- unknown_ratio: `{metrics.get('unknown_ratio', 0.0)}`")
     lines.append(f"- acceptance_pass_rate: `{metrics.get('acceptance_pass_rate', 0.0)}`")
     lines.append(f"- notify_delivery_rate: `{metrics.get('notify_delivery_rate', 0.0)}`")
+    lines.append(f"- notify_attempted_channels: `{metrics.get('notify_attempted_channels', 0)}`")
     lines.append(f"- recovery_success_rate: `{metrics.get('recovery_success_rate', 0.0)}`")
     lines.append(f"- reliability_total_runs: `{metrics.get('reliability_total_runs', 0)}`")
     lines.append("")
@@ -416,6 +486,8 @@ def main() -> int:
     parser.add_argument("--acceptance-pass-rate-hard", type=float, default=0.90)
     parser.add_argument("--notify-delivery-soft", type=float, default=1.00)
     parser.add_argument("--notify-delivery-hard", type=float, default=0.67)
+    parser.add_argument("--notify-attempted-soft-min", type=int, default=2)
+    parser.add_argument("--notify-attempted-hard-min", type=int, default=2)
     parser.add_argument("--recovery-success-soft", type=float, default=0.80)
     parser.add_argument("--recovery-success-hard", type=float, default=0.50)
     parser.add_argument("--reliability-runs-soft-min", type=int, default=24)
@@ -429,7 +501,7 @@ def main() -> int:
     repo_root = Path(git_out(Path.cwd(), ["rev-parse", "--show-toplevel"]) or Path.cwd()).resolve()
     out_dir = (repo_root / args.out_dir).resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
-    run_dir, meta, events = make_run_context(repo_root, tool="s29-slo-readiness-v3", obs_root=args.obs_root)
+    run_dir, meta, events = make_run_context(repo_root, tool="s29-slo-readiness-v4", obs_root=args.obs_root)
 
     current_head = git_out(repo_root, ["rev-parse", "HEAD"])
     docs: Dict[str, Dict[str, Any]] = {}
@@ -477,6 +549,7 @@ def main() -> int:
     notify_sent = bool(notify_doc.get("sent", False))
     notify_attempted = bool(notify_doc.get("attempted", False))
     notify_attempt_count = to_int(notify_doc.get("attempt_count", 0), 0)
+    notify_attempted_channels = to_int(notify_doc.get("attempted_channels", 0), 0)
     if notify_attempt_count <= 0 and notify_attempted:
         notify_attempt_count = 1
     notify_success_count = to_int(notify_doc.get("sent_channels", 0), 1 if notify_sent else 0)
@@ -501,6 +574,7 @@ def main() -> int:
         unknown_ratio=unknown_ratio,
         acceptance_pass_rate=acceptance_pass_rate,
         notify_delivery_rate=notify_delivery_rate,
+        notify_attempted_channels=notify_attempted_channels,
         recovery_success_rate=recovery_success_rate,
         reliability_total_runs=reliability_total_runs,
         skip_soft=float(args.skip_rate_soft),
@@ -511,6 +585,8 @@ def main() -> int:
         acceptance_hard=float(args.acceptance_pass_rate_hard),
         notify_soft=float(args.notify_delivery_soft),
         notify_hard=float(args.notify_delivery_hard),
+        notify_attempted_soft_min=max(int(args.notify_attempted_soft_min), 1),
+        notify_attempted_hard_min=max(int(args.notify_attempted_hard_min), 1),
         recovery_success_soft=float(args.recovery_success_soft),
         recovery_success_hard=float(args.recovery_success_hard),
         reliability_runs_soft_min=max(int(args.reliability_runs_soft_min), 1),
@@ -542,11 +618,13 @@ def main() -> int:
             "provider_env_gap": False,
             "recovery_success_env_gap": False,
             "notify_not_attempted": False,
+            "notify_endpoint_gap": False,
             "reliability_env_gap": False,
             "taxonomy_feedback_active": False,
             "taxonomy_candidate_count": 0,
             "taxonomy_action_count": 0,
             "unknown_ratio": unknown_ratio,
+            "exit_conditions_by_metric": {},
         }
 
     readiness = "READY"
@@ -569,14 +647,16 @@ def main() -> int:
         emit("WARN", f"waivers applied count={len(waived_hard)}", events)
 
     if status == "FAIL":
-        emit("ERROR", f"slo v3 readiness=BLOCKED reason={reason_code}", events)
+        emit("ERROR", f"slo v4 readiness=BLOCKED reason={reason_code}", events)
     elif status == "WARN":
-        emit("WARN", f"slo v3 readiness=WARN_ONLY reason={reason_code}", events)
+        emit("WARN", f"slo v4 readiness=WARN_ONLY reason={reason_code}", events)
     else:
-        emit("OK", "slo v3 readiness=READY", events)
+        emit("OK", "slo v4 readiness=READY", events)
+
+    waived_with_exit_condition_count = sum(1 for row in waived_hard if str(dict(row).get("waiver_exit_condition") or "").strip())
 
     payload: Dict[str, Any] = {
-        "schema_version": "s29-slo-readiness-v3",
+        "schema_version": "s29-slo-readiness-v4",
         "captured_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "git": {"branch": git_out(repo_root, ["branch", "--show-current"]), "head": current_head},
         "inputs": ARTIFACTS,
@@ -590,6 +670,7 @@ def main() -> int:
             "acceptance_passed": acc_passed,
             "acceptance_total": acc_total,
             "notify_delivery_rate": notify_delivery_rate,
+            "notify_attempted_channels": notify_attempted_channels,
             "notify_attempt_count": notify_attempt_count,
             "notify_success_count": notify_success_count,
             "notify_delivery_state": str(notify_doc.get("delivery_state") or ""),
@@ -610,6 +691,8 @@ def main() -> int:
                 "acceptance_pass_rate_hard": float(args.acceptance_pass_rate_hard),
                 "notify_delivery_soft": float(args.notify_delivery_soft),
                 "notify_delivery_hard": float(args.notify_delivery_hard),
+                "notify_attempted_soft_min": max(int(args.notify_attempted_soft_min), 1),
+                "notify_attempted_hard_min": max(int(args.notify_attempted_hard_min), 1),
                 "recovery_success_soft": float(args.recovery_success_soft),
                 "recovery_success_hard": float(args.recovery_success_hard),
                 "reliability_runs_soft_min": max(int(args.reliability_runs_soft_min), 1),
@@ -631,14 +714,15 @@ def main() -> int:
             "hard_block_count": len(hard),
             "soft_warn_count": len(soft),
             "waived_hard_count": len(waived_hard),
+            "waived_with_exit_condition_count": waived_with_exit_condition_count,
             "missing_count": len(missing),
             "stale_count": len(stale),
         },
-        "artifact_names": {"json": "slo_readiness_v3_latest.json", "md": "slo_readiness_v3_latest.md"},
+        "artifact_names": {"json": "slo_readiness_v4_latest.json", "md": "slo_readiness_v4_latest.md"},
     }
 
-    out_json = out_dir / "slo_readiness_v3_latest.json"
-    out_md = out_dir / "slo_readiness_v3_latest.md"
+    out_json = out_dir / "slo_readiness_v4_latest.json"
+    out_md = out_dir / "slo_readiness_v4_latest.md"
     out_json.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     out_md.write_text(build_markdown(payload), encoding="utf-8")
     emit("OK", f"artifact_json={out_json}", events)

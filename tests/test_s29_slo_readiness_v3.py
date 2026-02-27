@@ -26,6 +26,7 @@ class S29SLOReadinessV3Tests(unittest.TestCase):
             unknown_ratio=0.05,
             acceptance_pass_rate=1.0,
             notify_delivery_rate=1.0,
+            notify_attempted_channels=2,
             recovery_success_rate=1.0,
             reliability_total_runs=30,
             skip_soft=0.5,
@@ -36,6 +37,8 @@ class S29SLOReadinessV3Tests(unittest.TestCase):
             acceptance_hard=0.85,
             notify_soft=1.0,
             notify_hard=0.5,
+            notify_attempted_soft_min=2,
+            notify_attempted_hard_min=2,
             recovery_success_soft=0.8,
             recovery_success_hard=0.5,
             reliability_runs_soft_min=24,
@@ -50,6 +53,7 @@ class S29SLOReadinessV3Tests(unittest.TestCase):
             unknown_ratio=0.01,
             acceptance_pass_rate=1.0,
             notify_delivery_rate=1.0,
+            notify_attempted_channels=2,
             recovery_success_rate=1.0,
             reliability_total_runs=3,
             skip_soft=0.2,
@@ -60,6 +64,8 @@ class S29SLOReadinessV3Tests(unittest.TestCase):
             acceptance_hard=0.85,
             notify_soft=0.95,
             notify_hard=0.5,
+            notify_attempted_soft_min=2,
+            notify_attempted_hard_min=2,
             recovery_success_soft=0.8,
             recovery_success_hard=0.5,
             reliability_runs_soft_min=24,
@@ -131,6 +137,7 @@ class S29SLOReadinessV3Tests(unittest.TestCase):
         self.assertTrue(context["provider_env_gap"])
         self.assertTrue(context["recovery_success_env_gap"])
         self.assertTrue(context["notify_not_attempted"])
+        self.assertFalse(context["notify_endpoint_gap"])
         self.assertTrue(context["reliability_env_gap"])
         self.assertTrue(context["taxonomy_feedback_active"])
 
@@ -153,6 +160,13 @@ class S29SLOReadinessV3Tests(unittest.TestCase):
                 "taxonomy_candidate_count": 6,
                 "taxonomy_action_count": 3,
                 "unknown_ratio": 0.31,
+                "exit_conditions_by_metric": {
+                    "skip_rate": "reduce skip rate",
+                    "unknown_ratio": "reduce unknown ratio",
+                    "recovery_success_rate": "improve recovery rate",
+                    "notify_delivery_rate": "configure webhook",
+                    "reliability_total_runs": "collect more runs",
+                },
             },
             taxonomy_waiver_min_candidates=5,
             taxonomy_waiver_max_unknown=0.35,

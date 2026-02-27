@@ -1,4 +1,4 @@
-schema_version = "s29-canary-recovery-success-rate-slo-v1"
+schema_version = "s29-canary-recovery-success-rate-slo-v2"
 canary_ops_json = "docs/evidence/s27-01/provider_canary_ops_latest.json"
 history_json = "docs/evidence/s27-01/provider_canary_history.json"
 window_size = 12

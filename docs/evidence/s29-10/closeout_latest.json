@@ -1,21 +1,21 @@
 {
-  "schema_version": "s29-closeout-v1",
-  "captured_at_utc": "2026-02-27T11:07:48Z",
+  "schema_version": "s29-closeout-v2",
+  "captured_at_utc": "2026-02-27T11:27:56Z",
   "git": {
     "branch": "ops/S29-01-S29-10",
-    "head": "4d5916728a1831687c05062a875520825c77e1db"
+    "head": "d968bc83a6767578fffbc56c901cf072f5b33255"
   },
   "inputs": {
-    "readiness_json": "docs/evidence/s29-09/slo_readiness_v3_latest.json",
-    "index_json": "docs/evidence/s29-08/evidence_trend_index_v4_latest.json"
+    "readiness_json": "docs/evidence/s29-09/slo_readiness_v4_latest.json",
+    "index_json": "docs/evidence/s29-08/evidence_trend_index_v5_latest.json"
   },
   "before_after": {
     "before_scope": "S28-10 Exit (WARN_ONLY closeout)",
-    "after_scope": "S29-10 Exit (production-connected readiness hardening)",
+    "after_scope": "S29-10 Exit v2 (waiver burn-down)",
     "before_phases_present": 10,
     "after_phases_present": 10,
     "after_failed_count": 0,
-    "after_warn_count": 5
+    "after_warn_count": 6
   },
   "unresolved_risks": [
     "skip_rate has soft SLO warning and requires ongoing monitoring.",
@@ -23,15 +23,22 @@
     "notify_delivery_rate has soft SLO warning and requires ongoing monitoring.",
     "recovery_success_rate has soft SLO warning and requires ongoing monitoring.",
     "reliability_total_runs has soft SLO warning and requires ongoing monitoring.",
-    "skip_rate is currently waived (SKIP_RATE_ENV_GAP); validate exit criteria in production-connected runs.",
-    "unknown_ratio is currently waived (UNKNOWN_RATIO_WITH_ACTIONS); validate exit criteria in production-connected runs.",
-    "notify_delivery_rate is currently waived (NOTIFY_NOT_ATTEMPTED); validate exit criteria in production-connected runs.",
-    "recovery_success_rate is currently waived (RECOVERY_SUCCESS_ENV_GAP); validate exit criteria in production-connected runs.",
-    "reliability_total_runs is currently waived (RELIABILITY_ENV_GAP); validate exit criteria in production-connected runs.",
-    "Evidence trend includes 5 warning phase(s); continued hardening is required.",
+    "skip_rate is currently waived (SKIP_RATE_ENV_GAP); exit condition: Keep trailing non-pass streak below 3.",
+    "unknown_ratio is currently waived (UNKNOWN_RATIO_WITH_ACTIONS); exit condition: Reduce unknown_ratio to <= 0.03 with additional labeled samples.",
+    "notify_delivery_rate is currently waived (NOTIFY_ENDPOINT_GAP); exit condition: Configure channel webhooks and verify each channel returns 2xx at least once.",
+    "recovery_success_rate is currently waived (RECOVERY_SUCCESS_ENV_GAP); exit condition: Keep trailing non-pass streak below 3.",
+    "reliability_total_runs is currently waived (RELIABILITY_ENV_GAP); exit condition: Collect additional canary history samples and rerun S29-06.",
+    "Evidence trend includes 6 warning phase(s); continued hardening is required.",
     "provider env 未設定時の SKIP 常態化は運用継続監視が必要。",
     "長時間高負荷時の retry/backoff 最適値は追加検証が必要。",
     "unknown taxonomy の恒常的発生はデータ収集強化が必要。"
+  ],
+  "waiver_exit_conditions": [
+    "skip_rate: Keep trailing non-pass streak below 3.",
+    "unknown_ratio: Reduce unknown_ratio to <= 0.03 with additional labeled samples.",
+    "notify_delivery_rate: Configure channel webhooks and verify each channel returns 2xx at least once.",
+    "recovery_success_rate: Keep trailing non-pass streak below 3.",
+    "reliability_total_runs: Collect additional canary history samples and rerun S29-06."
   ],
   "next_thread_handoff": [
     "S30-01: production-connected runbook を運用定着し、失敗系復旧訓練を定例化する。",
@@ -44,6 +51,7 @@
     "blocked_gates": 0,
     "readiness_reason_code": "SOFT_SLO_WARN",
     "waived_hard_count": 5,
+    "waiver_exit_condition_count": 5,
     "unresolved_risk_count": 14,
     "handoff_count": 3
   },

@@ -37,7 +37,7 @@ class S29TaxonomyFeedbackLoopTests(unittest.TestCase):
     def test_validate_config(self):
         ok, reason = self.m.validate_config(
             {
-                "schema_version": "s29-taxonomy-pipeline-integration-v1",
+                "schema_version": "s29-taxonomy-pipeline-integration-v2",
                 "cases_path": "x.jsonl",
                 "known_tags": ["provider"],
                 "unknown_ratio_target": 0.1,
@@ -65,9 +65,11 @@ class S29TaxonomyFeedbackLoopTests(unittest.TestCase):
         records = self.m.build_pipeline_records(
             [{"case_id": "c1", "query": "q", "suggested_taxonomy": "provider", "tags": ["provider"]}],
             5,
+            {"provider": "ml-platform", "unknown": "ops-triage"},
         )
         self.assertEqual(len(records), 1)
         self.assertEqual(records[0]["case_id"], "c1")
+        self.assertEqual(records[0]["owner"], "ml-platform")
 
 
 if __name__ == "__main__":

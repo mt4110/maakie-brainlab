@@ -77,6 +77,25 @@ class S29ReliabilitySoakV2Tests(unittest.TestCase):
         self.assertEqual(status, "WARN")
         self.assertEqual(reason, self.m.REASON_SKIP_RATE_HIGH_ENV_GAP)
 
+    def test_evaluate_reliability_status_target_runs_env_gap(self):
+        status, reason = self.m.evaluate_reliability_status(
+            history_present=True,
+            total_runs=10,
+            min_runs=6,
+            target_runs=24,
+            max_consecutive_nonpass=1,
+            max_consecutive_threshold=4,
+            fail_rate=0.0,
+            fail_rate_hard_threshold=0.3,
+            skip_rate=0.1,
+            skip_rate_warn_threshold=0.5,
+            recovery_present=True,
+            dominant_reason_code="MISSING_PROVIDER_ENV",
+            env_gap_ratio=0.9,
+        )
+        self.assertEqual(status, "WARN")
+        self.assertEqual(reason, self.m.REASON_TARGET_RUNS_ENV_GAP)
+
 
 if __name__ == "__main__":
     unittest.main()

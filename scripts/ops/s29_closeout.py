@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-S29-10 closeout artifact generator.
+S29-10 closeout artifact generator v2.
 
 Goal:
 - Freeze S29 Before/After, unresolved risks, and S30 handoff.
@@ -19,8 +19,8 @@ from scripts.ops.obs_contract import DEFAULT_OBS_ROOT, emit, git_out, make_run_c
 
 
 DEFAULT_OUT_DIR = "docs/evidence/s29-10"
-DEFAULT_READINESS = "docs/evidence/s29-09/slo_readiness_v3_latest.json"
-DEFAULT_INDEX = "docs/evidence/s29-08/evidence_trend_index_v4_latest.json"
+DEFAULT_READINESS = "docs/evidence/s29-09/slo_readiness_v4_latest.json"
+DEFAULT_INDEX = "docs/evidence/s29-08/evidence_trend_index_v5_latest.json"
 
 DEFAULT_UNRESOLVED_RISKS = [
     "provider env 未設定時の SKIP 常態化は運用継続監視が必要。",
@@ -93,8 +93,14 @@ def derive_unresolved_risks(readiness: Dict[str, Any], index: Dict[str, Any]) ->
     for row in waived:
         metric = str(dict(row).get("metric") or "")
         waiver = str(dict(row).get("waiver_code") or "")
+        exit_condition = str(dict(row).get("waiver_exit_condition") or "")
         if metric and waiver:
-            risks.append(f"{metric} is currently waived ({waiver}); validate exit criteria in production-connected runs.")
+            if exit_condition:
+                risks.append(
+                    f"{metric} is currently waived ({waiver}); exit condition: {exit_condition}"
+                )
+            else:
+                risks.append(f"{metric} is currently waived ({waiver}); validate exit criteria in production-connected runs.")
 
     idx_summary = dict(index.get("summary", {}))
     warn_count = int(idx_summary.get("warn_count", 0) or 0)
@@ -107,11 +113,23 @@ def derive_unresolved_risks(readiness: Dict[str, Any], index: Dict[str, Any]) ->
     return dedupe_lines(risks)
 
 
+def derive_waiver_exit_conditions(readiness: Dict[str, Any]) -> List[str]:
+    out: List[str] = []
+    for row in list(dict(readiness.get("slo", {})).get("waived_hard_violations", [])):
+        if not isinstance(row, dict):
+            continue
+        metric = str(row.get("metric") or "").strip()
+        cond = str(row.get("waiver_exit_condition") or "").strip()
+        if metric and cond:
+            out.append(f"{metric}: {cond}")
+    return dedupe_lines(out)
+
+
 def build_markdown(payload: Dict[str, Any]) -> str:
     summary = dict(payload.get("summary", {}))
     before_after = dict(payload.get("before_after", {}))
     lines: List[str] = []
-    lines.append("# S29-10 Closeout (Latest)")
+    lines.append("# S29-10 Closeout v2 (Latest)")
     lines.append("")
     lines.append(f"- CapturedAtUTC: `{payload.get('captured_at_utc', '')}`")
     lines.append(f"- Branch: `{payload.get('git', {}).get('branch', '')}`")
@@ -123,6 +141,7 @@ def build_markdown(payload: Dict[str, Any]) -> str:
     lines.append(f"- readiness: `{summary.get('readiness', '')}`")
     lines.append(f"- blocked_gates: `{summary.get('blocked_gates', 0)}`")
     lines.append(f"- waived_hard_count: `{summary.get('waived_hard_count', 0)}`")
+    lines.append(f"- waiver_exit_condition_count: `{summary.get('waiver_exit_condition_count', 0)}`")
     lines.append("")
     lines.append("## Before / After")
     lines.append("")
@@ -137,6 +156,13 @@ def build_markdown(payload: Dict[str, Any]) -> str:
     for item in list(payload.get("unresolved_risks", [])):
         lines.append(f"- {item}")
     lines.append("")
+    lines.append("## Waiver Exit Conditions")
+    lines.append("")
+    for item in list(payload.get("waiver_exit_conditions", [])):
+        lines.append(f"- {item}")
+    if not payload.get("waiver_exit_conditions"):
+        lines.append("- none")
+    lines.append("")
     lines.append("## Next Thread Handoff")
     lines.append("")
     for item in list(payload.get("next_thread_handoff", [])):
@@ -149,6 +175,7 @@ def build_markdown(payload: Dict[str, Any]) -> str:
     lines.append(f"- status: {summary.get('status', '')}")
     lines.append(f"- readiness: {summary.get('readiness', '')}")
     lines.append(f"- blocked_gates: {summary.get('blocked_gates', 0)}")
+    lines.append(f"- waiver_exit_condition_count: {summary.get('waiver_exit_condition_count', 0)}")
     lines.append(f"- unresolved_risks: {len(payload.get('unresolved_risks', []))}")
     lines.append(f"- handoff_items: {len(payload.get('next_thread_handoff', []))}")
     lines.append(f"- artifact: docs/evidence/s29-10/{payload.get('artifact_names', {}).get('json', '')}")
@@ -167,7 +194,7 @@ def write_failure(
     handoff_items: List[str],
 ) -> None:
     payload: Dict[str, Any] = {
-        "schema_version": "s29-closeout-v1",
+        "schema_version": "s29-closeout-v2",
         "captured_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "git": {
             "branch": git_out(repo_root, ["branch", "--show-current"]),
@@ -179,13 +206,14 @@ def write_failure(
         },
         "before_after": {
             "before_scope": "S28-10 Exit (WARN_ONLY closeout)",
-            "after_scope": "S29-10 Exit (production-connected readiness hardening)",
+            "after_scope": "S29-10 Exit v2 (waiver burn-down)",
             "before_phases_present": 10,
             "after_phases_present": 0,
             "after_failed_count": 0,
             "after_warn_count": 0,
         },
         "unresolved_risks": list(unresolved_risks),
+        "waiver_exit_conditions": [],
         "next_thread_handoff": list(handoff_items),
         "summary": {"status": "FAIL", "readiness": "BLOCKED", "blocked_gates": 1, "reason": reason},
         "artifact_names": {"json": "closeout_latest.json", "md": "closeout_latest.md"},
@@ -209,7 +237,7 @@ def main() -> int:
     repo_root = Path(git_out(Path.cwd(), ["rev-parse", "--show-toplevel"]) or Path.cwd()).resolve()
     out_dir = (repo_root / args.out_dir).resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
-    run_dir, meta, events = make_run_context(repo_root, tool="s29-closeout", obs_root=args.obs_root)
+    run_dir, meta, events = make_run_context(repo_root, tool="s29-closeout-v2", obs_root=args.obs_root)
 
     readiness_path = (repo_root / args.readiness_json).resolve()
     index_path = (repo_root / args.index_json).resolve()
@@ -242,12 +270,13 @@ def main() -> int:
     else:
         status = "FAIL"
 
+    waiver_exit_conditions = derive_waiver_exit_conditions(readiness)
     derived_risks = derive_unresolved_risks(readiness, index)
     unresolved_risks = dedupe_lines(manual_risks + derived_risks + ([] if manual_risks else DEFAULT_UNRESOLVED_RISKS))
 
     before_after = {
         "before_scope": "S28-10 Exit (WARN_ONLY closeout)",
-        "after_scope": "S29-10 Exit (production-connected readiness hardening)",
+        "after_scope": "S29-10 Exit v2 (waiver burn-down)",
         "before_phases_present": 10,
         "after_phases_present": int(isum.get("present_count", 0) or 0) + 3,
         "after_failed_count": int(isum.get("failed_count", 0) or 0),
@@ -255,7 +284,7 @@ def main() -> int:
     }
 
     payload: Dict[str, Any] = {
-        "schema_version": "s29-closeout-v1",
+        "schema_version": "s29-closeout-v2",
         "captured_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "git": {
             "branch": git_out(repo_root, ["branch", "--show-current"]),
@@ -267,6 +296,7 @@ def main() -> int:
         },
         "before_after": before_after,
         "unresolved_risks": unresolved_risks,
+        "waiver_exit_conditions": waiver_exit_conditions,
         "next_thread_handoff": handoff_items,
         "summary": {
             "status": status,
@@ -274,6 +304,7 @@ def main() -> int:
             "blocked_gates": blocked,
             "readiness_reason_code": str(rsum.get("reason_code") or ""),
             "waived_hard_count": int(rsum.get("waived_hard_count", 0) or 0),
+            "waiver_exit_condition_count": len(waiver_exit_conditions),
             "unresolved_risk_count": len(unresolved_risks),
             "handoff_count": len(handoff_items),
         },

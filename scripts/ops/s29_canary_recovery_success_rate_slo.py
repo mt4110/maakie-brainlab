@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """
-S29-01 canary recovery success-rate SLO.
+S29-01 canary recovery success-rate SLO v2.
 
 Goal:
 - Detect sustained non-pass streaks from canary history.
 - Provide deterministic recovery actions and optional auto-recovery execution.
 - Evaluate recovery success-rate SLO from canary history transitions.
+- Persist explicit exit conditions for WARN/FAIL states.
 """
 
 from __future__ import annotations
@@ -313,12 +314,41 @@ def evaluate_recovery_success_rate_slo(
     return {"level": "PASS", "reason_code": "", "violated": False}
 
 
+def build_exit_conditions(
+    *,
+    reason_code: str,
+    recovery_threshold: int,
+    skip_rate_warn_threshold: float,
+    success_rate_soft_threshold: float,
+    min_attempts_soft: int,
+) -> List[str]:
+    code = str(reason_code or "")
+    if code == REASON_INPUT_MISSING:
+        return ["Restore canary ops/history artifacts and rerun S29-01."]
+    if code == REASON_RECOVERY_REQUIRED:
+        return [f"Keep trailing non-pass streak below {max(1, int(recovery_threshold))}."]
+    if code in {REASON_SKIP_RATE_HIGH, REASON_SKIP_RATE_HIGH_ENV_GAP}:
+        return [f"Reduce skip_rate below {float(skip_rate_warn_threshold):.2f} within configured window."]
+    if code in {
+        REASON_RECOVERY_SUCCESS_RATE_SOFT_WARN,
+        REASON_RECOVERY_SUCCESS_RATE_HARD_BREACH,
+        REASON_RECOVERY_SUCCESS_RATE_INSUFFICIENT_SAMPLE,
+    }:
+        return [
+            f"Reach recovery_success_rate >= {float(success_rate_soft_threshold):.2f}.",
+            f"Collect at least {max(1, int(min_attempts_soft))} recovery attempts.",
+        ]
+    if code == REASON_RECOVERY_COMMAND_FAILED:
+        return ["Fix recovery command failure and confirm PASS return code."]
+    return []
+
+
 def build_markdown(payload: Dict[str, Any]) -> str:
     summary = dict(payload.get("summary", {}))
     trend = dict(payload.get("trend", {}))
     recovery_slo = dict(payload.get("recovery_slo", {}))
     lines: List[str] = []
-    lines.append("# S29-01 Canary Recovery Success-rate SLO (Latest)")
+    lines.append("# S29-01 Canary Recovery Success-rate SLO v2 (Latest)")
     lines.append("")
     lines.append(f"- CapturedAtUTC: `{payload.get('captured_at_utc', '')}`")
     lines.append(f"- Branch: `{payload.get('git', {}).get('branch', '')}`")
@@ -344,7 +374,7 @@ def build_markdown(payload: Dict[str, Any]) -> str:
     lines.append("## PR Body Snippet")
     lines.append("")
     lines.append("```md")
-    lines.append("### S29-01 Canary Recovery Success-rate SLO")
+    lines.append("### S29-01 Canary Recovery Success-rate SLO v2")
     lines.append(f"- status: {summary.get('status', '')}")
     lines.append(f"- reason_code: {summary.get('reason_code', '')}")
     lines.append(f"- trailing_nonpass_streak: {trend.get('trailing_nonpass_streak', 0)}")
@@ -534,8 +564,16 @@ def main() -> int:
             "Improve canary auto-recovery success-rate via strict retry/rollback validation and provider env hardening."
         )
 
+    exit_conditions = build_exit_conditions(
+        reason_code=reason_code,
+        recovery_threshold=recovery_threshold,
+        skip_rate_warn_threshold=skip_rate_warn_threshold,
+        success_rate_soft_threshold=success_rate_soft_threshold,
+        min_attempts_soft=success_rate_min_attempts_soft,
+    )
+
     payload: Dict[str, Any] = {
-        "schema_version": "s29-canary-recovery-success-rate-slo-v1",
+        "schema_version": "s29-canary-recovery-success-rate-slo-v2",
         "captured_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "git": {
             "branch": git_out(repo_root, ["branch", "--show-current"]),
@@ -570,6 +608,9 @@ def main() -> int:
         "recovery": recovery_exec,
         "recovery_slo": recovery_slo,
         "recommended_actions": recommended_actions,
+        "constraints": {
+            "exit_conditions": exit_conditions,
+        },
         "summary": {
             "status": status,
             "reason_code": reason_code,
@@ -578,6 +619,7 @@ def main() -> int:
             "env_gap_detected": env_gap_detected,
             "recovery_success_rate": float(recovery_slo.get("success_rate", 0.0)),
             "recovery_slo_level": str(recovery_slo.get("level", "")),
+            "exit_condition_count": len(exit_conditions),
         },
         "artifact_names": {
             "json": "canary_recovery_success_rate_slo_latest.json",

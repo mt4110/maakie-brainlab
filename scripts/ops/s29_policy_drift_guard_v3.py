@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-S29-05 policy drift guard v3.
+S29-05 policy drift guard v4.
 
 Goal:
 - Detect drift across S29 operation contracts.
@@ -20,12 +20,12 @@ from scripts.ops.obs_contract import DEFAULT_OBS_ROOT, emit, git_out, make_run_c
 
 
 DEFAULT_OUT_DIR = "docs/evidence/s29-05"
-DEFAULT_BASELINE = "policy_drift_baseline_v3.json"
+DEFAULT_BASELINE = "policy_drift_baseline_v4.json"
 
 WATCH_FILES = [
     "docs/ops/S29-01_CANARY_RECOVERY_SUCCESS_RATE_SLO.toml",
     "docs/ops/S29-02_TAXONOMY_PIPELINE_INTEGRATION.toml",
-    "docs/ops/S29-07_ACCEPTANCE_CASES_V4.json",
+    "docs/ops/S29-07_ACCEPTANCE_CASES_V5.json",
     "scripts/ops/s29_slo_readiness_v3.py",
     "scripts/ops/s29_readiness_notify_multichannel.py",
     ".github/workflows/run_always_1h.yml",
@@ -117,7 +117,7 @@ def build_markdown(payload: Dict[str, Any]) -> str:
     summary = dict(payload.get("summary", {}))
     drift = dict(payload.get("drift", {}))
     lines: List[str] = []
-    lines.append("# S29-05 Policy Drift Guard v3 (Latest)")
+    lines.append("# S29-05 Policy Drift Guard v4 (Latest)")
     lines.append("")
     lines.append(f"- CapturedAtUTC: `{payload.get('captured_at_utc', '')}`")
     lines.append(f"- Branch: `{payload.get('git', {}).get('branch', '')}`")
@@ -152,7 +152,7 @@ def main() -> int:
     repo_root = Path(git_out(Path.cwd(), ["rev-parse", "--show-toplevel"]) or Path.cwd()).resolve()
     out_dir = (repo_root / args.out_dir).resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
-    run_dir, meta, events = make_run_context(repo_root, tool="s29-policy-drift-guard-v3", obs_root=args.obs_root)
+    run_dir, meta, events = make_run_context(repo_root, tool="s29-policy-drift-guard-v4", obs_root=args.obs_root)
 
     baseline_path = out_dir / str(args.baseline_file)
     current_scan = scan_current(repo_root, WATCH_FILES)
@@ -175,7 +175,7 @@ def main() -> int:
             reason_code = REASON_BASELINE_CREATED
             emit("WARN", "baseline not found; creating baseline", events)
         baseline_doc = {
-            "schema_version": "s29-policy-drift-baseline-v3",
+            "schema_version": "s29-policy-drift-baseline-v4",
             "created_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             "files": current_scan.get("files", {}),
         }
@@ -197,7 +197,7 @@ def main() -> int:
 
         if args.update_baseline:
             new_base = {
-                "schema_version": "s29-policy-drift-baseline-v3",
+                "schema_version": "s29-policy-drift-baseline-v4",
                 "created_at_utc": baseline.get("created_at_utc") or time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                 "updated_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                 "files": current_scan.get("files", {}),
@@ -209,7 +209,7 @@ def main() -> int:
     drift_total = len(drift.get("added", [])) + len(drift.get("removed", [])) + len(drift.get("changed", []))
 
     payload: Dict[str, Any] = {
-        "schema_version": "s29-policy-drift-guard-v3",
+        "schema_version": "s29-policy-drift-guard-v4",
         "captured_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "git": {
             "branch": git_out(repo_root, ["branch", "--show-current"]),
@@ -232,14 +232,14 @@ def main() -> int:
             "baseline_state": baseline_state,
         },
         "artifact_names": {
-            "json": "policy_drift_guard_v3_latest.json",
-            "md": "policy_drift_guard_v3_latest.md",
+            "json": "policy_drift_guard_v4_latest.json",
+            "md": "policy_drift_guard_v4_latest.md",
             "baseline": str(args.baseline_file),
         },
     }
 
-    out_json = out_dir / "policy_drift_guard_v3_latest.json"
-    out_md = out_dir / "policy_drift_guard_v3_latest.md"
+    out_json = out_dir / "policy_drift_guard_v4_latest.json"
+    out_md = out_dir / "policy_drift_guard_v4_latest.md"
     out_json.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     out_md.write_text(build_markdown(payload), encoding="utf-8")
     emit("OK", f"artifact_json={out_json}", events)

@@ -1,9 +1,9 @@
 {
-  "schema_version": "s29-taxonomy-pipeline-integration-v1",
-  "captured_at_utc": "2026-02-27T11:07:47Z",
+  "schema_version": "s29-taxonomy-pipeline-integration-v2",
+  "captured_at_utc": "2026-02-27T11:27:55Z",
   "git": {
     "branch": "ops/S29-01-S29-10",
-    "head": "4d5916728a1831687c05062a875520825c77e1db"
+    "head": "d968bc83a6767578fffbc56c901cf072f5b33255"
   },
   "inputs": {
     "config": "docs/ops/S29-02_TAXONOMY_PIPELINE_INTEGRATION.toml",
@@ -21,6 +21,13 @@
       "security",
       "timeout"
     ],
+    "owner_by_taxonomy": {
+      "provider": "ml-platform",
+      "network": "sre-network",
+      "schema": "data-platform",
+      "timeout": "runtime-core",
+      "unknown": "ops-triage"
+    },
     "unknown_ratio_target": 0.03
   },
   "metrics": {
@@ -89,6 +96,32 @@
     "Collect at least 1 additional labeled cases for taxonomy 'unknown'.",
     "Promote top unknown candidates to incident triage backlog and assign owner."
   ],
+  "collection_actions_v2": [
+    {
+      "taxonomy": "provider",
+      "owner": "ml-platform",
+      "action": "collect_labeled_cases",
+      "target_cases": 2
+    },
+    {
+      "taxonomy": "network",
+      "owner": "sre-network",
+      "action": "collect_labeled_cases",
+      "target_cases": 1
+    },
+    {
+      "taxonomy": "schema",
+      "owner": "data-platform",
+      "action": "collect_labeled_cases",
+      "target_cases": 1
+    },
+    {
+      "taxonomy": "unknown",
+      "owner": "ops-triage",
+      "action": "collect_labeled_cases",
+      "target_cases": 1
+    }
+  ],
   "pipeline": {
     "jsonl": "docs/evidence/s29-02/taxonomy_pipeline_candidates_latest.jsonl",
     "record_count": 5,
@@ -103,7 +136,9 @@
         "tags": [
           "provider",
           "basic"
-        ]
+        ],
+        "owner": "ml-platform",
+        "next_action": "collect_labeled_cases"
       },
       {
         "record_id": "s29-taxonomy-0002",
@@ -115,7 +150,9 @@
           "domain",
           "medical",
           "provider"
-        ]
+        ],
+        "owner": "ml-platform",
+        "next_action": "collect_labeled_cases"
       },
       {
         "record_id": "s29-taxonomy-0003",
@@ -127,14 +164,22 @@
           "domain",
           "finance",
           "network"
-        ]
+        ],
+        "owner": "sre-network",
+        "next_action": "collect_labeled_cases"
       }
+    ]
+  },
+  "constraints": {
+    "exit_conditions": [
+      "Reduce unknown_ratio to <= 0.03 with additional labeled samples."
     ]
   },
   "summary": {
     "status": "WARN",
     "reason_code": "UNKNOWN_RATIO_ABOVE_TARGET",
-    "missing_inputs": 0
+    "missing_inputs": 0,
+    "exit_condition_count": 1
   },
   "artifact_names": {
     "json": "taxonomy_pipeline_integration_latest.json",

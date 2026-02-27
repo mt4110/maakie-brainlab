@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-S29-07 acceptance wall v4.
+S29-07 acceptance wall v5.
 
 Goal:
 - Evaluate acceptance cases with severity and fallback guidance.
@@ -18,7 +18,7 @@ from typing import Any, Dict, List, Tuple
 from scripts.ops.obs_contract import DEFAULT_OBS_ROOT, emit, git_out, make_run_context, write_events, write_summary
 
 
-DEFAULT_CASES_FILE = "docs/ops/S29-07_ACCEPTANCE_CASES_V4.json"
+DEFAULT_CASES_FILE = "docs/ops/S29-07_ACCEPTANCE_CASES_V5.json"
 DEFAULT_OUT_DIR = "docs/evidence/s29-07"
 
 SEVERITIES = {"critical", "major", "minor"}
@@ -325,7 +325,7 @@ def run_case(repo_root: Path, case: Dict[str, Any], run_dir: Path) -> Dict[str, 
 def build_markdown(payload: Dict[str, Any]) -> str:
     summary = dict(payload.get("summary", {}))
     lines: List[str] = []
-    lines.append("# S29-07 Acceptance Wall v4 (Latest)")
+    lines.append("# S29-07 Acceptance Wall v5 (Latest)")
     lines.append("")
     lines.append(f"- CapturedAtUTC: `{payload.get('captured_at_utc', '')}`")
     lines.append(f"- Branch: `{payload.get('git', {}).get('branch', '')}`")
@@ -347,7 +347,7 @@ def build_markdown(payload: Dict[str, Any]) -> str:
     lines.append("## PR Body Snippet")
     lines.append("")
     lines.append("```md")
-    lines.append("### S29-07 Acceptance Wall v4")
+    lines.append("### S29-07 Acceptance Wall v5")
     lines.append(f"- status: {summary.get('status', '')}")
     lines.append(f"- reason_code: {summary.get('reason_code', '')}")
     lines.append(f"- acceptance: {summary.get('passed_cases', 0)}/{summary.get('total_cases', 0)}")
@@ -361,7 +361,7 @@ def build_markdown(payload: Dict[str, Any]) -> str:
 
 def write_failure(out_dir: Path, repo_root: Path, cases_path: Path, reason_code: str, message: str) -> Dict[str, Any]:
     payload: Dict[str, Any] = {
-        "schema_version": "s29-acceptance-wall-v4",
+        "schema_version": "s29-acceptance-wall-v5",
         "captured_at_utc": utc_now().isoformat(),
         "git": {"branch": git_out(repo_root, ["branch", "--show-current"]), "head": git_out(repo_root, ["rev-parse", "HEAD"])} ,
         "cases_file": to_repo_rel(repo_root, cases_path),
@@ -389,10 +389,10 @@ def write_failure(out_dir: Path, repo_root: Path, cases_path: Path, reason_code:
                 "log_path": "",
             }
         ],
-        "artifact_names": {"json": "acceptance_wall_v4_latest.json", "md": "acceptance_wall_v4_latest.md", "run_dir": ""},
+        "artifact_names": {"json": "acceptance_wall_v5_latest.json", "md": "acceptance_wall_v5_latest.md", "run_dir": ""},
     }
-    out_json = out_dir / "acceptance_wall_v4_latest.json"
-    out_md = out_dir / "acceptance_wall_v4_latest.md"
+    out_json = out_dir / "acceptance_wall_v5_latest.json"
+    out_md = out_dir / "acceptance_wall_v5_latest.md"
     out_json.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     out_md.write_text(build_markdown(payload), encoding="utf-8")
     return payload
@@ -408,7 +408,7 @@ def main() -> int:
     repo_root = Path(git_out(Path.cwd(), ["rev-parse", "--show-toplevel"]) or Path.cwd()).resolve()
     out_dir = (repo_root / args.out_dir).resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
-    run_dir, meta, events = make_run_context(repo_root, tool="s29-acceptance-wall-v4", obs_root=args.obs_root)
+    run_dir, meta, events = make_run_context(repo_root, tool="s29-acceptance-wall-v5", obs_root=args.obs_root)
 
     cases_path = (repo_root / args.cases_file).resolve()
     if not cases_path.exists():
@@ -475,7 +475,7 @@ def main() -> int:
         summary_reason = next((r.get("reason_code") for r in rows if r.get("status") == "FAIL" and r.get("reason_code")), "")
 
     payload: Dict[str, Any] = {
-        "schema_version": "s29-acceptance-wall-v4",
+        "schema_version": "s29-acceptance-wall-v5",
         "captured_at_utc": utc_now().isoformat(),
         "git": {"branch": git_out(repo_root, ["branch", "--show-current"]), "head": git_out(repo_root, ["rev-parse", "HEAD"])} ,
         "cases_file": to_repo_rel(repo_root, cases_path),
@@ -491,14 +491,14 @@ def main() -> int:
         },
         "cases": rows,
         "artifact_names": {
-            "json": "acceptance_wall_v4_latest.json",
-            "md": "acceptance_wall_v4_latest.md",
+            "json": "acceptance_wall_v5_latest.json",
+            "md": "acceptance_wall_v5_latest.md",
             "run_dir": to_repo_rel(repo_root, run_dir),
         },
     }
 
-    out_json = out_dir / "acceptance_wall_v4_latest.json"
-    out_md = out_dir / "acceptance_wall_v4_latest.md"
+    out_json = out_dir / "acceptance_wall_v5_latest.json"
+    out_md = out_dir / "acceptance_wall_v5_latest.md"
     out_json.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     out_md.write_text(build_markdown(payload), encoding="utf-8")
     emit("OK", f"artifact_json={out_json}", events)

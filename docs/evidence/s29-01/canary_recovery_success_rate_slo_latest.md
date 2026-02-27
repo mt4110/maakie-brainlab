@@ -1,8 +1,8 @@
-# S29-01 Canary Recovery Success-rate SLO (Latest)
+# S29-01 Canary Recovery Success-rate SLO v2 (Latest)
 
-- CapturedAtUTC: `2026-02-27T11:07:47Z`
+- CapturedAtUTC: `2026-02-27T11:27:55Z`
 - Branch: `ops/S29-01-S29-10`
-- HeadSHA: `4d5916728a1831687c05062a875520825c77e1db`
+- HeadSHA: `d968bc83a6767578fffbc56c901cf072f5b33255`
 
 ## Summary
 
@@ -24,7 +24,7 @@
 ## PR Body Snippet
 
 ```md
-### S29-01 Canary Recovery Success-rate SLO
+### S29-01 Canary Recovery Success-rate SLO v2
 - status: WARN
 - reason_code: RECOVERY_REQUIRED
 - trailing_nonpass_streak: 3

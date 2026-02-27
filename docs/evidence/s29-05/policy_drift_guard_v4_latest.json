@@ -1,0 +1,79 @@
+{
+  "schema_version": "s29-policy-drift-guard-v4",
+  "captured_at_utc": "2026-02-27T11:27:55Z",
+  "git": {
+    "branch": "ops/S29-01-S29-10",
+    "head": "d968bc83a6767578fffbc56c901cf072f5b33255"
+  },
+  "inputs": {
+    "watch_files": [
+      "docs/ops/S29-01_CANARY_RECOVERY_SUCCESS_RATE_SLO.toml",
+      "docs/ops/S29-02_TAXONOMY_PIPELINE_INTEGRATION.toml",
+      "docs/ops/S29-07_ACCEPTANCE_CASES_V5.json",
+      "scripts/ops/s29_slo_readiness_v3.py",
+      "scripts/ops/s29_readiness_notify_multichannel.py",
+      ".github/workflows/run_always_1h.yml",
+      "Makefile"
+    ],
+    "baseline_file": "docs/evidence/s29-05/policy_drift_baseline_v4.json",
+    "fail_on_high_impact": false,
+    "bootstrap_baseline": false
+  },
+  "current": {
+    "files": {
+      "docs/ops/S29-01_CANARY_RECOVERY_SUCCESS_RATE_SLO.toml": {
+        "present": true,
+        "sha256": "e08299f8cb4e7cb8cda102231f7d53bc6cd0cebce3c3b62cb4d2ae19d07a0399",
+        "size": 573
+      },
+      "docs/ops/S29-02_TAXONOMY_PIPELINE_INTEGRATION.toml": {
+        "present": true,
+        "sha256": "06157acc1f3af2e2d764698509c5504a4a307ec4e59507c040f2d6aa04083a51",
+        "size": 584
+      },
+      "docs/ops/S29-07_ACCEPTANCE_CASES_V5.json": {
+        "present": true,
+        "sha256": "7b882b5af3a665b8b91c4ee39524fd5b6f41bdc89e407601f792c676a79f57cb",
+        "size": 3735
+      },
+      "scripts/ops/s29_slo_readiness_v3.py": {
+        "present": true,
+        "sha256": "287d7db3c37d62311129f1ad1696b198501235e256ea5e78e2bddd9c9afddfdc",
+        "size": 30722
+      },
+      "scripts/ops/s29_readiness_notify_multichannel.py": {
+        "present": true,
+        "sha256": "a4bf14ae066d4e966d2c58b61601043f7c2a8149605ba4611216ae0610e243ea",
+        "size": 21410
+      },
+      ".github/workflows/run_always_1h.yml": {
+        "present": true,
+        "sha256": "c7f87b659608af9764349d6f991cc87713b01b28ed5ed8d33ef1f8f199dae5d6",
+        "size": 1845
+      },
+      "Makefile": {
+        "present": true,
+        "sha256": "6ec361849b624efa980af2b40a3ed3bee1aab328d140f96152e21872b477beb2",
+        "size": 8683
+      }
+    }
+  },
+  "drift": {
+    "added": [],
+    "removed": [],
+    "changed": []
+  },
+  "summary": {
+    "status": "WARN",
+    "reason_code": "BASELINE_CREATED",
+    "drift_total": 0,
+    "high_impact_changes": 0,
+    "high_impact_files": [],
+    "baseline_state": "created"
+  },
+  "artifact_names": {
+    "json": "policy_drift_guard_v4_latest.json",
+    "md": "policy_drift_guard_v4_latest.md",
+    "baseline": "policy_drift_baseline_v4.json"
+  }
+}

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-S29-04 incident triage pack v3.
+S29-04 incident triage pack v4.
 
 Goal:
 - Aggregate S29 recovery/taxonomy/notification signals into one triage payload.
@@ -34,6 +34,7 @@ REASON_SEVERITY = {
     "HARD_SLO_VIOLATION": "critical",
     "RECOVERY_REQUIRED": "major",
     "SKIP_RATE_HIGH": "major",
+    "ATTEMPTED_CHANNELS_BELOW_MIN": "major",
     "UNKNOWN_RATIO_ABOVE_TARGET": "major",
     "NOTIFY_SEND_FAILED": "major",
     "NOTIFY_DRY_RUN": "minor",
@@ -102,6 +103,13 @@ def build_priority_actions(recovery: Dict[str, Any], taxonomy: Dict[str, Any], n
     actions: List[str] = []
     actions.extend([str(item) for item in list(recovery.get("recommended_actions", []))[:3]])
     actions.extend([str(item) for item in list(taxonomy.get("collection_actions", []))[:3]])
+    for row in list(taxonomy.get("collection_actions_v2", []))[:3]:
+        if not isinstance(row, dict):
+            continue
+        owner = str(row.get("owner") or "ops-triage")
+        tax = str(row.get("taxonomy") or "unknown")
+        target = int(row.get("target_cases", 0) or 0)
+        actions.append(f"Owner {owner}: collect {target} labeled case(s) for taxonomy '{tax}'.")
     notify_sum = dict(notify.get("summary", {}))
     notify_reason = str(notify_sum.get("reason_code") or "")
     if str(notify_sum.get("status") or "") != "PASS":
@@ -111,10 +119,20 @@ def build_priority_actions(recovery: Dict[str, Any], taxonomy: Dict[str, Any], n
     return dedupe_actions(actions, limit=8)
 
 
+def gather_exit_conditions(*docs: Dict[str, Any], limit: int = 8) -> List[str]:
+    rows: List[str] = []
+    for doc in docs:
+        for item in list(dict(doc.get("constraints", {})).get("exit_conditions", [])):
+            text = str(item or "").strip()
+            if text:
+                rows.append(text)
+    return dedupe_actions(rows, limit=limit)
+
+
 def build_markdown(payload: Dict[str, Any]) -> str:
     summary = dict(payload.get("summary", {}))
     lines: List[str] = []
-    lines.append("# S29-04 Incident Triage Pack v3 (Latest)")
+    lines.append("# S29-04 Incident Triage Pack v4 (Latest)")
     lines.append("")
     lines.append(f"- CapturedAtUTC: `{payload.get('captured_at_utc', '')}`")
     lines.append(f"- Branch: `{payload.get('git', {}).get('branch', '')}`")
@@ -158,7 +176,7 @@ def main() -> int:
     repo_root = Path(git_out(Path.cwd(), ["rev-parse", "--show-toplevel"]) or Path.cwd()).resolve()
     out_dir = (repo_root / args.out_dir).resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
-    run_dir, meta, events = make_run_context(repo_root, tool="s29-incident-triage-pack-v3", obs_root=args.obs_root)
+    run_dir, meta, events = make_run_context(repo_root, tool="s29-incident-triage-pack-v4", obs_root=args.obs_root)
 
     recovery_path = (repo_root / str(args.recovery_json)).resolve()
     taxonomy_path = (repo_root / str(args.taxonomy_json)).resolve()
@@ -196,6 +214,7 @@ def main() -> int:
             reason_counts[reason] = int(reason_counts.get(reason, 0)) + max(1, cnt)
 
     priority_actions = build_priority_actions(recovery, taxonomy, notify)
+    exit_conditions = gather_exit_conditions(recovery, taxonomy, notify)
 
     top_rows = [
         {"reason_code": key, "count": count, "severity": reason_severity(key)}
@@ -223,14 +242,14 @@ def main() -> int:
         reason_code = ""
 
     if status == "FAIL":
-        emit("ERROR", f"triage v3 FAIL reason={reason_code}", events)
+        emit("ERROR", f"triage v4 FAIL reason={reason_code}", events)
     elif status == "WARN":
-        emit("WARN", f"triage v3 WARN reason={reason_code}", events)
+        emit("WARN", f"triage v4 WARN reason={reason_code}", events)
     else:
-        emit("OK", "triage v3 PASS", events)
+        emit("OK", "triage v4 PASS", events)
 
     payload: Dict[str, Any] = {
-        "schema_version": "s29-incident-triage-pack-v3",
+        "schema_version": "s29-incident-triage-pack-v4",
         "captured_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "git": {
             "branch": git_out(repo_root, ["branch", "--show-current"]),
@@ -246,21 +265,23 @@ def main() -> int:
         "top_reasons": top_rows,
         "alerts_by_severity": alerts_by_severity,
         "priority_actions": priority_actions,
+        "exit_conditions": exit_conditions,
         "summary": {
             "status": status,
             "reason_code": reason_code,
             "missing_inputs": len(missing_inputs),
             "alerts": alerts,
             "critical_alerts": int(alerts_by_severity.get("critical", 0)),
+            "exit_condition_count": len(exit_conditions),
         },
         "artifact_names": {
-            "json": "incident_triage_pack_v3_latest.json",
-            "md": "incident_triage_pack_v3_latest.md",
+            "json": "incident_triage_pack_v4_latest.json",
+            "md": "incident_triage_pack_v4_latest.md",
         },
     }
 
-    out_json = out_dir / "incident_triage_pack_v3_latest.json"
-    out_md = out_dir / "incident_triage_pack_v3_latest.md"
+    out_json = out_dir / "incident_triage_pack_v4_latest.json"
+    out_md = out_dir / "incident_triage_pack_v4_latest.md"
     out_json.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     out_md.write_text(build_markdown(payload), encoding="utf-8")
     emit("OK", f"artifact_json={out_json}", events)

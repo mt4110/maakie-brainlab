@@ -1,9 +1,9 @@
 {
-  "schema_version": "s29-canary-recovery-success-rate-slo-v1",
-  "captured_at_utc": "2026-02-27T11:07:47Z",
+  "schema_version": "s29-canary-recovery-success-rate-slo-v2",
+  "captured_at_utc": "2026-02-27T11:27:55Z",
   "git": {
     "branch": "ops/S29-01-S29-10",
-    "head": "4d5916728a1831687c05062a875520825c77e1db"
+    "head": "d968bc83a6767578fffbc56c901cf072f5b33255"
   },
   "inputs": {
     "canary_ops_json": "docs/evidence/s27-01/provider_canary_ops_latest.json",
@@ -65,6 +65,11 @@
     "Keep rollback path ready: python3 scripts/ops/s25_langchain_poc.py --mode rollback-only",
     "Improve canary auto-recovery success-rate via strict retry/rollback validation and provider env hardening."
   ],
+  "constraints": {
+    "exit_conditions": [
+      "Keep trailing non-pass streak below 3."
+    ]
+  },
   "summary": {
     "status": "WARN",
     "reason_code": "RECOVERY_REQUIRED",
@@ -72,7 +77,8 @@
     "dominant_skip_cause": "env",
     "env_gap_detected": true,
     "recovery_success_rate": 0.0,
-    "recovery_slo_level": "SOFT_WARN"
+    "recovery_slo_level": "SOFT_WARN",
+    "exit_condition_count": 1
   },
   "artifact_names": {
     "json": "canary_recovery_success_rate_slo_latest.json",

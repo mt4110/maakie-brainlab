@@ -1,8 +1,8 @@
-# S29-02 Taxonomy Pipeline Integration (Latest)
+# S29-02 Taxonomy Pipeline Integration v2 (Latest)
 
-- CapturedAtUTC: `2026-02-27T11:07:47Z`
+- CapturedAtUTC: `2026-02-27T11:27:55Z`
 - Branch: `ops/S29-01-S29-10`
-- HeadSHA: `4d5916728a1831687c05062a875520825c77e1db`
+- HeadSHA: `d968bc83a6767578fffbc56c901cf072f5b33255`
 
 ## Summary
 
@@ -11,6 +11,7 @@
 - unknown_ratio: `0.3125`
 - candidate_count: `5`
 - pipeline_records: `5`
+- action_count: `4`
 - pipeline_jsonl: `docs/evidence/s29-02/taxonomy_pipeline_candidates_latest.jsonl`
 
 ## Collection Actions
@@ -24,11 +25,12 @@
 ## PR Body Snippet
 
 ```md
-### S29-02 Taxonomy Pipeline Integration
+### S29-02 Taxonomy Pipeline Integration v2
 - status: WARN
 - reason_code: UNKNOWN_RATIO_ABOVE_TARGET
 - unknown_ratio: 0.3125
 - candidate_count: 5
 - pipeline_records: 5
+- action_count: 4
 - artifact: docs/evidence/s29-02/taxonomy_pipeline_integration_latest.json
 ```

@@ -89,7 +89,7 @@ class S29ReadinessNotifyTests(unittest.TestCase):
         self.assertEqual(summary["delivery_state"], "PARTIAL")
         self.assertEqual(summary["sent_channels"], 1)
 
-    def test_send_requested_without_webhook_keeps_not_attempted(self):
+    def test_send_requested_without_webhook_records_attempted_failures(self):
         root = Path(__file__).resolve().parents[1]
         script = root / "scripts" / "ops" / "s29_readiness_notify_multichannel.py"
         with tempfile.TemporaryDirectory() as td:
@@ -132,10 +132,11 @@ class S29ReadinessNotifyTests(unittest.TestCase):
             self.assertEqual(cp.returncode, 0, msg=cp.stderr)
 
             payload = json.loads((out_dir / "readiness_notify_multichannel_latest.json").read_text(encoding="utf-8"))
-            self.assertEqual(payload["summary"]["reason_code"], self.m.REASON_WEBHOOK_NOT_CONFIGURED)
-            self.assertFalse(payload["notification"]["attempted"])
-            self.assertEqual(payload["notification"]["delivery_state"], "NOT_ATTEMPTED")
-            self.assertIsNone(payload["notification"]["delivery_rate"])
+            self.assertEqual(payload["summary"]["reason_code"], self.m.REASON_NOTIFY_SEND_FAILED)
+            self.assertTrue(payload["notification"]["attempted"])
+            self.assertEqual(payload["notification"]["attempted_channels"], 2)
+            self.assertEqual(payload["notification"]["delivery_state"], "FAILED")
+            self.assertEqual(payload["notification"]["delivery_rate"], 0.0)
 
 
 if __name__ == "__main__":

@@ -202,7 +202,7 @@ s29-taxonomy-pipeline-integration:
 	$(PYENV) $(PY) scripts/ops/s29_taxonomy_pipeline_integration.py
 
 s29-readiness-notify-multichannel:
-	$(PYENV) $(PY) scripts/ops/s29_readiness_notify_multichannel.py
+	$(PYENV) $(PY) scripts/ops/s29_readiness_notify_multichannel.py --send
 
 s29-incident-triage-pack-v3:
 	$(PYENV) $(PY) scripts/ops/s29_incident_triage_pack_v3.py

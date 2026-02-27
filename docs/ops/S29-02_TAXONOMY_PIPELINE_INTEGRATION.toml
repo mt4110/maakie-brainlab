@@ -1,4 +1,4 @@
-schema_version = "s29-taxonomy-pipeline-integration-v1"
+schema_version = "s29-taxonomy-pipeline-integration-v2"
 cases_path = "data/eval/datasets/rag-eval-wall-v2__seed-medium__v0001/cases.jsonl"
 unknown_ratio_target = 0.03
 max_candidates = 12
@@ -16,3 +16,10 @@ known_tags = [
   "policy",
   "security",
 ]
+
+[owner_by_taxonomy]
+provider = "ml-platform"
+network = "sre-network"
+schema = "data-platform"
+timeout = "runtime-core"
+unknown = "ops-triage"
