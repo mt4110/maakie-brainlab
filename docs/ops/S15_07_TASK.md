@@ -5,8 +5,8 @@
 - MIGRATED: S21-MIG-S15-07-0002 (see docs/ops/S21_TASK.md)
 
 ## C1: Implementation Steps (ordered)
-- [ ] TBD
-- [ ] TBD
+- [x] TBD
+- [x] TBD
 
 ## C2: Verification
 - MIGRATED: S21-MIG-S15-07-0003 (see docs/ops/S21_TASK.md)

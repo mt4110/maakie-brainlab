@@ -35,12 +35,12 @@
     - `cd "$ROOT" || true; rg -n --no-heading "IL|il_|schema|canonical|executor|opcode" src scripts eval tests 2>/dev/null || true`
 
 STOP条件（ここで止める判断、exitはしない）:
-- [ ] schema と入口候補が全く見えない → `ERROR: cannot locate IL surfaces` を残し、以降は設計だけコミットして終える（実装に突っ込まない）
+- [x] schema と入口候補が全く見えない → `ERROR: cannot locate IL surfaces` を残し、以降は設計だけコミットして終える（実装に突っ込まない）
 
 ---
 
 ## 2) P0: 入口一本化 + 常時検証 (il_guard)
-- [ ] `scripts/` or `src/` の標準置き場を確定（見つけた方に合わせる）
+- [x] `scripts/` or `src/` の標準置き場を確定（見つけた方に合わせる）
   - Command:
     - `cd "$ROOT" || true; for d in scripts src cmd; do if [ -d "$d" ]; then echo "OK: dir=$d"; else echo "SKIP: no dir=$d"; fi; done`
 - [/] 新規: `scripts/il_guard.py` を追加（常に0終了、ログで真実）
@@ -49,7 +49,7 @@ STOP条件（ここで止める判断、exitはしない）:
     - canonicalize(strip含む)
     - schema validate（NGなら ERROR）
     - `out_dir/il.guard.json` に `can_execute` と `errors[]` を必ず出す
-- [ ] 既存のIL生成/受け取り箇所を入口に寄せる（“入口を通らない経路”を残さない）
+- [x] 既存のIL生成/受け取り箇所を入口に寄せる（“入口を通らない経路”を残さない）
   - Rule:
     - 直接 executor を呼ぶ/直接 validate を抜く経路が残ったら ERROR 扱い
 
@@ -73,15 +73,15 @@ STOP条件（ここで止める判断、exitはしない）:
 ---
 
 ## 4) P1: canonicalize 規約の確立（同一バイト列）
-- [ ] canonicalize ルールをコードとドキュメントに固定
+- [x] canonicalize ルールをコードとドキュメントに固定
   - sort_keys=true
   - separators=(",",":")
   - strip forbidden fields (timestamp / generated_at / env)
   - arrays are order-preserving
-- [ ] 同一入力 → 同一 `il.canonical.json` の bytes を fixture で固定
+- [x] 同一入力 → 同一 `il.canonical.json` の bytes を fixture で固定
   - Approach:
     - fixture input を canonicalize して期待出力をファイルで固定（差分が出たら検知）
-- [ ] pipeline順序を固定: parse -> canonicalize -> validate -> write
+- [x] pipeline順序を固定: parse -> canonicalize -> validate -> write
 
 ---
 
@@ -99,7 +99,7 @@ STOP条件（ここで止める判断、exitはしない）:
         - opcode を順に処理（最小集合）
         - 副作用は out_dir への書き込みのみ
         - print("OK/ERROR/SKIP: ...") を残す
-- [ ] opcode を schema に反映（最小で）
+- [x] opcode を schema に反映（最小で）
   - NOOP / SET_VARS / SEARCH_TERMS / RETRIEVE / ANSWER_DRAFT（など）
   - RETRIEVE は最小実装なら SKIP で良い（未接続を明示）
 
@@ -122,28 +122,28 @@ STOP条件（ここで止める判断、exitはしない）:
 - [x] ローカルで軽量確認（重いのは分散）
   - `python3 scripts/il_guard.py --fixtures ...`
   - `python3 scripts/il_exec.py ...`（guard true/false 両方）
-- [ ] PR作成（milestone S21-05 を必ず付与）
+- [x] PR作成（milestone S21-05 を必ず付与）
 
 ---
 
 ## Fixpack v3: Lock & Makefile & Distributed Verify
-- [ ] **1) Dep Lock**
+- [x] **1) Dep Lock**
   - Ensure `jsonschema` in `pyproject.toml`.
   - Run `python3 -m uv lock` (Heavy).
-- [ ] **2) Makefile Integration**
+- [x] **2) Makefile Integration**
   - Add `$(MAKE) verify-il` to `test:` target in `Makefile`.
-- [ ] **3) Cleanup**
+- [x] **3) Cleanup**
   - Remove unused imports from `scripts/il_check.py`.
-- [ ] **4) Distributed Verification**
+- [x] **4) Distributed Verification**
   - `make verify-il`
   - `go test ./...` (Heavy)
   - `python -m unittest -v`
   - `make check-doc-links`
-- [ ] **5) Evidence**
+- [x] **5) Evidence**
   - `reviewpack submit --mode verify-only` (Heavy)
 
 ---
 
 ## Closeout (after merge)
-- [ ] 後始末コマンドを実行（落ちない版）
+- [x] 後始末コマンドを実行（落ちない版）
   - see: docs/ops/S21-05_PLAN.md "Aftercare"

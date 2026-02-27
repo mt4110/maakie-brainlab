@@ -13,61 +13,61 @@ Last Updated: 2026-02-24
 
 ---
 
-- [ ] 0) repo確認（落ちない）
-  - [ ] `git rev-parse --show-toplevel` が取れる
+- [x] 0) repo確認（落ちない）
+  - [x] `git rev-parse --show-toplevel` が取れる
 
-- [ ] 1) main同期（軽）
-  - [ ] fetch --prune / switch main / pull --ff-only
-  - [ ] OBSログ保存
+- [x] 1) main同期（軽）
+  - [x] fetch --prune / switch main / pull --ff-only
+  - [x] OBSログ保存
 
-- [ ] 2) 未追跡ファイル隔離（混入事故防止）
-  - [ ] `git status --porcelain` を観測
-  - [ ] `??` を `.local/tmp/quarantine_untracked_<TS>/` へ移動（削除しない）
-  - [ ] 移動できないものは SKIP（理由1行）
+- [x] 2) 未追跡ファイル隔離（混入事故防止）
+  - [x] `git status --porcelain` を観測
+  - [x] `??` を `.local/tmp/quarantine_untracked_<TS>/` へ移動（削除しない）
+  - [x] 移動できないものは SKIP（理由1行）
 
-- [ ] 3) ブランチ作成/移動
-  - [ ] `s22-10-public-hardening-threat-injection-v1`
+- [x] 3) ブランチ作成/移動
+  - [x] `s22-10-public-hardening-threat-injection-v1`
 
-- [ ] 4) Kickoffファイル整備
-  - [ ] `docs/ops/S22-10_PLAN.md` 作成/更新
-  - [ ] `docs/ops/S22-10_TASK.md` 作成/更新
+- [x] 4) Kickoffファイル整備
+  - [x] `docs/ops/S22-10_PLAN.md` 作成/更新
+  - [x] `docs/ops/S22-10_TASK.md` 作成/更新
 
-- [ ] 5) SOT更新（docs/ops/STATUS.md）
-  - [ ] S22-10 を `1% (WIP)` に（既に正しければ SKIP）
+- [x] 5) SOT更新（docs/ops/STATUS.md）
+  - [x] S22-10 を `1% (WIP)` に（既に正しければ SKIP）
 
-- [ ] 6) SECURITY.md（最小）
-  - [ ] 報告先 / 秘密情報NG / 対応範囲 / Responsible disclosure
+- [x] 6) SECURITY.md（最小）
+  - [x] 報告先 / 秘密情報NG / 対応範囲 / Responsible disclosure
 
-- [ ] 7) THREAT_MODEL_v1
-  - [ ] 攻撃面の列挙（IL/pack/CI/依存/アーカイブ）
-  - [ ] 期待する壊れ方（OK/ERROR/SKIP）と検知点
+- [x] 7) THREAT_MODEL_v1
+  - [x] 攻撃面の列挙（IL/pack/CI/依存/アーカイブ）
+  - [x] 期待する壊れ方（OK/ERROR/SKIP）と検知点
 
-- [ ] 8) INJECTION_SIM_SUITE_v1
-  - [ ] 5〜10ケース
-  - [ ] fixture は任意（相対パスのみ）
+- [x] 8) INJECTION_SIM_SUITE_v1
+  - [x] 5〜10ケース
+  - [x] fixture は任意（相対パスのみ）
 
-- [ ] 9) Smoke（CPU軽）
-  - [ ] suite doc を読み、構造と fixture を観測
-  - [ ] JSON/JSONL の最小妥当性チェック（軽）
-  - [ ] assert/sys.exit/SystemExit なし
-  - [ ] 例外で停止しない（捕まえて ERROR ログ）
+- [x] 9) Smoke（CPU軽）
+  - [x] suite doc を読み、構造と fixture を観測
+  - [x] JSON/JSONL の最小妥当性チェック（軽）
+  - [x] assert/sys.exit/SystemExit なし
+  - [x] 例外で停止しない（捕まえて ERROR ログ）
 
-- [ ] 10) 軽い検証（分割）
-  - [ ] Step10-1: `python3 tests/test_injection_sim_smoke.py` のみ
-  - [ ] Step10-2: 余力があれば既存 verify を追加（重ければ次ステップへ分割）
+- [x] 10) 軽い検証（分割）
+  - [x] Step10-1: `python3 tests/test_injection_sim_smoke.py` のみ
+  - [x] Step10-2: 余力があれば既存 verify を追加（重ければ次ステップへ分割）
 
-- [ ] 11) reviewpack verify-only（証拠）
-  - [ ] `go run cmd/reviewpack/main.go submit --mode verify-only`
-  - [ ] bundle sha を PR本文へ
+- [x] 11) reviewpack verify-only（証拠）
+  - [x] `go run cmd/reviewpack/main.go submit --mode verify-only`
+  - [x] bundle sha を PR本文へ
 
-- [ ] 12) PR作成（milestone必須）
-  - [ ] milestone: S22-10
-  - [ ] Copilot review（best-effort）
-  - [ ] merge-commit only（squash禁止）
+- [x] 12) PR作成（milestone必須）
+  - [x] milestone: S22-10
+  - [x] Copilot review（best-effort）
+  - [x] merge-commit only（squash禁止）
 
-- [ ] 13) merge guard
-  - [ ] `ops/pr_merge_guard.sh` dry-run
-  - [ ] `--merge` 実行
+- [x] 13) merge guard
+  - [x] `ops/pr_merge_guard.sh` dry-run
+  - [x] `--merge` 実行
 
-- [ ] 14) Closeout（同PR内で可能なら同梱）
-  - [ ] STATUS を `100% (Merged PR #??)` に
+- [x] 14) Closeout（同PR内で可能なら同梱）
+  - [x] STATUS を `100% (Merged PR #??)` に

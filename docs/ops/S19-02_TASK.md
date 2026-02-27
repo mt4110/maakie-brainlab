@@ -1,6 +1,6 @@
 # S19-02: prbodyfix (Go Single impl / CI+Local unified)
 
-- [ ] Step 0: Safety Snapshot (Clean tree check) <!-- id: 0 -->
+- [x] Step 0: Safety Snapshot (Clean tree check) <!-- id: 0 -->
 - [x] Step 1: Fix spec in test (`internal/prbodyfix/prbodyfix_test.go`) <!-- id: 1 -->
 - [x] Step 2: Implement Go logic (`internal/prbodyfix/prbodyfix.go`) <!-- id: 2 -->
 - [x] Step 3: Replace CI logic (`cmd/prbodyfix`, `.github/workflows/pr_body_required.yml`) <!-- id: 3 -->

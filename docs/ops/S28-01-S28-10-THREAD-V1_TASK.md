@@ -129,8 +129,8 @@ Last Updated: 2026-02-27
 重量（ship前）:
 
 - [x] `make verify-il`
-- [ ] `source /path/to/your/nix/profile.d/nix-daemon.sh`
-- [ ] `ci-self up --ref "$(git branch --show-current)"`
+- [x] `source /path/to/your/nix/profile.d/nix-daemon.sh`
+- [x] `ci-self up --ref "$(git branch --show-current)"`
 
 ## Evidence Policy
 

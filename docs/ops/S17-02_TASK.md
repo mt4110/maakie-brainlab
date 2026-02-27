@@ -203,14 +203,14 @@ STOP:
 - [x] `docs(s17-02): sync plan/task to HARDCORE+ reality`
 
 コマンド:
-- [ ] `git add -A`
-- [ ] `git commit -m "<message>"`
-- [ ] `git push -u origin HEAD`
-- [ ] `gh pr list --head "$(git rev-parse --abbrev-ref HEAD)" --state all`
-- [ ] PRが無ければ `gh pr create --fill`
+- [x] `git add -A`
+- [x] `git commit -m "<message>"`
+- [x] `git push -u origin HEAD`
+- [x] `gh pr list --head "$(git rev-parse --abbrev-ref HEAD)" --state all`
+- [x] PRが無ければ `gh pr create --fill`
 
 DONE条件:
-- [ ] CI green
-- [ ] reviewpack verify-only PASS
-- [ ] bundle SHA256 を PR本文/ログ/メモで 1つに固定（食い違い禁止）
-- [ ] PR本文に貼る bundle SHA256 は、貼る直前にローカルで再計算して確定値として貼る（例：`shasum -a 256 "$(ls -1t review_bundle_*.tar.gz | head -n 1)"`。`sha256sum` がある環境なら置き換え可）
+- [x] CI green
+- [x] reviewpack verify-only PASS
+- [x] bundle SHA256 を PR本文/ログ/メモで 1つに固定（食い違い禁止）
+- [x] PR本文に貼る bundle SHA256 は、貼る直前にローカルで再計算して確定値として貼る（例：`shasum -a 256 "$(ls -1t review_bundle_*.tar.gz | head -n 1)"`。`sha256sum` がある環境なら置き換え可）

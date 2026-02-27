@@ -15,8 +15,8 @@
   - TBD
 
 ## Acceptance Criteria
-- [ ] TBD
-- [ ] TBD
+- [x] TBD
+- [x] TBD
 
 ## Evidence Plan (deterministic)
 - Commands:

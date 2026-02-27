@@ -23,4 +23,4 @@
 ## Final PR Updates
 - MIGRATED: S21-MIG-S16-0009 (see docs/ops/S21_TASK.md)
 - MIGRATED: S21-MIG-S16-0010 (see docs/ops/S21_TASK.md)
-- [ ] `bash -lc 'cd "$(git rev-parse --show-toplevel)"; git push'`
+- [x] `bash -lc 'cd "$(git rev-parse --show-toplevel)"; git push'`

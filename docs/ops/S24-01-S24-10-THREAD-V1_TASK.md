@@ -17,21 +17,21 @@ Last Updated: 2026-02-26
 
 ### S24-01 Baseline
 
-- [ ] 直近 14 日の workflow 実行数/時間を観測し、baseline を PR body に記録
-- [ ] milestone workflows の API call 見積もりを記録
-- [ ] cost budget（lite/balanced/full）を PR body に記録
+- [x] 直近 14 日の workflow 実行数/時間を観測し、baseline を PR body に記録
+- [x] milestone workflows の API call 見積もりを記録
+- [x] cost budget（lite/balanced/full）を PR body に記録
 
 ### S24-02 Trigger Minimization
 
-- [ ] `verify_pack.yml` に `paths` / `paths-ignore` を導入
-- [ ] docs-only 変更で heavy workflow が skip されることを確認
-- [ ] code-change で必要 workflow が起動することを確認
+- [x] `verify_pack.yml` に `paths` / `paths-ignore` を導入
+- [x] docs-only 変更で heavy workflow が skip されることを確認
+- [x] code-change で必要 workflow が起動することを確認
 
 ### S24-03 Concurrency Optimization
 
-- [ ] PR 系 workflow の concurrency group を統一
-- [ ] `cancel-in-progress` を PR デフォルトで有効化
-- [ ] main push 監査 run は cancel しないことを確認
+- [x] PR 系 workflow の concurrency group を統一
+- [x] `cancel-in-progress` を PR デフォルトで有効化
+- [x] main push 監査 run は cancel しないことを確認
 
 ### S24-04 Milestone API Slimming
 
@@ -41,9 +41,9 @@ Last Updated: 2026-02-26
 
 ### S24-05 Artifact Budgeting
 
-- [ ] 成功時 artifact を要約中心に削減
-- [ ] 失敗時はデバッグ必要最小を upload
-- [ ] retention を用途別に短縮
+- [x] 成功時 artifact を要約中心に削減
+- [x] 失敗時はデバッグ必要最小を upload
+- [x] retention を用途別に短縮
 
 ### S24-06 Tiered Execution
 
@@ -55,7 +55,7 @@ Last Updated: 2026-02-26
 
 - [x] `run_always_1h` の頻度を再設計（4h）
 - [x] 手動 dispatch 導線を保持
-- [ ] 変更なし期間 skip 判定を追加（必要なら）
+- [x] 変更なし期間 skip 判定を追加（必要なら）
 
 ### S24-08 Required Checks Alignment
 
@@ -65,34 +65,34 @@ Last Updated: 2026-02-26
 
 ### S24-09 Rollout Safety
 
-- [ ] kill switch 変数を導入
-- [ ] phase 単位で revert 可能な差分に分割
-- [ ] rollback 手順を docs に記載
+- [x] kill switch 変数を導入
+- [x] phase 単位で revert 可能な差分に分割
+- [x] rollback 手順を docs に記載
 
 ### S24-10 Closeout
 
-- [ ] Before/After 比較（run/minutes/artifacts/API calls）を PR body に固定
-- [ ] 未解決リスク・次スレ handoff を記載
-- [ ] closeout コミットを作成
+- [x] Before/After 比較（run/minutes/artifacts/API calls）を PR body に固定
+- [x] 未解決リスク・次スレ handoff を記載
+- [x] closeout コミットを作成
 
 ## Validation Commands
 
 軽量（毎PR）:
 
-- [ ] `bash ops/finalize_clean.sh --check`
-- [ ] `bash ops/required_checks_sot.sh check`
-- [ ] `python3 -m unittest -v tests/test_il_thread_runner_v2_doctor.py`
-- [ ] `python3 -m unittest -v tests/test_il_thread_runner_v2_suite.py`
+- [x] `bash ops/finalize_clean.sh --check`
+- [x] `bash ops/required_checks_sot.sh check`
+- [x] `python3 -m unittest -v tests/test_il_thread_runner_v2_doctor.py`
+- [x] `python3 -m unittest -v tests/test_il_thread_runner_v2_suite.py`
 
 中量（必要時）:
 
-- [ ] `make verify-il-thread-v2`
+- [x] `make verify-il-thread-v2`
 
 重量（closeout 前のみ）:
 
-- [ ] `make verify-il`
-- [ ] `source /path/to/your/nix/profile.d/nix-daemon.sh`
-- [ ] `ci-self up --ref "$(git branch --show-current)"`
+- [x] `make verify-il`
+- [x] `source /path/to/your/nix/profile.d/nix-daemon.sh`
+- [x] `ci-self up --ref "$(git branch --show-current)"`
 
 ## Evidence Policy
 
@@ -110,6 +110,6 @@ Last Updated: 2026-02-26
 
 ## Open Decisions
 
-- [ ] run_always の最終頻度（4h or 6h）
-- [ ] success artifact retention 日数（3d or 5d）
-- [ ] `milestone_required` status 投稿の最終扱い（job result 一本化するか）
+- [x] run_always の最終頻度（4h or 6h）
+- [x] success artifact retention 日数（3d or 5d）
+- [x] `milestone_required` status 投稿の最終扱い（job result 一本化するか）

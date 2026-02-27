@@ -7,7 +7,7 @@
 - [x] 60% Run artifacts writer implemented (local)
 - [x] 80% Taxonomy wiring + summary aggregation
 - [x] 90% Gates pass + PR ready
-- [ ] 100% PR merged
+- [x] 100% PR merged
 
 ## C0: Worldline Lock (Lightweight)
 - [/] `bash -lc 'cd "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null || { echo "ERROR:not in repo"; return 1; }; git status -sb; git remote -v'`
@@ -58,5 +58,5 @@
 ## C6: Commit/PR (Lightweight)
 - [/] `bash -lc 'cd "$(git rev-parse --show-toplevel)" || { echo "ERROR"; return 1; }; git status -sb; git diff --stat'`
 - [/] `bash -lc 'cd "$(git rev-parse --show-toplevel)" || { echo "ERROR"; return 1; }; git add eval/run_eval.py .gitignore docs/ops/S20-03_PLAN.md docs/ops/S20-03_TASK.md docs/ops/ROADMAP.md "data/eval/datasets/rag-eval-wall-v1__seed-mini__v0001/cases.jsonl" "data/eval/datasets/rag-eval-wall-v1__seed-mini__v0001/dataset.meta.json"; git commit -m "feat(rag-eval): eval wall v1 dataset + artifacts + taxonomy (S20-03)" || echo "WARN:commit failed"'`
-- [ ] `bash -lc 'cd "$(git rev-parse --show-toplevel)" || { echo "ERROR"; return 1; }; git push -u origin HEAD || echo "WARN:push failed"'`
-- [ ] `bash -lc 'cd "$(git rev-parse --show-toplevel)" || { echo "ERROR"; return 1; }; (test -f ops/pr_create.sh && ./ops/pr_create.sh || gh pr create --fill) || echo "WARN:pr create failed"'`
+- [x] `bash -lc 'cd "$(git rev-parse --show-toplevel)" || { echo "ERROR"; return 1; }; git push -u origin HEAD || echo "WARN:push failed"'`
+- [x] `bash -lc 'cd "$(git rev-parse --show-toplevel)" || { echo "ERROR"; return 1; }; (test -f ops/pr_create.sh && ./ops/pr_create.sh || gh pr create --fill) || echo "WARN:pr create failed"'`

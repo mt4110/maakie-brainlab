@@ -19,20 +19,20 @@ Hardening — new_ops_phase.sh truthful write + PHASE_ID sanitize
 - 生成物フォーマットをいじりすぎない（互換維持）
 
 ## Steps (fixed order)
-- [ ] 0) Safety snapshot: git status / branch確認
-- [ ] 1) docs/ops/S18_PLAN.md に S18-02 行があること（無ければ追記）
-- [ ] 2) ops/new_ops_phase.sh: truthful write + PHASE_ID sanitize を実装（最小パッチ）
-- [ ] 3) Smoke:
-  - [ ] NG: ../X / A/B / .. / .S18-00 が必ず拒否される（ERROR: 1行 + 非0）
-  - [ ] OK: S18-98 等は生成できる（生成後に削除）
-  - [ ] 事故ファイルが残ってないこと（docs, docs/ops を確認）
-- [ ] 4) Gates:
-  - [ ] make test
-  - [ ] go run cmd/reviewpack/main.go submit --mode verify-only
-- [ ] 5) Commit / Push / PR update:
-  - [ ] git add -A
-  - [ ] git commit
-  - [ ] git push（PR #54 に反映される）
+- [x] 0) Safety snapshot: git status / branch確認
+- [x] 1) docs/ops/S18_PLAN.md に S18-02 行があること（無ければ追記）
+- [x] 2) ops/new_ops_phase.sh: truthful write + PHASE_ID sanitize を実装（最小パッチ）
+- [x] 3) Smoke:
+  - [x] NG: ../X / A/B / .. / .S18-00 が必ず拒否される（ERROR: 1行 + 非0）
+  - [x] OK: S18-98 等は生成できる（生成後に削除）
+  - [x] 事故ファイルが残ってないこと（docs, docs/ops を確認）
+- [x] 4) Gates:
+  - [x] make test
+  - [x] go run cmd/reviewpack/main.go submit --mode verify-only
+- [x] 5) Commit / Push / PR update:
+  - [x] git add -A
+  - [x] git commit
+  - [x] git push（PR #54 に反映される）
 
 ## Progress update rules (S18-02)
 - docs scope lock完了：20%

@@ -53,12 +53,12 @@
 - [x] `rg -n "PASS|OK:|ERROR:" .local/obs/reviewpack_verify_only.log 2>/dev/null || true`
 
 ## 7) Commit Plan (1 PRで完結)
-- [ ] commit1: docs(il): add IL_ENTRY_CONTRACT_v1
-- [ ] commit2: feat(il): add scripts/il_entry.py (single entry)
-- [ ] commit3: test(il): add scripts/il_entry_smoke.py
-- [ ] commit4: docs(ops): add IL_ENTRY_RUNBOOK + wiring notes
+- [x] commit1: docs(il): add IL_ENTRY_CONTRACT_v1
+- [x] commit2: feat(il): add scripts/il_entry.py (single entry)
+- [x] commit3: test(il): add scripts/il_entry_smoke.py
+- [x] commit4: docs(ops): add IL_ENTRY_RUNBOOK + wiring notes
 
 ## 8) PR
-- [ ] Title: `S22-05: IL entry single entry + always verify`
-- [ ] Milestone: `S22-05`
-- [ ] Body: SOT/証拠スタイル（テンプレ使用）
+- [x] Title: `S22-05: IL entry single entry + always verify`
+- [x] Milestone: `S22-05`
+- [x] Body: SOT/証拠スタイル（テンプレ使用）

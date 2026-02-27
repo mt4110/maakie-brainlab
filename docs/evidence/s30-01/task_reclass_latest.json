@@ -1,0 +1,51 @@
+{
+  "schema_version": "s30-task-reclass-v1",
+  "captured_at_utc": "2026-02-27T13:05:54Z",
+  "git": {
+    "branch": "ops/S30-1-S30-900",
+    "head": "614a069158b1f1d8e4bff4a6e2194bec8890596b"
+  },
+  "inputs": {
+    "sources": [
+      "docs/ops/**/*.md",
+      "docs/rules/**/*.md",
+      "docs/pr_templates/**/*.md",
+      "+PTASK+"
+    ]
+  },
+  "summary": {
+    "pending_total": 0,
+    "batch_size": 0,
+    "batch_switch_rule": "Switch thread after completing batch tasks."
+  },
+  "apply": {
+    "enabled": false,
+    "stats": {}
+  },
+  "axes": [
+    {
+      "axis_id": "A_FLOW_FAILZERO",
+      "label": "Daily flow failure zeroing (execute->verify->judge)",
+      "rank": 0,
+      "count": 0
+    },
+    {
+      "axis_id": "B_LOG_CLARITY",
+      "label": "Log/output clarity (instant understanding)",
+      "rank": 1,
+      "count": 0
+    },
+    {
+      "axis_id": "C_AUTOMATION",
+      "label": "Automation of repetitive operations",
+      "rank": 2,
+      "count": 0
+    }
+  ],
+  "batch": [],
+  "all_ranked": [],
+  "artifact_names": {
+    "json": "task_reclass_latest.json",
+    "md": "task_reclass_latest.md"
+  }
+}

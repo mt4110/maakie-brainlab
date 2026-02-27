@@ -90,3 +90,7 @@
 ### S29 — Active (Thread v3: S29-01..S29-10)
 - 全体図: `docs/ops/S29-01-S29-10-THREAD-V3_PLAN.md`
 - 実行: `docs/ops/S29-01-S29-10-THREAD-V3_TASK.md`
+
+### S30 — Active (Thread v1: S30-1..S30-900)
+- 全体図: `docs/ops/S30-1-S30-900-THREAD-V1_PLAN.md`
+- 実行: `docs/ops/S30-1-S30-900-THREAD-V1_TASK.md`

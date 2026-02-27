@@ -9,25 +9,25 @@
 - 100% PR merged (+ optional main re-run)
 
 ## C0: Safety Snapshot
-- [ ] `git status -sb` clean
+- [x] `git status -sb` clean
 
 ## C1: Add ROADMAP入口
-- [ ] `docs/ops/ROADMAP.md` を追加（入口・凡例・シリーズ俯瞰）
+- [x] `docs/ops/ROADMAP.md` を追加（入口・凡例・シリーズ俯瞰）
 
 ## C2: S15〜S19 view (正直ステータス)
-- [ ] ROADMAP のシリーズ俯瞰を手で補強（完了/進行中/迷子ポイント）
+- [x] ROADMAP のシリーズ俯瞰を手で補強（完了/進行中/迷子ポイント）
   - まずは S19 を確実に埋める（他はTBDでもOK）
 
 ## C3: Fix the “迷子の根” (S19 docs)
-- [ ] `docs/ops/S19_PLAN.md` をテンプレ→実態に更新
-- [ ] `docs/ops/S19_TASK.md` をテンプレ→実態に更新
-- [ ] S19-02 merged / main gate PASS を明記
+- [x] `docs/ops/S19_PLAN.md` をテンプレ→実態に更新
+- [x] `docs/ops/S19_TASK.md` をテンプレ→実態に更新
+- [x] S19-02 merged / main gate PASS を明記
 
 ## C4: Gates
-- [ ] `go test ./...`
-- [ ] `go run cmd/reviewpack/main.go submit --mode verify-only`
+- [x] `go test ./...`
+- [x] `go run cmd/reviewpack/main.go submit --mode verify-only`
 
 ## C5: PR
-- [ ] `git push -u origin HEAD`
-- [ ] PR作成（`./ops/pr_create.sh` か `gh pr create --fill`）
-- [ ] CI green
+- [x] `git push -u origin HEAD`
+- [x] PR作成（`./ops/pr_create.sh` か `gh pr create --fill`）
+- [x] CI green

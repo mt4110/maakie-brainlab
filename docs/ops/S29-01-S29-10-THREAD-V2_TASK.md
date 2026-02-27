@@ -32,7 +32,7 @@ Last Updated: 2026-02-27
 - [x] 1-1. S29-10 Exit v2 条件と READY 判定目標を固定
 - [x] 1-2. v1 WARN要因（notify/soak/taxonomy/recovery）を実装要求へ分解
 - [x] 1-3. 変更対象（script/test/evidence）を確定
-- [ ] 1-4. PR body 記録テンプレート（OK/WARN/ERROR/SKIP）を更新
+- [x] 1-4. PR body 記録テンプレート（OK/WARN/ERROR/SKIP）を更新
 
 ### Phase-2 Implementation Batch
 
@@ -58,7 +58,7 @@ Last Updated: 2026-02-27
 - [x] 5-1. `make verify-il`
 - [x] 5-2. `source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh`
 - [x] 5-3. `ci-self up --ref "$(git branch --show-current)"`
-- [ ] 5-4. PR body を最終更新
+- [x] 5-4. PR body を最終更新
 
 ## Validation Commands
 

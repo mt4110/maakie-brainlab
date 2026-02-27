@@ -29,9 +29,9 @@ DEFAULT_UNRESOLVED_RISKS = [
 ]
 
 DEFAULT_HANDOFF = [
-    "S30-01: production-connected runbook を運用定着し、失敗系復旧訓練を定例化する。",
-    "S30-02: taxonomy pipeline の生成品質指標を追加し、ラベル精度の継続改善を行う。",
-    "S30-03: readiness 通知の受信側SLA（ack/再送）を契約化する。",
+    "S30-1: Reclass pending tasks by impact order (Flow Failzero -> Log Clarity -> Automation).",
+    "S30-2: Freeze and execute batch-100 from docs/evidence/s30-01/task_reclass_latest.json, then switch thread.",
+    "S30-3: Keep progress source of truth in TASK + PR body (not STATUS.md), and run ci-self before PR update.",
 ]
 
 REASON_READINESS_MISSING = "READINESS_MISSING"
