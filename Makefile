@@ -2,7 +2,7 @@
 .PHONY: sat-collect sat-normalize sat-gate sat-store sat-digest sat-index sat-run
 .PHONY: server-start server-stop server-status log ingest ask
 .PHONY: ai-smoke ai-verify
-.PHONY: s22-16-ship phase-ship ops-now s25-baseline-freeze s25-obs-summary s25-regression-safety s25-acceptance-wall s25-ml-experiment s25-rag-tuning s25-langchain-poc bench-il-compile tune-il-compile-prompt il-thread-smoke il-thread-replay-check verify-il-thread-v2
+.PHONY: s22-16-ship phase-ship ops-now s25-baseline-freeze s25-obs-summary s25-regression-safety s25-acceptance-wall s25-ml-experiment s25-rag-tuning s25-langchain-poc s26-provider-canary s26-medium-eval-wall s26-rollback-artifact s26-orchestration-core bench-il-compile tune-il-compile-prompt il-thread-smoke il-thread-replay-check verify-il-thread-v2
 
 PY=.venv/bin/python
 PYENV=PYTHONPATH=./src:.
@@ -104,6 +104,18 @@ s25-rag-tuning:
 
 s25-langchain-poc:
 	$(PYENV) $(PY) scripts/ops/s25_langchain_poc.py
+
+s26-provider-canary:
+	$(PYENV) $(PY) scripts/ops/s26_provider_canary.py
+
+s26-medium-eval-wall:
+	$(PYENV) $(PY) scripts/ops/s26_medium_eval_wall.py
+
+s26-rollback-artifact:
+	$(PYENV) $(PY) scripts/ops/s26_rollback_artifact.py
+
+s26-orchestration-core:
+	$(PYENV) $(PY) scripts/ops/s26_orchestration_core.py
 
 bootstrap:
 	# S20-08: Canonical bootstrap via uv (using system python only to install uv)
