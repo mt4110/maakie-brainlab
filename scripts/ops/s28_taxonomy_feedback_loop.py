@@ -1,0 +1,308 @@
+#!/usr/bin/env python3
+"""
+S28-02 taxonomy feedback loop.
+
+Goal:
+- Reduce taxonomy unknown by extracting candidate cases and concrete collection actions.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import time
+from pathlib import Path
+from typing import Any, Dict, List, Tuple
+
+try:
+    import tomllib  # py3.11+
+except Exception:  # pragma: no cover
+    tomllib = None
+
+from scripts.ops.obs_contract import DEFAULT_OBS_ROOT, emit, git_out, make_run_context, write_events, write_summary
+
+
+DEFAULT_CONFIG = "docs/ops/S28-02_TAXONOMY_FEEDBACK_LOOP.toml"
+DEFAULT_OUT_DIR = "docs/evidence/s28-02"
+DEFAULT_MEDIUM_JSON = "docs/evidence/s27-02/medium_eval_wall_v2_latest.json"
+
+REASON_CONFIG_INVALID = "CONFIG_INVALID"
+REASON_INPUT_MISSING = "INPUT_MISSING"
+REASON_UNKNOWN_RATIO_ABOVE_TARGET = "UNKNOWN_RATIO_ABOVE_TARGET"
+
+
+def _read_toml(path: Path) -> Dict[str, Any]:
+    if tomllib is None:
+        raise RuntimeError("tomllib unavailable")
+    return tomllib.loads(path.read_text(encoding="utf-8"))
+
+
+def to_repo_rel(repo_root: Path, value: str | Path) -> str:
+    p = Path(value).resolve()
+    root = repo_root.resolve()
+    try:
+        rel = p.relative_to(root)
+    except ValueError:
+        return ""
+    text = rel.as_posix()
+    if ".." in Path(text).parts:
+        return ""
+    return text
+
+
+def read_json_if_exists(path: Path) -> Dict[str, Any]:
+    if not path.exists():
+        return {}
+    try:
+        obj = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    return obj if isinstance(obj, dict) else {}
+
+
+def load_cases(path: Path) -> List[Dict[str, Any]]:
+    rows: List[Dict[str, Any]] = []
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        obj = json.loads(line)
+        if isinstance(obj, dict):
+            rows.append(obj)
+    return rows
+
+
+def suggest_taxonomy(tags: List[str], query: str) -> str:
+    low_tags = {str(x).strip().lower() for x in tags if str(x).strip()}
+    if "provider" in low_tags:
+        return "provider"
+    if "network" in low_tags:
+        return "network"
+    if "schema" in low_tags:
+        return "schema"
+    if "timeout" in low_tags:
+        return "timeout"
+
+    q = str(query or "").lower()
+    if "timeout" in q or "slow" in q:
+        return "timeout"
+    if "http" in q or "network" in q or "dns" in q:
+        return "network"
+    if "schema" in q or "json" in q or "field" in q:
+        return "schema"
+    if "provider" in q or "model" in q or "api key" in q:
+        return "provider"
+    return "unknown"
+
+
+def build_collection_actions(candidates: List[Dict[str, Any]], max_actions: int) -> List[str]:
+    grouped: Dict[str, int] = {}
+    for row in candidates:
+        tax = str(row.get("suggested_taxonomy") or "unknown")
+        grouped[tax] = int(grouped.get(tax, 0)) + 1
+    actions: List[str] = []
+    for tax, cnt in sorted(grouped.items(), key=lambda x: (-x[1], x[0])):
+        actions.append(f"Collect at least {cnt} additional labeled cases for taxonomy '{tax}'.")
+    return actions[: max(1, int(max_actions))]
+
+
+def validate_config(cfg: Dict[str, Any]) -> Tuple[bool, str]:
+    if str(cfg.get("schema_version") or "") != "s28-taxonomy-feedback-loop-v1":
+        return False, "schema_version mismatch"
+    if not str(cfg.get("cases_path") or "").strip():
+        return False, "cases_path missing"
+    if not isinstance(cfg.get("known_tags"), list) or not list(cfg.get("known_tags") or []):
+        return False, "known_tags missing"
+    try:
+        target = float(cfg.get("unknown_ratio_target", 0.1))
+        if target < 0 or target > 1:
+            return False, "unknown_ratio_target must be in [0,1]"
+    except Exception:
+        return False, "unknown_ratio_target invalid"
+    return True, ""
+
+
+def build_markdown(payload: Dict[str, Any]) -> str:
+    summary = dict(payload.get("summary", {}))
+    metrics = dict(payload.get("metrics", {}))
+    lines: List[str] = []
+    lines.append("# S28-02 Taxonomy Feedback Loop (Latest)")
+    lines.append("")
+    lines.append(f"- CapturedAtUTC: `{payload.get('captured_at_utc', '')}`")
+    lines.append(f"- Branch: `{payload.get('git', {}).get('branch', '')}`")
+    lines.append(f"- HeadSHA: `{payload.get('git', {}).get('head', '')}`")
+    lines.append("")
+    lines.append("## Summary")
+    lines.append("")
+    lines.append(f"- status: `{summary.get('status', '')}`")
+    lines.append(f"- reason_code: `{summary.get('reason_code', '')}`")
+    lines.append(f"- unknown_ratio: `{metrics.get('unknown_ratio', 0.0)}`")
+    lines.append(f"- candidate_count: `{metrics.get('candidate_count', 0)}`")
+    lines.append("")
+    lines.append("## Collection Actions")
+    lines.append("")
+    for item in list(payload.get("collection_actions", [])):
+        lines.append(f"- {item}")
+    if not payload.get("collection_actions"):
+        lines.append("- none")
+    lines.append("")
+    lines.append("## PR Body Snippet")
+    lines.append("")
+    lines.append("```md")
+    lines.append("### S28-02 Taxonomy Feedback Loop")
+    lines.append(f"- status: {summary.get('status', '')}")
+    lines.append(f"- reason_code: {summary.get('reason_code', '')}")
+    lines.append(f"- unknown_ratio: {metrics.get('unknown_ratio', 0.0)}")
+    lines.append(f"- candidate_count: {metrics.get('candidate_count', 0)}")
+    lines.append(f"- artifact: docs/evidence/s28-02/{payload.get('artifact_names', {}).get('json', '')}")
+    lines.append("```")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config", default=DEFAULT_CONFIG)
+    parser.add_argument("--out-dir", default=DEFAULT_OUT_DIR)
+    parser.add_argument("--obs-root", default=DEFAULT_OBS_ROOT)
+    parser.add_argument("--medium-json", default=DEFAULT_MEDIUM_JSON)
+    args = parser.parse_args()
+
+    repo_root = Path(git_out(Path.cwd(), ["rev-parse", "--show-toplevel"]) or Path.cwd()).resolve()
+    out_dir = (repo_root / args.out_dir).resolve()
+    out_dir.mkdir(parents=True, exist_ok=True)
+    run_dir, meta, events = make_run_context(repo_root, tool="s28-taxonomy-feedback-loop", obs_root=args.obs_root)
+
+    config_path = (repo_root / str(args.config)).resolve()
+    if not config_path.exists():
+        emit("ERROR", f"config missing path={config_path}", events)
+        payload = {
+            "schema_version": "s28-taxonomy-feedback-loop-v1",
+            "captured_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "git": {"branch": git_out(repo_root, ["branch", "--show-current"]), "head": git_out(repo_root, ["rev-parse", "HEAD"])},
+            "summary": {"status": "FAIL", "reason_code": REASON_CONFIG_INVALID},
+            "metrics": {"unknown_ratio": 0.0, "candidate_count": 0},
+            "collection_actions": [],
+            "artifact_names": {"json": "taxonomy_feedback_loop_latest.json", "md": "taxonomy_feedback_loop_latest.md"},
+        }
+        out_json = out_dir / "taxonomy_feedback_loop_latest.json"
+        out_md = out_dir / "taxonomy_feedback_loop_latest.md"
+        out_json.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        out_md.write_text(build_markdown(payload), encoding="utf-8")
+        write_events(run_dir, events)
+        write_summary(run_dir, meta, events, extra={"status": "FAIL", "reason_code": REASON_CONFIG_INVALID})
+        return 1
+
+    try:
+        cfg = _read_toml(config_path)
+    except Exception as exc:
+        emit("ERROR", f"config parse failed err={exc}", events)
+        write_events(run_dir, events)
+        write_summary(run_dir, meta, events, extra={"status": "FAIL", "reason_code": REASON_CONFIG_INVALID})
+        return 1
+
+    ok, reason = validate_config(cfg)
+    if not ok:
+        emit("ERROR", f"config invalid reason={reason}", events)
+        write_events(run_dir, events)
+        write_summary(run_dir, meta, events, extra={"status": "FAIL", "reason_code": REASON_CONFIG_INVALID})
+        return 1
+
+    medium_path = (repo_root / str(args.medium_json)).resolve()
+    cases_path = (repo_root / str(cfg.get("cases_path") or "")).resolve()
+    medium = read_json_if_exists(medium_path)
+
+    missing_inputs: List[str] = []
+    if not medium:
+        missing_inputs.append("medium_json")
+    if not cases_path.exists():
+        missing_inputs.append("cases_path")
+
+    unknown_ratio = 0.0
+    if medium:
+        unknown_ratio = float(dict(medium.get("taxonomy", {})).get("unknown_ratio", 0.0) or 0.0)
+
+    cases: List[Dict[str, Any]] = []
+    if cases_path.exists():
+        try:
+            cases = load_cases(cases_path)
+        except Exception as exc:
+            emit("WARN", f"cases parse failed err={exc}", events)
+
+    known_tags = {str(x).strip().lower() for x in list(cfg.get("known_tags") or []) if str(x).strip()}
+    max_candidates = int(cfg.get("max_candidates", 12) or 12)
+    candidates: List[Dict[str, Any]] = []
+    for row in cases:
+        tags = [str(x).strip() for x in list(row.get("tags") or []) if str(x).strip()]
+        low_tags = {t.lower() for t in tags}
+        unknown_like = "unknown" in low_tags or bool(low_tags - known_tags)
+        if not unknown_like:
+            continue
+        candidates.append(
+            {
+                "case_id": str(row.get("case_id") or ""),
+                "tags": tags,
+                "query": str(row.get("query") or "")[:220],
+                "suggested_taxonomy": suggest_taxonomy(tags, str(row.get("query") or "")),
+            }
+        )
+        if len(candidates) >= max_candidates:
+            break
+
+    collection_actions = build_collection_actions(candidates, int(cfg.get("max_actions", 5) or 5))
+
+    target = float(cfg.get("unknown_ratio_target", 0.1) or 0.1)
+    status = "PASS"
+    reason_code = ""
+    if missing_inputs:
+        status = "WARN"
+        reason_code = REASON_INPUT_MISSING
+        for name in missing_inputs:
+            emit("WARN", f"missing input={name}", events)
+    elif unknown_ratio > target:
+        status = "WARN"
+        reason_code = REASON_UNKNOWN_RATIO_ABOVE_TARGET
+        emit("WARN", f"unknown ratio above target ratio={unknown_ratio} target={target}", events)
+    else:
+        emit("OK", f"taxonomy feedback PASS ratio={unknown_ratio}", events)
+
+    payload: Dict[str, Any] = {
+        "schema_version": "s28-taxonomy-feedback-loop-v1",
+        "captured_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "git": {"branch": git_out(repo_root, ["branch", "--show-current"]), "head": git_out(repo_root, ["rev-parse", "HEAD"])} ,
+        "inputs": {
+            "config": to_repo_rel(repo_root, config_path),
+            "medium_json": to_repo_rel(repo_root, medium_path),
+            "cases_path": to_repo_rel(repo_root, cases_path),
+            "known_tags": sorted(known_tags),
+            "unknown_ratio_target": target,
+        },
+        "metrics": {
+            "unknown_ratio": round(unknown_ratio, 4),
+            "candidate_count": len(candidates),
+            "total_cases_scanned": len(cases),
+        },
+        "candidates": candidates,
+        "collection_actions": collection_actions,
+        "summary": {
+            "status": status,
+            "reason_code": reason_code,
+            "missing_inputs": len(missing_inputs),
+        },
+        "artifact_names": {"json": "taxonomy_feedback_loop_latest.json", "md": "taxonomy_feedback_loop_latest.md"},
+    }
+
+    out_json = out_dir / "taxonomy_feedback_loop_latest.json"
+    out_md = out_dir / "taxonomy_feedback_loop_latest.md"
+    out_json.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    out_md.write_text(build_markdown(payload), encoding="utf-8")
+    emit("OK", f"artifact_json={out_json}", events)
+    emit("OK", f"artifact_md={out_md}", events)
+
+    write_events(run_dir, events)
+    write_summary(run_dir, meta, events, extra={"status": status, "reason_code": reason_code, "unknown_ratio": round(unknown_ratio, 4)})
+    return 0 if status != "FAIL" else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
