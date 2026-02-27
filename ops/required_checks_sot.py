@@ -71,7 +71,6 @@ def write_doc_sot(doc_path, contexts):
     block = [
         "<!-- required_checks_sot:v1",
         "# auto-managed. run: bash ops/required_checks_sot.sh write-sot",
-        "# NOTE: empty/missing live required checks => ERROR (fail-closed)",
     ]
     block.extend(clean)
     block.append("-->")
