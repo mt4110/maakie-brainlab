@@ -24,10 +24,12 @@ class S29EvidenceTrendIndexV3Tests(unittest.TestCase):
             {"present": True, "status": "PASS"},
             {"present": True, "status": "WARN"},
             {"present": True, "status": "FAIL"},
+            {"present": True, "status": "MISSING"},
             {"present": False, "status": "MISSING"},
         ]
         counts = self.m.count_statuses(rows)
         self.assertEqual(counts["missing_count"], 1)
+        self.assertEqual(counts["failed_count"], 2)
         self.assertEqual(self.m.overall_status(counts), "FAIL")
 
     def test_is_stale(self):

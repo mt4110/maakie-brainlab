@@ -253,6 +253,24 @@ def build_markdown(payload: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def write_failure_artifacts(repo_root: Path, out_dir: Path, reason_code: str, status: str = "FAIL") -> None:
+    payload = {
+        "schema_version": "s29-taxonomy-pipeline-integration-v2",
+        "captured_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "git": {"branch": git_out(repo_root, ["branch", "--show-current"]), "head": git_out(repo_root, ["rev-parse", "HEAD"])},
+        "summary": {"status": status, "reason_code": reason_code},
+        "metrics": {"unknown_ratio": 0.0, "candidate_count": 0},
+        "pipeline": {"jsonl": "", "record_count": 0},
+        "collection_actions": [],
+        "collection_actions_v2": [],
+        "artifact_names": {"json": "taxonomy_pipeline_integration_latest.json", "md": "taxonomy_pipeline_integration_latest.md"},
+    }
+    out_json = out_dir / "taxonomy_pipeline_integration_latest.json"
+    out_md = out_dir / "taxonomy_pipeline_integration_latest.md"
+    out_json.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    out_md.write_text(build_markdown(payload), encoding="utf-8")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default=DEFAULT_CONFIG)
@@ -270,19 +288,7 @@ def main() -> int:
     config_path = (repo_root / str(args.config)).resolve()
     if not config_path.exists():
         emit("ERROR", f"config missing path={config_path}", events)
-        payload = {
-            "schema_version": "s29-taxonomy-pipeline-integration-v1",
-            "captured_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-            "git": {"branch": git_out(repo_root, ["branch", "--show-current"]), "head": git_out(repo_root, ["rev-parse", "HEAD"])},
-            "summary": {"status": "FAIL", "reason_code": REASON_CONFIG_INVALID},
-            "metrics": {"unknown_ratio": 0.0, "candidate_count": 0},
-            "collection_actions": [],
-            "artifact_names": {"json": "taxonomy_pipeline_integration_latest.json", "md": "taxonomy_pipeline_integration_latest.md"},
-        }
-        out_json = out_dir / "taxonomy_pipeline_integration_latest.json"
-        out_md = out_dir / "taxonomy_pipeline_integration_latest.md"
-        out_json.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-        out_md.write_text(build_markdown(payload), encoding="utf-8")
+        write_failure_artifacts(repo_root, out_dir, REASON_CONFIG_INVALID, status="FAIL")
         write_events(run_dir, events)
         write_summary(run_dir, meta, events, extra={"status": "FAIL", "reason_code": REASON_CONFIG_INVALID})
         return 1
@@ -291,6 +297,7 @@ def main() -> int:
         cfg = _read_toml(config_path)
     except Exception as exc:
         emit("ERROR", f"config parse failed err={exc}", events)
+        write_failure_artifacts(repo_root, out_dir, REASON_CONFIG_INVALID, status="FAIL")
         write_events(run_dir, events)
         write_summary(run_dir, meta, events, extra={"status": "FAIL", "reason_code": REASON_CONFIG_INVALID})
         return 1
@@ -298,6 +305,7 @@ def main() -> int:
     ok, reason = validate_config(cfg)
     if not ok:
         emit("ERROR", f"config invalid reason={reason}", events)
+        write_failure_artifacts(repo_root, out_dir, REASON_CONFIG_INVALID, status="FAIL")
         write_events(run_dir, events)
         write_summary(run_dir, meta, events, extra={"status": "FAIL", "reason_code": REASON_CONFIG_INVALID})
         return 1

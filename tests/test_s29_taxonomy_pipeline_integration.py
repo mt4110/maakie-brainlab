@@ -1,4 +1,6 @@
 import importlib.util
+import json
+import tempfile
 import unittest
 
 
@@ -70,6 +72,25 @@ class S29TaxonomyFeedbackLoopTests(unittest.TestCase):
         self.assertEqual(len(records), 1)
         self.assertEqual(records[0]["case_id"], "c1")
         self.assertEqual(records[0]["owner"], "ml-platform")
+
+    def test_write_failure_artifacts(self):
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td).resolve()
+            out_dir = root / "out"
+            out_dir.mkdir(parents=True, exist_ok=True)
+            self.m.write_failure_artifacts(root, out_dir, self.m.REASON_CONFIG_INVALID, status="FAIL")
+
+            out_json = out_dir / "taxonomy_pipeline_integration_latest.json"
+            out_md = out_dir / "taxonomy_pipeline_integration_latest.md"
+            self.assertTrue(out_json.exists())
+            self.assertTrue(out_md.exists())
+
+            payload = json.loads(out_json.read_text(encoding="utf-8"))
+            self.assertEqual(payload["summary"]["status"], "FAIL")
+            self.assertEqual(payload["summary"]["reason_code"], self.m.REASON_CONFIG_INVALID)
+            self.assertEqual(payload["pipeline"]["record_count"], 0)
 
 
 if __name__ == "__main__":

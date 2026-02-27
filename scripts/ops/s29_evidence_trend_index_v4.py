@@ -108,7 +108,7 @@ def count_statuses(rows: List[Dict[str, Any]]) -> Dict[str, int]:
         if bool(row.get("stale")):
             out["stale_count"] += 1
         st = str(row.get("status") or "").upper()
-        if st == "FAIL":
+        if st in {"FAIL", "MISSING"}:
             out["failed_count"] += 1
         elif st == "WARN":
             out["warn_count"] += 1
@@ -275,7 +275,7 @@ def main() -> int:
     payload: Dict[str, Any] = {
         "schema_version": "s29-evidence-trend-index-v5",
         "captured_at_utc": now,
-        "git": {"branch": git_out(repo_root, ["branch", "--show-current"]), "head": git_out(repo_root, ["rev-parse", "HEAD"])} ,
+        "git": {"branch": git_out(repo_root, ["branch", "--show-current"]), "head": git_out(repo_root, ["rev-parse", "HEAD"])},
         "phases": rows,
         "history": {
             "path": to_repo_rel(repo_root, history_path),
