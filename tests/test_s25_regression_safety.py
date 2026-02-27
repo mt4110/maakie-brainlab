@@ -51,9 +51,10 @@ class S25RegressionSafetyTests(unittest.TestCase):
                 json.dumps({"required_status_checks": ["test", "body_required"]}) + "\n",
                 encoding="utf-8",
             )
-            docs, rules = self.m.read_required_contexts(root)
+            docs, rules, errs = self.m.read_required_contexts(root)
             self.assertEqual(docs, ["test", "verify-pack"])
             self.assertEqual(rules, ["body_required", "test"])
+            self.assertEqual(errs, [])
 
 
 if __name__ == "__main__":
