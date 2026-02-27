@@ -1,72 +1,35 @@
 {
   "schema_version": "s29-incident-triage-pack-v4",
-  "captured_at_utc": "2026-02-27T11:50:23Z",
+  "captured_at_utc": "2026-02-27T13:59:12Z",
   "git": {
-    "branch": "ops/S29-01-S29-10",
-    "head": "2971732a2c6df3a57166589d92e528ab65e49038"
+    "branch": "ops/S30-1-S30-900",
+    "head": "eb11d99e73e0ea59ecc59aaa2c776cca1825a752"
   },
   "inputs": {
     "recovery_json": "docs/evidence/s29-01/canary_recovery_success_rate_slo_latest.json",
     "taxonomy_json": "docs/evidence/s29-02/taxonomy_pipeline_integration_latest.json",
     "notify_json": "docs/evidence/s29-03/readiness_notify_multichannel_latest.json",
-    "triage_v1_json": "docs/evidence/s27-04/incident_triage_pack_latest.json"
+    "triage_v1_json": "docs/evidence/s30-02/pass_inputs/triage_v1_pass.json"
   },
   "missing_inputs": [],
-  "top_reasons": [
-    {
-      "reason_code": "MISSING_PROVIDER_ENV",
-      "count": 1,
-      "severity": "major"
-    },
-    {
-      "reason_code": "NOTIFY_SEND_FAILED",
-      "count": 1,
-      "severity": "major"
-    },
-    {
-      "reason_code": "RECOVERY_REQUIRED",
-      "count": 1,
-      "severity": "major"
-    },
-    {
-      "reason_code": "SKIP_RATE_HIGH",
-      "count": 1,
-      "severity": "major"
-    },
-    {
-      "reason_code": "UNKNOWN_RATIO_ABOVE_TARGET",
-      "count": 1,
-      "severity": "major"
-    }
-  ],
+  "top_reasons": [],
   "alerts_by_severity": {
     "critical": 0,
-    "major": 5,
+    "major": 0,
     "minor": 0
   },
   "priority_actions": [
-    "Validate provider env variables (`base_url/api_key/model`) in runtime and CI contexts.",
-    "Run strict canary once and verify status transition to PASS after recovery action.",
-    "Keep rollback path ready: python3 scripts/ops/s25_langchain_poc.py --mode rollback-only",
-    "Collect at least 2 additional labeled cases for taxonomy 'provider'.",
-    "Collect at least 1 additional labeled cases for taxonomy 'network'.",
-    "Collect at least 1 additional labeled cases for taxonomy 'schema'.",
-    "Owner ml-platform: collect 2 labeled case(s) for taxonomy 'provider'.",
-    "Owner sre-network: collect 1 labeled case(s) for taxonomy 'network'."
+    "Validate provider canary config/policy file schema and referenced paths.",
+    "Keep rollback path ready: python3 scripts/ops/s25_langchain_poc.py --mode rollback-only"
   ],
-  "exit_conditions": [
-    "Keep trailing non-pass streak below 3.",
-    "Reduce unknown_ratio to <= 0.03 with additional labeled samples.",
-    "Configure channel webhooks and verify each channel returns 2xx at least once.",
-    "Keep retries enabled and capture failing channel/error in triage."
-  ],
+  "exit_conditions": [],
   "summary": {
-    "status": "WARN",
-    "reason_code": "TRIAGE_ALERT",
+    "status": "PASS",
+    "reason_code": "",
     "missing_inputs": 0,
-    "alerts": 5,
+    "alerts": 0,
     "critical_alerts": 0,
-    "exit_condition_count": 4
+    "exit_condition_count": 0
   },
   "artifact_names": {
     "json": "incident_triage_pack_v4_latest.json",

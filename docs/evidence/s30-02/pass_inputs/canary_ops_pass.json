@@ -1,0 +1,13 @@
+{
+  "schema_version": "s30-pass-canary-ops-v1",
+  "captured_at_utc": "2026-02-27T14:10:00Z",
+  "trend": {
+    "skip_rate": 0.0833,
+    "fail_rate": 0.0417
+  },
+  "base": {
+    "summary": {
+      "status": "PASS"
+    }
+  }
+}

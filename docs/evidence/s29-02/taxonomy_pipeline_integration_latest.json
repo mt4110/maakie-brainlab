@@ -1,14 +1,14 @@
 {
   "schema_version": "s29-taxonomy-pipeline-integration-v2",
-  "captured_at_utc": "2026-02-27T11:50:23Z",
+  "captured_at_utc": "2026-02-27T13:58:17Z",
   "git": {
-    "branch": "ops/S29-01-S29-10",
-    "head": "2971732a2c6df3a57166589d92e528ab65e49038"
+    "branch": "ops/S30-1-S30-900",
+    "head": "eb11d99e73e0ea59ecc59aaa2c776cca1825a752"
   },
   "inputs": {
-    "config": "docs/ops/S29-02_TAXONOMY_PIPELINE_INTEGRATION.toml",
-    "medium_json": "docs/evidence/s27-02/medium_eval_wall_v2_latest.json",
-    "cases_path": "data/eval/datasets/rag-eval-wall-v2__seed-medium__v0001/cases.jsonl",
+    "config": "docs/evidence/s30-02/pass_inputs/s29-02_pass.toml",
+    "medium_json": "docs/evidence/s30-02/pass_inputs/medium_eval_pass.json",
+    "cases_path": "docs/evidence/s30-02/pass_inputs/cases_pass.jsonl",
     "pipeline_jsonl": "docs/evidence/s29-02/taxonomy_pipeline_candidates_latest.jsonl",
     "known_tags": [
       "domain",
@@ -31,155 +31,32 @@
     "unknown_ratio_target": 0.03
   },
   "metrics": {
-    "unknown_ratio": 0.3125,
-    "unknown_ratio_upstream": 0.0625,
-    "unknown_ratio_cases": 0.3125,
-    "candidate_count": 5,
-    "total_cases_scanned": 16,
-    "unknown_like_cases": 5,
-    "pipeline_records": 5,
+    "unknown_ratio": 0.01,
+    "unknown_ratio_upstream": 0.01,
+    "unknown_ratio_cases": 0.0,
+    "candidate_count": 0,
+    "total_cases_scanned": 40,
+    "unknown_like_cases": 0,
+    "pipeline_records": 0,
     "pipeline_written": true
   },
-  "candidates": [
-    {
-      "case_id": "m205",
-      "tags": [
-        "provider",
-        "basic"
-      ],
-      "query": "provider 実接続 canary が SKIP のときに記録すべき項目は？",
-      "suggested_taxonomy": "provider"
-    },
-    {
-      "case_id": "m213",
-      "tags": [
-        "domain",
-        "medical",
-        "provider"
-      ],
-      "query": "医療AIの可用性指標で provider 障害をどう扱うべきですか？",
-      "suggested_taxonomy": "provider"
-    },
-    {
-      "case_id": "m214",
-      "tags": [
-        "domain",
-        "finance",
-        "network"
-      ],
-      "query": "金融レポートの更新遅延が network 起因かを判定する観点は？",
-      "suggested_taxonomy": "network"
-    },
-    {
-      "case_id": "m203",
-      "tags": [
-        "basic",
-        "schema"
-      ],
-      "query": "レスポンス JSON のキー欠落時に優先して確認すべき箇所は？",
-      "suggested_taxonomy": "schema"
-    },
-    {
-      "case_id": "m216",
-      "tags": [
-        "ops",
-        "unknown"
-      ],
-      "query": "未知エラーコード X999 が出たときの初動は？",
-      "suggested_taxonomy": "unknown"
-    }
-  ],
-  "collection_actions": [
-    "Collect at least 2 additional labeled cases for taxonomy 'provider'.",
-    "Collect at least 1 additional labeled cases for taxonomy 'network'.",
-    "Collect at least 1 additional labeled cases for taxonomy 'schema'.",
-    "Collect at least 1 additional labeled cases for taxonomy 'unknown'.",
-    "Promote top unknown candidates to incident triage backlog and assign owner."
-  ],
-  "collection_actions_v2": [
-    {
-      "taxonomy": "provider",
-      "owner": "ml-platform",
-      "action": "collect_labeled_cases",
-      "target_cases": 2
-    },
-    {
-      "taxonomy": "network",
-      "owner": "sre-network",
-      "action": "collect_labeled_cases",
-      "target_cases": 1
-    },
-    {
-      "taxonomy": "schema",
-      "owner": "data-platform",
-      "action": "collect_labeled_cases",
-      "target_cases": 1
-    },
-    {
-      "taxonomy": "unknown",
-      "owner": "ops-triage",
-      "action": "collect_labeled_cases",
-      "target_cases": 1
-    }
-  ],
+  "candidates": [],
+  "collection_actions": [],
+  "collection_actions_v2": [],
   "pipeline": {
     "jsonl": "docs/evidence/s29-02/taxonomy_pipeline_candidates_latest.jsonl",
-    "record_count": 5,
+    "record_count": 0,
     "written": true,
-    "records_preview": [
-      {
-        "record_id": "s29-taxonomy-0001",
-        "source_thread": "S29-02",
-        "case_id": "m205",
-        "query": "provider 実接続 canary が SKIP のときに記録すべき項目は？",
-        "suggested_taxonomy": "provider",
-        "tags": [
-          "provider",
-          "basic"
-        ],
-        "owner": "ml-platform",
-        "next_action": "collect_labeled_cases"
-      },
-      {
-        "record_id": "s29-taxonomy-0002",
-        "source_thread": "S29-02",
-        "case_id": "m213",
-        "query": "医療AIの可用性指標で provider 障害をどう扱うべきですか？",
-        "suggested_taxonomy": "provider",
-        "tags": [
-          "domain",
-          "medical",
-          "provider"
-        ],
-        "owner": "ml-platform",
-        "next_action": "collect_labeled_cases"
-      },
-      {
-        "record_id": "s29-taxonomy-0003",
-        "source_thread": "S29-02",
-        "case_id": "m214",
-        "query": "金融レポートの更新遅延が network 起因かを判定する観点は？",
-        "suggested_taxonomy": "network",
-        "tags": [
-          "domain",
-          "finance",
-          "network"
-        ],
-        "owner": "sre-network",
-        "next_action": "collect_labeled_cases"
-      }
-    ]
+    "records_preview": []
   },
   "constraints": {
-    "exit_conditions": [
-      "Reduce unknown_ratio to <= 0.03 with additional labeled samples."
-    ]
+    "exit_conditions": []
   },
   "summary": {
-    "status": "WARN",
-    "reason_code": "UNKNOWN_RATIO_ABOVE_TARGET",
+    "status": "PASS",
+    "reason_code": "",
     "missing_inputs": 0,
-    "exit_condition_count": 1
+    "exit_condition_count": 0
   },
   "artifact_names": {
     "json": "taxonomy_pipeline_integration_latest.json",

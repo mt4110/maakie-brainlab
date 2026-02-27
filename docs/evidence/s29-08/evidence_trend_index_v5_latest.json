@@ -1,41 +1,41 @@
 {
   "schema_version": "s29-evidence-trend-index-v5",
-  "captured_at_utc": "2026-02-27T11:50:23Z",
+  "captured_at_utc": "2026-02-27T13:59:12Z",
   "git": {
-    "branch": "ops/S29-01-S29-10",
-    "head": "2971732a2c6df3a57166589d92e528ab65e49038"
+    "branch": "ops/S30-1-S30-900",
+    "head": "eb11d99e73e0ea59ecc59aaa2c776cca1825a752"
   },
   "phases": [
     {
       "phase": "S29-01",
       "artifact": "docs/evidence/s29-01/canary_recovery_success_rate_slo_latest.json",
       "present": true,
-      "status": "WARN",
-      "captured_at_utc": "2026-02-27T11:50:23Z",
+      "status": "PASS",
+      "captured_at_utc": "2026-02-27T13:58:17Z",
       "stale": false
     },
     {
       "phase": "S29-02",
       "artifact": "docs/evidence/s29-02/taxonomy_pipeline_integration_latest.json",
       "present": true,
-      "status": "WARN",
-      "captured_at_utc": "2026-02-27T11:50:23Z",
+      "status": "PASS",
+      "captured_at_utc": "2026-02-27T13:58:17Z",
       "stale": false
     },
     {
       "phase": "S29-03",
       "artifact": "docs/evidence/s29-03/readiness_notify_multichannel_latest.json",
       "present": true,
-      "status": "WARN",
-      "captured_at_utc": "2026-02-27T11:50:23Z",
+      "status": "PASS",
+      "captured_at_utc": "2026-02-27T13:59:11Z",
       "stale": false
     },
     {
       "phase": "S29-04",
       "artifact": "docs/evidence/s29-04/incident_triage_pack_v4_latest.json",
       "present": true,
-      "status": "WARN",
-      "captured_at_utc": "2026-02-27T11:50:23Z",
+      "status": "PASS",
+      "captured_at_utc": "2026-02-27T13:59:12Z",
       "stale": false
     },
     {
@@ -43,15 +43,15 @@
       "artifact": "docs/evidence/s29-05/policy_drift_guard_v4_latest.json",
       "present": true,
       "status": "PASS",
-      "captured_at_utc": "2026-02-27T11:50:23Z",
+      "captured_at_utc": "2026-02-27T13:58:43Z",
       "stale": false
     },
     {
       "phase": "S29-06",
       "artifact": "docs/evidence/s29-06/reliability_soak_v4_latest.json",
       "present": true,
-      "status": "WARN",
-      "captured_at_utc": "2026-02-27T11:50:23Z",
+      "status": "PASS",
+      "captured_at_utc": "2026-02-27T13:58:44Z",
       "stale": false
     },
     {
@@ -59,28 +59,28 @@
       "artifact": "docs/evidence/s29-07/acceptance_wall_v5_latest.json",
       "present": true,
       "status": "PASS",
-      "captured_at_utc": "2026-02-27T11:50:23.716379+00:00",
+      "captured_at_utc": "2026-02-27T13:58:44.120389+00:00",
       "stale": false
     }
   ],
   "history": {
     "path": "docs/evidence/s29-08/evidence_trend_history_v5.json",
-    "size": 2,
+    "size": 4,
     "deltas": {
       "missing_delta": 0,
       "failed_delta": 0,
-      "warn_delta": -1
+      "warn_delta": -2
     },
     "regressed_phases": []
   },
   "summary": {
-    "status": "WARN",
-    "history_size": 2,
+    "status": "PASS",
+    "history_size": 4,
     "regressed_phase_count": 0,
     "present_count": 7,
     "missing_count": 0,
-    "pass_count": 2,
-    "warn_count": 5,
+    "pass_count": 7,
+    "warn_count": 0,
     "failed_count": 0,
     "stale_count": 0
   },

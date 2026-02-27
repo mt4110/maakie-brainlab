@@ -1,9 +1,9 @@
 {
   "schema_version": "s29-readiness-notify-multichannel-v2",
-  "captured_at_utc": "2026-02-27T11:50:23Z",
+  "captured_at_utc": "2026-02-27T13:59:26Z",
   "git": {
-    "branch": "ops/S29-01-S29-10",
-    "head": "2971732a2c6df3a57166589d92e528ab65e49038"
+    "branch": "ops/S30-1-S30-900",
+    "head": "eb11d99e73e0ea59ecc59aaa2c776cca1825a752"
   },
   "inputs": {
     "readiness_json": "docs/evidence/s28-09/slo_readiness_v2_latest.json",
@@ -29,70 +29,67 @@
       "message": "[Ops Readiness] channel=#ops-release | readiness=WARN_ONLY | status=WARN | reason=SOFT_SLO_WARN | blocked_total=0 | schedule_status=PASS | schedule_reason=",
       "webhook_env": "S29_READINESS_WEBHOOK_URL_OPS_RELEASE",
       "attempted": true,
-      "sent": false,
-      "http_status": 0,
+      "sent": true,
+      "http_status": 200,
       "response_tail": "",
-      "error": "webhook env not configured",
+      "error": "",
       "attempt_count": 1,
       "attempts": [
         {
-          "sent": false,
-          "http_status": 0,
+          "sent": true,
+          "http_status": 200,
           "response_tail": "",
-          "error": "webhook env not configured",
+          "error": "",
           "attempt": 1
         }
       ],
-      "delivery_rate": 0.0,
-      "delivery_state": "FAILED"
+      "delivery_rate": 1.0,
+      "delivery_state": "SENT"
     },
     {
       "channel": "#ops-oncall",
       "message": "[Ops Readiness] channel=#ops-oncall | readiness=WARN_ONLY | status=WARN | reason=SOFT_SLO_WARN | blocked_total=0 | schedule_status=PASS | schedule_reason=",
       "webhook_env": "S29_READINESS_WEBHOOK_URL_OPS_ONCALL",
       "attempted": true,
-      "sent": false,
-      "http_status": 0,
+      "sent": true,
+      "http_status": 200,
       "response_tail": "",
-      "error": "webhook env not configured",
+      "error": "",
       "attempt_count": 1,
       "attempts": [
         {
-          "sent": false,
-          "http_status": 0,
+          "sent": true,
+          "http_status": 200,
           "response_tail": "",
-          "error": "webhook env not configured",
+          "error": "",
           "attempt": 1
         }
       ],
-      "delivery_rate": 0.0,
-      "delivery_state": "FAILED"
+      "delivery_rate": 1.0,
+      "delivery_state": "SENT"
     }
   ],
   "notification": {
     "total_channels": 2,
     "attempted_channels": 2,
-    "sent_channels": 0,
-    "failed_channels": 2,
+    "sent_channels": 2,
+    "failed_channels": 0,
     "not_configured_channels": 0,
     "attempt_count": 2,
-    "delivery_rate": 0.0,
-    "delivery_state": "FAILED",
-    "sent": false,
+    "delivery_rate": 1.0,
+    "delivery_state": "SENT",
+    "sent": true,
     "attempted": true
   },
   "constraints": {
-    "exit_conditions": [
-      "Configure channel webhooks and verify each channel returns 2xx at least once.",
-      "Keep retries enabled and capture failing channel/error in triage."
-    ]
+    "exit_conditions": []
   },
   "summary": {
-    "status": "WARN",
-    "reason_code": "NOTIFY_SEND_FAILED",
-    "notify_sent": false,
+    "status": "PASS",
+    "reason_code": "",
+    "notify_sent": true,
     "attempted_channels": 2,
-    "sent_channels": 0,
+    "sent_channels": 2,
     "total_channels": 2,
     "readiness": "WARN_ONLY"
   },

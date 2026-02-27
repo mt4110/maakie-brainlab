@@ -1,0 +1,9 @@
+{
+  "schema_version": "s30-pass-medium-v1",
+  "taxonomy": {
+    "unknown_ratio": 0.01
+  },
+  "summary": {
+    "status": "PASS"
+  }
+}

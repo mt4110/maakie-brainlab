@@ -3,211 +3,181 @@
     "json": "quality_burndown_latest.json",
     "md": "quality_burndown_latest.md"
   },
-  "captured_at_utc": "2026-02-27T13:54:08Z",
+  "captured_at_utc": "2026-02-27T13:59:27Z",
   "checks": [
     {
       "bucket": "waiver_exit",
       "detail": "Derived from s29-01 trend.trailing_nonpass_streak.",
-      "done": false,
+      "done": true,
       "id": "WVR-01",
-      "observed": 3,
-      "status": "WARN",
+      "observed": 0,
+      "status": "PASS",
       "target": "streak < 3",
       "title": "skip_rate trailing non-pass streak < 3"
     },
     {
       "bucket": "waiver_exit",
       "detail": "Derived from s29-02 metrics.unknown_ratio.",
-      "done": false,
+      "done": true,
       "id": "WVR-02",
-      "observed": 0.3125,
-      "status": "WARN",
+      "observed": 0.01,
+      "status": "PASS",
       "target": "<= 0.03",
       "title": "unknown_ratio <= 0.03"
     },
     {
       "bucket": "waiver_exit",
       "detail": "Derived from s29-03 channels[*].attempted/sent/http_status.",
-      "done": false,
+      "done": true,
       "id": "WVR-03",
       "observed": {
-        "all_ok": false,
+        "all_ok": true,
         "channel_count": 2
       },
-      "status": "WARN",
+      "status": "PASS",
       "target": "all channels attempted+sent with HTTP 2xx",
       "title": "notify channels return 2xx at least once"
     },
     {
       "bucket": "waiver_exit",
       "detail": "Same operational streak guard as skip_rate for RECOVERY_SUCCESS_ENV_GAP.",
-      "done": false,
+      "done": true,
       "id": "WVR-04",
-      "observed": 3,
-      "status": "WARN",
+      "observed": 0,
+      "status": "PASS",
       "target": "streak < 3",
       "title": "recovery_success_rate streak condition"
     },
     {
       "bucket": "waiver_exit",
       "detail": "Derived from s29-06 metrics.total_runs and summary.status.",
-      "done": false,
+      "done": true,
       "id": "WVR-05",
       "observed": {
-        "status": "WARN",
-        "total_runs": 3
+        "status": "PASS",
+        "total_runs": 24
       },
-      "status": "WARN",
+      "status": "PASS",
       "target": "total_runs >= 24 and status PASS",
       "title": "reliability soak rerun with enough runs"
     },
     {
       "bucket": "unresolved_risk",
       "detail": "s29-09 metrics.skip_rate",
-      "done": false,
+      "done": true,
       "id": "RSK-01",
-      "observed": 1.0,
-      "status": "WARN",
+      "observed": 0.0833,
+      "status": "PASS",
       "target": "<= 0.15",
       "title": "skip_rate soft SLO monitor"
     },
     {
       "bucket": "unresolved_risk",
       "detail": "s29-02 metrics.unknown_ratio",
-      "done": false,
+      "done": true,
       "id": "RSK-02",
-      "observed": 0.3125,
-      "status": "WARN",
+      "observed": 0.01,
+      "status": "PASS",
       "target": "<= 0.03",
       "title": "unknown_ratio soft SLO monitor"
     },
     {
       "bucket": "unresolved_risk",
       "detail": "s29-09 metrics.notify_delivery_rate",
-      "done": false,
+      "done": true,
       "id": "RSK-03",
-      "observed": 0.0,
-      "status": "WARN",
+      "observed": 1.0,
+      "status": "PASS",
       "target": ">= 1.0",
       "title": "notify_delivery_rate soft SLO monitor"
     },
     {
       "bucket": "unresolved_risk",
       "detail": "s29-09 metrics.recovery_success_rate",
-      "done": false,
+      "done": true,
       "id": "RSK-04",
-      "observed": 0.0,
-      "status": "WARN",
+      "observed": 1.0,
+      "status": "PASS",
       "target": ">= 0.8",
       "title": "recovery_success_rate soft SLO monitor"
     },
     {
       "bucket": "unresolved_risk",
       "detail": "s29-09 metrics.reliability_total_runs",
-      "done": false,
+      "done": true,
       "id": "RSK-05",
-      "observed": 3,
-      "status": "WARN",
+      "observed": 24,
+      "status": "PASS",
       "target": ">= 24",
       "title": "reliability_total_runs soft SLO monitor"
     },
     {
       "bucket": "unresolved_risk",
       "detail": "s29-09 slo.waived_hard_violations",
-      "done": false,
+      "done": true,
       "id": "RSK-06",
-      "observed": [
-        "notify_delivery_rate",
-        "recovery_success_rate",
-        "reliability_total_runs",
-        "skip_rate",
-        "unknown_ratio"
-      ],
-      "status": "WARN",
+      "observed": [],
+      "status": "PASS",
       "target": "waived_hard does not include skip_rate",
       "title": "skip_rate waiver removed"
     },
     {
       "bucket": "unresolved_risk",
       "detail": "s29-09 slo.waived_hard_violations",
-      "done": false,
+      "done": true,
       "id": "RSK-07",
-      "observed": [
-        "notify_delivery_rate",
-        "recovery_success_rate",
-        "reliability_total_runs",
-        "skip_rate",
-        "unknown_ratio"
-      ],
-      "status": "WARN",
+      "observed": [],
+      "status": "PASS",
       "target": "waived_hard does not include unknown_ratio",
       "title": "unknown_ratio waiver removed"
     },
     {
       "bucket": "unresolved_risk",
       "detail": "s29-09 slo.waived_hard_violations",
-      "done": false,
+      "done": true,
       "id": "RSK-08",
-      "observed": [
-        "notify_delivery_rate",
-        "recovery_success_rate",
-        "reliability_total_runs",
-        "skip_rate",
-        "unknown_ratio"
-      ],
-      "status": "WARN",
+      "observed": [],
+      "status": "PASS",
       "target": "waived_hard does not include notify_delivery_rate",
       "title": "notify_delivery_rate waiver removed"
     },
     {
       "bucket": "unresolved_risk",
       "detail": "s29-09 slo.waived_hard_violations",
-      "done": false,
+      "done": true,
       "id": "RSK-09",
-      "observed": [
-        "notify_delivery_rate",
-        "recovery_success_rate",
-        "reliability_total_runs",
-        "skip_rate",
-        "unknown_ratio"
-      ],
-      "status": "WARN",
+      "observed": [],
+      "status": "PASS",
       "target": "waived_hard does not include recovery_success_rate",
       "title": "recovery_success_rate waiver removed"
     },
     {
       "bucket": "unresolved_risk",
       "detail": "s29-09 slo.waived_hard_violations",
-      "done": false,
+      "done": true,
       "id": "RSK-10",
-      "observed": [
-        "notify_delivery_rate",
-        "recovery_success_rate",
-        "reliability_total_runs",
-        "skip_rate",
-        "unknown_ratio"
-      ],
-      "status": "WARN",
+      "observed": [],
+      "status": "PASS",
       "target": "waived_hard does not include reliability_total_runs",
       "title": "reliability_total_runs waiver removed"
     },
     {
       "bucket": "unresolved_risk",
       "detail": "s29-08 summary.warn_count",
-      "done": false,
+      "done": true,
       "id": "RSK-11",
-      "observed": 5,
-      "status": "WARN",
+      "observed": 0,
+      "status": "PASS",
       "target": "warn_count == 0",
       "title": "evidence trend warning phases reduced to 0"
     },
     {
       "bucket": "unresolved_risk",
       "detail": "s29-01 trend.env_skip_rate",
-      "done": false,
+      "done": true,
       "id": "RSK-12",
-      "observed": 1.0,
-      "status": "WARN",
+      "observed": 0.5,
+      "status": "PASS",
       "target": "env_skip_rate < 0.8",
       "title": "provider env gap skip chronicity resolved"
     },
@@ -227,24 +197,24 @@
     {
       "bucket": "unresolved_risk",
       "detail": "s29-02 metrics unknown_ratio/candidate_count.",
-      "done": false,
+      "done": true,
       "id": "RSK-14",
       "observed": {
-        "candidate_count": 5,
-        "unknown_ratio": 0.3125
+        "candidate_count": 0,
+        "unknown_ratio": 0.01
       },
-      "status": "WARN",
+      "status": "PASS",
       "target": "unknown_ratio<=0.03 and candidate_count<=2",
       "title": "unknown taxonomy chronic issue resolved"
     }
   ],
   "closeout_snapshot": {
-    "unresolved_risk_count": 14,
-    "waived_hard_count": 5
+    "unresolved_risk_count": 3,
+    "waived_hard_count": 0
   },
   "git": {
     "branch": "ops/S30-1-S30-900",
-    "head": "4e9cc501523f159c39db9894e1a61549043c6917"
+    "head": "eb11d99e73e0ea59ecc59aaa2c776cca1825a752"
   },
   "inputs": {
     "canary_json": "docs/evidence/s29-01/canary_recovery_success_rate_slo_latest.json",
@@ -257,15 +227,15 @@
   },
   "schema_version": "s30-quality-burndown-v1",
   "summary": {
-    "done_checks": 1,
-    "remaining_checks": 18,
-    "risk_done": 1,
-    "risk_remaining": 13,
+    "done_checks": 19,
+    "remaining_checks": 0,
+    "risk_done": 14,
+    "risk_remaining": 0,
     "risk_total": 14,
-    "status": "WARN",
+    "status": "PASS",
     "total_checks": 19,
-    "waiver_done": 0,
-    "waiver_remaining": 5,
+    "waiver_done": 5,
+    "waiver_remaining": 0,
     "waiver_total": 5
   }
 }

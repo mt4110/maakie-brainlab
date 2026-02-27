@@ -1,9 +1,9 @@
 {
   "schema_version": "s29-policy-drift-guard-v4",
-  "captured_at_utc": "2026-02-27T11:50:23Z",
+  "captured_at_utc": "2026-02-27T13:58:43Z",
   "git": {
-    "branch": "ops/S29-01-S29-10",
-    "head": "2971732a2c6df3a57166589d92e528ab65e49038"
+    "branch": "ops/S30-1-S30-900",
+    "head": "eb11d99e73e0ea59ecc59aaa2c776cca1825a752"
   },
   "inputs": {
     "watch_files": [
@@ -53,8 +53,8 @@
       },
       "Makefile": {
         "present": true,
-        "sha256": "6ec361849b624efa980af2b40a3ed3bee1aab328d140f96152e21872b477beb2",
-        "size": 8683
+        "sha256": "598a8e6f105dc26b2058924d9b1a22e20fa28e98e9fe6ba7ab44df6e25152896",
+        "size": 10584
       }
     }
   },

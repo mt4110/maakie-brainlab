@@ -1,9 +1,9 @@
 {
   "schema_version": "s29-slo-readiness-v4",
-  "captured_at_utc": "2026-02-27T11:50:23Z",
+  "captured_at_utc": "2026-02-27T13:59:12Z",
   "git": {
-    "branch": "ops/S29-01-S29-10",
-    "head": "2971732a2c6df3a57166589d92e528ab65e49038"
+    "branch": "ops/S30-1-S30-900",
+    "head": "eb11d99e73e0ea59ecc59aaa2c776cca1825a752"
   },
   "inputs": {
     "S29-01": "docs/evidence/s29-01/canary_recovery_success_rate_slo_latest.json",
@@ -21,25 +21,25 @@
     {
       "phase": "S29-01",
       "gate": "status must not be FAIL/MISSING",
-      "actual": "WARN",
+      "actual": "PASS",
       "passed": true
     },
     {
       "phase": "S29-02",
       "gate": "status must not be FAIL/MISSING",
-      "actual": "WARN",
+      "actual": "PASS",
       "passed": true
     },
     {
       "phase": "S29-03",
       "gate": "status must not be FAIL/MISSING",
-      "actual": "WARN",
+      "actual": "PASS",
       "passed": true
     },
     {
       "phase": "S29-04",
       "gate": "status must not be FAIL/MISSING",
-      "actual": "WARN",
+      "actual": "PASS",
       "passed": true
     },
     {
@@ -51,7 +51,7 @@
     {
       "phase": "S29-06",
       "gate": "status must not be FAIL/MISSING",
-      "actual": "WARN",
+      "actual": "PASS",
       "passed": true
     },
     {
@@ -63,147 +63,45 @@
     {
       "phase": "S29-08",
       "gate": "status must not be FAIL/MISSING",
-      "actual": "WARN",
+      "actual": "PASS",
       "passed": true
     }
   ],
   "metrics": {
-    "skip_rate": 1.0,
-    "unknown_ratio": 0.3125,
+    "skip_rate": 0.0833,
+    "unknown_ratio": 0.01,
     "acceptance_pass_rate": 1.0,
     "acceptance_passed": 10,
     "acceptance_total": 10,
-    "notify_delivery_rate": 0.0,
+    "notify_delivery_rate": 1.0,
     "notify_attempted_channels": 2,
     "notify_attempt_count": 2,
-    "notify_success_count": 0,
-    "notify_delivery_state": "FAILED",
-    "recovery_success_rate": 0.0,
-    "reliability_total_runs": 3
+    "notify_success_count": 2,
+    "notify_delivery_state": "SENT",
+    "recovery_success_rate": 1.0,
+    "reliability_total_runs": 24
   },
   "slo": {
     "hard_violations": [],
-    "soft_violations": [
-      {
-        "metric": "skip_rate",
-        "value": 1.0,
-        "threshold": 0.3,
-        "rule": "value <= hard",
-        "waived_from_hard": true,
-        "waiver_code": "SKIP_RATE_ENV_GAP",
-        "waiver_note": "skip degradation is dominated by provider environment gap.",
-        "waiver_exit_condition": "Keep trailing non-pass streak below 3."
-      },
-      {
-        "metric": "unknown_ratio",
-        "value": 0.3125,
-        "threshold": 0.15,
-        "rule": "value <= hard",
-        "waived_from_hard": true,
-        "waiver_code": "UNKNOWN_RATIO_WITH_ACTIONS",
-        "waiver_note": "taxonomy feedback actions are active and candidate backlog is populated.",
-        "waiver_exit_condition": "Reduce unknown_ratio to <= 0.03 with additional labeled samples."
-      },
-      {
-        "metric": "notify_delivery_rate",
-        "value": 0.0,
-        "threshold": 0.67,
-        "rule": "value >= hard",
-        "waived_from_hard": true,
-        "waiver_code": "NOTIFY_ENDPOINT_GAP",
-        "waiver_note": "notification endpoint is unavailable in current environment.",
-        "waiver_exit_condition": "Configure channel webhooks and verify each channel returns 2xx at least once."
-      },
-      {
-        "metric": "recovery_success_rate",
-        "value": 0.0,
-        "threshold": 0.5,
-        "rule": "value >= hard",
-        "waived_from_hard": true,
-        "waiver_code": "RECOVERY_SUCCESS_ENV_GAP",
-        "waiver_note": "recovery success-rate degradation is dominated by provider environment gap.",
-        "waiver_exit_condition": "Keep trailing non-pass streak below 3."
-      },
-      {
-        "metric": "reliability_total_runs",
-        "value": 3,
-        "threshold": 12,
-        "rule": "value >= hard",
-        "waived_from_hard": true,
-        "waiver_code": "RELIABILITY_ENV_GAP",
-        "waiver_note": "insufficient soak runs are caused by provider environment gap.",
-        "waiver_exit_condition": "Collect additional canary history samples and rerun S29-06."
-      }
-    ],
-    "waived_hard_violations": [
-      {
-        "metric": "skip_rate",
-        "value": 1.0,
-        "threshold": 0.3,
-        "rule": "value <= hard",
-        "waiver_code": "SKIP_RATE_ENV_GAP",
-        "waiver_note": "skip degradation is dominated by provider environment gap.",
-        "waiver_exit_condition": "Keep trailing non-pass streak below 3.",
-        "waived_to": "soft"
-      },
-      {
-        "metric": "unknown_ratio",
-        "value": 0.3125,
-        "threshold": 0.15,
-        "rule": "value <= hard",
-        "waiver_code": "UNKNOWN_RATIO_WITH_ACTIONS",
-        "waiver_note": "taxonomy feedback actions are active and candidate backlog is populated.",
-        "waiver_exit_condition": "Reduce unknown_ratio to <= 0.03 with additional labeled samples.",
-        "waived_to": "soft"
-      },
-      {
-        "metric": "notify_delivery_rate",
-        "value": 0.0,
-        "threshold": 0.67,
-        "rule": "value >= hard",
-        "waiver_code": "NOTIFY_ENDPOINT_GAP",
-        "waiver_note": "notification endpoint is unavailable in current environment.",
-        "waiver_exit_condition": "Configure channel webhooks and verify each channel returns 2xx at least once.",
-        "waived_to": "soft"
-      },
-      {
-        "metric": "recovery_success_rate",
-        "value": 0.0,
-        "threshold": 0.5,
-        "rule": "value >= hard",
-        "waiver_code": "RECOVERY_SUCCESS_ENV_GAP",
-        "waiver_note": "recovery success-rate degradation is dominated by provider environment gap.",
-        "waiver_exit_condition": "Keep trailing non-pass streak below 3.",
-        "waived_to": "soft"
-      },
-      {
-        "metric": "reliability_total_runs",
-        "value": 3,
-        "threshold": 12,
-        "rule": "value >= hard",
-        "waiver_code": "RELIABILITY_ENV_GAP",
-        "waiver_note": "insufficient soak runs are caused by provider environment gap.",
-        "waiver_exit_condition": "Collect additional canary history samples and rerun S29-06.",
-        "waived_to": "soft"
-      }
-    ],
+    "soft_violations": [],
+    "waived_hard_violations": [],
     "waiver_context": {
-      "provider_env_gap": true,
-      "recovery_success_env_gap": true,
+      "provider_env_gap": false,
+      "recovery_success_env_gap": false,
       "notify_not_attempted": false,
-      "notify_endpoint_gap": true,
-      "reliability_env_gap": true,
-      "taxonomy_feedback_active": true,
-      "taxonomy_candidate_count": 5,
-      "taxonomy_action_count": 5,
-      "unknown_ratio": 0.3125,
+      "notify_endpoint_gap": false,
+      "reliability_env_gap": false,
+      "taxonomy_feedback_active": false,
+      "taxonomy_candidate_count": 0,
+      "taxonomy_action_count": 0,
+      "unknown_ratio": 0.01,
       "exit_conditions_by_metric": {
-        "skip_rate": "Keep trailing non-pass streak below 3.",
-        "recovery_success_rate": "Keep trailing non-pass streak below 3.",
-        "unknown_ratio": "Reduce unknown_ratio to <= 0.03 with additional labeled samples.",
-        "notify_delivery_rate": "Configure channel webhooks and verify each channel returns 2xx at least once.",
-        "notify_attempted_channels": "Configure channel webhooks and verify each channel returns 2xx at least once.",
-        "reliability_total_runs": "Collect additional canary history samples and rerun S29-06."
+        "skip_rate": "",
+        "recovery_success_rate": "",
+        "unknown_ratio": "",
+        "notify_delivery_rate": "",
+        "notify_attempted_channels": "",
+        "reliability_total_runs": ""
       }
     },
     "thresholds": {
@@ -228,17 +126,17 @@
     }
   },
   "summary": {
-    "readiness": "WARN_ONLY",
-    "status": "WARN",
-    "reason_code": "SOFT_SLO_WARN",
+    "readiness": "READY",
+    "status": "PASS",
+    "reason_code": "",
     "total_gates": 8,
     "passed_gates": 8,
     "blocked_gates": 0,
     "blocked_total": 0,
     "hard_block_count": 0,
-    "soft_warn_count": 5,
-    "waived_hard_count": 5,
-    "waived_with_exit_condition_count": 5,
+    "soft_warn_count": 0,
+    "waived_hard_count": 0,
+    "waived_with_exit_condition_count": 0,
     "missing_count": 0,
     "stale_count": 0
   },

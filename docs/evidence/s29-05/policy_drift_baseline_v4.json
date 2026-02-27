@@ -1,6 +1,7 @@
 {
   "schema_version": "s29-policy-drift-baseline-v4",
   "created_at_utc": "2026-02-27T11:27:55Z",
+  "updated_at_utc": "2026-02-27T13:58:43Z",
   "files": {
     "docs/ops/S29-01_CANARY_RECOVERY_SUCCESS_RATE_SLO.toml": {
       "present": true,
@@ -34,8 +35,8 @@
     },
     "Makefile": {
       "present": true,
-      "sha256": "6ec361849b624efa980af2b40a3ed3bee1aab328d140f96152e21872b477beb2",
-      "size": 8683
+      "sha256": "598a8e6f105dc26b2058924d9b1a22e20fa28e98e9fe6ba7ab44df6e25152896",
+      "size": 10584
     }
   }
 }

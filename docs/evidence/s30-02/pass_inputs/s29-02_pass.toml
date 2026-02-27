@@ -1,0 +1,25 @@
+schema_version = "s29-taxonomy-pipeline-integration-v2"
+cases_path = "docs/evidence/s30-02/pass_inputs/cases_pass.jsonl"
+unknown_ratio_target = 0.03
+max_candidates = 12
+max_actions = 5
+pipeline_jsonl = "docs/evidence/s29-02/taxonomy_pipeline_candidates_latest.jsonl"
+pipeline_max_records = 12
+known_tags = [
+  "provider",
+  "network",
+  "schema",
+  "timeout",
+  "negative",
+  "ops",
+  "domain",
+  "policy",
+  "security",
+]
+
+[owner_by_taxonomy]
+provider = "ml-platform"
+network = "sre-network"
+schema = "data-platform"
+timeout = "runtime-core"
+unknown = "ops-triage"

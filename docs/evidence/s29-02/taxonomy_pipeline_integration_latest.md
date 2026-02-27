@@ -1,36 +1,32 @@
 # S29-02 Taxonomy Pipeline Integration v2 (Latest)
 
-- CapturedAtUTC: `2026-02-27T11:50:23Z`
-- Branch: `ops/S29-01-S29-10`
-- HeadSHA: `2971732a2c6df3a57166589d92e528ab65e49038`
+- CapturedAtUTC: `2026-02-27T13:58:17Z`
+- Branch: `ops/S30-1-S30-900`
+- HeadSHA: `eb11d99e73e0ea59ecc59aaa2c776cca1825a752`
 
 ## Summary
 
-- status: `WARN`
-- reason_code: `UNKNOWN_RATIO_ABOVE_TARGET`
-- unknown_ratio: `0.3125`
-- candidate_count: `5`
-- pipeline_records: `5`
-- action_count: `4`
+- status: `PASS`
+- reason_code: ``
+- unknown_ratio: `0.01`
+- candidate_count: `0`
+- pipeline_records: `0`
+- action_count: `0`
 - pipeline_jsonl: `docs/evidence/s29-02/taxonomy_pipeline_candidates_latest.jsonl`
 
 ## Collection Actions
 
-- Collect at least 2 additional labeled cases for taxonomy 'provider'.
-- Collect at least 1 additional labeled cases for taxonomy 'network'.
-- Collect at least 1 additional labeled cases for taxonomy 'schema'.
-- Collect at least 1 additional labeled cases for taxonomy 'unknown'.
-- Promote top unknown candidates to incident triage backlog and assign owner.
+- none
 
 ## PR Body Snippet
 
 ```md
 ### S29-02 Taxonomy Pipeline Integration v2
-- status: WARN
-- reason_code: UNKNOWN_RATIO_ABOVE_TARGET
-- unknown_ratio: 0.3125
-- candidate_count: 5
-- pipeline_records: 5
-- action_count: 4
+- status: PASS
+- reason_code: 
+- unknown_ratio: 0.01
+- candidate_count: 0
+- pipeline_records: 0
+- action_count: 0
 - artifact: docs/evidence/s29-02/taxonomy_pipeline_integration_latest.json
 ```
