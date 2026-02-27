@@ -1,0 +1,35 @@
+{
+  "schema_version": "s27-release-readiness-schedule-v1",
+  "captured_at_utc": "2026-02-27T04:16:27Z",
+  "git": {
+    "branch": "ops/S27-01-S27-10",
+    "head": "02f0f008326b975d7100e79201a4370e4f5c81aa"
+  },
+  "trigger": "manual",
+  "commands": [
+    {
+      "label": "primary",
+      "command": "python3 scripts/ops/s27_slo_readiness.py",
+      "returncode": 0,
+      "status": "PASS",
+      "stdout_log": ".local/obs/s25-ops/s27-release-readiness-schedule/s27-release-readiness-schedule__20260227T041627Z__ops-s27-01-s27-10__02f0f00/primary.stdout.log",
+      "stderr_log": ".local/obs/s25-ops/s27-release-readiness-schedule/s27-release-readiness-schedule__20260227T041627Z__ops-s27-01-s27-10__02f0f00/primary.stderr.log",
+      "error": ""
+    }
+  ],
+  "inputs": {
+    "primary_artifact": "docs/evidence/s27-09/slo_readiness_latest.json",
+    "fallback_artifact": "docs/evidence/s26-09/release_readiness_latest.json"
+  },
+  "summary": {
+    "status": "PASS",
+    "reason_code": "",
+    "readiness": "WARN_ONLY",
+    "blocked_gates": 0,
+    "readiness_source": "docs/evidence/s27-09/slo_readiness_latest.json"
+  },
+  "artifact_names": {
+    "json": "release_readiness_schedule_latest.json",
+    "md": "release_readiness_schedule_latest.md"
+  }
+}

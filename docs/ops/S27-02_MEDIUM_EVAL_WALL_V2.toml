@@ -1,0 +1,26 @@
+schema_version = "s27-medium-eval-wall-v2"
+dataset_id = "rag-eval-wall-v2__seed-medium__v0001"
+cases_path = "data/eval/datasets/rag-eval-wall-v2__seed-medium__v0001/cases.jsonl"
+meta_path = "data/eval/datasets/rag-eval-wall-v2__seed-medium__v0001/dataset.meta.json"
+baseline_cases_path = "data/eval/datasets/rag-eval-wall-v1__seed-medium__v0001/cases.jsonl"
+
+[contract]
+min_cases = 14
+max_cases = 48
+min_must_answer_true = 10
+min_must_answer_false = 4
+min_must_cite_true = 10
+max_unknown_ratio_warn = 0.20
+
+[tag_min_counts]
+provider = 3
+network = 3
+schema = 3
+timeout = 2
+negative = 3
+
+[taxonomy_map]
+provider = ["provider"]
+network = ["network"]
+schema = ["schema"]
+timeout = ["timeout"]

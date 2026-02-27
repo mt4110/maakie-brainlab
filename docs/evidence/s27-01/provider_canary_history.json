@@ -1,0 +1,14 @@
+{
+  "schema_version": "s27-provider-canary-history-v1",
+  "updated_at_utc": "2026-02-27T04:14:21Z",
+  "runs": [
+    {
+      "captured_at_utc": "2026-02-27T04:14:21Z",
+      "status": "SKIP",
+      "reason_code": "MISSING_PROVIDER_ENV",
+      "passed_cases": 0,
+      "failed_cases": 0,
+      "skipped_cases": 2
+    }
+  ]
+}

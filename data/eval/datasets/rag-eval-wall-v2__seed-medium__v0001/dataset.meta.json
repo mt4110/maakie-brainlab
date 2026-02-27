@@ -1,0 +1,16 @@
+{
+  "dataset_id": "rag-eval-wall-v2__seed-medium__v0001",
+  "schema_version": "s27-medium-dataset-v2",
+  "eval_spec_version": "EVAL_SPEC_v1",
+  "created_utc": "2026-02-27T00:00:00Z",
+  "source": "manual-seed-medium-v2",
+  "cases_total": 16,
+  "distribution": {
+    "provider": 4,
+    "network": 4,
+    "schema": 4,
+    "timeout": 3,
+    "unknown": 1,
+    "negative": 4
+  }
+}

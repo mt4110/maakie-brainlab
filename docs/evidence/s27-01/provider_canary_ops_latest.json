@@ -1,0 +1,60 @@
+{
+  "schema_version": "s27-provider-canary-ops-result-v1",
+  "captured_at_utc": "2026-02-27T04:14:21Z",
+  "git": {
+    "branch": "ops/S27-01-S27-10",
+    "head": "02f0f008326b975d7100e79201a4370e4f5c81aa"
+  },
+  "config_path": "docs/ops/S27-01_PROVIDER_CANARY_OPS.toml",
+  "ops_policy": {
+    "window_size": 6,
+    "skip_rate_warn_threshold": 0.4,
+    "max_history_entries": 200,
+    "warn_on_recent_failures": true
+  },
+  "base": {
+    "artifact": "docs/evidence/s27-01/provider_canary_latest.json",
+    "summary": {
+      "status": "SKIP",
+      "passed_cases": 0,
+      "failed_cases": 0,
+      "skipped_cases": 2,
+      "reason_code": "MISSING_PROVIDER_ENV"
+    },
+    "execution": {
+      "command": [
+        "python3",
+        "scripts/ops/s26_provider_canary.py",
+        "--config",
+        "/Users/takemuramasaki/dev/maakie-brainlab/docs/ops/S27-01_PROVIDER_CANARY_OPS.toml",
+        "--out-dir",
+        "docs/evidence/s27-01"
+      ],
+      "returncode": 0,
+      "stdout_tail": "OK: config=/Users/takemuramasaki/dev/maakie-brainlab/docs/ops/S27-01_PROVIDER_CANARY_OPS.toml\nWARN: provider env missing=base_url,api_key,model; canary skipped\nOK: artifact_json=/Users/takemuramasaki/dev/maakie-brainlab/docs/evidence/s27-01/provider_canary_latest.json\nOK: artifact_md=/Users/takemuramasaki/dev/maakie-brainlab/docs/evidence/s27-01/provider_canary_latest.md\n",
+      "stderr_tail": ""
+    }
+  },
+  "trend": {
+    "window_size": 6,
+    "window_count": 1,
+    "skip_rate": 1.0,
+    "fail_rate": 0.0,
+    "warn_rate": 0.0,
+    "skip_runs": 1,
+    "fail_runs": 0,
+    "warn_runs": 0
+  },
+  "summary": {
+    "status": "WARN",
+    "reason_code": "SKIP_RATE_HIGH",
+    "base_status": "SKIP",
+    "base_returncode": 0,
+    "history_size": 1
+  },
+  "artifact_names": {
+    "json": "provider_canary_ops_latest.json",
+    "md": "provider_canary_ops_latest.md",
+    "history": "provider_canary_history.json"
+  }
+}
