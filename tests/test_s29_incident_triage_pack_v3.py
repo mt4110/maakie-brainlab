@@ -14,7 +14,7 @@ def _load_module():
     return module
 
 
-class S29IncidentTriagePackV2Tests(unittest.TestCase):
+class S29IncidentTriagePackV3Tests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.m = _load_module()

@@ -14,7 +14,7 @@ def _load_module():
     return module
 
 
-class S29ReliabilitySoakV2Tests(unittest.TestCase):
+class S29ReliabilitySoakV3Tests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.m = _load_module()

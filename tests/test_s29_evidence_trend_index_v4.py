@@ -14,7 +14,7 @@ def _load_module():
     return module
 
 
-class S29EvidenceTrendIndexV3Tests(unittest.TestCase):
+class S29EvidenceTrendIndexV4Tests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.m = _load_module()
