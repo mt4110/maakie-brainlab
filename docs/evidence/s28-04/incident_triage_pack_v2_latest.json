@@ -1,0 +1,50 @@
+{
+  "schema_version": "s28-incident-triage-pack-v2",
+  "captured_at_utc": "2026-02-27T07:07:33Z",
+  "git": {
+    "branch": "ops/S28-01-S28-10",
+    "head": "81102446eb5a9f461a4baf4b243286fc004d9ed4"
+  },
+  "inputs": {
+    "recovery_json": "docs/evidence/s28-01/provider_canary_recovery_latest.json",
+    "taxonomy_json": "docs/evidence/s28-02/taxonomy_feedback_loop_latest.json",
+    "notify_json": "docs/evidence/s28-03/readiness_notify_latest.json",
+    "triage_v1_json": "docs/evidence/s27-04/incident_triage_pack_latest.json"
+  },
+  "missing_inputs": [],
+  "top_reasons": [
+    {
+      "reason_code": "MISSING_PROVIDER_ENV",
+      "count": 1
+    },
+    {
+      "reason_code": "NOTIFY_DRY_RUN",
+      "count": 1
+    },
+    {
+      "reason_code": "RECOVERY_REQUIRED",
+      "count": 1
+    },
+    {
+      "reason_code": "SKIP_RATE_HIGH",
+      "count": 1
+    }
+  ],
+  "priority_actions": [
+    "Validate provider env variables and credentials wiring.",
+    "Run strict canary once and verify status transition to PASS.",
+    "Collect at least 2 additional labeled cases for taxonomy 'provider'.",
+    "Collect at least 1 additional labeled cases for taxonomy 'network'.",
+    "Configure readiness webhook and re-run notification dispatch."
+  ],
+  "summary": {
+    "status": "WARN",
+    "reason_code": "TRIAGE_ALERT",
+    "missing_inputs": 0,
+    "alerts": 4
+  },
+  "artifact_names": {
+    "json": "incident_triage_pack_v2_latest.json",
+    "md": "incident_triage_pack_v2_latest.md"
+  }
+}

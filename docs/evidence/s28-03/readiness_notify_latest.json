@@ -1,0 +1,33 @@
+{
+  "schema_version": "s28-readiness-notify-v1",
+  "captured_at_utc": "2026-02-27T07:07:33Z",
+  "git": {
+    "branch": "ops/S28-01-S28-10",
+    "head": "81102446eb5a9f461a4baf4b243286fc004d9ed4"
+  },
+  "inputs": {
+    "readiness_json": "docs/evidence/s27-09/slo_readiness_latest.json",
+    "schedule_json": "docs/evidence/s27-03/release_readiness_schedule_latest.json",
+    "webhook_env": "S28_READINESS_WEBHOOK_URL",
+    "send": false
+  },
+  "channel": "#ops-release",
+  "message": "[Ops Readiness] channel=#ops-release | readiness=WARN_ONLY | status=WARN | reason=SOFT_SLO_WARN | blocked_total=0 | schedule_status=PASS | schedule_reason=",
+  "notification": {
+    "attempted": false,
+    "sent": false,
+    "http_status": 0,
+    "response_tail": "",
+    "error": ""
+  },
+  "summary": {
+    "status": "WARN",
+    "reason_code": "NOTIFY_DRY_RUN",
+    "notify_sent": false,
+    "readiness": "WARN_ONLY"
+  },
+  "artifact_names": {
+    "json": "readiness_notify_latest.json",
+    "md": "readiness_notify_latest.md"
+  }
+}

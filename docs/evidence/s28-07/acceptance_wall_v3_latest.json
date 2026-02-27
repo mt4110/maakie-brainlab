@@ -1,0 +1,184 @@
+{
+  "schema_version": "s28-acceptance-wall-v3",
+  "captured_at_utc": "2026-02-27T07:07:33.485965+00:00",
+  "git": {
+    "branch": "ops/S28-01-S28-10",
+    "head": "81102446eb5a9f461a4baf4b243286fc004d9ed4"
+  },
+  "cases_file": "docs/ops/S28-07_ACCEPTANCE_CASES_V3.json",
+  "summary": {
+    "status": "PASS",
+    "reason_code": "",
+    "total_cases": 6,
+    "passed_cases": 6,
+    "failed_cases": 0,
+    "critical_failed": 0,
+    "severity_failed": {
+      "critical": 0,
+      "major": 0,
+      "minor": 0
+    },
+    "failure_counts": {}
+  },
+  "cases": [
+    {
+      "case_id": "S28A-001",
+      "title": "provider recovery strategy is actionable",
+      "severity": "critical",
+      "fallback": "Run S28-01 and inspect trailing streak plus recommended actions.",
+      "status": "PASS",
+      "reason_code": "",
+      "artifact": "docs/evidence/s28-01/provider_canary_recovery_latest.json",
+      "assertion": {
+        "path": "summary.status",
+        "op": "in",
+        "value": [
+          "PASS",
+          "WARN"
+        ]
+      },
+      "actual": "WARN",
+      "log_path": "s28a-001.log"
+    },
+    {
+      "case_id": "S28A-002",
+      "title": "taxonomy feedback loop remains non-failing",
+      "severity": "critical",
+      "fallback": "Recheck S28-02 config and unknown candidate extraction.",
+      "status": "PASS",
+      "reason_code": "",
+      "artifact": "docs/evidence/s28-02/taxonomy_feedback_loop_latest.json",
+      "assertion": {
+        "path": "summary.status",
+        "op": "in",
+        "value": [
+          "PASS",
+          "WARN"
+        ]
+      },
+      "actual": "PASS",
+      "log_path": "s28a-002.log"
+    },
+    {
+      "case_id": "S28A-003",
+      "title": "readiness notify produces message payload",
+      "severity": "major",
+      "fallback": "Run S28-03 with --send after configuring webhook env.",
+      "status": "PASS",
+      "reason_code": "",
+      "artifact": "docs/evidence/s28-03/readiness_notify_latest.json",
+      "assertion": {
+        "path": "message",
+        "op": "contains",
+        "value": "readiness"
+      },
+      "actual": "[Ops Readiness] channel=#ops-release | readiness=WARN_ONLY | status=WARN | reason=SOFT_SLO_WARN | blocked_total=0 | schedule_status=PASS | schedule_reason=",
+      "log_path": "s28a-003.log"
+    },
+    {
+      "case_id": "S28A-004",
+      "title": "triage v2 exports priority actions",
+      "severity": "major",
+      "fallback": "Run S28-04 and verify priority_actions is populated.",
+      "status": "PASS",
+      "reason_code": "",
+      "artifact": "docs/evidence/s28-04/incident_triage_pack_v2_latest.json",
+      "assertion": {
+        "path": "priority_actions",
+        "op": "truthy",
+        "value": true
+      },
+      "actual": {
+        "schema_version": "s28-incident-triage-pack-v2",
+        "captured_at_utc": "2026-02-27T07:07:33Z",
+        "git": {
+          "branch": "ops/S28-01-S28-10",
+          "head": "81102446eb5a9f461a4baf4b243286fc004d9ed4"
+        },
+        "inputs": {
+          "recovery_json": "docs/evidence/s28-01/provider_canary_recovery_latest.json",
+          "taxonomy_json": "docs/evidence/s28-02/taxonomy_feedback_loop_latest.json",
+          "notify_json": "docs/evidence/s28-03/readiness_notify_latest.json",
+          "triage_v1_json": "docs/evidence/s27-04/incident_triage_pack_latest.json"
+        },
+        "missing_inputs": [],
+        "top_reasons": [
+          {
+            "reason_code": "MISSING_PROVIDER_ENV",
+            "count": 1
+          },
+          {
+            "reason_code": "NOTIFY_DRY_RUN",
+            "count": 1
+          },
+          {
+            "reason_code": "RECOVERY_REQUIRED",
+            "count": 1
+          },
+          {
+            "reason_code": "SKIP_RATE_HIGH",
+            "count": 1
+          }
+        ],
+        "priority_actions": [
+          "Validate provider env variables and credentials wiring.",
+          "Run strict canary once and verify status transition to PASS.",
+          "Collect at least 2 additional labeled cases for taxonomy 'provider'.",
+          "Collect at least 1 additional labeled cases for taxonomy 'network'.",
+          "Configure readiness webhook and re-run notification dispatch."
+        ],
+        "summary": {
+          "status": "WARN",
+          "reason_code": "TRIAGE_ALERT",
+          "missing_inputs": 0,
+          "alerts": 4
+        },
+        "artifact_names": {
+          "json": "incident_triage_pack_v2_latest.json",
+          "md": "incident_triage_pack_v2_latest.md"
+        }
+      },
+      "log_path": "s28a-004.log"
+    },
+    {
+      "case_id": "S28A-005",
+      "title": "policy drift guard v2 is non-failing by default",
+      "severity": "minor",
+      "fallback": "Run S28-05 with baseline update and inspect drift classification.",
+      "status": "PASS",
+      "reason_code": "",
+      "artifact": "docs/evidence/s28-05/policy_drift_guard_v2_latest.json",
+      "assertion": {
+        "path": "summary.status",
+        "op": "neq",
+        "value": "FAIL"
+      },
+      "actual": "WARN",
+      "log_path": "s28a-005.log"
+    },
+    {
+      "case_id": "S28A-006",
+      "title": "soak v2 remains actionable",
+      "severity": "major",
+      "fallback": "Run S28-06 and inspect max_consecutive_nonpass + reason_code.",
+      "status": "PASS",
+      "reason_code": "",
+      "artifact": "docs/evidence/s28-06/reliability_soak_v2_latest.json",
+      "assertion": {
+        "path": "summary.status",
+        "op": "in",
+        "value": [
+          "PASS",
+          "WARN"
+        ]
+      },
+      "actual": "WARN",
+      "log_path": "s28a-006.log"
+    }
+  ],
+  "artifact_names": {
+    "json": "acceptance_wall_v3_latest.json",
+    "md": "acceptance_wall_v3_latest.md",
+    "run_dir": ".local/obs/s25-ops/s28-acceptance-wall-v3/s28-acceptance-wall-v3__20260227T070733Z__ops-s28-01-s28-10__8110244"
+  }
+}

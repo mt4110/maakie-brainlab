@@ -1,0 +1,122 @@
+{
+  "schema_version": "s28-slo-readiness-v2",
+  "captured_at_utc": "2026-02-27T07:07:44Z",
+  "git": {
+    "branch": "ops/S28-01-S28-10",
+    "head": "81102446eb5a9f461a4baf4b243286fc004d9ed4"
+  },
+  "inputs": {
+    "S28-01": "docs/evidence/s28-01/provider_canary_recovery_latest.json",
+    "S28-02": "docs/evidence/s28-02/taxonomy_feedback_loop_latest.json",
+    "S28-03": "docs/evidence/s28-03/readiness_notify_latest.json",
+    "S28-04": "docs/evidence/s28-04/incident_triage_pack_v2_latest.json",
+    "S28-05": "docs/evidence/s28-05/policy_drift_guard_v2_latest.json",
+    "S28-06": "docs/evidence/s28-06/reliability_soak_v2_latest.json",
+    "S28-07": "docs/evidence/s28-07/acceptance_wall_v3_latest.json",
+    "S28-08": "docs/evidence/s28-08/evidence_trend_index_v3_latest.json"
+  },
+  "missing_phases": [],
+  "stale_phases": [],
+  "gates": [
+    {
+      "phase": "S28-01",
+      "gate": "status must not be FAIL/MISSING",
+      "actual": "WARN",
+      "passed": true
+    },
+    {
+      "phase": "S28-02",
+      "gate": "status must not be FAIL/MISSING",
+      "actual": "PASS",
+      "passed": true
+    },
+    {
+      "phase": "S28-03",
+      "gate": "status must not be FAIL/MISSING",
+      "actual": "WARN",
+      "passed": true
+    },
+    {
+      "phase": "S28-04",
+      "gate": "status must not be FAIL/MISSING",
+      "actual": "WARN",
+      "passed": true
+    },
+    {
+      "phase": "S28-05",
+      "gate": "status must not be FAIL/MISSING",
+      "actual": "WARN",
+      "passed": true
+    },
+    {
+      "phase": "S28-06",
+      "gate": "status must not be FAIL/MISSING",
+      "actual": "WARN",
+      "passed": true
+    },
+    {
+      "phase": "S28-07",
+      "gate": "status must not be FAIL/MISSING",
+      "actual": "PASS",
+      "passed": true
+    },
+    {
+      "phase": "S28-08",
+      "gate": "status must not be FAIL/MISSING",
+      "actual": "WARN",
+      "passed": true
+    }
+  ],
+  "metrics": {
+    "skip_rate": 1.0,
+    "unknown_ratio": 0.0625,
+    "acceptance_pass_rate": 1.0,
+    "acceptance_passed": 6,
+    "acceptance_total": 6,
+    "notify_delivery_rate": 0.0
+  },
+  "slo": {
+    "hard_violations": [],
+    "soft_violations": [
+      {
+        "metric": "skip_rate",
+        "value": 1.0,
+        "threshold": 0.5,
+        "rule": "value <= soft"
+      },
+      {
+        "metric": "notify_delivery_rate",
+        "value": 0.0,
+        "threshold": 1.0,
+        "rule": "value >= soft"
+      }
+    ],
+    "thresholds": {
+      "skip_rate_soft": 0.5,
+      "skip_rate_hard": 1.0,
+      "unknown_ratio_soft": 0.1,
+      "unknown_ratio_hard": 0.25,
+      "acceptance_pass_rate_soft": 0.95,
+      "acceptance_pass_rate_hard": 0.85,
+      "notify_delivery_soft": 1.0,
+      "notify_delivery_hard": 0.0
+    }
+  },
+  "summary": {
+    "readiness": "WARN_ONLY",
+    "status": "WARN",
+    "reason_code": "SOFT_SLO_WARN",
+    "total_gates": 8,
+    "passed_gates": 8,
+    "blocked_gates": 0,
+    "blocked_total": 0,
+    "hard_block_count": 0,
+    "soft_warn_count": 2,
+    "missing_count": 0,
+    "stale_count": 0
+  },
+  "artifact_names": {
+    "json": "slo_readiness_v2_latest.json",
+    "md": "slo_readiness_v2_latest.md"
+  }
+}

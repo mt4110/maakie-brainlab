@@ -1,0 +1,94 @@
+{
+  "schema_version": "s28-taxonomy-feedback-loop-v1",
+  "captured_at_utc": "2026-02-27T07:07:33Z",
+  "git": {
+    "branch": "ops/S28-01-S28-10",
+    "head": "81102446eb5a9f461a4baf4b243286fc004d9ed4"
+  },
+  "inputs": {
+    "config": "docs/ops/S28-02_TAXONOMY_FEEDBACK_LOOP.toml",
+    "medium_json": "docs/evidence/s27-02/medium_eval_wall_v2_latest.json",
+    "cases_path": "data/eval/datasets/rag-eval-wall-v2__seed-medium__v0001/cases.jsonl",
+    "known_tags": [
+      "domain",
+      "negative",
+      "network",
+      "ops",
+      "policy",
+      "provider",
+      "schema",
+      "security",
+      "timeout"
+    ],
+    "unknown_ratio_target": 0.1
+  },
+  "metrics": {
+    "unknown_ratio": 0.0625,
+    "candidate_count": 5,
+    "total_cases_scanned": 16
+  },
+  "candidates": [
+    {
+      "case_id": "m203",
+      "tags": [
+        "basic",
+        "schema"
+      ],
+      "query": "レスポンス JSON のキー欠落時に優先して確認すべき箇所は？",
+      "suggested_taxonomy": "schema"
+    },
+    {
+      "case_id": "m205",
+      "tags": [
+        "provider",
+        "basic"
+      ],
+      "query": "provider 実接続 canary が SKIP のときに記録すべき項目は？",
+      "suggested_taxonomy": "provider"
+    },
+    {
+      "case_id": "m213",
+      "tags": [
+        "domain",
+        "medical",
+        "provider"
+      ],
+      "query": "医療AIの可用性指標で provider 障害をどう扱うべきですか？",
+      "suggested_taxonomy": "provider"
+    },
+    {
+      "case_id": "m214",
+      "tags": [
+        "domain",
+        "finance",
+        "network"
+      ],
+      "query": "金融レポートの更新遅延が network 起因かを判定する観点は？",
+      "suggested_taxonomy": "network"
+    },
+    {
+      "case_id": "m216",
+      "tags": [
+        "ops",
+        "unknown"
+      ],
+      "query": "未知エラーコード X999 が出たときの初動は？",
+      "suggested_taxonomy": "unknown"
+    }
+  ],
+  "collection_actions": [
+    "Collect at least 2 additional labeled cases for taxonomy 'provider'.",
+    "Collect at least 1 additional labeled cases for taxonomy 'network'.",
+    "Collect at least 1 additional labeled cases for taxonomy 'schema'.",
+    "Collect at least 1 additional labeled cases for taxonomy 'unknown'."
+  ],
+  "summary": {
+    "status": "PASS",
+    "reason_code": "",
+    "missing_inputs": 0
+  },
+  "artifact_names": {
+    "json": "taxonomy_feedback_loop_latest.json",
+    "md": "taxonomy_feedback_loop_latest.md"
+  }
+}
