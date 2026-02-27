@@ -77,6 +77,18 @@ def validate_config(cfg: Dict[str, Any]) -> Tuple[bool, str]:
     tag_min = cfg.get("tag_min_counts")
     if not isinstance(tag_min, dict) or not tag_min:
         return False, "tag_min_counts missing"
+    for key, value in tag_min.items():
+        tag = str(key).strip()
+        if not tag:
+            return False, "tag_min_counts key invalid"
+        if isinstance(value, bool):
+            return False, f"tag_min_counts.{tag} invalid"
+        try:
+            min_count = int(value)
+        except Exception:
+            return False, f"tag_min_counts.{tag} invalid"
+        if min_count < 0:
+            return False, f"tag_min_counts.{tag} must be >=0"
 
     taxonomy_map = cfg.get("taxonomy_map")
     if not isinstance(taxonomy_map, dict) or not taxonomy_map:
@@ -205,7 +217,14 @@ def validate_contract(dist: Dict[str, Any], contract: Dict[str, Any], tag_min_co
 
     got_tags = dict(dist.get("tag_counts", {}))
     for tag, min_count_raw in dict(tag_min_counts).items():
-        min_count = int(min_count_raw)
+        try:
+            min_count = int(min_count_raw)
+        except Exception:
+            errs.append(f"tag {tag} min invalid")
+            continue
+        if min_count < 0:
+            errs.append(f"tag {tag} min invalid")
+            continue
         have = int(got_tags.get(str(tag), 0))
         if have < min_count:
             errs.append(f"tag {tag} below min: {have} < {min_count}")

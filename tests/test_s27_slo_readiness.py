@@ -48,6 +48,14 @@ class S27SLOReadinessTests(unittest.TestCase):
         self.assertEqual(len(rows), 8)
         self.assertFalse(next(r for r in rows if r["phase"] == "S27-03")["passed"])
 
+    def test_infer_status_unknown_summary_returns_missing(self):
+        self.assertEqual(self.m.infer_status({"summary": {"status": "???"}}), "MISSING")
+        self.assertEqual(self.m.infer_status({"summary": {}}), "MISSING")
+
+    def test_compute_blocked_total(self):
+        out = self.m.compute_blocked_total(3, [{"metric": "skip_rate"}, {"metric": "unknown_ratio"}])
+        self.assertEqual(out, 5)
+
 
 if __name__ == "__main__":
     unittest.main()

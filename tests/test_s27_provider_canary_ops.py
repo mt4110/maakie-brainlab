@@ -51,6 +51,16 @@ class S27ProviderCanaryOpsTests(unittest.TestCase):
         self.assertEqual(out["status"], "WARN")
         self.assertEqual(out["reason_code"], self.m.REASON_SKIP_RATE_HIGH)
 
+    def test_sanitize_repo_paths_and_command(self):
+        repo_root = Path("/tmp/repo")
+        root_text = str(repo_root.resolve())
+        raw = f"{root_text}/docs/evidence/out.json"
+        self.assertEqual(self.m.sanitize_repo_paths(repo_root, raw), "docs/evidence/out.json")
+        cmd = ["python3", f"{root_text}/scripts/ops/tool.py", "--config", f"{root_text}/docs/ops/cfg.toml"]
+        out = self.m.sanitize_command_args(repo_root, cmd)
+        self.assertEqual(out[1], "scripts/ops/tool.py")
+        self.assertEqual(out[3], "docs/ops/cfg.toml")
+
     def test_main_handles_invalid_config(self):
         repo_root = Path(__file__).resolve().parents[1]
         with tempfile.TemporaryDirectory() as td:

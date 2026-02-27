@@ -71,8 +71,12 @@ def is_stale_artifact(doc: Dict[str, Any], current_head: str) -> bool:
 def infer_status(doc: Dict[str, Any]) -> str:
     summary = dict(doc.get("summary", {}))
     status = str(summary.get("status") or "").upper().strip()
-    if status:
+    if status in {"PASS", "WARN", "FAIL", "SKIP", "MISSING"}:
         return status
+    if status in {"OK", "SUCCESS"}:
+        return "PASS"
+    if status in {"ERROR"}:
+        return "FAIL"
     readiness = str(summary.get("readiness") or "").upper().strip()
     if readiness == "READY":
         return "PASS"
@@ -80,7 +84,11 @@ def infer_status(doc: Dict[str, Any]) -> str:
         return "WARN"
     if readiness == "BLOCKED":
         return "FAIL"
-    return "PASS"
+    return "MISSING"
+
+
+def compute_blocked_total(blocked_gates: int, hard_violations: List[Dict[str, Any]]) -> int:
+    return int(blocked_gates) + len(list(hard_violations))
 
 
 def build_gate_rows(docs: Dict[str, Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -328,7 +336,7 @@ def main() -> int:
             "total_gates": len(gates),
             "passed_gates": passed_gates,
             "blocked_gates": blocked_gates,
-            "blocked_total": blocked_gates + len(hard) + len(missing) + len(stale),
+            "blocked_total": compute_blocked_total(blocked_gates, hard),
             "hard_block_count": len(hard),
             "soft_warn_count": len(soft),
             "missing_count": len(missing),

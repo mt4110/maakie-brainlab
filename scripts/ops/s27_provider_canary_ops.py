@@ -68,6 +68,18 @@ def read_json_if_exists(path: Path) -> Dict[str, Any]:
     return obj if isinstance(obj, dict) else {}
 
 
+def sanitize_repo_paths(repo_root: Path, text: str) -> str:
+    value = str(text or "")
+    prefix = str(repo_root.resolve()).rstrip("/") + "/"
+    if prefix and prefix in value:
+        value = value.replace(prefix, "")
+    return value
+
+
+def sanitize_command_args(repo_root: Path, command: List[str]) -> List[str]:
+    return [sanitize_repo_paths(repo_root, str(x)) for x in list(command or [])]
+
+
 def validate_config(cfg: Dict[str, Any]) -> str:
     if str(cfg.get("schema_version") or "") != "s26-provider-canary-v1":
         return "schema_version must keep s26-provider-canary-v1 for compatibility"
@@ -98,11 +110,12 @@ def validate_config(cfg: Dict[str, Any]) -> str:
 
 
 def run_base_canary(repo_root: Path, config_path: Path, out_dir: Path, strict_provider_env: bool, timeout_sec: int) -> Dict[str, Any]:
+    config_arg = to_repo_rel(repo_root, config_path) or str(config_path)
     cmd = [
         "python3",
         "scripts/ops/s26_provider_canary.py",
         "--config",
-        str(config_path),
+        config_arg,
         "--out-dir",
         to_repo_rel(repo_root, out_dir),
     ]
@@ -255,7 +268,7 @@ def write_failure_artifacts(repo_root: Path, out_dir: Path, reason_code: str, me
             "base_status": "",
             "base_returncode": 1,
             "history_size": 0,
-            "errors": [message],
+            "errors": [sanitize_repo_paths(repo_root, message)],
         },
         "artifact_names": {
             "json": "provider_canary_ops_latest.json",
@@ -362,6 +375,8 @@ def main() -> int:
     else:
         emit("OK", "ops status=PASS", events)
 
+    stdout_sanitized = sanitize_repo_paths(repo_root, str(base_exec.get("stdout") or ""))
+    stderr_sanitized = sanitize_repo_paths(repo_root, str(base_exec.get("stderr") or ""))
     payload: Dict[str, Any] = {
         "schema_version": "s27-provider-canary-ops-result-v1",
         "captured_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
@@ -380,10 +395,10 @@ def main() -> int:
             "artifact": to_repo_rel(repo_root, base_artifact),
             "summary": base_summary,
             "execution": {
-                "command": base_exec["command"],
+                "command": sanitize_command_args(repo_root, list(base_exec["command"])),
                 "returncode": base_exec["returncode"],
-                "stdout_tail": (base_exec["stdout"] or "")[-1000:],
-                "stderr_tail": (base_exec["stderr"] or "")[-1000:],
+                "stdout_tail": stdout_sanitized[-1000:],
+                "stderr_tail": stderr_sanitized[-1000:],
             },
         },
         "history": {

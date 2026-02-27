@@ -32,6 +32,8 @@ REASON_PRIMARY_FAILED = "PRIMARY_FAILED"
 REASON_PRIMARY_AND_FALLBACK_FAILED = "PRIMARY_AND_FALLBACK_FAILED"
 REASON_FALLBACK_USED = "FALLBACK_USED"
 REASON_READINESS_MISSING = "READINESS_MISSING"
+REASON_READINESS_BLOCKED = "READINESS_BLOCKED"
+REASON_READINESS_WARN = "READINESS_WARN"
 
 
 def to_repo_rel(repo_root: Path, value: str | Path) -> str:
@@ -112,6 +114,15 @@ def summarize_readiness(doc: Dict[str, Any]) -> Dict[str, Any]:
         "blocked": blocked_int,
         "raw_summary": summary,
     }
+
+
+def status_from_readiness(readiness: str) -> Dict[str, str]:
+    value = str(readiness or "").upper().strip()
+    if value in {"BLOCKED", "FAIL"}:
+        return {"status": "FAIL", "reason_code": REASON_READINESS_BLOCKED}
+    if value in {"WARN", "WARN_ONLY", "SKIP"}:
+        return {"status": "WARN", "reason_code": REASON_READINESS_WARN}
+    return {"status": "PASS", "reason_code": ""}
 
 
 def build_markdown(payload: Dict[str, Any]) -> str:
@@ -201,17 +212,26 @@ def main() -> int:
     if primary_doc:
         readiness_summary = summarize_readiness(primary_doc)
         readiness_source = to_repo_rel(repo_root, primary_artifact_path)
+        readiness_state = status_from_readiness(str(readiness_summary.get("readiness") or ""))
+        status = str(readiness_state.get("status") or "PASS")
+        reason_code = str(readiness_state.get("reason_code") or "")
         if primary_status == "FAIL" and fallback_status == "FAIL":
             status = "FAIL"
             reason_code = REASON_PRIMARY_AND_FALLBACK_FAILED
-        elif primary_status == "FAIL":
+        elif primary_status == "FAIL" and status != "FAIL":
             status = "WARN"
             reason_code = REASON_PRIMARY_FAILED
     elif fallback_doc:
         readiness_summary = summarize_readiness(fallback_doc)
         readiness_source = to_repo_rel(repo_root, fallback_artifact_path)
-        status = "WARN"
-        reason_code = REASON_FALLBACK_USED
+        readiness_state = status_from_readiness(str(readiness_summary.get("readiness") or ""))
+        status = str(readiness_state.get("status") or "PASS")
+        reason_code = str(readiness_state.get("reason_code") or "")
+        if status == "PASS":
+            status = "WARN"
+            reason_code = REASON_FALLBACK_USED
+        elif status == "WARN" and reason_code == REASON_READINESS_WARN:
+            reason_code = REASON_FALLBACK_USED
     else:
         status = "FAIL"
         reason_code = REASON_READINESS_MISSING
