@@ -6,6 +6,7 @@ Generate S25-04 observability summary for PR body from latest obs runs.
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import json
 from pathlib import Path
 from typing import Any, Dict, List
@@ -44,6 +45,20 @@ def _load_json(path: Path) -> Dict[str, Any]:
         return {}
 
 
+def parse_utc_like(value: str) -> dt.datetime:
+    text = (value or "").strip()
+    if not text:
+        return dt.datetime.fromtimestamp(0, tz=dt.timezone.utc)
+    fixed = text[:-1] + "+00:00" if text.endswith("Z") else text
+    try:
+        parsed = dt.datetime.fromisoformat(fixed)
+    except Exception:
+        return dt.datetime.fromtimestamp(0, tz=dt.timezone.utc)
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=dt.timezone.utc)
+    return parsed.astimezone(dt.timezone.utc)
+
+
 def collect_latest_tool_summaries(repo_root: Path, obs_root: str) -> Dict[str, Dict[str, Any]]:
     root = (repo_root / obs_root).resolve()
     found: Dict[str, Dict[str, Any]] = {}
@@ -54,9 +69,10 @@ def collect_latest_tool_summaries(repo_root: Path, obs_root: str) -> Dict[str, D
         if not obj:
             continue
         tool = str(obj.get("tool") or "unknown")
-        now_ts = str(obj.get("captured_at_utc") or "")
+        now_ts = parse_utc_like(str(obj.get("captured_at_utc") or ""))
         prev = found.get(tool)
-        if prev is None or now_ts >= str(prev.get("captured_at_utc") or ""):
+        prev_ts = parse_utc_like(str(prev.get("captured_at_utc") or "")) if prev else None
+        if prev is None or (prev_ts is not None and now_ts >= prev_ts):
             found[tool] = obj
     return found
 

@@ -147,7 +147,7 @@ def build_markdown(result: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def main() -> None:
+def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-dir", default="docs/evidence/s25-05", help="Output directory")
     parser.add_argument("--obs-root", default=DEFAULT_OBS_ROOT, help="Observability root directory")
@@ -242,10 +242,12 @@ def main() -> None:
         },
     )
     print(f"OK: obs_events={events_path}", flush=True)
+    return 0 if stop == 0 else 1
 
 
 if __name__ == "__main__":
     try:
-        main()
+        raise SystemExit(main())
     except Exception as exc:
         print(f"ERROR: unhandled exception err={exc}", flush=True)
+        raise SystemExit(1)

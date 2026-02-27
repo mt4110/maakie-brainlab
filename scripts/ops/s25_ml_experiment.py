@@ -15,6 +15,7 @@ import datetime as dt
 import json
 import os
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -141,7 +142,7 @@ def build_bench_cmd(repo_root: Path, run_dir: Path, tpl: Dict[str, Any], seed_ov
     out_dir.mkdir(parents=True, exist_ok=True)
 
     cmd = [
-        "python3",
+        sys.executable,
         str((repo_root / "scripts" / "il_compile_bench.py").resolve()),
         "--cases",
         str(cases_path),
@@ -267,7 +268,7 @@ def build_markdown(payload: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def main() -> None:
+def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--template", default=DEFAULT_TEMPLATE)
     parser.add_argument("--out-dir", default=DEFAULT_OUT_DIR)
@@ -286,7 +287,7 @@ def main() -> None:
         emit("ERROR", f"template missing path={template_path}", events)
         write_events(run_dir, events)
         write_summary(run_dir, meta, events, extra={"stop": 1, "reason_code": REASON_TEMPLATE_INVALID})
-        return
+        return 1
 
     tpl = load_template(template_path)
     ok_tpl, why = validate_template(tpl)
@@ -294,7 +295,7 @@ def main() -> None:
         emit("ERROR", f"template invalid reason={why}", events)
         write_events(run_dir, events)
         write_summary(run_dir, meta, events, extra={"stop": 1, "reason_code": REASON_TEMPLATE_INVALID})
-        return
+        return 1
     emit("OK", f"template={template_path}", events)
 
     cmd = build_bench_cmd(repo_root, run_dir, tpl, seed_override=args.seed)
@@ -400,10 +401,12 @@ def main() -> None:
         },
     )
     print(f"OK: obs_events={events_path}", flush=True)
+    return 0 if status == "PASS" else 1
 
 
 if __name__ == "__main__":
     try:
-        main()
+        raise SystemExit(main())
     except Exception as exc:
         print(f"ERROR: unhandled exception err={exc}", flush=True)
+        raise SystemExit(1)

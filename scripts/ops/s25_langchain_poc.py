@@ -15,6 +15,7 @@ import json
 import re
 import sqlite3
 import subprocess
+import sys
 import time
 from pathlib import Path, PurePosixPath
 from typing import Any, Dict, List, Tuple
@@ -214,7 +215,7 @@ def build_sqlite_index(
     timeout_sec: int,
 ) -> Tuple[int, str]:
     cmd = [
-        "python3",
+        sys.executable,
         str((repo_root / "src" / "build_index.py").resolve()),
         "--raw-dir",
         str(raw_dir),
@@ -477,7 +478,7 @@ def build_markdown(payload: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def main() -> None:
+def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default=DEFAULT_CONFIG)
     parser.add_argument("--out-dir", default=DEFAULT_OUT_DIR)
@@ -500,7 +501,7 @@ def main() -> None:
         emit("ERROR", f"config missing path={config_path}", events)
         write_events(run_dir, events)
         write_summary(run_dir, meta, events, extra={"stop": 1, "reason_code": REASON_CONFIG_INVALID})
-        return
+        return 1
 
     cfg = _read_toml(config_path)
     ok, why = validate_config(cfg)
@@ -508,7 +509,7 @@ def main() -> None:
         emit("ERROR", f"config invalid reason={why}", events)
         write_events(run_dir, events)
         write_summary(run_dir, meta, events, extra={"stop": 1, "reason_code": REASON_CONFIG_INVALID})
-        return
+        return 1
     emit("OK", f"config={config_path}", events)
 
     docs = list(cfg.get("docs", []))
@@ -522,7 +523,7 @@ def main() -> None:
         emit("ERROR", f"materialize_docs failed err={exc}", events)
         write_events(run_dir, events)
         write_summary(run_dir, meta, events, extra={"stop": 1, "reason_code": REASON_CONFIG_INVALID})
-        return
+        return 1
     emit("OK", f"raw_docs_materialized={raw_dir}", events)
 
     index_dir = run_dir / "index"
@@ -544,7 +545,7 @@ def main() -> None:
         emit("ERROR", "build_index failed", events)
         write_events(run_dir, events)
         write_summary(run_dir, meta, events, extra={"stop": 1, "reason_code": REASON_BUILD_INDEX_FAILED})
-        return
+        return 1
     emit("OK", f"db_path={db_path}", events)
 
     question = str(smoke_cfg.get("question") or "")
@@ -653,10 +654,12 @@ def main() -> None:
         },
     )
     print(f"OK: obs_events={events_path}", flush=True)
+    return 0 if status == "PASS" else 1
 
 
 if __name__ == "__main__":
     try:
-        main()
+        raise SystemExit(main())
     except Exception as exc:
         print(f"ERROR: unhandled exception err={exc}", flush=True)
+        raise SystemExit(1)

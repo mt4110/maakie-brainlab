@@ -1,9 +1,9 @@
 {
   "schema_version": "s25-rag-tuning-loop-v1",
-  "captured_at_utc": "2026-02-27T01:11:51Z",
+  "captured_at_utc": "2026-02-27T01:15:35Z",
   "git": {
     "branch": "ops/S25-01-25-10",
-    "head": "3261f6f9720514bfcedefa08c1beb8be2b1ed3c3"
+    "head": "ae5c5b867e5927c416478a5e6ec3ab64bc3386cc"
   },
   "config_path": "docs/ops/S25-08_RAG_TUNING.toml",
   "config_snapshot": {
@@ -69,17 +69,17 @@
       "status": "PASS",
       "reason_code": "",
       "build_rc": 0,
-      "build_log": ".local/obs/s25-ops/rag-tuning/rag-tuning__20260227T011151Z__ops-s25-01-25-10__3261f6f/baseline_build_index.log",
+      "build_log": ".local/obs/s25-ops/rag-tuning/rag-tuning__20260227T011535Z__ops-s25-01-25-10__ae5c5b8/baseline_build_index.log",
       "metrics": {
         "cases_total": 4,
         "cases_with_expected_source": 4,
         "hit_cases": 4,
         "hit_rate": 1.0,
-        "avg_latency_ms": 0.721520758816041,
+        "avg_latency_ms": 0.7710522477282211,
         "chunk_size": 1200,
         "overlap": 200,
         "top_k": 1,
-        "db_path": ".local/obs/s25-ops/rag-tuning/rag-tuning__20260227T011151Z__ops-s25-01-25-10__3261f6f/indexes/baseline/index.sqlite3"
+        "db_path": ".local/obs/s25-ops/rag-tuning/rag-tuning__20260227T011535Z__ops-s25-01-25-10__ae5c5b8/indexes/baseline/index.sqlite3"
       },
       "cases": [
         {
@@ -87,40 +87,40 @@
           "query": "hello.md の要点を教えてください。",
           "expected_source": "hello.md",
           "retrieved_sources": [
-            ".local/obs/s25-ops/rag-tuning/rag-tuning__20260227T011151Z__ops-s25-01-25-10__3261f6f/raw_docs/hello.md#chunk-0"
+            ".local/obs/s25-ops/rag-tuning/rag-tuning__20260227T011535Z__ops-s25-01-25-10__ae5c5b8/raw_docs/hello.md#chunk-0"
           ],
           "matched": true,
-          "latency_ms": 1.313
+          "latency_ms": 1.272
         },
         {
           "id": "R02",
           "query": "RAG の正式名称は何ですか？",
           "expected_source": "hello.md",
           "retrieved_sources": [
-            ".local/obs/s25-ops/rag-tuning/rag-tuning__20260227T011151Z__ops-s25-01-25-10__3261f6f/raw_docs/hello.md#chunk-0"
+            ".local/obs/s25-ops/rag-tuning/rag-tuning__20260227T011535Z__ops-s25-01-25-10__ae5c5b8/raw_docs/hello.md#chunk-0"
           ],
           "matched": true,
-          "latency_ms": 0.476
+          "latency_ms": 0.649
         },
         {
           "id": "R03",
           "query": "sample_note.md のバナナ価格を教えてください。",
           "expected_source": "sample_note.md",
           "retrieved_sources": [
-            ".local/obs/s25-ops/rag-tuning/rag-tuning__20260227T011151Z__ops-s25-01-25-10__3261f6f/raw_docs/sample_note.md#chunk-0"
+            ".local/obs/s25-ops/rag-tuning/rag-tuning__20260227T011535Z__ops-s25-01-25-10__ae5c5b8/raw_docs/sample_note.md#chunk-0"
           ],
           "matched": true,
-          "latency_ms": 0.578
+          "latency_ms": 0.596
         },
         {
           "id": "R04",
           "query": "ingest のあとに何が走りますか？",
           "expected_source": "sample_note.md",
           "retrieved_sources": [
-            ".local/obs/s25-ops/rag-tuning/rag-tuning__20260227T011151Z__ops-s25-01-25-10__3261f6f/raw_docs/sample_note.md#chunk-0"
+            ".local/obs/s25-ops/rag-tuning/rag-tuning__20260227T011535Z__ops-s25-01-25-10__ae5c5b8/raw_docs/sample_note.md#chunk-0"
           ],
           "matched": true,
-          "latency_ms": 0.519
+          "latency_ms": 0.567
         }
       ]
     },
@@ -128,17 +128,17 @@
       "status": "PASS",
       "reason_code": "",
       "build_rc": 0,
-      "build_log": ".local/obs/s25-ops/rag-tuning/rag-tuning__20260227T011151Z__ops-s25-01-25-10__3261f6f/candidate_build_index.log",
+      "build_log": ".local/obs/s25-ops/rag-tuning/rag-tuning__20260227T011535Z__ops-s25-01-25-10__ae5c5b8/candidate_build_index.log",
       "metrics": {
         "cases_total": 4,
         "cases_with_expected_source": 4,
         "hit_cases": 4,
         "hit_rate": 1.0,
-        "avg_latency_ms": 0.575801997911185,
+        "avg_latency_ms": 0.5602605015155859,
         "chunk_size": 800,
         "overlap": 100,
         "top_k": 3,
-        "db_path": ".local/obs/s25-ops/rag-tuning/rag-tuning__20260227T011151Z__ops-s25-01-25-10__3261f6f/indexes/candidate/index.sqlite3"
+        "db_path": ".local/obs/s25-ops/rag-tuning/rag-tuning__20260227T011535Z__ops-s25-01-25-10__ae5c5b8/indexes/candidate/index.sqlite3"
       },
       "cases": [
         {
@@ -146,40 +146,40 @@
           "query": "hello.md の要点を教えてください。",
           "expected_source": "hello.md",
           "retrieved_sources": [
-            ".local/obs/s25-ops/rag-tuning/rag-tuning__20260227T011151Z__ops-s25-01-25-10__3261f6f/raw_docs/hello.md#chunk-0"
+            ".local/obs/s25-ops/rag-tuning/rag-tuning__20260227T011535Z__ops-s25-01-25-10__ae5c5b8/raw_docs/hello.md#chunk-0"
           ],
           "matched": true,
-          "latency_ms": 0.652
+          "latency_ms": 0.632
         },
         {
           "id": "R02",
           "query": "RAG の正式名称は何ですか？",
           "expected_source": "hello.md",
           "retrieved_sources": [
-            ".local/obs/s25-ops/rag-tuning/rag-tuning__20260227T011151Z__ops-s25-01-25-10__3261f6f/raw_docs/hello.md#chunk-0"
+            ".local/obs/s25-ops/rag-tuning/rag-tuning__20260227T011535Z__ops-s25-01-25-10__ae5c5b8/raw_docs/hello.md#chunk-0"
           ],
           "matched": true,
-          "latency_ms": 0.474
+          "latency_ms": 0.504
         },
         {
           "id": "R03",
           "query": "sample_note.md のバナナ価格を教えてください。",
           "expected_source": "sample_note.md",
           "retrieved_sources": [
-            ".local/obs/s25-ops/rag-tuning/rag-tuning__20260227T011151Z__ops-s25-01-25-10__3261f6f/raw_docs/sample_note.md#chunk-0"
+            ".local/obs/s25-ops/rag-tuning/rag-tuning__20260227T011535Z__ops-s25-01-25-10__ae5c5b8/raw_docs/sample_note.md#chunk-0"
           ],
           "matched": true,
-          "latency_ms": 0.582
+          "latency_ms": 0.527
         },
         {
           "id": "R04",
           "query": "ingest のあとに何が走りますか？",
           "expected_source": "sample_note.md",
           "retrieved_sources": [
-            ".local/obs/s25-ops/rag-tuning/rag-tuning__20260227T011151Z__ops-s25-01-25-10__3261f6f/raw_docs/sample_note.md#chunk-0"
+            ".local/obs/s25-ops/rag-tuning/rag-tuning__20260227T011535Z__ops-s25-01-25-10__ae5c5b8/raw_docs/sample_note.md#chunk-0"
           ],
           "matched": true,
-          "latency_ms": 0.595
+          "latency_ms": 0.578
         }
       ]
     }
@@ -187,7 +187,7 @@
   "comparison": {
     "status": "PASS",
     "delta_hit_rate": 0.0,
-    "delta_latency_ms": -0.14571876090485603,
+    "delta_latency_ms": -0.2107917462126352,
     "min_hit_rate_delta": -0.05
   },
   "summary": {
@@ -197,7 +197,7 @@
   "artifact_names": {
     "json": "rag_tuning_latest.json",
     "md": "rag_tuning_latest.md",
-    "run_dir": ".local/obs/s25-ops/rag-tuning/rag-tuning__20260227T011151Z__ops-s25-01-25-10__3261f6f"
+    "run_dir": ".local/obs/s25-ops/rag-tuning/rag-tuning__20260227T011535Z__ops-s25-01-25-10__ae5c5b8"
   },
   "stop": 0
 }

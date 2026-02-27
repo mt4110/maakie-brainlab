@@ -1,21 +1,21 @@
 {
   "schema_version": "s25-ml-experiment-v1",
-  "captured_at_utc": "2026-02-27T01:11:48.066078+00:00",
+  "captured_at_utc": "2026-02-27T01:15:34.982424+00:00",
   "git": {
     "branch": "ops/S25-01-25-10",
-    "head": "3261f6f9720514bfcedefa08c1beb8be2b1ed3c3"
+    "head": "ae5c5b867e5927c416478a5e6ec3ab64bc3386cc"
   },
   "experiment": {
     "experiment_id": "s25-07-il-compile-bench-v1",
     "template_path": "docs/ops/S25-07_ML_EXPERIMENT_TEMPLATE.json",
     "seed": 7,
     "command": [
-      "python3",
+      "python",
       "scripts/il_compile_bench.py",
       "--cases",
       "tests/fixtures/il_compile/bench_cases.jsonl",
       "--out",
-      ".local/obs/s25-ops/ml-experiment/ml-experiment__20260227T011147Z__ops-s25-01-25-10__3261f6f/ml_bench",
+      ".local/obs/s25-ops/ml-experiment/ml-experiment__20260227T011534Z__ops-s25-01-25-10__ae5c5b8/ml_bench",
       "--provider",
       "rule_based",
       "--model",
@@ -29,7 +29,7 @@
     ],
     "rerun_command": "make s25-ml-experiment"
   },
-  "bench_summary_path": ".local/obs/s25-ops/ml-experiment/ml-experiment__20260227T011147Z__ops-s25-01-25-10__3261f6f/ml_bench/il.compile.bench.summary.json",
+  "bench_summary_path": ".local/obs/s25-ops/ml-experiment/ml-experiment__20260227T011534Z__ops-s25-01-25-10__ae5c5b8/ml_bench/il.compile.bench.summary.json",
   "bench_summary": {
     "schema": "IL_COMPILE_BENCH_SUMMARY_v2",
     "total_cases": 10,
@@ -112,12 +112,12 @@
     "reason_code": "",
     "errors": [],
     "bench_rc": 0,
-    "duration_sec": 0.07
+    "duration_sec": 0.034
   },
   "artifact_names": {
     "json": "ml_experiment_latest.json",
     "md": "ml_experiment_latest.md",
-    "run_dir": ".local/obs/s25-ops/ml-experiment/ml-experiment__20260227T011147Z__ops-s25-01-25-10__3261f6f"
+    "run_dir": ".local/obs/s25-ops/ml-experiment/ml-experiment__20260227T011534Z__ops-s25-01-25-10__ae5c5b8"
   },
   "stop": 0
 }

@@ -140,7 +140,7 @@ def build_markdown(payload: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def main() -> None:
+def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--cases-file", default=DEFAULT_CASES_FILE)
     parser.add_argument("--out-dir", default=DEFAULT_OUT_DIR)
@@ -158,7 +158,7 @@ def main() -> None:
         emit("ERROR", f"cases file missing path={cases_path}", events)
         write_events(run_dir, events)
         write_summary(run_dir, meta, events, extra={"stop": 1})
-        return
+        return 1
 
     schema, cases = load_cases(cases_path)
     emit("OK", f"cases_file={cases_path}", events)
@@ -280,10 +280,12 @@ def main() -> None:
         },
     )
     print(f"OK: obs_events={events_path}", flush=True)
+    return 0 if stop == 0 else 1
 
 
 if __name__ == "__main__":
     try:
-        main()
+        raise SystemExit(main())
     except Exception as exc:
         print(f"ERROR: unhandled exception err={exc}", flush=True)
+        raise SystemExit(1)

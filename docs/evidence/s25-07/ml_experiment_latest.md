@@ -1,15 +1,15 @@
 # S25-07 ML Experiment (Latest)
 
-- CapturedAtUTC: `2026-02-27T01:11:48.066078+00:00`
+- CapturedAtUTC: `2026-02-27T01:15:34.982424+00:00`
 - Branch: `ops/S25-01-25-10`
-- HeadSHA: `3261f6f9720514bfcedefa08c1beb8be2b1ed3c3`
+- HeadSHA: `ae5c5b867e5927c416478a5e6ec3ab64bc3386cc`
 - ExperimentId: `s25-07-il-compile-bench-v1`
 - Seed: `7`
 
 ## Metrics
 
 - Status: `PASS`
-- Duration: `0.07 sec`
+- Duration: `0.034 sec`
 - BenchRC: `0`
 - Failures: `0`
 
@@ -27,7 +27,7 @@
 - template: docs/ops/S25-07_ML_EXPERIMENT_TEMPLATE.json
 - seed: 7
 - status: PASS
-- duration: 0.07 sec
+- duration: 0.034 sec
 - failures: 0
 - artifact: docs/evidence/s25-07/ml_experiment_latest.json
 ```
