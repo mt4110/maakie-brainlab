@@ -1,5 +1,11 @@
 import importlib.util
+import json
+import os
+import subprocess
+import sys
+import tempfile
 import unittest
+from pathlib import Path
 
 
 def _load_module():
@@ -88,6 +94,31 @@ class S26MediumEvalWallTests(unittest.TestCase):
         ]
         dist = self.m.compute_distribution(cases)
         self.assertEqual(dist["tag_counts"]["basic"], 1)
+
+    def test_main_handles_bad_toml_and_writes_artifact(self):
+        repo_root = Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as td:
+            bad_cfg = Path(td) / "bad.toml"
+            out_dir = Path(td) / "out"
+            bad_cfg.write_text("schema_version = [", encoding="utf-8")
+            cp = subprocess.run(
+                [
+                    sys.executable,
+                    str(repo_root / "scripts" / "ops" / "s26_medium_eval_wall.py"),
+                    "--config",
+                    str(bad_cfg),
+                    "--out-dir",
+                    str(out_dir),
+                ],
+                cwd=str(repo_root),
+                env={**os.environ, "PYTHONPATH": "./src:."},
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(cp.returncode, 1)
+            payload = json.loads((out_dir / "medium_eval_wall_latest.json").read_text(encoding="utf-8"))
+            self.assertEqual(payload["summary"]["reason_code"], self.m.REASON_CONFIG_INVALID)
 
 
 if __name__ == "__main__":

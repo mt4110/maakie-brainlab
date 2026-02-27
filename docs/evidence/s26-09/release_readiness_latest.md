@@ -1,14 +1,15 @@
 # S26-09 Release Readiness (Latest)
 
-- CapturedAtUTC: `2026-02-27T03:04:58Z`
+- CapturedAtUTC: `2026-02-27T03:23:27Z`
 - Branch: `ops/S26-05-S26-06`
-- HeadSHA: `3eb910875a27d40569142fb684e2e634c940c754`
+- HeadSHA: `da8b651872e89285070085d2bf52564506c830f5`
 
 ## Decision
 
 - readiness: `READY`
 - passed_gates: `8/8`
 - blocked_gates: `0`
+- stale_phases: `0`
 - rollback_command: `python3 scripts/ops/s25_langchain_poc.py --mode rollback-only`
 
 ## Gate Results
@@ -29,6 +30,7 @@
 - readiness: READY
 - passed_gates: 8/8
 - blocked_gates: 0
+- stale_count: 0
 - rollback_command: python3 scripts/ops/s25_langchain_poc.py --mode rollback-only
 - artifact: docs/evidence/s26-09/release_readiness_latest.json
 ```

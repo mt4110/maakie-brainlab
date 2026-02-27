@@ -77,15 +77,19 @@ def sanitize_token(raw: str, max_len: int = 64) -> str:
 def load_cases(path: Path) -> Tuple[str, List[Dict[str, Any]]]:
     obj = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(obj, dict):
-        return "", []
+        raise ValueError("cases file must be JSON object")
     schema = str(obj.get("schema_version") or "")
     rows = obj.get("cases")
     if not isinstance(rows, list):
-        return schema, []
+        raise ValueError("cases must be list")
+    if not rows:
+        raise ValueError("cases must be non-empty list")
     out: List[Dict[str, Any]] = []
     for row in rows:
         if isinstance(row, dict):
             out.append(row)
+    if not out:
+        raise ValueError("cases must include at least one object")
     return schema, out
 
 

@@ -1,9 +1,9 @@
 {
   "schema_version": "s26-release-readiness-v1",
-  "captured_at_utc": "2026-02-27T03:04:58Z",
+  "captured_at_utc": "2026-02-27T03:23:27Z",
   "git": {
     "branch": "ops/S26-05-S26-06",
-    "head": "3eb910875a27d40569142fb684e2e634c940c754"
+    "head": "da8b651872e89285070085d2bf52564506c830f5"
   },
   "inputs": {
     "S26-01": "docs/evidence/s26-01/provider_canary_latest.json",
@@ -16,6 +16,7 @@
     "S26-08": "docs/evidence/s26-08/evidence_index_latest.json"
   },
   "missing_phases": [],
+  "stale_phases": [],
   "gates": [
     {
       "phase": "S26-01",
@@ -71,7 +72,8 @@
     "readiness": "READY",
     "total_gates": 8,
     "passed_gates": 8,
-    "blocked_gates": 0
+    "blocked_gates": 0,
+    "stale_count": 0
   },
   "artifact_names": {
     "json": "release_readiness_latest.json",

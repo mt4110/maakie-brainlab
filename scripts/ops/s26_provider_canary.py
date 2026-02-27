@@ -390,6 +390,39 @@ def build_markdown(payload: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def write_failure_artifacts(
+    *,
+    repo_root: Path,
+    out_dir: Path,
+    config_path: Path,
+    reason_code: str,
+    errors: List[str],
+) -> None:
+    payload = {
+        "schema_version": "s26-provider-canary-result-v1",
+        "captured_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "git": {"branch": git_out(repo_root, ["branch", "--show-current"]), "head": git_out(repo_root, ["rev-parse", "HEAD"])},
+        "config_path": to_repo_rel(repo_root, config_path),
+        "policy": {"hash": "", "value": {}},
+        "provider": {"provider_id": "", "base_url": "", "api_key": "", "model": "", "path": "", "missing": [], "api_key_set": False},
+        "cases": [],
+        "summary": {
+            "status": "FAIL",
+            "passed_cases": 0,
+            "failed_cases": 0,
+            "skipped_cases": 0,
+            "reason_code": reason_code,
+            "errors": list(errors),
+        },
+        "rollback": {"command": ""},
+        "artifact_names": {"json": "provider_canary_latest.json", "md": "provider_canary_latest.md"},
+    }
+    json_path = out_dir / "provider_canary_latest.json"
+    md_path = out_dir / "provider_canary_latest.md"
+    json_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    md_path.write_text(build_markdown(payload), encoding="utf-8")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default=DEFAULT_CONFIG)
@@ -407,14 +440,41 @@ def main() -> int:
     config_path = (repo_root / args.config).resolve()
     if not config_path.exists():
         emit("ERROR", f"config missing path={config_path}", events)
+        write_failure_artifacts(
+            repo_root=repo_root,
+            out_dir=out_dir,
+            config_path=config_path,
+            reason_code=REASON_CONFIG_INVALID,
+            errors=[f"config missing path={config_path}"],
+        )
         write_events(run_dir, events)
         write_summary(run_dir, meta, events, extra={"stop": 1, "reason_code": REASON_CONFIG_INVALID})
         return 1
 
-    cfg = _read_toml(config_path)
+    try:
+        cfg = _read_toml(config_path)
+    except Exception as exc:
+        emit("ERROR", f"config parse failed err={exc}", events)
+        write_failure_artifacts(
+            repo_root=repo_root,
+            out_dir=out_dir,
+            config_path=config_path,
+            reason_code=REASON_CONFIG_INVALID,
+            errors=[f"config parse failed err={exc}"],
+        )
+        write_events(run_dir, events)
+        write_summary(run_dir, meta, events, extra={"stop": 1, "reason_code": REASON_CONFIG_INVALID})
+        return 1
     ok, reason = validate_config(cfg)
     if not ok:
         emit("ERROR", f"config invalid reason={reason}", events)
+        write_failure_artifacts(
+            repo_root=repo_root,
+            out_dir=out_dir,
+            config_path=config_path,
+            reason_code=REASON_CONFIG_INVALID,
+            errors=[f"config invalid reason={reason}"],
+        )
         write_events(run_dir, events)
         write_summary(run_dir, meta, events, extra={"stop": 1, "reason_code": REASON_CONFIG_INVALID})
         return 1

@@ -35,6 +35,7 @@ class S26CloseoutTests(unittest.TestCase):
             {"phase": "S26-10", "present": True},
         ]
         self.assertEqual(self.m.count_present_until(rows, max_index=4), 2)
+        self.assertEqual(self.m.count_present_between(rows, min_index=5, max_index=10), 2)
 
     def test_build_markdown(self):
         payload = {

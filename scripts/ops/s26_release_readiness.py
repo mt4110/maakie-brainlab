@@ -55,6 +55,15 @@ def read_json_if_exists(path: Path) -> Dict[str, Any]:
     return obj if isinstance(obj, dict) else {}
 
 
+def is_stale_artifact(doc: Dict[str, Any], current_head: str) -> bool:
+    if not current_head:
+        return False
+    doc_head = str(dict(doc.get("git", {})).get("head") or "")
+    if not doc_head:
+        return False
+    return doc_head != current_head
+
+
 def to_int(value: Any, default: int) -> int:
     try:
         return int(value)
@@ -114,6 +123,7 @@ def build_markdown(payload: Dict[str, Any]) -> str:
     lines.append(f"- readiness: `{summary.get('readiness', '')}`")
     lines.append(f"- passed_gates: `{summary.get('passed_gates', 0)}/{summary.get('total_gates', 0)}`")
     lines.append(f"- blocked_gates: `{summary.get('blocked_gates', 0)}`")
+    lines.append(f"- stale_phases: `{summary.get('stale_count', 0)}`")
     lines.append(f"- rollback_command: `{payload.get('rollback_command', '')}`")
     lines.append("")
     lines.append("## Gate Results")
@@ -129,6 +139,7 @@ def build_markdown(payload: Dict[str, Any]) -> str:
     lines.append(f"- readiness: {summary.get('readiness', '')}")
     lines.append(f"- passed_gates: {summary.get('passed_gates', 0)}/{summary.get('total_gates', 0)}")
     lines.append(f"- blocked_gates: {summary.get('blocked_gates', 0)}")
+    lines.append(f"- stale_count: {summary.get('stale_count', 0)}")
     lines.append(f"- rollback_command: {payload.get('rollback_command', '')}")
     lines.append(f"- artifact: docs/evidence/s26-09/{payload.get('artifact_names', {}).get('json', '')}")
     lines.append("```")
@@ -150,6 +161,8 @@ def main() -> int:
     docs: Dict[str, Dict[str, Any]] = {}
     inputs: Dict[str, str] = {}
     missing: List[str] = []
+    stale: List[str] = []
+    current_head = git_out(repo_root, ["rev-parse", "HEAD"])
 
     for phase, rel in ARTIFACTS.items():
         path = (repo_root / rel).resolve()
@@ -160,7 +173,13 @@ def main() -> int:
             missing.append(phase)
             emit("ERROR", f"missing phase={phase} path={path}", events)
         else:
-            emit("OK", f"loaded phase={phase} path={rel}", events)
+            if is_stale_artifact(doc, current_head):
+                doc_head = str(dict(doc.get("git", {})).get("head") or "")
+                stale.append(phase)
+                docs[phase] = {}
+                emit("ERROR", f"stale phase={phase} artifact_head={doc_head} current_head={current_head}", events)
+            else:
+                emit("OK", f"loaded phase={phase} path={rel}", events)
 
     gates = build_gate_rows(docs)
     for row in gates:
@@ -171,7 +190,7 @@ def main() -> int:
 
     passed_gates = sum(1 for row in gates if bool(row.get("passed")))
     blocked_gates = len(gates) - passed_gates
-    readiness = "READY" if blocked_gates == 0 and not missing else "BLOCKED"
+    readiness = "READY" if blocked_gates == 0 and not missing and not stale else "BLOCKED"
 
     rollback_command = str(docs.get("S26-03", {}).get("rollback_command") or "")
 
@@ -184,6 +203,7 @@ def main() -> int:
         },
         "inputs": inputs,
         "missing_phases": missing,
+        "stale_phases": stale,
         "gates": gates,
         "rollback_command": rollback_command,
         "summary": {
@@ -191,6 +211,7 @@ def main() -> int:
             "total_gates": len(gates),
             "passed_gates": passed_gates,
             "blocked_gates": blocked_gates,
+            "stale_count": len(stale),
         },
         "artifact_names": {
             "json": "release_readiness_latest.json",

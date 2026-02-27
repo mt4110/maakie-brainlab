@@ -1,9 +1,9 @@
 {
   "schema_version": "s26-reliability-report-v1",
-  "captured_at_utc": "2026-02-27T02:43:31Z",
+  "captured_at_utc": "2026-02-27T03:23:27Z",
   "git": {
     "branch": "ops/S26-05-S26-06",
-    "head": "a08cc857a66433f18ad8bc366d5e70e84a9795c3"
+    "head": "da8b651872e89285070085d2bf52564506c830f5"
   },
   "inputs": {
     "canary_json": "docs/evidence/s26-01/provider_canary_latest.json",

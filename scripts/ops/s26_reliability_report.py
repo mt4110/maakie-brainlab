@@ -24,6 +24,7 @@ DEFAULT_ORCH = "docs/evidence/s26-04/orchestration_core_latest.json"
 
 REASON_CANARY_MISSING = "CANARY_MISSING"
 REASON_ORCHESTRATION_FAILED = "ORCHESTRATION_FAILED"
+REASON_ORCHESTRATION_MISSING = "ORCHESTRATION_MISSING"
 REASON_CANARY_FAILED = "CANARY_FAILED"
 REASON_NO_RUNNABLE_CASES = "NO_RUNNABLE_CASES"
 REASON_SUCCESS_RATE_LOW = "SUCCESS_RATE_LOW"
@@ -112,6 +113,51 @@ def build_markdown(payload: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def write_failure_artifacts(
+    *,
+    repo_root: Path,
+    out_dir: Path,
+    canary_path: Path,
+    orch_path: Path,
+    reason_code: str,
+) -> None:
+    payload: Dict[str, Any] = {
+        "schema_version": "s26-reliability-report-v1",
+        "captured_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "git": {
+            "branch": git_out(repo_root, ["branch", "--show-current"]),
+            "head": git_out(repo_root, ["rev-parse", "HEAD"]),
+        },
+        "inputs": {
+            "canary_json": to_repo_rel(repo_root, canary_path),
+            "orchestration_json": to_repo_rel(repo_root, orch_path),
+            "min_success_rate": None,
+            "max_failed_cases": None,
+        },
+        "metrics": {
+            "passed_cases": 0,
+            "failed_cases": 0,
+            "skipped_cases": 0,
+            "runnable_cases": 0,
+            "success_rate": None,
+            "avg_attempts_per_runnable_case": None,
+        },
+        "reason_counts": {},
+        "summary": {
+            "status": "FAIL",
+            "reason_code": reason_code,
+        },
+        "artifact_names": {
+            "json": "reliability_report_latest.json",
+            "md": "reliability_report_latest.md",
+        },
+    }
+    out_json = out_dir / "reliability_report_latest.json"
+    out_md = out_dir / "reliability_report_latest.md"
+    out_json.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    out_md.write_text(build_markdown(payload), encoding="utf-8")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-dir", default=DEFAULT_OUT_DIR)
@@ -134,8 +180,27 @@ def main() -> int:
 
     if not canary:
         emit("ERROR", f"canary evidence missing path={canary_path}", events)
+        write_failure_artifacts(
+            repo_root=repo_root,
+            out_dir=out_dir,
+            canary_path=canary_path,
+            orch_path=orch_path,
+            reason_code=REASON_CANARY_MISSING,
+        )
         write_events(run_dir, events)
         write_summary(run_dir, meta, events, extra={"status": "FAIL", "reason_code": REASON_CANARY_MISSING})
+        return 1
+    if not orchestration:
+        emit("ERROR", f"orchestration evidence missing path={orch_path}", events)
+        write_failure_artifacts(
+            repo_root=repo_root,
+            out_dir=out_dir,
+            canary_path=canary_path,
+            orch_path=orch_path,
+            reason_code=REASON_ORCHESTRATION_MISSING,
+        )
+        write_events(run_dir, events)
+        write_summary(run_dir, meta, events, extra={"status": "FAIL", "reason_code": REASON_ORCHESTRATION_MISSING})
         return 1
 
     canary_summary = dict(canary.get("summary", {}))

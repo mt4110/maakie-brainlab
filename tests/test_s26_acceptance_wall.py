@@ -132,6 +132,17 @@ class S26AcceptanceWallTests(unittest.TestCase):
             payload = json.loads((out_dir / "acceptance_wall_latest.json").read_text(encoding="utf-8"))
             self.assertEqual(payload["summary"]["reason_code"], self.m.REASON_CASES_FILE_INVALID)
 
+    def test_load_cases_rejects_empty_or_missing_cases(self):
+        with tempfile.TemporaryDirectory() as td:
+            p1 = Path(td) / "no_cases.json"
+            p1.write_text(json.dumps({"schema_version": "x"}), encoding="utf-8")
+            with self.assertRaises(ValueError):
+                self.m.load_cases(p1)
+            p2 = Path(td) / "empty_cases.json"
+            p2.write_text(json.dumps({"schema_version": "x", "cases": []}), encoding="utf-8")
+            with self.assertRaises(ValueError):
+                self.m.load_cases(p2)
+
 
 if __name__ == "__main__":
     unittest.main()

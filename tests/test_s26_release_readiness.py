@@ -49,6 +49,11 @@ class S26ReleaseReadinessTests(unittest.TestCase):
         self.assertFalse(next(x for x in rows if x["phase"] == "S26-05")["passed"])
         self.assertFalse(next(x for x in rows if x["phase"] == "S26-06")["passed"])
 
+    def test_is_stale_artifact(self):
+        self.assertFalse(self.m.is_stale_artifact({}, "abc"))
+        self.assertFalse(self.m.is_stale_artifact({"git": {"head": "abc"}}, "abc"))
+        self.assertTrue(self.m.is_stale_artifact({"git": {"head": "def"}}, "abc"))
+
 
 if __name__ == "__main__":
     unittest.main()

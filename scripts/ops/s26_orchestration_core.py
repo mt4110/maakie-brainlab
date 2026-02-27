@@ -51,12 +51,19 @@ def read_json_if_exists(path: Path) -> Dict[str, Any]:
     return data if isinstance(data, dict) else {}
 
 
-def run_step(repo_root: Path, run_dir: Path, name: str, cmd: List[str], timeout_sec: int) -> Dict[str, Any]:
+def run_step(
+    repo_root: Path,
+    run_dir: Path,
+    name: str,
+    exec_cmd: List[str],
+    display_cmd: List[str],
+    timeout_sec: int,
+) -> Dict[str, Any]:
     stdout_path = run_dir / f"{name}.stdout.log"
     stderr_path = run_dir / f"{name}.stderr.log"
     try:
         cp = subprocess.run(
-            cmd,
+            exec_cmd,
             cwd=str(repo_root),
             capture_output=True,
             text=True,
@@ -68,7 +75,7 @@ def run_step(repo_root: Path, run_dir: Path, name: str, cmd: List[str], timeout_
         stderr_path.write_text(str(exc), encoding="utf-8")
         return {
             "name": name,
-            "command": cmd,
+            "command": display_cmd,
             "returncode": 1,
             "status": "FAIL",
             "error": str(exc),
@@ -80,7 +87,7 @@ def run_step(repo_root: Path, run_dir: Path, name: str, cmd: List[str], timeout_
     stderr_path.write_text(cp.stderr or "", encoding="utf-8")
     return {
         "name": name,
-        "command": cmd,
+        "command": display_cmd,
         "returncode": int(cp.returncode),
         "status": "PASS" if cp.returncode == 0 else "FAIL",
         "error": "",
@@ -136,13 +143,32 @@ def main() -> int:
 
     steps: List[Dict[str, Any]] = []
     commands = [
-        (STEP_PROVIDER, [sys.executable, str((repo_root / "scripts/ops/s26_provider_canary.py").resolve())]),
-        (STEP_MEDIUM, [sys.executable, str((repo_root / "scripts/ops/s26_medium_eval_wall.py").resolve())]),
-        (STEP_ROLLBACK, [sys.executable, str((repo_root / "scripts/ops/s26_rollback_artifact.py").resolve())]),
+        (
+            STEP_PROVIDER,
+            [sys.executable, str((repo_root / "scripts/ops/s26_provider_canary.py").resolve())],
+            ["python3", "scripts/ops/s26_provider_canary.py"],
+        ),
+        (
+            STEP_MEDIUM,
+            [sys.executable, str((repo_root / "scripts/ops/s26_medium_eval_wall.py").resolve())],
+            ["python3", "scripts/ops/s26_medium_eval_wall.py"],
+        ),
+        (
+            STEP_ROLLBACK,
+            [sys.executable, str((repo_root / "scripts/ops/s26_rollback_artifact.py").resolve())],
+            ["python3", "scripts/ops/s26_rollback_artifact.py"],
+        ),
     ]
-    for name, cmd in commands:
+    for name, exec_cmd, display_cmd in commands:
         emit("OK", f"run step={name}", events)
-        out = run_step(repo_root, run_dir, name, cmd, timeout_sec=int(args.timeout_sec))
+        out = run_step(
+            repo_root,
+            run_dir,
+            name,
+            exec_cmd=exec_cmd,
+            display_cmd=display_cmd,
+            timeout_sec=int(args.timeout_sec),
+        )
         steps.append(out)
         level = "OK" if out["status"] == "PASS" else "ERROR"
         emit(level, f"step={name} status={out['status']} rc={out['returncode']}", events)

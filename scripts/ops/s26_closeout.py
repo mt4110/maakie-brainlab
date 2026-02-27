@@ -78,6 +78,17 @@ def count_present_until(phases: List[Dict[str, Any]], max_index: int) -> int:
     return total
 
 
+def count_present_between(phases: List[Dict[str, Any]], min_index: int, max_index: int) -> int:
+    total = 0
+    for row in phases:
+        idx = phase_to_index(str(row.get("phase", "")))
+        if idx < min_index or idx > max_index:
+            continue
+        if bool(row.get("present")):
+            total += 1
+    return total
+
+
 def build_markdown(payload: Dict[str, Any]) -> str:
     summary = payload["summary"]
     before_after = payload["before_after"]
@@ -100,6 +111,7 @@ def build_markdown(payload: Dict[str, Any]) -> str:
     lines.append(f"- after_scope: `{before_after.get('after_scope', '')}`")
     lines.append(f"- before_phases_present: `{before_after.get('before_phases_present', 0)}`")
     lines.append(f"- after_phases_present: `{before_after.get('after_phases_present', 0)}`")
+    lines.append(f"- after_scope_detail: `{before_after.get('after_scope_detail', '')}`")
     lines.append(f"- after_failed_warn: `{before_after.get('after_failed_count', 0)}/{before_after.get('after_warn_count', 0)}`")
     lines.append("")
     lines.append("## Unresolved Risks")
@@ -163,7 +175,13 @@ def main() -> int:
     phases = list(index.get("phases", [])) if isinstance(index.get("phases"), list) else []
 
     before_present = count_present_until(phases, max_index=4)
-    after_present = int(index_summary.get("present_count", 0))
+    after_present_core = count_present_between(phases, min_index=1, max_index=7)
+    after_present = after_present_core
+    # S26-08/09/10 are not inside index phases list; add explicitly.
+    after_present += 1  # S26-08 index itself exists by this point
+    if bool(readiness):
+        after_present += 1  # S26-09 readiness artifact loaded
+    after_present += 1  # S26-10 closeout artifact generation in progress
 
     unresolved_risks = list(args.unresolved_risk) if args.unresolved_risk else list(DEFAULT_UNRESOLVED_RISKS)
     handoff_items = list(args.handoff) if args.handoff else list(DEFAULT_HANDOFF)
@@ -175,6 +193,7 @@ def main() -> int:
     before_after = {
         "before_scope": "S26-04 Exit (core orchestration only)",
         "after_scope": "S26-10 Exit (regression/acceptance/reliability/readiness/closeout)",
+        "after_scope_detail": "S26-01..07(indexed) + S26-08(index) + S26-09(readiness) + S26-10(closeout)",
         "before_phases_present": before_present,
         "after_phases_present": after_present,
         "after_failed_count": int(index_summary.get("failed_count", 0)),

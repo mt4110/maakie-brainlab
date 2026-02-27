@@ -241,6 +241,53 @@ def build_markdown(payload: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def write_failure_artifacts(
+    *,
+    repo_root: Path,
+    out_dir: Path,
+    config_path: Path,
+    reason_code: str,
+    errors: List[str],
+) -> None:
+    payload: Dict[str, Any] = {
+        "schema_version": "s26-medium-eval-wall-result-v1",
+        "captured_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "git": {
+            "branch": git_out(repo_root, ["branch", "--show-current"]),
+            "head": git_out(repo_root, ["rev-parse", "HEAD"]),
+        },
+        "dataset_id": "",
+        "config_path": to_repo_rel(repo_root, config_path),
+        "cases_path": "",
+        "meta_path": "",
+        "meta_snapshot": {},
+        "distribution": {
+            "total_cases": 0,
+            "must_answer_true": 0,
+            "must_answer_false": 0,
+            "must_cite_true": 0,
+            "tag_counts": {},
+        },
+        "delta_vs_seed_mini": {
+            "seed_mini_cases_path": "",
+            "seed_mini_total_cases": 0,
+            "total_cases_delta": 0,
+        },
+        "contract": {},
+        "tag_min_counts": {},
+        "summary": {
+            "status": "FAIL",
+            "reason_code": reason_code,
+            "errors": list(errors),
+        },
+        "artifact_names": {"json": "medium_eval_wall_latest.json", "md": "medium_eval_wall_latest.md"},
+    }
+    json_path = out_dir / "medium_eval_wall_latest.json"
+    md_path = out_dir / "medium_eval_wall_latest.md"
+    json_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    md_path.write_text(build_markdown(payload), encoding="utf-8")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default=DEFAULT_CONFIG)
@@ -256,14 +303,41 @@ def main() -> int:
     config_path = (repo_root / args.config).resolve()
     if not config_path.exists():
         emit("ERROR", f"config missing path={config_path}", events)
+        write_failure_artifacts(
+            repo_root=repo_root,
+            out_dir=out_dir,
+            config_path=config_path,
+            reason_code=REASON_CONFIG_INVALID,
+            errors=[f"config missing path={config_path}"],
+        )
         write_events(run_dir, events)
         write_summary(run_dir, meta, events, extra={"stop": 1, "reason_code": REASON_CONFIG_INVALID})
         return 1
 
-    cfg = _read_toml(config_path)
+    try:
+        cfg = _read_toml(config_path)
+    except Exception as exc:
+        emit("ERROR", f"config parse failed err={exc}", events)
+        write_failure_artifacts(
+            repo_root=repo_root,
+            out_dir=out_dir,
+            config_path=config_path,
+            reason_code=REASON_CONFIG_INVALID,
+            errors=[f"config parse failed err={exc}"],
+        )
+        write_events(run_dir, events)
+        write_summary(run_dir, meta, events, extra={"stop": 1, "reason_code": REASON_CONFIG_INVALID})
+        return 1
     ok, why = validate_config(cfg)
     if not ok:
         emit("ERROR", f"config invalid reason={why}", events)
+        write_failure_artifacts(
+            repo_root=repo_root,
+            out_dir=out_dir,
+            config_path=config_path,
+            reason_code=REASON_CONFIG_INVALID,
+            errors=[f"config invalid reason={why}"],
+        )
         write_events(run_dir, events)
         write_summary(run_dir, meta, events, extra={"stop": 1, "reason_code": REASON_CONFIG_INVALID})
         return 1
@@ -273,11 +347,25 @@ def main() -> int:
     meta_path = (repo_root / str(cfg.get("meta_path") or "")).resolve()
     if not cases_path.exists():
         emit("ERROR", f"cases missing path={cases_path}", events)
+        write_failure_artifacts(
+            repo_root=repo_root,
+            out_dir=out_dir,
+            config_path=config_path,
+            reason_code=REASON_CONFIG_INVALID,
+            errors=[f"cases missing path={cases_path}"],
+        )
         write_events(run_dir, events)
         write_summary(run_dir, meta, events, extra={"stop": 1, "reason_code": REASON_CONFIG_INVALID})
         return 1
     if not meta_path.exists():
         emit("ERROR", f"meta missing path={meta_path}", events)
+        write_failure_artifacts(
+            repo_root=repo_root,
+            out_dir=out_dir,
+            config_path=config_path,
+            reason_code=REASON_CONFIG_INVALID,
+            errors=[f"meta missing path={meta_path}"],
+        )
         write_events(run_dir, events)
         write_summary(run_dir, meta, events, extra={"stop": 1, "reason_code": REASON_CONFIG_INVALID})
         return 1
@@ -286,6 +374,13 @@ def main() -> int:
         cases = load_cases(cases_path)
     except Exception as exc:
         emit("ERROR", f"cases parse failed err={exc}", events)
+        write_failure_artifacts(
+            repo_root=repo_root,
+            out_dir=out_dir,
+            config_path=config_path,
+            reason_code=REASON_CASE_SCHEMA_INVALID,
+            errors=[f"cases parse failed err={exc}"],
+        )
         write_events(run_dir, events)
         write_summary(run_dir, meta, events, extra={"stop": 1, "reason_code": REASON_CASE_SCHEMA_INVALID})
         return 1
@@ -294,6 +389,13 @@ def main() -> int:
     if schema_errs:
         for item in schema_errs:
             emit("ERROR", item, events)
+        write_failure_artifacts(
+            repo_root=repo_root,
+            out_dir=out_dir,
+            config_path=config_path,
+            reason_code=REASON_CASE_SCHEMA_INVALID,
+            errors=list(schema_errs),
+        )
         write_events(run_dir, events)
         write_summary(run_dir, meta, events, extra={"stop": 1, "reason_code": REASON_CASE_SCHEMA_INVALID})
         return 1

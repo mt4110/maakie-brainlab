@@ -1,4 +1,5 @@
 import importlib.util
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -37,6 +38,22 @@ class S26OrchestrationCoreTests(unittest.TestCase):
         md = self.m.build_markdown(payload)
         self.assertIn("S26-04", md)
         self.assertIn("PASS", md)
+
+    def test_run_step_records_display_command(self):
+        with tempfile.TemporaryDirectory() as td:
+            repo = Path(td)
+            run_dir = repo / "run"
+            run_dir.mkdir(parents=True, exist_ok=True)
+            out = self.m.run_step(
+                repo_root=repo,
+                run_dir=run_dir,
+                name="x",
+                exec_cmd=[sys.executable, "-c", "print('ok')"],
+                display_cmd=["python3", "scripts/ops/x.py"],
+                timeout_sec=5,
+            )
+            self.assertEqual(out["status"], "PASS")
+            self.assertEqual(out["command"], ["python3", "scripts/ops/x.py"])
 
 
 if __name__ == "__main__":

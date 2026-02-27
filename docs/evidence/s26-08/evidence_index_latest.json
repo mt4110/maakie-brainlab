@@ -1,9 +1,9 @@
 {
   "schema_version": "s26-evidence-index-v1",
-  "captured_at_utc": "2026-02-27T03:04:58Z",
+  "captured_at_utc": "2026-02-27T03:23:27Z",
   "git": {
     "branch": "ops/S26-05-S26-06",
-    "head": "3eb910875a27d40569142fb684e2e634c940c754"
+    "head": "da8b651872e89285070085d2bf52564506c830f5"
   },
   "phases": [
     {
@@ -12,7 +12,7 @@
       "present": true,
       "status": "SKIP",
       "schema_version": "s26-provider-canary-result-v1",
-      "captured_at_utc": "2026-02-27T02:18:09Z"
+      "captured_at_utc": "2026-02-27T03:23:25Z"
     },
     {
       "phase": "S26-02",
@@ -20,7 +20,7 @@
       "present": true,
       "status": "PASS",
       "schema_version": "s26-medium-eval-wall-result-v1",
-      "captured_at_utc": "2026-02-27T03:04:58Z"
+      "captured_at_utc": "2026-02-27T03:23:25Z"
     },
     {
       "phase": "S26-03",
@@ -28,7 +28,7 @@
       "present": true,
       "status": "PASS",
       "schema_version": "s26-rollback-artifact-v1",
-      "captured_at_utc": "2026-02-27T02:18:09Z"
+      "captured_at_utc": "2026-02-27T03:23:26Z"
     },
     {
       "phase": "S26-04",
@@ -36,7 +36,7 @@
       "present": true,
       "status": "PASS",
       "schema_version": "s26-orchestration-core-v1",
-      "captured_at_utc": "2026-02-27T02:18:09Z"
+      "captured_at_utc": "2026-02-27T03:23:26Z"
     },
     {
       "phase": "S26-05",
@@ -44,7 +44,7 @@
       "present": true,
       "status": "PASS",
       "schema_version": "s26-regression-safety-v1",
-      "captured_at_utc": "2026-02-27T02:44:04.525788+00:00"
+      "captured_at_utc": "2026-02-27T03:23:27.239922+00:00"
     },
     {
       "phase": "S26-06",
@@ -52,7 +52,7 @@
       "present": true,
       "status": "PASS",
       "schema_version": "s26-acceptance-wall-v1",
-      "captured_at_utc": "2026-02-27T03:04:58.392422+00:00"
+      "captured_at_utc": "2026-02-27T03:23:27.315340+00:00"
     },
     {
       "phase": "S26-07",
@@ -60,7 +60,7 @@
       "present": true,
       "status": "WARN",
       "schema_version": "s26-reliability-report-v1",
-      "captured_at_utc": "2026-02-27T02:43:31Z"
+      "captured_at_utc": "2026-02-27T03:23:27Z"
     }
   ],
   "summary": {
