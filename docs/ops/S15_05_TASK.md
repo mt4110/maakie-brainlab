@@ -14,8 +14,8 @@
   - [x] prompts/rag.md
   - [x] docs/rules/AI_TEXT_GUARD.md
 - [x] IF file exists THEN mark "FOUND" and continue
-- [ ] ELSE skip with 1-line reason
-- [ ] IF none FOUND THEN STOP (error: "AI entrypoint missing")
+- [x] ELSE skip with 1-line reason
+- [x] IF none FOUND THEN STOP (error: "AI entrypoint missing")
 
 ## Phase 2 — Determinism locks (must)
 - [x] IF any run depends on current time for semantic output THEN error + remove it
@@ -37,7 +37,7 @@
 
 ## Phase 5 — Tests (minimal)
 - [x] Run fast unit tests for AI lane (existing test framework)
-- [ ] IF tests are flaky/time-based THEN skip with 1-line reason + create deterministic alternative (N/A)
+- [x] IF tests are flaky/time-based THEN skip with 1-line reason + create deterministic alternative (N/A)
 
 ## Phase 6 — Gate (the truth machine)
 - [x] `make test`
@@ -48,5 +48,5 @@
   - SHA256: dd0db9c4e8a5e7187fd40ea9f3e32ded741f7d79b72902cef94ae95c59cc187a
 
 ## Phase 7 — PR rail
-- [ ] `git push -u origin s15-05-ai-work-v1`
-- [ ] `gh pr create --fill`
+- [x] `git push -u origin s15-05-ai-work-v1`
+- [x] `gh pr create --fill`

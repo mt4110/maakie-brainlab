@@ -5,7 +5,7 @@
 
 ## Scope
 - **S18-00: Template kit bootstrap** (this PR)
-- **S18-01+: TBD** (must be defined in ops docs before starting)
+- **S18-01..S18-03: defined in ops docs** (see `S18-01_PLAN.md`..`S18-03_PLAN.md`)
 
 ## Invariants (Must Hold)
 - Planは **分岐と停止条件**（嘘をつかない）

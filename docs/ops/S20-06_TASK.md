@@ -70,6 +70,6 @@
 - [x] commit6: docs(ops) update STATUS S20-06 100%
 
 ## 10) 仕上げ観測
-- [ ] `git status -sb` が clean を確認
-- [ ] `git diff main...HEAD` を観測して過剰変更がないか確認
+- [x] `git status -sb` が clean を確認
+- [x] `git diff main...HEAD` を観測して過剰変更がないか確認
 

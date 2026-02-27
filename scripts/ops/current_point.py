@@ -20,8 +20,8 @@ from typing import Any, Dict, List, Optional, Tuple
 from scripts.ops.obs_contract import DEFAULT_OBS_ROOT, emit, make_run_context, write_events, write_summary
 
 
-THREAD_RX = re.compile(r"([sS]\d{2}-\d{2}-[sS]?\d{2}-\d{2})")
-PHASE_RX = re.compile(r"([sS]\d{2}-\d{2})")
+THREAD_RX = re.compile(r"([sS]\d{2}-\d{1,3}-[sS]?\d{2}-\d{1,3})")
+PHASE_RX = re.compile(r"([sS]\d{2}-\d{1,3})")
 PROGRESS_LINE_RX = re.compile(r"^\s*-\s*([A-Za-z0-9\-]+):\s*([0-9]+(?:\.[0-9]+)?)%\s*(.*)$", re.M)
 PERCENT_RX = re.compile(r"([0-9]+(?:\.[0-9]+)?)%")
 CHECKBOX_RX = re.compile(r"^\s*-\s*\[([xX ])\]\s+(.+?)\s*$", re.M)

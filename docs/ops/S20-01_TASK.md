@@ -11,36 +11,36 @@
 - 100% PR merged
 
 ## C0: Safety Snapshot
-- [ ] `git status -sb` clean
-- [ ] `git grep -n "file URL（fileスキーム）\|ユーザHOME絶対パス" -- docs/ops || true`
+- [x] `git status -sb` clean
+- [x] `git grep -n "file URL（fileスキーム）\|ユーザHOME絶対パス" -- docs/ops || true`
 
 ## C1: Create reserved spec paths (薄くてOK、でも作る)
-- [ ] `mkdir -p docs/ops/rag`
-- [ ] `docs/ops/rag/EVAL_SPEC_v1.md` を作る（空にしない：目的と“固定するもの”だけ書く）
-- [ ] `docs/ops/rag/DETERMINISM_SPEC_v1.md` を作る（同上）
-- [ ] `docs/ops/rag/INJECTION_POLICY_v1.md` を作る（同上）
+- [x] `mkdir -p docs/ops/rag`
+- [x] `docs/ops/rag/EVAL_SPEC_v1.md` を作る（空にしない：目的と“固定するもの”だけ書く）
+- [x] `docs/ops/rag/DETERMINISM_SPEC_v1.md` を作る（同上）
+- [x] `docs/ops/rag/INJECTION_POLICY_v1.md` を作る（同上）
 
 ## C2: Eval Wall (measurable tuning)
-- [ ] 評価セットの置き場所・フォーマット・最低限の失敗分類を EVAL_SPEC に固定
-- [ ] 実行出力（ログ/結果）の保存先・命名規則を EVAL_SPEC に固定
-- [ ] “良くなった/悪くなった” を判定する最小メトリクスを EVAL_SPEC に定義（比較は前回runとの差分）
+- [x] 評価セットの置き場所・フォーマット・最低限の失敗分類を EVAL_SPEC に固定
+- [x] 実行出力（ログ/結果）の保存先・命名規則を EVAL_SPEC に固定
+- [x] “良くなった/悪くなった” を判定する最小メトリクスを EVAL_SPEC に定義（比較は前回runとの差分）
 
 ## C3: Determinism Moat (repeatable index/retrieval)
-- [ ] chunk・正規化・順序の仕様を DETERMINISM_SPEC に固定（仕様名をつける）
-- [ ] index作成の設定（モデル/embedding/チャンク設定/入力スナップショット）を「記録項目」として固定
+- [x] chunk・正規化・順序の仕様を DETERMINISM_SPEC に固定（仕様名をつける）
+- [x] index作成の設定（モデル/embedding/チャンク設定/入力スナップショット）を「記録項目」として固定
 
 ## C4: Injection Gate (baseline guard)
-- [ ] 検索結果中の命令を命令として扱わない方針を INJECTION_POLICY に固定
-- [ ] 最低限の検知（危険フレーズ等）と「検知ログのフォーマット」を固定（検知でOK）
+- [x] 検索結果中の命令を命令として扱わない方針を INJECTION_POLICY に固定
+- [x] 最低限の検知（危険フレーズ等）と「検知ログのフォーマット」を固定（検知でOK）
 
 ## C5: ROADMAP update
-- [ ] `docs/ops/ROADMAP.md` の S20 セクションに S20-01 を追記
+- [x] `docs/ops/ROADMAP.md` の S20 セクションに S20-01 を追記
 
 ## C6: Gates
-- [ ] `go test ./...`
-- [ ] `go run cmd/reviewpack/main.go submit --mode verify-only`
+- [x] `go test ./...`
+- [x] `go run cmd/reviewpack/main.go submit --mode verify-only`
 
 ## C7: PR
-- [ ] `git push -u origin HEAD`
-- [ ] PR作成（`./ops/pr_create.sh` or `gh pr create --fill`）
-- [ ] CI green → merge
+- [x] `git push -u origin HEAD`
+- [x] PR作成（`./ops/pr_create.sh` or `gh pr create --fill`）
+- [x] CI green → merge

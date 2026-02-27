@@ -70,7 +70,7 @@ jobs:
           elif [ "$EVENT_NAME" = "push" ]; then
             BASE_SHA="${PUSH_BEFORE_SHA:-}"
           fi
-          # NOTE: ubuntu-latest ships python3 by default; setup-python remains heavy-gated for cost control.
+          # ubuntu-latest ships python3 by default; setup-python stays heavy-gated for cost control.
           python3 ops/ci/decide_cost_scope.py \
             --policy ops/ci/cost_scope_policy.json \
             --event "$EVENT_NAME" \
@@ -176,9 +176,6 @@ jobs:
               echo "[OK] eval/results/ci.jsonl already exists"
             fi
             
-            # Use 'seed-eval' logic if available (future proofing)
-            # make seed-eval || true
-
             # Sanity
             ls -la eval/results
           } 2>&1 | tee .local/ci/seed_eval.log

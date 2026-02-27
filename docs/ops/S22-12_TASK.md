@@ -2,12 +2,12 @@
 
 ## Checklist
 
-- [ ] 01. `milestone_required.yml` に `workflow_dispatch` 追加 + dispatch-aware PR fetch
-- [ ] 02. `milestone_autofill.yml` に dispatch step + 監査ログ + `actions: write` 追加
-- [ ] 03. `s22_milestone_autofill.yml` 削除（重複）
-- [ ] 04. `STATUS.md` 更新
-- [ ] 05. YAML 構文検証
-- [ ] 06. PR 作成 → CI green → merge
+- [x] 01. `milestone_required.yml` に `workflow_dispatch` 追加 + dispatch-aware PR fetch
+- [x] 02. `milestone_autofill.yml` に dispatch step + 監査ログ + `actions: write` 追加
+- [x] 03. `s22_milestone_autofill.yml` 削除（重複）
+- [x] 04. `STATUS.md` 更新
+- [x] 05. YAML 構文検証
+- [x] 06. PR 作成 → CI green → merge
 
 ## DoD
 

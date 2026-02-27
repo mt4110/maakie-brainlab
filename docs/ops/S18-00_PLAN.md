@@ -17,7 +17,7 @@ This phase (S18-00) includes ONLY:
 4) Local gates を通し、Canonical を **このPRの1回だけ** pin する
 
 Non-Goals (explicitly excluded; MUST be S18-01+):
-- S18-01 以降の具体スコープ定義（TBDのまま）
+- S18-01 以降の具体スコープ実装（定義は `S18-01..03` docs を参照）
 - 実装コードの変更（docs/ops のみ）
 - 既存テンプレや既存 docs の内容改変（S18-00の必須ではない）
 
@@ -110,7 +110,7 @@ stop when:
 # Phase 3 — Scope Pin (write now, prevent ex-post)
 - In `docs/ops/S18_PLAN.md`, write minimal statement:
   - S18-00 is this bootstrap
-  - S18-01+ is TBD and MUST be defined in ops docs before starting
+  - S18-01..S18-03 are defined in ops docs and executed separately from S18-00
 - In `docs/ops/S18-00_PLAN.md`, ensure Goal + Scope + Deliverables are consistent (this file)
 
 stop when:

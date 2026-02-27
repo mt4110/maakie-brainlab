@@ -1,9 +1,9 @@
 {
   "schema_version": "s29-closeout-v2",
-  "captured_at_utc": "2026-02-27T11:50:23Z",
+  "captured_at_utc": "2026-02-27T13:59:12Z",
   "git": {
-    "branch": "ops/S29-01-S29-10",
-    "head": "2971732a2c6df3a57166589d92e528ab65e49038"
+    "branch": "ops/S30-1-S30-900",
+    "head": "eb11d99e73e0ea59ecc59aaa2c776cca1825a752"
   },
   "inputs": {
     "readiness_json": "docs/evidence/s29-09/slo_readiness_v4_latest.json",
@@ -15,44 +15,27 @@
     "before_phases_present": 10,
     "after_phases_present": 10,
     "after_failed_count": 0,
-    "after_warn_count": 5
+    "after_warn_count": 0
   },
   "unresolved_risks": [
-    "skip_rate has soft SLO warning and requires ongoing monitoring.",
-    "unknown_ratio has soft SLO warning and requires ongoing monitoring.",
-    "notify_delivery_rate has soft SLO warning and requires ongoing monitoring.",
-    "recovery_success_rate has soft SLO warning and requires ongoing monitoring.",
-    "reliability_total_runs has soft SLO warning and requires ongoing monitoring.",
-    "skip_rate is currently waived (SKIP_RATE_ENV_GAP); exit condition: Keep trailing non-pass streak below 3.",
-    "unknown_ratio is currently waived (UNKNOWN_RATIO_WITH_ACTIONS); exit condition: Reduce unknown_ratio to <= 0.03 with additional labeled samples.",
-    "notify_delivery_rate is currently waived (NOTIFY_ENDPOINT_GAP); exit condition: Configure channel webhooks and verify each channel returns 2xx at least once.",
-    "recovery_success_rate is currently waived (RECOVERY_SUCCESS_ENV_GAP); exit condition: Keep trailing non-pass streak below 3.",
-    "reliability_total_runs is currently waived (RELIABILITY_ENV_GAP); exit condition: Collect additional canary history samples and rerun S29-06.",
-    "Evidence trend includes 5 warning phase(s); continued hardening is required.",
     "provider env 未設定時の SKIP 常態化は運用継続監視が必要。",
     "長時間高負荷時の retry/backoff 最適値は追加検証が必要。",
     "unknown taxonomy の恒常的発生はデータ収集強化が必要。"
   ],
-  "waiver_exit_conditions": [
-    "skip_rate: Keep trailing non-pass streak below 3.",
-    "unknown_ratio: Reduce unknown_ratio to <= 0.03 with additional labeled samples.",
-    "notify_delivery_rate: Configure channel webhooks and verify each channel returns 2xx at least once.",
-    "recovery_success_rate: Keep trailing non-pass streak below 3.",
-    "reliability_total_runs: Collect additional canary history samples and rerun S29-06."
-  ],
+  "waiver_exit_conditions": [],
   "next_thread_handoff": [
-    "S30-01: production-connected runbook を運用定着し、失敗系復旧訓練を定例化する。",
-    "S30-02: taxonomy pipeline の生成品質指標を追加し、ラベル精度の継続改善を行う。",
-    "S30-03: readiness 通知の受信側SLA（ack/再送）を契約化する。"
+    "S30-1: Reclass pending tasks by impact order (Flow Failzero -> Log Clarity -> Automation).",
+    "S30-2: Freeze and execute batch-100 from docs/evidence/s30-01/task_reclass_latest.json, then switch thread.",
+    "S30-3: Keep progress source of truth in TASK + PR body (not STATUS.md), and run ci-self before PR update."
   ],
   "summary": {
     "status": "PASS",
-    "readiness": "WARN_ONLY",
+    "readiness": "READY",
     "blocked_gates": 0,
-    "readiness_reason_code": "SOFT_SLO_WARN",
-    "waived_hard_count": 5,
-    "waiver_exit_condition_count": 5,
-    "unresolved_risk_count": 14,
+    "readiness_reason_code": "",
+    "waived_hard_count": 0,
+    "waiver_exit_condition_count": 0,
+    "unresolved_risk_count": 3,
     "handoff_count": 3
   },
   "artifact_names": {

@@ -32,4 +32,4 @@
 - [x] Mark `docs/ops/S20-05_TASK.md` complete
 
 ## Step7: reviewpack
-- [ ] `go run cmd/reviewpack/main.go submit --mode verify-only`
+- [x] `go run cmd/reviewpack/main.go submit --mode verify-only`

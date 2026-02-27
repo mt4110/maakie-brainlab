@@ -41,7 +41,7 @@ PHASE 2: Normalize naming + structure
 
 PHASE 3: Fill TouchSet + Dependencies
   - For each step plan:
-      - TouchSet: list directories/files intended to change (TBD allowed, but must be explicit)
+      - TouchSet: list directories/files intended to change (placeholder allowed, but must be explicit)
       - Dependencies: explicit "Depends on S15-0X" or "None"
 
 PHASE 4: Build Dependency Matrix

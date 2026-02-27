@@ -1,12 +1,12 @@
 # S22-09_TASK.md
-- [ ] 0) repo位置確認（落ちない）
-- [ ] 1) main同期（落ちない）
-- [ ] 2) ブランチ作成（1PRで閉じ切る前提）
+- [x] 0) repo位置確認（落ちない）
+- [x] 1) main同期（落ちない）
+- [x] 2) ブランチ作成（1PRで閉じ切る前提）
 - [x] 3) OBSディレクトリ作成（.local/obs/s22-09_...）
 - [x] 4) 既存entrypoint探索（rgで validate-only/run/executor を洗い出し、OBSへ保存）
 - [x] 5) docs/evidence/EVAL_WALL_V2.md に「実行モード契約」を先に追記（validate-only/run定義）
 - [x] 6) 失敗分類 TAXONOMY_v1 を固定（schema/contract/opcode/normalization/index/search/cite）
-- [ ] 7) dataset( seed-mini ) を失敗分類タグで再編（既存がv0001ならそのまま、必要なら追記方式）
+- [x] 7) dataset( seed-mini ) を失敗分類タグで再編（既存がv0001ならそのまま、必要なら追記方式）
 - [x] 8) 計測出力（JSONL + summary.json）へタグ集計を統合
 - [x] 9) validate-onlyの“非実行保証”監査：入口ごとに executor 呼び出しが無いことを確認（違反はERRORで停止）
 - [x] 10) 決定論チェック（同一入力2回実行→JSONL sha256一致）※CPU安全：smoke(N=20)完了

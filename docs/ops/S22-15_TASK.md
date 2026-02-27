@@ -40,7 +40,7 @@ S22-15: 100% ✅ (Merged PR #98 / commit 2b8df7b)
 - [x] 4-C: Self-audit for banned tokens (exit/SystemExit)
 - [x] 5: Pin SOT (write-sot) and commit
 - [x] 6: Generate/Apply ghost prune candidate (APPLY_SOT=1)
-- [ ] 7: Sync SOT to Ruleset (APPLY_SYNC=1 + Double-lock)
+- [x] 7: Sync SOT to Ruleset (APPLY_SYNC=1 + Double-lock)
 - [x] 8: Automated PR creation
 - [x] 9: Closeout (100% status update and commit)
 

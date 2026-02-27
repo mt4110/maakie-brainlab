@@ -2,6 +2,7 @@ import argparse
 import hashlib
 import json
 import feedparser
+import subprocess
 import sys
 import urllib.request
 import urllib.error
@@ -27,6 +28,40 @@ def compute_raw_uid(source_id: str, url: str) -> str:
     """
     payload = f"{source_id}|{url}"
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def detect_code_version(project_root: Path) -> str:
+    """
+    Return a stable code version string.
+    Prefer git short SHA; fallback to fixed dev label when git context is unavailable.
+    """
+    default = "v1-dev"
+    try:
+        rev = subprocess.run(
+            ["git", "-C", str(project_root), "rev-parse", "--short=12", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if rev.returncode != 0:
+            return default
+        head = (rev.stdout or "").strip()
+        if not head:
+            return default
+
+        dirty = subprocess.run(
+            ["git", "-C", str(project_root), "diff-index", "--quiet", "HEAD", "--"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if dirty.returncode == 0:
+            return head
+        if dirty.returncode == 1:
+            return f"{head}-dirty"
+        return default
+    except Exception:
+        return default
 
 class Collector:
     def __init__(self, source_id: str, date_str: str, project_root: Path):
@@ -136,8 +171,7 @@ class Collector:
         try:
             config_sha = compute_config_sha(self.source_id, self.root)
             
-            # Simple/Naive code version (git sha ideally, but for now simple)
-            code_version = "v1-dev" #TODO: get from git if possible
+            code_version = detect_code_version(self.root)
             
             run_id = generate_run_id(self.date_str, self.source_id, config_sha, code_version)
             

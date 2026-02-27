@@ -1,6 +1,6 @@
 {
   "schema_version": "s29-evidence-trend-history-v5",
-  "updated_at_utc": "2026-02-27T11:50:23Z",
+  "updated_at_utc": "2026-02-27T13:59:12Z",
   "snapshots": [
     {
       "captured_at_utc": "2026-02-27T11:27:56Z",
@@ -41,6 +41,48 @@
         "S29-04": "WARN",
         "S29-05": "PASS",
         "S29-06": "WARN",
+        "S29-07": "PASS"
+      }
+    },
+    {
+      "captured_at_utc": "2026-02-27T13:58:44Z",
+      "status": "WARN",
+      "counts": {
+        "present_count": 7,
+        "missing_count": 0,
+        "pass_count": 5,
+        "warn_count": 2,
+        "failed_count": 0,
+        "stale_count": 0
+      },
+      "phase_statuses": {
+        "S29-01": "PASS",
+        "S29-02": "PASS",
+        "S29-03": "WARN",
+        "S29-04": "WARN",
+        "S29-05": "PASS",
+        "S29-06": "PASS",
+        "S29-07": "PASS"
+      }
+    },
+    {
+      "captured_at_utc": "2026-02-27T13:59:12Z",
+      "status": "PASS",
+      "counts": {
+        "present_count": 7,
+        "missing_count": 0,
+        "pass_count": 7,
+        "warn_count": 0,
+        "failed_count": 0,
+        "stale_count": 0
+      },
+      "phase_statuses": {
+        "S29-01": "PASS",
+        "S29-02": "PASS",
+        "S29-03": "PASS",
+        "S29-04": "PASS",
+        "S29-05": "PASS",
+        "S29-06": "PASS",
         "S29-07": "PASS"
       }
     }

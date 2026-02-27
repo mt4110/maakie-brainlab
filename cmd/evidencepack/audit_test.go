@@ -133,19 +133,8 @@ func TestVerifyBundleAlsoVerifiesAuditWhenPresent(t *testing.T) {
 	policyFile := filepath.Join(tmp, "policy.toml")
 	os.WriteFile(policyFile, []byte("version=1\n[enforcement]\nlocal='permissive'\n"), 0644)
 
-	// Create bundle with --audit-dir pointing to tmp (where .local/reviewpack_artifacts exists)
-	// Wait, ChainDir includes .local/reviewpack_artifacts. NewChainWriter(tmp) creates tmp/.local/reviewpack_artifacts.
-	// runBundle --audit-dir expects the root where .local/... exists?
-	// Let's check bundle.go:
-	// srcPath := filepath.Join(auditDir, ChainFile)
-	// ChainFile = "AUDIT_CHAIN_v1.tsv" ?? NO. ChainFile = "AUDIT_CHAIN_v1.tsv".
-	// ChainDir = ".local/reviewpack_artifacts".
-	//
-	// In `bundle.go`: srcPath := filepath.Join(auditDir, ChainFile)
-	// If auditDir is passed as `tmp`, it looks for `tmp/AUDIT_CHAIN_v1.tsv`.
-	// But `NewChainWriter(tmp)` writes to `tmp/.local/reviewpack_artifacts/AUDIT_CHAIN_v1.tsv`.
-	// So we must pass `tmp/.local/reviewpack_artifacts` as `--audit-dir`.
-
+	// NewChainWriter(tmp) writes chain files under tmp/.local/reviewpack_artifacts,
+	// so --audit-dir must point to that directory.
 	auditDir := filepath.Join(tmp, ChainDir)
 
 	bundlePath := filepath.Join(tmp, "bundle.tar.gz")

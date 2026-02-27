@@ -9,9 +9,7 @@ from typing import Dict, Any, List
 CONFIG_PATTERNS = [
     "satellite/sources/{id}.toml",
     "satellite/rules/{id}.toml",
-    # "satellite/prompts/{id}/v1.txt", # Allow v*.txt wildcards or fixed v1? User said v1.txt or v*.txt.
-    # Instruction says: "satellite/prompts/<source_id>/v1.txt" (S4.1 placeholder ok)
-    "satellite/prompts/{id}/v1.txt", 
+    "satellite/prompts/{id}/v1.txt",
 ]
 
 def generate_run_id(
@@ -101,4 +99,3 @@ def save_manifest(path: Path, data: Dict[str, Any]) -> None:
         if tmp_path.exists():
             tmp_path.unlink()
         raise
-

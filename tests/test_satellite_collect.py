@@ -5,13 +5,14 @@ import tempfile
 from datetime import datetime
 from pathlib import Path
 from unittest.mock import patch
+from subprocess import CompletedProcess
 import feedparser
 
 # Fix import path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from satellite.collect import Collector, compute_raw_uid  # noqa: E402
+from satellite.collect import Collector, compute_raw_uid, detect_code_version  # noqa: E402
 
 class TestSatelliteCollect(unittest.TestCase):
     def setUp(self):
@@ -43,6 +44,28 @@ class TestSatelliteCollect(unittest.TestCase):
         
         uid3 = compute_raw_uid("src1", "http://example.com/2")
         self.assertNotEqual(uid1, uid3)
+
+    def test_detect_code_version_fallback_when_not_git_repo(self):
+        version = detect_code_version(self.root)
+        self.assertEqual(version, "v1-dev")
+
+    @patch("satellite.collect.subprocess.run")
+    def test_detect_code_version_git_head_and_dirty(self, mock_run):
+        mock_run.side_effect = [
+            CompletedProcess(args=["git"], returncode=0, stdout="abc123def456\n", stderr=""),
+            CompletedProcess(args=["git"], returncode=1, stdout="", stderr=""),
+        ]
+        version = detect_code_version(self.root)
+        self.assertEqual(version, "abc123def456-dirty")
+
+    @patch("satellite.collect.subprocess.run")
+    def test_detect_code_version_fallback_on_git_status_error(self, mock_run):
+        mock_run.side_effect = [
+            CompletedProcess(args=["git"], returncode=0, stdout="abc123def456\n", stderr=""),
+            CompletedProcess(args=["git"], returncode=128, stdout="", stderr="fatal: not a git repository"),
+        ]
+        version = detect_code_version(self.root)
+        self.assertEqual(version, "v1-dev")
 
     @patch("satellite.collect.Collector.fetch_feed")
     def test_collector_run_with_fixture(self, mock_fetch):

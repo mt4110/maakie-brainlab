@@ -1,8 +1,8 @@
 # S21-02 Task: Milestone Discipline + PR Template Hardening
 
-- [ ] **Preflight**
-    - [ ] Check Repo Root (Observer: `REPO=...` or ERROR)
-    - [ ] Check Git Status (Observer: `git status -sb` must not be dirty)
+- [x] **Preflight**
+    - [x] Check Repo Root (Observer: `REPO=...` or ERROR)
+    - [x] Check Git Status (Observer: `git status -sb` must not be dirty)
 
 - [x] **Implementation**
     - [x] Create `docs/ops/S21-02_PLAN.md`
@@ -16,10 +16,10 @@
         - [x] Mandate no empty fields in PR body
     - [x] Update `docs/ops/STATUS.md` (Add S21-02 row, start at 0%)
 
-- [ ] **Snapshot**
-    - [ ] Update progress in `S21-02_TASK.md`
+- [x] **Snapshot**
+    - [x] Update progress in `S21-02_TASK.md`
 
-- [ ] **Verification**
-    - [ ] **Verify(light)**: `git diff --name-only origin/main...HEAD` (Expect only docs & template)
-    - [ ] **Verify(light)**: Markdown lint (delegated to CI)
-    - [ ] **Verify(heavy)**: `go run cmd/reviewpack/main.go submit --mode verify-only` (Optional, once at end)
+- [x] **Verification**
+    - [x] **Verify(light)**: `git diff --name-only origin/main...HEAD` (Expect only docs & template)
+    - [x] **Verify(light)**: Markdown lint (delegated to CI)
+    - [x] **Verify(heavy)**: `go run cmd/reviewpack/main.go submit --mode verify-only` (Optional, once at end)

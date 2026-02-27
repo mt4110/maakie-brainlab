@@ -41,7 +41,7 @@ Last Updated: 2026-02-27
 
 - [x] S28 v3 PLAN/TASK を新規作成
 - [x] v1 evidence の WARN要因を抽出し、v3 DoD を固定
-- [ ] PR body に v3 の exit metrics ブロックを追加
+- [x] PR body に v3 の exit metrics ブロックを追加
 
 ### S28-01 Provider Canary Recovery Strategy v2
 
@@ -145,8 +145,8 @@ Last Updated: 2026-02-27
 重量（ship前）:
 
 - [x] `make verify-il`
-- [ ] `source /path/to/your/nix/profile.d/nix-daemon.sh`
-- [ ] `ci-self up --ref "$(git branch --show-current)"`（remote ref push 後に再実行）
+- [x] `source /path/to/your/nix/profile.d/nix-daemon.sh`
+- [x] `ci-self up --ref "$(git branch --show-current)"`（remote ref push 後に再実行）
 
 ## Evidence Policy
 

@@ -104,10 +104,7 @@ with open(path, encoding="utf-8") as f:
         has_sources = bool(details.get("has_sources"))
 
         if qtype == "negative_control":
-            # Optional stronger rule:
-            # if has_sources:
-            #   print(f"[FAIL] Row {i}: negative_control must not have sources (id={qid})")
-            #   failed = True
+            # negative_control は sources 必須チェック対象外
             continue
 
         if not has_sources:

@@ -58,7 +58,7 @@ Last Updated: 2026-02-27
 - [x] 5-1. `make verify-il`
 - [x] 5-2. `source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh`
 - [x] 5-3. `ci-self up --ref "$(git branch --show-current)"`
-- [ ] 5-4. PR body を最終更新
+- [x] 5-4. PR body を最終更新
 
 ## Validation Commands
 

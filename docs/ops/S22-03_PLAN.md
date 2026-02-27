@@ -132,9 +132,9 @@
 
 ## Gates integration (do not break existing pipeline)
 - Makefile に追加：
-  - make run-il-eval
-  - make il-metrics
-  - make verify-il-causal
+  - make il-thread-smoke
+  - make verify-il-thread-v2
+  - make il-thread-replay-check
   - make verify-il（既存ターゲットに「軽い」形で組み込み）
 - 既存の `make test` や CI を壊さない：
   - 既存ターゲットは意味を変えない

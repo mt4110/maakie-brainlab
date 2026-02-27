@@ -9,7 +9,7 @@
 ---
 
 ## 1) Kickoff: 観測ディレクトリを作る（軽い）
-- [ ] OBS作成
+- [x] OBS作成
 ```bash
 bash -lc '
 cd "/Users/takemuramasaki/dev/maakie-brainlab" 2>/dev/null || true
@@ -27,7 +27,7 @@ echo "OK: done"
 
 ## 2) Dataset 探索（for/continue/break で “確実に見つける”）
 
-- [ ] data/eval/datasets を観測
+- [x] data/eval/datasets を観測
 ```bash
 bash -lc '
 cd "/Users/takemuramasaki/dev/maakie-brainlab" 2>/dev/null || true
@@ -45,7 +45,7 @@ echo "OK: done"
 '
 ```
 
-- [ ] 候補を 1つに確定（手動で DATASET_FILE に貼る：嘘を入れない）
+- [x] 候補を 1つに確定（手動で DATASET_FILE に貼る：嘘を入れない）
 ```bash
 bash -lc '
 cd "/Users/takemuramasaki/dev/maakie-brainlab" 2>/dev/null || true
@@ -96,7 +96,7 @@ echo "OK: done stop=$STOP"
 
 ## 3) ランナー実装（新規ファイル1本。軽い）
 
-- [ ] scripts/eval_wall_v2_il_centered.py を作成/更新
+- [x] scripts/eval_wall_v2_il_centered.py を作成/更新
 
 仕様（最低限）：
 - 引数：--dataset --out --mode --offset --limit --resume --timebox-sec
@@ -108,7 +108,7 @@ echo "OK: done stop=$STOP"
 
 ## 4) Smoke（validate-only / 低負荷）
 
-- [ ] limit=5 timebox=20 でまず通す
+- [x] limit=5 timebox=20 でまず通す
 ```bash
 bash -lc '
 cd "/Users/takemuramasaki/dev/maakie-brainlab" 2>/dev/null || true
@@ -150,7 +150,7 @@ echo "OK: done stop=$STOP"
 
 ## 5) Smoke（validate-exec / さらに軽く：1件だけ）
 
-- [ ] validate-exec は “1件だけ” で様子見（CPUが跳ねるならここで止める）
+- [x] validate-exec は “1件だけ” で様子見（CPUが跳ねるならここで止める）
 ```bash
 bash -lc '
 cd "/Users/takemuramasaki/dev/maakie-brainlab" 2>/dev/null || true
@@ -188,7 +188,7 @@ echo "OK: done stop=$STOP"
 
 ## 6) 分割本走（20件ずつ。固まるなら 10件ずつ）
 
-- [ ] 20件ずつ segment 実行（同一 OUT に resume で積む）
+- [x] 20件ずつ segment 実行（同一 OUT に resume で積む）
 ```bash
 bash -lc '
 cd "/Users/takemuramasaki/dev/maakie-brainlab" 2>/dev/null || true
@@ -240,23 +240,23 @@ echo "OK: done stop=$STOP"
 
 ## 7) Docs/SOT 更新（STATUS + Plan/Task）
 
-- [ ] docs/ops/STATUS.md に S22-08 を WIP で追加し、進捗%を書く（例：5%）
-- [ ] docs/ops/S22-08_PLAN.md / TASK.md を含めてコミット
+- [x] docs/ops/STATUS.md に S22-08 を WIP で追加し、進捗%を書く（例：5%）
+- [x] docs/ops/S22-08_PLAN.md / TASK.md を含めてコミット
 
 ---
 
 ## 8) verify-only（証拠の束）
 
-- [ ] 既存の reviewpack 流儀で verify-only → bundle sha256 を OBS に保存
-- [ ] “PASS判定はログ文字列” で行い、exitに依存しない
+- [x] 既存の reviewpack 流儀で verify-only → bundle sha256 を OBS に保存
+- [x] “PASS判定はログ文字列” で行い、exitに依存しない
 
 ---
 
 ## 9) PR 作成〜マージ（1PRで閉じ切る）
 
-- [ ] milestone: S22-08
-- [ ] merge は ops/pr_merge_guard.sh（dry→execute）
-- [ ] gh pr view --json mergedAt,mergeCommit で事後確認（merged フィールド禁止）
+- [x] milestone: S22-08
+- [x] merge は ops/pr_merge_guard.sh（dry→execute）
+- [x] gh pr view --json mergedAt,mergeCommit で事後確認（merged フィールド禁止）
 
 
 ## Extension: 6-10%% Pack

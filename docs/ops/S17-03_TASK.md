@@ -43,4 +43,4 @@
 - [x] git add -A
 - [x] git commit -m "fix(s17-03): stabilize scheduled run_always_1h and harden diagnostics"
 - [x] git push -u origin s17-03-run-always-1h-fix-v1
-- [ ] gh pr create --fill
+- [x] gh pr create --fill

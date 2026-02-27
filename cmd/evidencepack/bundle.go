@@ -178,9 +178,10 @@ Contents:
 - keys/: Public keys needed for verification.
 - audit/: (Optional) Audit chain snapshot for provenance verification.
 
-NOTE: The signature protects the *artifact only*.
-The policy and keys are provided for self-contained verification, but their
-authenticity is not strictly guaranteed by the bundle signature itself in v1.
+Security model (v1):
+- The signature protects the *artifact only*.
+- The policy and keys are included for self-contained verification, but their
+  authenticity is not strictly guaranteed by the bundle signature itself.
 `
 	if err := os.WriteFile(filepath.Join(stagingDir, "README.md"), []byte(strings.TrimSpace(readmeContent)+"\n"), 0644); err != nil {
 		return fmt.Errorf("failed to write README.md: %w", err)
