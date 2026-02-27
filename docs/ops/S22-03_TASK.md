@@ -68,7 +68,7 @@
 - 形式：`<LEVEL>: <what> key=value ...`
   - `OK:    OK: il_metrics wrote path=... count=...`
   - `ERROR: ERROR: il_metrics failed reason=...`
-  - `SKIP:  SKIP: verify-il-causal reason=STOP=1`
+  - `SKIP:  SKIP: verify-il-thread-v2 reason=STOP=1`
 
 ---
 
@@ -226,9 +226,9 @@
 
 追加ターゲット（例）：
 
-- [x] `make run-il-eval`（strong生成）
-- [x] `make il-metrics`（strong集計）
-- [x] `make verify-il-causal`（strong+weak+差分）
+- [x] `make il-thread-smoke`（thread runner 実行）
+- [x] `make verify-il-thread-v2`（suite/doctor/replay 集計）
+- [x] `make verify-il`（統合検証）
 - [x] `make verify-il` に軽く組み込む（重くしない）
 
 注意（重要）：

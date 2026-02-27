@@ -90,7 +90,7 @@ Last Updated: 2026-02-27
 - `python3 -m unittest -v tests/test_s29_*.py`
 
 中量:
-- `make s29-01` ... `make s29-10`（ターゲット追加後）
+- `make s29-canary-recovery-success-rate-slo` ... `make s29-closeout`（S29用ターゲット群）
 
 重量（ship前）:
 - `make verify-il`
