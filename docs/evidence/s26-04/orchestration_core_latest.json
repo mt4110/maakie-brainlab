@@ -1,0 +1,59 @@
+{
+  "schema_version": "s26-orchestration-core-v1",
+  "captured_at_utc": "2026-02-27T02:18:09Z",
+  "git": {
+    "branch": "ops/S26-01-S26-02",
+    "head": "c2a004b33b9663faad5c42306a321601d7a2512f"
+  },
+  "steps": [
+    {
+      "name": "s26-provider-canary",
+      "command": [
+        "/Users/takemuramasaki/dev/maakie-brainlab/.venv/bin/python",
+        "/Users/takemuramasaki/dev/maakie-brainlab/scripts/ops/s26_provider_canary.py"
+      ],
+      "returncode": 0,
+      "status": "PASS",
+      "error": "",
+      "stdout_log": ".local/obs/s25-ops/s26-orchestration-core/s26-orchestration-core__20260227T021809Z__ops-s26-01-s26-02__c2a004b/s26-provider-canary.stdout.log",
+      "stderr_log": ".local/obs/s25-ops/s26-orchestration-core/s26-orchestration-core__20260227T021809Z__ops-s26-01-s26-02__c2a004b/s26-provider-canary.stderr.log"
+    },
+    {
+      "name": "s26-medium-eval-wall",
+      "command": [
+        "/Users/takemuramasaki/dev/maakie-brainlab/.venv/bin/python",
+        "/Users/takemuramasaki/dev/maakie-brainlab/scripts/ops/s26_medium_eval_wall.py"
+      ],
+      "returncode": 0,
+      "status": "PASS",
+      "error": "",
+      "stdout_log": ".local/obs/s25-ops/s26-orchestration-core/s26-orchestration-core__20260227T021809Z__ops-s26-01-s26-02__c2a004b/s26-medium-eval-wall.stdout.log",
+      "stderr_log": ".local/obs/s25-ops/s26-orchestration-core/s26-orchestration-core__20260227T021809Z__ops-s26-01-s26-02__c2a004b/s26-medium-eval-wall.stderr.log"
+    },
+    {
+      "name": "s26-rollback-artifact",
+      "command": [
+        "/Users/takemuramasaki/dev/maakie-brainlab/.venv/bin/python",
+        "/Users/takemuramasaki/dev/maakie-brainlab/scripts/ops/s26_rollback_artifact.py"
+      ],
+      "returncode": 0,
+      "status": "PASS",
+      "error": "",
+      "stdout_log": ".local/obs/s25-ops/s26-orchestration-core/s26-orchestration-core__20260227T021809Z__ops-s26-01-s26-02__c2a004b/s26-rollback-artifact.stdout.log",
+      "stderr_log": ".local/obs/s25-ops/s26-orchestration-core/s26-orchestration-core__20260227T021809Z__ops-s26-01-s26-02__c2a004b/s26-rollback-artifact.stderr.log"
+    }
+  ],
+  "upstream_status": {
+    "canary": "SKIP",
+    "medium_eval_wall": "PASS",
+    "rollback_artifact": "PASS"
+  },
+  "summary": {
+    "status": "PASS",
+    "failed_steps": 0
+  },
+  "artifact_names": {
+    "json": "orchestration_core_latest.json",
+    "md": "orchestration_core_latest.md"
+  }
+}
