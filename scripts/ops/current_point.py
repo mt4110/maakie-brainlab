@@ -25,6 +25,7 @@ PHASE_RX = re.compile(r"([sS]\d{2}-\d{2})")
 PROGRESS_LINE_RX = re.compile(r"^\s*-\s*([A-Za-z0-9\-]+):\s*([0-9]+(?:\.[0-9]+)?)%\s*(.*)$", re.M)
 PERCENT_RX = re.compile(r"([0-9]+(?:\.[0-9]+)?)%")
 CHECKBOX_RX = re.compile(r"^\s*-\s*\[([xX ])\]\s+(.+?)\s*$", re.M)
+VERSION_TASK_RX = re.compile(r"[-_]V([0-9]+)_TASK\.MD$")
 
 
 def run_git(args: List[str], cwd: Path, events: Optional[List[Dict[str, Any]]] = None) -> Optional[str]:
@@ -84,18 +85,31 @@ def score_candidate(name_upper: str, track_upper: str) -> Optional[Tuple[int, in
     return None
 
 
+def extract_task_version(name_upper: str) -> int:
+    m = VERSION_TASK_RX.search(name_upper)
+    if not m:
+        return 0
+    try:
+        return int(m.group(1))
+    except Exception:
+        return 0
+
+
 def choose_task_file(docs_dir: Path, track: str) -> Optional[Path]:
     files = sorted(docs_dir.glob("*_TASK.md"))
     if not files:
         return None
 
     if track:
-        scored: List[Tuple[Tuple[int, int, str], Path]] = []
+        scored: List[Tuple[Tuple[int, int, int, str], Path]] = []
         track_upper = track.upper()
         for path in files:
-            score = score_candidate(path.name.upper(), track_upper)
+            name_upper = path.name.upper()
+            score = score_candidate(name_upper, track_upper)
             if score is not None:
-                scored.append((score, path))
+                version = extract_task_version(name_upper)
+                # For same match class, prefer newer Vn task files.
+                scored.append(((score[0], -version, score[1], score[2]), path))
         if scored:
             scored.sort(key=lambda x: x[0])
             return scored[0][1]

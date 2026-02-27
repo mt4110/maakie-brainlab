@@ -36,6 +36,16 @@ class CurrentPointTests(unittest.TestCase):
             self.assertIsNotNone(chosen)
             self.assertEqual(chosen.name, "S25-01-25-10-THREAD-V1_TASK.md")
 
+    def test_choose_task_file_prefers_highest_version_for_same_track(self):
+        with tempfile.TemporaryDirectory() as td:
+            d = Path(td)
+            (d / "S28-01-S28-10-THREAD-V1_TASK.md").write_text("v1", encoding="utf-8")
+            (d / "S28-01-S28-10-THREAD-V3_TASK.md").write_text("v3", encoding="utf-8")
+            (d / "S28-01-S28-10-THREAD-V2_TASK.md").write_text("v2", encoding="utf-8")
+            chosen = self.m.choose_task_file(d, "S28-01-S28-10")
+            self.assertIsNotNone(chosen)
+            self.assertEqual(chosen.name, "S28-01-S28-10-THREAD-V3_TASK.md")
+
     def test_parse_task_progress_and_next_items(self):
         text = """
 ## Progress

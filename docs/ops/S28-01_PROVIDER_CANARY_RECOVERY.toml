@@ -1,0 +1,8 @@
+schema_version = "s28-provider-canary-recovery-v1"
+canary_ops_json = "docs/evidence/s27-01/provider_canary_ops_latest.json"
+history_json = "docs/evidence/s27-01/provider_canary_history.json"
+window_size = 12
+recovery_threshold = 3
+skip_rate_warn_threshold = 0.2
+recovery_cmd = "python3 scripts/ops/s27_provider_canary_ops.py --strict-provider-env"
+rollback_cmd = "python3 scripts/ops/s25_langchain_poc.py --mode rollback-only"

@@ -1,0 +1,77 @@
+{
+  "schema_version": "s28-acceptance-cases-v3",
+  "cases": [
+    {
+      "id": "S28A-001",
+      "title": "provider recovery strategy is actionable",
+      "severity": "critical",
+      "fallback": "Run S28-01 and inspect trailing streak plus recommended actions.",
+      "artifact": "docs/evidence/s28-01/provider_canary_recovery_latest.json",
+      "assertion": {"path": "summary.status", "op": "in", "value": ["PASS", "WARN"]}
+    },
+    {
+      "id": "S28A-002",
+      "title": "taxonomy feedback loop remains non-failing",
+      "severity": "critical",
+      "fallback": "Recheck S28-02 config and unknown candidate extraction.",
+      "artifact": "docs/evidence/s28-02/taxonomy_feedback_loop_latest.json",
+      "assertion": {"path": "summary.status", "op": "in", "value": ["PASS", "WARN"]}
+    },
+    {
+      "id": "S28A-003",
+      "title": "readiness notify produces message payload",
+      "severity": "major",
+      "fallback": "Run S28-03 with --send after configuring webhook env.",
+      "artifact": "docs/evidence/s28-03/readiness_notify_latest.json",
+      "assertion": {"path": "message", "op": "contains", "value": "readiness"}
+    },
+    {
+      "id": "S28A-004",
+      "title": "triage v2 exports priority actions",
+      "severity": "major",
+      "fallback": "Run S28-04 and verify priority_actions is populated.",
+      "artifact": "docs/evidence/s28-04/incident_triage_pack_v2_latest.json",
+      "assertion": {"path": "priority_actions", "op": "truthy", "value": true}
+    },
+    {
+      "id": "S28A-005",
+      "title": "policy drift guard v2 is non-failing by default",
+      "severity": "minor",
+      "fallback": "Run S28-05 with baseline update and inspect drift classification.",
+      "artifact": "docs/evidence/s28-05/policy_drift_guard_v2_latest.json",
+      "assertion": {"path": "summary.status", "op": "neq", "value": "FAIL"}
+    },
+    {
+      "id": "S28A-006",
+      "title": "soak v2 remains actionable",
+      "severity": "major",
+      "fallback": "Run S28-06 and inspect max_consecutive_nonpass + reason_code.",
+      "artifact": "docs/evidence/s28-06/reliability_soak_v2_latest.json",
+      "assertion": {"path": "summary.status", "op": "in", "value": ["PASS", "WARN"]}
+    },
+    {
+      "id": "S28A-007",
+      "title": "readiness notify tracks delivery attempts",
+      "severity": "minor",
+      "fallback": "Run S28-03 and verify notification.attempt_count is emitted.",
+      "artifact": "docs/evidence/s28-03/readiness_notify_latest.json",
+      "assertion": {"path": "notification.attempt_count", "op": "gte", "value": 0}
+    },
+    {
+      "id": "S28A-008",
+      "title": "reliability soak reports remaining run gap",
+      "severity": "minor",
+      "fallback": "Run S28-06 and verify remaining_runs_to_target is emitted.",
+      "artifact": "docs/evidence/s28-06/reliability_soak_v2_latest.json",
+      "assertion": {"path": "metrics.remaining_runs_to_target", "op": "gte", "value": 0}
+    },
+    {
+      "id": "S28A-009",
+      "title": "triage pack includes severity buckets",
+      "severity": "major",
+      "fallback": "Run S28-04 and verify alerts_by_severity is emitted.",
+      "artifact": "docs/evidence/s28-04/incident_triage_pack_v2_latest.json",
+      "assertion": {"path": "alerts_by_severity", "op": "truthy", "value": true}
+    }
+  ]
+}

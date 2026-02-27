@@ -1,0 +1,41 @@
+{
+  "schema_version": "s28-policy-drift-baseline-v2",
+  "created_at_utc": "2026-02-27T07:07:33Z",
+  "files": {
+    "docs/ops/S28-01_PROVIDER_CANARY_RECOVERY.toml": {
+      "present": true,
+      "sha256": "e9d574b9f40fdb4bfa5601a1cfd1ec0d8fa8623bb5a88ad9e8ef01fe9e1ace81",
+      "size": 426
+    },
+    "docs/ops/S28-02_TAXONOMY_FEEDBACK_LOOP.toml": {
+      "present": true,
+      "sha256": "1db02dcc1723d61ceb99ba7409b30bab99fc38dce7ab24c3c183a6abfb780f62",
+      "size": 326
+    },
+    "docs/ops/S28-07_ACCEPTANCE_CASES_V3.json": {
+      "present": true,
+      "sha256": "18a082d9ec054f7db89152ee317961a5b5162ba9cb586c81227291dd3853b5fe",
+      "size": 2227
+    },
+    "scripts/ops/s28_slo_readiness_v2.py": {
+      "present": true,
+      "sha256": "5ecd0c4bad742edb30707b42268303ec268140c7f70c1fb42de799e624284eb2",
+      "size": 13675
+    },
+    "scripts/ops/s28_readiness_notify.py": {
+      "present": true,
+      "sha256": "4d2899ec478ef2587380d83cb99041c56fe97006fc085dc123a2705a52844b9b",
+      "size": 9427
+    },
+    ".github/workflows/run_always_1h.yml": {
+      "present": true,
+      "sha256": "c7f87b659608af9764349d6f991cc87713b01b28ed5ed8d33ef1f8f199dae5d6",
+      "size": 1845
+    },
+    "Makefile": {
+      "present": true,
+      "sha256": "6e3090d2886640dc4b6ce04f28df77b2193c4bab8a490043eb17693a7b50b881",
+      "size": 7542
+    }
+  }
+}

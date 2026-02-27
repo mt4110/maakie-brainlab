@@ -1,0 +1,90 @@
+{
+  "schema_version": "s28-evidence-trend-index-v3",
+  "captured_at_utc": "2026-02-27T10:16:34Z",
+  "git": {
+    "branch": "ops/S28-01-S28-10",
+    "head": "2a3af57247941708ebc55133a88ee4900018b6aa"
+  },
+  "phases": [
+    {
+      "phase": "S28-01",
+      "artifact": "docs/evidence/s28-01/provider_canary_recovery_latest.json",
+      "present": true,
+      "status": "WARN",
+      "captured_at_utc": "2026-02-27T10:16:33Z",
+      "stale": false
+    },
+    {
+      "phase": "S28-02",
+      "artifact": "docs/evidence/s28-02/taxonomy_feedback_loop_latest.json",
+      "present": true,
+      "status": "WARN",
+      "captured_at_utc": "2026-02-27T08:06:03Z",
+      "stale": false
+    },
+    {
+      "phase": "S28-03",
+      "artifact": "docs/evidence/s28-03/readiness_notify_latest.json",
+      "present": true,
+      "status": "WARN",
+      "captured_at_utc": "2026-02-27T10:16:33Z",
+      "stale": false
+    },
+    {
+      "phase": "S28-04",
+      "artifact": "docs/evidence/s28-04/incident_triage_pack_v2_latest.json",
+      "present": true,
+      "status": "WARN",
+      "captured_at_utc": "2026-02-27T08:06:03Z",
+      "stale": false
+    },
+    {
+      "phase": "S28-05",
+      "artifact": "docs/evidence/s28-05/policy_drift_guard_v2_latest.json",
+      "present": true,
+      "status": "WARN",
+      "captured_at_utc": "2026-02-27T08:06:03Z",
+      "stale": false
+    },
+    {
+      "phase": "S28-06",
+      "artifact": "docs/evidence/s28-06/reliability_soak_v2_latest.json",
+      "present": true,
+      "status": "WARN",
+      "captured_at_utc": "2026-02-27T08:06:03Z",
+      "stale": false
+    },
+    {
+      "phase": "S28-07",
+      "artifact": "docs/evidence/s28-07/acceptance_wall_v3_latest.json",
+      "present": true,
+      "status": "PASS",
+      "captured_at_utc": "2026-02-27T08:06:03.909847+00:00",
+      "stale": false
+    }
+  ],
+  "history": {
+    "path": "docs/evidence/s28-08/evidence_trend_history_v3.json",
+    "size": 5,
+    "deltas": {
+      "missing_delta": 0,
+      "failed_delta": 0,
+      "warn_delta": 0
+    }
+  },
+  "summary": {
+    "status": "WARN",
+    "history_size": 5,
+    "present_count": 7,
+    "missing_count": 0,
+    "pass_count": 1,
+    "warn_count": 6,
+    "failed_count": 0,
+    "stale_count": 0
+  },
+  "artifact_names": {
+    "json": "evidence_trend_index_v3_latest.json",
+    "md": "evidence_trend_index_v3_latest.md",
+    "history": "evidence_trend_history_v3.json"
+  }
+}
