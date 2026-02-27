@@ -1,0 +1,39 @@
+{
+  "schema_version": "s27-closeout-v1",
+  "captured_at_utc": "2026-02-27T04:35:27Z",
+  "git": {
+    "branch": "ops/S27-01-S27-10",
+    "head": "92af6677bd40b05a1e624760d25ef2601887584d"
+  },
+  "inputs": {
+    "readiness_json": "docs/evidence/s27-09/slo_readiness_latest.json",
+    "index_json": "docs/evidence/s27-08/evidence_trend_index_latest.json"
+  },
+  "before_after": {
+    "before_scope": "S26-10 Exit (single-run readiness)",
+    "after_scope": "S27-10 Exit (continuous canary ops + SLO readiness)",
+    "before_phases_present": 10,
+    "after_phases_present": 10,
+    "after_failed_count": 0,
+    "after_warn_count": 4
+  },
+  "unresolved_risks": [
+    "provider env 未設定時の SKIP 常態化は運用継続監視が必要。",
+    "長時間高負荷時の retry/backoff 最適値は追加検証が必要。",
+    "unknown taxonomy の恒常的発生はデータ収集強化が必要。"
+  ],
+  "next_thread_handoff": [
+    "S28-01: provider 実接続 canary の自動復旧戦略を追加する。",
+    "S28-02: taxonomy unknown を削減する運用データ収集ループを導入する。",
+    "S28-03: readiness 通知を運用チャンネルへ自動配信する。"
+  ],
+  "summary": {
+    "status": "PASS",
+    "readiness": "WARN_ONLY",
+    "blocked_gates": 0
+  },
+  "artifact_names": {
+    "json": "closeout_latest.json",
+    "md": "closeout_latest.md"
+  }
+}

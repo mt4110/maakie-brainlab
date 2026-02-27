@@ -1,0 +1,89 @@
+{
+  "schema_version": "s27-medium-eval-wall-v2-result-v1",
+  "captured_at_utc": "2026-02-27T04:34:40Z",
+  "git": {
+    "branch": "ops/S27-01-S27-10",
+    "head": "92af6677bd40b05a1e624760d25ef2601887584d"
+  },
+  "dataset_id": "rag-eval-wall-v2__seed-medium__v0001",
+  "config_path": "docs/ops/S27-02_MEDIUM_EVAL_WALL_V2.toml",
+  "cases_path": "data/eval/datasets/rag-eval-wall-v2__seed-medium__v0001/cases.jsonl",
+  "meta_path": "data/eval/datasets/rag-eval-wall-v2__seed-medium__v0001/dataset.meta.json",
+  "meta_snapshot": {
+    "dataset_id": "rag-eval-wall-v2__seed-medium__v0001",
+    "schema_version": "s27-medium-dataset-v2",
+    "eval_spec_version": "EVAL_SPEC_v1",
+    "created_utc": "2026-02-27T00:00:00Z",
+    "source": "manual-seed-medium-v2",
+    "cases_total": 16,
+    "distribution": {
+      "provider": 4,
+      "network": 4,
+      "schema": 4,
+      "timeout": 3,
+      "unknown": 1,
+      "negative": 4
+    }
+  },
+  "distribution": {
+    "total_cases": 16,
+    "must_answer_true": 12,
+    "must_answer_false": 4,
+    "must_cite_true": 12,
+    "tag_counts": {
+      "basic": 2,
+      "domain": 3,
+      "finance": 1,
+      "medical": 1,
+      "negative": 4,
+      "network": 4,
+      "ops": 5,
+      "policy": 2,
+      "provider": 4,
+      "schema": 4,
+      "security": 2,
+      "timeout": 3,
+      "unknown": 1
+    }
+  },
+  "taxonomy": {
+    "counts": {
+      "network": 4,
+      "provider": 4,
+      "schema": 4,
+      "timeout": 3,
+      "unknown": 1
+    },
+    "unknown_ratio": 0.0625,
+    "total_cases": 16
+  },
+  "delta_vs_v1": {
+    "baseline_cases_path": "data/eval/datasets/rag-eval-wall-v1__seed-medium__v0001/cases.jsonl",
+    "baseline_total_cases": 12,
+    "total_cases_delta": 4
+  },
+  "contract": {
+    "min_cases": 14,
+    "max_cases": 48,
+    "min_must_answer_true": 10,
+    "min_must_answer_false": 4,
+    "min_must_cite_true": 10,
+    "max_unknown_ratio_warn": 0.2
+  },
+  "tag_min_counts": {
+    "provider": 3,
+    "network": 3,
+    "schema": 3,
+    "timeout": 2,
+    "negative": 3
+  },
+  "summary": {
+    "status": "PASS",
+    "reason_code": "",
+    "errors": []
+  },
+  "artifact_names": {
+    "json": "medium_eval_wall_v2_latest.json",
+    "md": "medium_eval_wall_v2_latest.md"
+  }
+}

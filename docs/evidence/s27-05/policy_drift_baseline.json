@@ -1,0 +1,36 @@
+{
+  "schema_version": "s27-policy-drift-baseline-v1",
+  "created_at_utc": "2026-02-27T04:14:22Z",
+  "files": {
+    "docs/ops/S27-01_PROVIDER_CANARY_OPS.toml": {
+      "present": true,
+      "sha256": "9d3114fac40add5512670689407cb2aa5f9625f02e3a8805c35a214a63749c26",
+      "size": 1025
+    },
+    "docs/ops/S27-02_MEDIUM_EVAL_WALL_V2.toml": {
+      "present": true,
+      "sha256": "4f2f3cc411615dd9508fcf0702d00a381420937aa50bba1604dc64cbc7adc7de",
+      "size": 689
+    },
+    "docs/ops/S27-07_ACCEPTANCE_CASES_V2.json": {
+      "present": true,
+      "sha256": "9433032b39dff6cce2e3ba21a80e61200d42b6d63aa147d2fcdee56c98c01a3c",
+      "size": 2257
+    },
+    "scripts/ops/s27_slo_readiness.py": {
+      "present": true,
+      "sha256": "26165116007098016d140d832835e61d1f16b485e6258deb0b09e0b6a702b533",
+      "size": 13246
+    },
+    ".github/workflows/run_always_1h.yml": {
+      "present": true,
+      "sha256": "c7f87b659608af9764349d6f991cc87713b01b28ed5ed8d33ef1f8f199dae5d6",
+      "size": 1845
+    },
+    "Makefile": {
+      "present": true,
+      "sha256": "afa87b670d12a5ada3637dd0bb4c10cb956bab23f1a3a67c1ed1bf8365f5b99a",
+      "size": 6492
+    }
+  }
+}

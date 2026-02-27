@@ -1,0 +1,53 @@
+{
+  "schema_version": "s27-acceptance-cases-v2",
+  "cases": [
+    {
+      "id": "S27A-001",
+      "title": "provider canary ops status allowed",
+      "severity": "critical",
+      "fallback": "Run S27-01 with strict provider env and verify credentials/env wiring.",
+      "artifact": "docs/evidence/s27-01/provider_canary_ops_latest.json",
+      "assertion": {"path": "summary.status", "op": "in", "value": ["PASS", "WARN"]}
+    },
+    {
+      "id": "S27A-002",
+      "title": "medium eval v2 status allowed",
+      "severity": "critical",
+      "fallback": "Rebuild dataset v2/taxonomy map and rerun S27-02.",
+      "artifact": "docs/evidence/s27-02/medium_eval_wall_v2_latest.json",
+      "assertion": {"path": "summary.status", "op": "in", "value": ["PASS", "WARN"]}
+    },
+    {
+      "id": "S27A-003",
+      "title": "schedule wrapper keeps readiness visible",
+      "severity": "major",
+      "fallback": "Run S27-03 manually and inspect fallback readiness source.",
+      "artifact": "docs/evidence/s27-03/release_readiness_schedule_latest.json",
+      "assertion": {"path": "summary.status", "op": "in", "value": ["PASS", "WARN"]}
+    },
+    {
+      "id": "S27A-004",
+      "title": "triage pack keeps rollback command",
+      "severity": "major",
+      "fallback": "Regenerate triage pack and ensure rollback command mapping from canary base.",
+      "artifact": "docs/evidence/s27-04/incident_triage_pack_latest.json",
+      "assertion": {"path": "rollback_command", "op": "contains", "value": "rollback-only"}
+    },
+    {
+      "id": "S27A-005",
+      "title": "policy drift guard is non-failing by default",
+      "severity": "minor",
+      "fallback": "Run S27-05 with baseline update or inspect high-impact drift files.",
+      "artifact": "docs/evidence/s27-05/policy_drift_guard_latest.json",
+      "assertion": {"path": "summary.status", "op": "neq", "value": "FAIL"}
+    },
+    {
+      "id": "S27A-006",
+      "title": "soak result remains actionable",
+      "severity": "major",
+      "fallback": "Increase history window and rerun S27-06 to verify failure streaks.",
+      "artifact": "docs/evidence/s27-06/reliability_soak_latest.json",
+      "assertion": {"path": "summary.status", "op": "in", "value": ["PASS", "WARN"]}
+    }
+  ]
+}

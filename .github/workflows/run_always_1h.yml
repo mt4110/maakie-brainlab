@@ -55,6 +55,10 @@ jobs:
         run: |
           bash ops/run_always_1h.sh
 
+      - name: S27 Release Readiness Schedule (non-blocking)
+        run: |
+          make s27-release-readiness-schedule || true
+
       - name: Upload Artifacts (Run Always)
         if: always()
         uses: actions/upload-artifact@v4

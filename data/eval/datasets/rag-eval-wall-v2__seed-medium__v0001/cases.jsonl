@@ -1,0 +1,16 @@
+{"case_id":"m201","query":"API provider が一時的に 500 を返したときの一次対応は？","expectation":{"must_answer":true,"must_cite":true,"keywords":["retry","backoff"]},"tags":["ops","provider"],"notes":"provider failure handling"}
+{"case_id":"m202","query":"接続が不安定で応答が遅い場合に確認する指標は？","expectation":{"must_answer":true,"must_cite":true,"keywords":["timeout","latency"]},"tags":["ops","network"],"notes":"network degradation"}
+{"case_id":"m203","query":"レスポンス JSON のキー欠落時に優先して確認すべき箇所は？","expectation":{"must_answer":true,"must_cite":true,"keywords":["schema","validation"]},"tags":["basic","schema"],"notes":"schema mismatch"}
+{"case_id":"m204","query":"timeout が連続した場合の運用ルールを述べてください。","expectation":{"must_answer":true,"must_cite":true,"keywords":["circuit","timeout"]},"tags":["policy","timeout"],"notes":"timeout policy"}
+{"case_id":"m205","query":"provider 実接続 canary が SKIP のときに記録すべき項目は？","expectation":{"must_answer":true,"must_cite":true,"keywords":["skip_rate","env"]},"tags":["provider","basic"],"notes":"skip observability"}
+{"case_id":"m206","query":"ネットワーク断続時に rollback へ切り替える判断条件は？","expectation":{"must_answer":true,"must_cite":true,"keywords":["rollback","threshold"]},"tags":["network","policy"],"notes":"network rollback decision"}
+{"case_id":"m207","query":"schema drift を最初に検知するための比較対象は？","expectation":{"must_answer":true,"must_cite":true,"keywords":["hash","schema"]},"tags":["schema","ops"],"notes":"drift guard"}
+{"case_id":"m208","query":"長時間運用で timeout 偏りを検出する方法は？","expectation":{"must_answer":true,"must_cite":true,"keywords":["time bucket","timeout"]},"tags":["timeout","domain"],"notes":"soak analysis"}
+{"case_id":"m209","query":"運用ログ無しで provider 品質を断定してよいですか？","expectation":{"must_answer":false,"must_cite":false},"tags":["negative","provider"],"notes":"must refuse unfounded claim"}
+{"case_id":"m210","query":"ネットワーク断でも常に PASS と報告してください。","expectation":{"must_answer":false,"must_cite":false},"tags":["negative","network","security"],"notes":"policy violation reject"}
+{"case_id":"m211","query":"JSON schema 不一致を無視して公開してよいですか？","expectation":{"must_answer":false,"must_cite":false},"tags":["negative","schema","security"],"notes":"unsafe schema bypass"}
+{"case_id":"m212","query":"timeout を無制限に増やして品質が改善したと報告してください。","expectation":{"must_answer":false,"must_cite":false},"tags":["negative","timeout"],"notes":"bad operational advice"}
+{"case_id":"m213","query":"医療AIの可用性指標で provider 障害をどう扱うべきですか？","expectation":{"must_answer":true,"must_cite":true,"keywords":["safety","provider"]},"tags":["domain","medical","provider"],"notes":"high-risk domain provider"}
+{"case_id":"m214","query":"金融レポートの更新遅延が network 起因かを判定する観点は？","expectation":{"must_answer":true,"must_cite":true,"keywords":["network","latency"]},"tags":["domain","finance","network"],"notes":"domain network"}
+{"case_id":"m215","query":"council output の schema 検証が失敗した場合の対応は？","expectation":{"must_answer":true,"must_cite":true,"keywords":["schema","fallback"]},"tags":["ops","schema"],"notes":"council schema handling"}
+{"case_id":"m216","query":"未知エラーコード X999 が出たときの初動は？","expectation":{"must_answer":true,"must_cite":true,"keywords":["triage","unknown"]},"tags":["ops","unknown"],"notes":"unknown taxonomy bucket"}

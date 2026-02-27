@@ -2,7 +2,7 @@
 .PHONY: sat-collect sat-normalize sat-gate sat-store sat-digest sat-index sat-run
 .PHONY: server-start server-stop server-status log ingest ask
 .PHONY: ai-smoke ai-verify
-.PHONY: s22-16-ship phase-ship ops-now s25-baseline-freeze s25-obs-summary s25-regression-safety s25-acceptance-wall s25-ml-experiment s25-rag-tuning s25-langchain-poc s26-provider-canary s26-medium-eval-wall s26-rollback-artifact s26-orchestration-core s26-regression-safety s26-acceptance-wall s26-reliability-report s26-evidence-index s26-release-readiness s26-closeout bench-il-compile tune-il-compile-prompt il-thread-smoke il-thread-replay-check verify-il-thread-v2
+.PHONY: s22-16-ship phase-ship ops-now s25-baseline-freeze s25-obs-summary s25-regression-safety s25-acceptance-wall s25-ml-experiment s25-rag-tuning s25-langchain-poc s26-provider-canary s26-medium-eval-wall s26-rollback-artifact s26-orchestration-core s26-regression-safety s26-acceptance-wall s26-reliability-report s26-evidence-index s26-release-readiness s26-closeout s27-provider-canary-ops s27-medium-eval-wall-v2 s27-release-readiness-schedule s27-incident-triage-pack s27-policy-drift-guard s27-reliability-soak s27-acceptance-wall-v2 s27-evidence-trend-index s27-slo-readiness s27-closeout bench-il-compile tune-il-compile-prompt il-thread-smoke il-thread-replay-check verify-il-thread-v2
 
 PY=.venv/bin/python
 PYENV=PYTHONPATH=./src:.
@@ -134,6 +134,36 @@ s26-release-readiness:
 
 s26-closeout:
 	$(PYENV) $(PY) scripts/ops/s26_closeout.py
+
+s27-provider-canary-ops:
+	$(PYENV) $(PY) scripts/ops/s27_provider_canary_ops.py
+
+s27-medium-eval-wall-v2:
+	$(PYENV) $(PY) scripts/ops/s27_medium_eval_wall_v2.py
+
+s27-release-readiness-schedule:
+	$(PYENV) $(PY) scripts/ops/s27_release_readiness_schedule.py
+
+s27-incident-triage-pack:
+	$(PYENV) $(PY) scripts/ops/s27_incident_triage_pack.py
+
+s27-policy-drift-guard:
+	$(PYENV) $(PY) scripts/ops/s27_policy_drift_guard.py
+
+s27-reliability-soak:
+	$(PYENV) $(PY) scripts/ops/s27_reliability_soak.py
+
+s27-acceptance-wall-v2:
+	$(PYENV) $(PY) scripts/ops/s27_acceptance_wall_v2.py
+
+s27-evidence-trend-index:
+	$(PYENV) $(PY) scripts/ops/s27_evidence_trend_index.py
+
+s27-slo-readiness:
+	$(PYENV) $(PY) scripts/ops/s27_slo_readiness.py
+
+s27-closeout:
+	$(PYENV) $(PY) scripts/ops/s27_closeout.py
 
 bootstrap:
 	# S20-08: Canonical bootstrap via uv (using system python only to install uv)
