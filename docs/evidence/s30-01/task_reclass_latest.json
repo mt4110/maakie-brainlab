@@ -1,9 +1,9 @@
 {
   "schema_version": "s30-task-reclass-v1",
-  "captured_at_utc": "2026-02-27T13:05:54Z",
+  "captured_at_utc": "2026-02-27T13:24:32Z",
   "git": {
     "branch": "ops/S30-1-S30-900",
-    "head": "614a069158b1f1d8e4bff4a6e2194bec8890596b"
+    "head": "7a921e3abca148bef3b4372c91c7088f4c79aa28"
   },
   "inputs": {
     "sources": [
@@ -19,7 +19,7 @@
     "batch_switch_rule": "Switch thread after completing batch tasks."
   },
   "apply": {
-    "enabled": false,
+    "enabled": true,
     "stats": {}
   },
   "axes": [
