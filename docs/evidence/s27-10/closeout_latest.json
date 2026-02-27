@@ -1,9 +1,9 @@
 {
   "schema_version": "s27-closeout-v1",
-  "captured_at_utc": "2026-02-27T04:16:28Z",
+  "captured_at_utc": "2026-02-27T04:35:27Z",
   "git": {
     "branch": "ops/S27-01-S27-10",
-    "head": "02f0f008326b975d7100e79201a4370e4f5c81aa"
+    "head": "92af6677bd40b05a1e624760d25ef2601887584d"
   },
   "inputs": {
     "readiness_json": "docs/evidence/s27-09/slo_readiness_latest.json",

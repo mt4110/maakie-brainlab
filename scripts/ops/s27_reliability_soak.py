@@ -167,7 +167,11 @@ def main() -> int:
     elif fail_rate > float(args.fail_rate_hard_threshold):
         status = "FAIL"
         reason_code = REASON_FAIL_RATE_HIGH
-    elif skip_rate > float(args.skip_rate_warn_threshold) and status != "FAIL":
+    elif (
+        total_runs >= int(args.min_runs)
+        and skip_rate > float(args.skip_rate_warn_threshold)
+        and status != "FAIL"
+    ):
         status = "WARN"
         reason_code = REASON_SKIP_RATE_HIGH
 

@@ -114,6 +114,13 @@ def validate_case(case: Dict[str, Any]) -> Tuple[bool, str]:
     return True, ""
 
 
+def normalize_severity(value: str, default: str = "critical") -> str:
+    text = str(value or "").strip()
+    if text in SEVERITIES:
+        return text
+    return default
+
+
 def _to_float(value: Any) -> float:
     if isinstance(value, bool):
         return float(int(value))
@@ -421,7 +428,7 @@ def main() -> int:
             out = {
                 "case_id": cid or "invalid-case",
                 "title": str(case.get("title") or cid or "invalid-case"),
-                "severity": str(case.get("severity") or "critical"),
+                "severity": normalize_severity(str(case.get("severity") or "critical"), default="critical"),
                 "fallback": str(case.get("fallback") or ""),
                 "status": "FAIL",
                 "reason_code": REASON_CASE_INVALID,
@@ -437,7 +444,7 @@ def main() -> int:
 
         if out["status"] == "FAIL":
             reason_code = str(out.get("reason_code") or REASON_ASSERTION_FAILED)
-            severity = str(out.get("severity") or "minor")
+            severity = normalize_severity(str(out.get("severity") or "minor"), default="minor")
             failure_counts[reason_code] = int(failure_counts.get(reason_code, 0)) + 1
             severity_failed[severity] = int(severity_failed.get(severity, 0)) + 1
             if severity == "critical":

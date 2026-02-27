@@ -1,9 +1,9 @@
 {
   "schema_version": "s27-release-readiness-schedule-v1",
-  "captured_at_utc": "2026-02-27T04:16:27Z",
+  "captured_at_utc": "2026-02-27T04:34:48Z",
   "git": {
     "branch": "ops/S27-01-S27-10",
-    "head": "02f0f008326b975d7100e79201a4370e4f5c81aa"
+    "head": "92af6677bd40b05a1e624760d25ef2601887584d"
   },
   "trigger": "manual",
   "commands": [
@@ -12,8 +12,8 @@
       "command": "python3 scripts/ops/s27_slo_readiness.py",
       "returncode": 0,
       "status": "PASS",
-      "stdout_log": ".local/obs/s25-ops/s27-release-readiness-schedule/s27-release-readiness-schedule__20260227T041627Z__ops-s27-01-s27-10__02f0f00/primary.stdout.log",
-      "stderr_log": ".local/obs/s25-ops/s27-release-readiness-schedule/s27-release-readiness-schedule__20260227T041627Z__ops-s27-01-s27-10__02f0f00/primary.stderr.log",
+      "stdout_log": ".local/obs/s25-ops/s27-release-readiness-schedule/s27-release-readiness-schedule__20260227T043448Z__ops-s27-01-s27-10__92af667/primary.stdout.log",
+      "stderr_log": ".local/obs/s25-ops/s27-release-readiness-schedule/s27-release-readiness-schedule__20260227T043448Z__ops-s27-01-s27-10__92af667/primary.stderr.log",
       "error": ""
     }
   ],

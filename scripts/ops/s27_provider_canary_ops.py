@@ -386,6 +386,10 @@ def main() -> int:
                 "stderr_tail": (base_exec["stderr"] or "")[-1000:],
             },
         },
+        "history": {
+            "path": to_repo_rel(repo_root, history_path),
+            "runs": runs,
+        },
         "trend": trend,
         "summary": {
             "status": status,

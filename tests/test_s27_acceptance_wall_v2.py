@@ -35,6 +35,11 @@ class S27AcceptanceWallV2Tests(unittest.TestCase):
         self.assertFalse(ok2)
         self.assertIn("severity", reason2)
 
+    def test_normalize_severity(self):
+        self.assertEqual(self.m.normalize_severity("critical"), "critical")
+        self.assertEqual(self.m.normalize_severity("bad"), "critical")
+        self.assertEqual(self.m.normalize_severity("bad", default="minor"), "minor")
+
 
 if __name__ == "__main__":
     unittest.main()

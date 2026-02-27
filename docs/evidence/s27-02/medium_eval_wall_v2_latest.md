@@ -1,8 +1,8 @@
 # S27-02 Medium Eval Wall v2 (Latest)
 
-- CapturedAtUTC: `2026-02-27T04:14:21Z`
+- CapturedAtUTC: `2026-02-27T04:34:40Z`
 - Branch: `ops/S27-01-S27-10`
-- HeadSHA: `02f0f008326b975d7100e79201a4370e4f5c81aa`
+- HeadSHA: `92af6677bd40b05a1e624760d25ef2601887584d`
 - DatasetID: `rag-eval-wall-v2__seed-medium__v0001`
 
 ## Summary

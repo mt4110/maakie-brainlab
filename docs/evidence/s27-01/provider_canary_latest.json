@@ -1,9 +1,9 @@
 {
   "schema_version": "s26-provider-canary-result-v1",
-  "captured_at_utc": "2026-02-27T04:14:21Z",
+  "captured_at_utc": "2026-02-27T04:35:26Z",
   "git": {
     "branch": "ops/S27-01-S27-10",
-    "head": "02f0f008326b975d7100e79201a4370e4f5c81aa"
+    "head": "92af6677bd40b05a1e624760d25ef2601887584d"
   },
   "config_path": "docs/ops/S27-01_PROVIDER_CANARY_OPS.toml",
   "policy": {

@@ -1,9 +1,9 @@
 {
   "schema_version": "s27-evidence-trend-index-v2",
-  "captured_at_utc": "2026-02-27T04:16:28Z",
+  "captured_at_utc": "2026-02-27T04:35:26Z",
   "git": {
     "branch": "ops/S27-01-S27-10",
-    "head": "02f0f008326b975d7100e79201a4370e4f5c81aa"
+    "head": "92af6677bd40b05a1e624760d25ef2601887584d"
   },
   "phases": [
     {
@@ -11,54 +11,54 @@
       "artifact": "docs/evidence/s27-01/provider_canary_ops_latest.json",
       "present": true,
       "status": "WARN",
-      "captured_at_utc": "2026-02-27T04:14:21Z"
+      "captured_at_utc": "2026-02-27T04:35:26Z"
     },
     {
       "phase": "S27-02",
       "artifact": "docs/evidence/s27-02/medium_eval_wall_v2_latest.json",
       "present": true,
       "status": "PASS",
-      "captured_at_utc": "2026-02-27T04:14:21Z"
+      "captured_at_utc": "2026-02-27T04:34:40Z"
     },
     {
       "phase": "S27-03",
       "artifact": "docs/evidence/s27-03/release_readiness_schedule_latest.json",
       "present": true,
       "status": "PASS",
-      "captured_at_utc": "2026-02-27T04:16:27Z"
+      "captured_at_utc": "2026-02-27T04:34:48Z"
     },
     {
       "phase": "S27-04",
       "artifact": "docs/evidence/s27-04/incident_triage_pack_latest.json",
       "present": true,
       "status": "WARN",
-      "captured_at_utc": "2026-02-27T04:16:28Z"
+      "captured_at_utc": "2026-02-27T04:35:26Z"
     },
     {
       "phase": "S27-05",
       "artifact": "docs/evidence/s27-05/policy_drift_guard_latest.json",
       "present": true,
       "status": "WARN",
-      "captured_at_utc": "2026-02-27T04:16:28Z"
+      "captured_at_utc": "2026-02-27T04:34:40Z"
     },
     {
       "phase": "S27-06",
       "artifact": "docs/evidence/s27-06/reliability_soak_latest.json",
       "present": true,
       "status": "WARN",
-      "captured_at_utc": "2026-02-27T04:16:28Z"
+      "captured_at_utc": "2026-02-27T04:35:26Z"
     },
     {
       "phase": "S27-07",
       "artifact": "docs/evidence/s27-07/acceptance_wall_v2_latest.json",
       "present": true,
       "status": "PASS",
-      "captured_at_utc": "2026-02-27T04:16:28.227051+00:00"
+      "captured_at_utc": "2026-02-27T04:34:40.992855+00:00"
     }
   ],
   "history": {
     "path": "docs/evidence/s27-08/evidence_trend_history.json",
-    "size": 2,
+    "size": 6,
     "deltas": {
       "missing_delta": 0,
       "failed_delta": 0,
@@ -67,7 +67,7 @@
   },
   "summary": {
     "status": "WARN",
-    "history_size": 2,
+    "history_size": 6,
     "present_count": 7,
     "missing_count": 0,
     "pass_count": 3,

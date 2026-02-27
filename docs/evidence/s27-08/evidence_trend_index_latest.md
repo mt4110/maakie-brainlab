@@ -1,15 +1,15 @@
 # S27-08 Evidence Trend Index v2 (Latest)
 
-- CapturedAtUTC: `2026-02-27T04:16:28Z`
+- CapturedAtUTC: `2026-02-27T04:35:26Z`
 - Branch: `ops/S27-01-S27-10`
-- HeadSHA: `02f0f008326b975d7100e79201a4370e4f5c81aa`
+- HeadSHA: `92af6677bd40b05a1e624760d25ef2601887584d`
 
 ## Summary
 
 - status: `WARN`
 - present_missing: `7/0`
 - pass_warn_fail: `3/4/0`
-- history_size: `2`
+- history_size: `6`
 
 ## Phase Statuses
 
@@ -28,6 +28,6 @@
 - status: WARN
 - present_missing: 7/0
 - pass_warn_fail: 3/4/0
-- history_size: 2
+- history_size: 6
 - artifact: docs/evidence/s27-08/evidence_trend_index_latest.json
 ```

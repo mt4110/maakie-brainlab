@@ -1,9 +1,9 @@
 {
   "schema_version": "s27-incident-triage-pack-v1",
-  "captured_at_utc": "2026-02-27T04:16:28Z",
+  "captured_at_utc": "2026-02-27T04:35:26Z",
   "git": {
     "branch": "ops/S27-01-S27-10",
-    "head": "02f0f008326b975d7100e79201a4370e4f5c81aa"
+    "head": "92af6677bd40b05a1e624760d25ef2601887584d"
   },
   "inputs": {
     "canary_ops_json": "docs/evidence/s27-01/provider_canary_ops_latest.json",
@@ -23,6 +23,16 @@
     }
   ],
   "recent_failures": [
+    {
+      "captured_at_utc": "2026-02-27T04:35:26Z",
+      "status": "SKIP",
+      "reason_code": "MISSING_PROVIDER_ENV"
+    },
+    {
+      "captured_at_utc": "2026-02-27T04:34:40Z",
+      "status": "SKIP",
+      "reason_code": "MISSING_PROVIDER_ENV"
+    },
     {
       "captured_at_utc": "2026-02-27T04:14:21Z",
       "status": "SKIP",

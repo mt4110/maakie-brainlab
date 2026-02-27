@@ -1,9 +1,9 @@
 {
   "schema_version": "s27-acceptance-wall-v2",
-  "captured_at_utc": "2026-02-27T04:16:28.227051+00:00",
+  "captured_at_utc": "2026-02-27T04:34:40.992855+00:00",
   "git": {
     "branch": "ops/S27-01-S27-10",
-    "head": "02f0f008326b975d7100e79201a4370e4f5c81aa"
+    "head": "92af6677bd40b05a1e624760d25ef2601887584d"
   },
   "cases_file": "docs/ops/S27-07_ACCEPTANCE_CASES_V2.json",
   "summary": {
@@ -75,7 +75,7 @@
           "WARN"
         ]
       },
-      "actual": "PASS",
+      "actual": "WARN",
       "log_path": "s27a-003.log"
     },
     {
@@ -133,6 +133,6 @@
   "artifact_names": {
     "json": "acceptance_wall_v2_latest.json",
     "md": "acceptance_wall_v2_latest.md",
-    "run_dir": ".local/obs/s25-ops/s27-acceptance-wall-v2/s27-acceptance-wall-v2__20260227T041628Z__ops-s27-01-s27-10__02f0f00"
+    "run_dir": ".local/obs/s25-ops/s27-acceptance-wall-v2/s27-acceptance-wall-v2__20260227T043440Z__ops-s27-01-s27-10__92af667"
   }
 }

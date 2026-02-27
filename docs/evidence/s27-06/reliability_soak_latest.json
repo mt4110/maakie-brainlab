@@ -1,9 +1,9 @@
 {
   "schema_version": "s27-reliability-soak-v1",
-  "captured_at_utc": "2026-02-27T04:16:28Z",
+  "captured_at_utc": "2026-02-27T04:35:26Z",
   "git": {
     "branch": "ops/S27-01-S27-10",
-    "head": "02f0f008326b975d7100e79201a4370e4f5c81aa"
+    "head": "92af6677bd40b05a1e624760d25ef2601887584d"
   },
   "inputs": {
     "history_json": "docs/evidence/s27-01/provider_canary_history.json",
@@ -13,20 +13,20 @@
     "skip_rate_warn_threshold": 0.4
   },
   "metrics": {
-    "total_runs": 1,
+    "total_runs": 3,
     "fail_runs": 0,
-    "skip_runs": 1,
+    "skip_runs": 3,
     "warn_runs": 0,
     "fail_rate": 0.0,
     "skip_rate": 1.0,
     "max_consecutive_failures": 0,
     "hour_bucket_counts": {
-      "04:00": 1
+      "04:00": 3
     }
   },
   "summary": {
     "status": "WARN",
-    "reason_code": "SKIP_RATE_HIGH"
+    "reason_code": "INSUFFICIENT_RUNS"
   },
   "artifact_names": {
     "json": "reliability_soak_latest.json",
