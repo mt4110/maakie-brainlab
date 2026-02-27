@@ -1,0 +1,60 @@
+{
+  "schema_version": "s26-provider-canary-result-v1",
+  "captured_at_utc": "2026-02-27T03:32:17Z",
+  "git": {
+    "branch": "ops/S26-05-S26-06",
+    "head": "8af969292a66335f055382f1a5b2e2bdfa330a7c"
+  },
+  "config_path": "docs/ops/S26-01_PROVIDER_CANARY.toml",
+  "policy": {
+    "hash": "170f1b5a842ef87edbb6297c0fbf1331a9d90dc683eec54340bf86300b6e4c79",
+    "value": {
+      "timeout_sec": 15,
+      "max_retries": 2,
+      "retry_backoff_ms": 400,
+      "jitter_ms": 0,
+      "circuit_open_sec": 20,
+      "max_inflight": 1,
+      "retryable_reason_codes": [
+        "TIMEOUT",
+        "NETWORK_ERROR",
+        "HTTP_429",
+        "HTTP_5XX"
+      ],
+      "non_retryable_reason_codes": [
+        "AUTH_ERROR",
+        "HTTP_4XX",
+        "BAD_RESPONSE",
+        "ASSERTION_FAILED"
+      ]
+    }
+  },
+  "provider": {
+    "provider_id": "openai-compatible-canary",
+    "base_url": "",
+    "api_key": "",
+    "model": "",
+    "path": "/v1/chat/completions",
+    "missing": [
+      "base_url",
+      "api_key",
+      "model"
+    ],
+    "api_key_set": false
+  },
+  "cases": [],
+  "summary": {
+    "status": "SKIP",
+    "passed_cases": 0,
+    "failed_cases": 0,
+    "skipped_cases": 2,
+    "reason_code": "MISSING_PROVIDER_ENV"
+  },
+  "rollback": {
+    "command": "python3 scripts/ops/s25_langchain_poc.py --mode rollback-only"
+  },
+  "artifact_names": {
+    "json": "provider_canary_latest.json",
+    "md": "provider_canary_latest.md"
+  }
+}

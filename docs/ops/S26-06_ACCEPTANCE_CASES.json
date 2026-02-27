@@ -1,0 +1,47 @@
+{
+  "schema_version": "s26-acceptance-cases-v1",
+  "cases": [
+    {
+      "id": "S26A-001",
+      "title": "provider canary status allowed",
+      "artifact": "docs/evidence/s26-01/provider_canary_latest.json",
+      "assertion": {"path": "summary.status", "op": "in", "value": ["PASS", "SKIP"]}
+    },
+    {
+      "id": "S26A-002",
+      "title": "medium eval wall pass",
+      "artifact": "docs/evidence/s26-02/medium_eval_wall_latest.json",
+      "assertion": {"path": "summary.status", "op": "eq", "value": "PASS"}
+    },
+    {
+      "id": "S26A-003",
+      "title": "medium cases lower bound",
+      "artifact": "docs/evidence/s26-02/medium_eval_wall_latest.json",
+      "assertion": {"path": "distribution.total_cases", "op": "gte", "value": 12}
+    },
+    {
+      "id": "S26A-004",
+      "title": "rollback artifact pass",
+      "artifact": "docs/evidence/s26-03/rollback_artifact_latest.json",
+      "assertion": {"path": "summary.status", "op": "eq", "value": "PASS"}
+    },
+    {
+      "id": "S26A-005",
+      "title": "orchestration failed steps zero",
+      "artifact": "docs/evidence/s26-04/orchestration_core_latest.json",
+      "assertion": {"path": "summary.failed_steps", "op": "eq", "value": 0}
+    },
+    {
+      "id": "S26A-006",
+      "title": "regression safety stop flag zero",
+      "artifact": "docs/evidence/s26-05/regression_safety_latest.json",
+      "assertion": {"path": "stop", "op": "eq", "value": 0}
+    },
+    {
+      "id": "S26A-007",
+      "title": "rollback command contains rollback-only",
+      "artifact": "docs/evidence/s26-03/rollback_artifact_latest.json",
+      "assertion": {"path": "rollback_command", "op": "contains", "value": "rollback-only"}
+    }
+  ]
+}

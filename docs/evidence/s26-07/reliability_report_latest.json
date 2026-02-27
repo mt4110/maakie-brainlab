@@ -1,0 +1,31 @@
+{
+  "schema_version": "s26-reliability-report-v1",
+  "captured_at_utc": "2026-02-27T03:33:06Z",
+  "git": {
+    "branch": "ops/S26-05-S26-06",
+    "head": "8af969292a66335f055382f1a5b2e2bdfa330a7c"
+  },
+  "inputs": {
+    "canary_json": "docs/evidence/s26-01/provider_canary_latest.json",
+    "orchestration_json": "docs/evidence/s26-04/orchestration_core_latest.json",
+    "min_success_rate": 0.8,
+    "max_failed_cases": 0
+  },
+  "metrics": {
+    "passed_cases": 0,
+    "failed_cases": 0,
+    "skipped_cases": 2,
+    "runnable_cases": 0,
+    "success_rate": null,
+    "avg_attempts_per_runnable_case": null
+  },
+  "reason_counts": {},
+  "summary": {
+    "status": "WARN",
+    "reason_code": "NO_RUNNABLE_CASES"
+  },
+  "artifact_names": {
+    "json": "reliability_report_latest.json",
+    "md": "reliability_report_latest.md"
+  }
+}

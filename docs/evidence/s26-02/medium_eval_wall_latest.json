@@ -1,0 +1,80 @@
+{
+  "schema_version": "s26-medium-eval-wall-result-v1",
+  "captured_at_utc": "2026-02-27T03:32:17Z",
+  "git": {
+    "branch": "ops/S26-05-S26-06",
+    "head": "8af969292a66335f055382f1a5b2e2bdfa330a7c"
+  },
+  "dataset_id": "rag-eval-wall-v1__seed-medium__v0001",
+  "config_path": "docs/ops/S26-02_MEDIUM_EVAL_WALL.toml",
+  "cases_path": "data/eval/datasets/rag-eval-wall-v1__seed-medium__v0001/cases.jsonl",
+  "meta_path": "data/eval/datasets/rag-eval-wall-v1__seed-medium__v0001/dataset.meta.json",
+  "meta_snapshot": {
+    "dataset_id": "rag-eval-wall-v1__seed-medium__v0001",
+    "schema_version": "s26-medium-dataset-v1",
+    "eval_spec_version": "EVAL_SPEC_v1",
+    "created_utc": "2026-02-27T00:00:00Z",
+    "source": "manual-seed-medium-v1",
+    "cases_total": 12,
+    "distribution": {
+      "basic": 3,
+      "policy": 2,
+      "ops": 2,
+      "domain": 2,
+      "security": 1,
+      "negative": 2
+    }
+  },
+  "distribution": {
+    "total_cases": 12,
+    "must_answer_true": 9,
+    "must_answer_false": 3,
+    "must_cite_true": 9,
+    "tag_counts": {
+      "basic": 3,
+      "citation": 2,
+      "def": 1,
+      "domain": 2,
+      "finance": 1,
+      "grounded": 1,
+      "hallucination-check": 1,
+      "medical": 1,
+      "negative": 3,
+      "ops": 2,
+      "policy": 2,
+      "runbook": 1,
+      "safety": 1,
+      "security": 2,
+      "troubleshoot": 1
+    }
+  },
+  "delta_vs_seed_mini": {
+    "seed_mini_cases_path": "data/eval/datasets/rag-eval-wall-v1__seed-mini__v0001/cases.jsonl",
+    "seed_mini_total_cases": 2,
+    "total_cases_delta": 10
+  },
+  "contract": {
+    "min_cases": 12,
+    "max_cases": 40,
+    "min_must_answer_true": 8,
+    "min_must_answer_false": 2,
+    "min_must_cite_true": 8
+  },
+  "tag_min_counts": {
+    "basic": 3,
+    "policy": 2,
+    "ops": 2,
+    "domain": 2,
+    "security": 1,
+    "negative": 2
+  },
+  "summary": {
+    "status": "PASS",
+    "reason_code": "",
+    "errors": []
+  },
+  "artifact_names": {
+    "json": "medium_eval_wall_latest.json",
+    "md": "medium_eval_wall_latest.md"
+  }
+}

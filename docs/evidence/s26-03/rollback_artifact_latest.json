@@ -1,0 +1,29 @@
+{
+  "schema_version": "s26-rollback-artifact-v1",
+  "captured_at_utc": "2026-02-27T03:32:17Z",
+  "git": {
+    "branch": "ops/S26-05-S26-06",
+    "head": "8af969292a66335f055382f1a5b2e2bdfa330a7c"
+  },
+  "upstream": {
+    "canary_json": "docs/evidence/s26-01/provider_canary_latest.json",
+    "canary_status": "SKIP",
+    "medium_json": "docs/evidence/s26-02/medium_eval_wall_latest.json",
+    "medium_status": "PASS"
+  },
+  "rollback_command": "python3 scripts/ops/s25_langchain_poc.py --mode rollback-only",
+  "rollback_execution": {
+    "returncode": 0,
+    "stdout_log": ".local/obs/s25-ops/s26-rollback-artifact/s26-rollback-artifact__20260227T033217Z__ops-s26-05-s26-06__8af9692/rollback.stdout.log",
+    "stderr_log": ".local/obs/s25-ops/s26-rollback-artifact/s26-rollback-artifact__20260227T033217Z__ops-s26-05-s26-06__8af9692/rollback.stderr.log",
+    "error": ""
+  },
+  "summary": {
+    "status": "PASS",
+    "reason_code": ""
+  },
+  "artifact_names": {
+    "json": "rollback_artifact_latest.json",
+    "md": "rollback_artifact_latest.md"
+  }
+}

@@ -1,0 +1,19 @@
+schema_version = "s26-medium-eval-wall-v1"
+dataset_id = "rag-eval-wall-v1__seed-medium__v0001"
+cases_path = "data/eval/datasets/rag-eval-wall-v1__seed-medium__v0001/cases.jsonl"
+meta_path = "data/eval/datasets/rag-eval-wall-v1__seed-medium__v0001/dataset.meta.json"
+
+[contract]
+min_cases = 12
+max_cases = 40
+min_must_answer_true = 8
+min_must_answer_false = 2
+min_must_cite_true = 8
+
+[tag_min_counts]
+basic = 3
+policy = 2
+ops = 2
+domain = 2
+security = 1
+negative = 2

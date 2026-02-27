@@ -24,24 +24,24 @@ jobs:
         with:
           script: |
             const core = require("@actions/core");
+            let prNumberStr = "";
+            let headRef = "";
+            let dispatchNeeded = "0";
+            let autofillStatus = "skip";
+            let autofillDetail = "";
+
+            function flushOutputs() {
+              core.setOutput("pr_number", prNumberStr);
+              core.setOutput("head_ref", headRef);
+              core.setOutput("dispatch_needed", dispatchNeeded);
+              core.setOutput("autofill_status", autofillStatus);
+              core.setOutput("autofill_detail", autofillDetail.slice(0, 360));
+            }
 
             async function run() {
               const owner = context.repo.owner;
               const repo = context.repo.repo;
               const prNumber = context.payload.pull_request?.number;
-              let prNumberStr = "";
-              let headRef = "";
-              let dispatchNeeded = "0";
-              let autofillStatus = "skip";
-              let autofillDetail = "";
-
-              function flushOutputs() {
-                core.setOutput("pr_number", prNumberStr);
-                core.setOutput("head_ref", headRef);
-                core.setOutput("dispatch_needed", dispatchNeeded);
-                core.setOutput("autofill_status", autofillStatus);
-                core.setOutput("autofill_detail", autofillDetail.slice(0, 360));
-              }
 
               if (!prNumber) {
                 autofillDetail = "SKIP: no PR number in payload";
