@@ -29,6 +29,7 @@ DEFAULT_FALLBACK_ARTIFACT = "docs/evidence/s26-09/release_readiness_latest.json"
 DEFAULT_TIMEOUT_SEC = 300
 
 REASON_PRIMARY_FAILED = "PRIMARY_FAILED"
+REASON_PRIMARY_AND_FALLBACK_FAILED = "PRIMARY_AND_FALLBACK_FAILED"
 REASON_FALLBACK_USED = "FALLBACK_USED"
 REASON_READINESS_MISSING = "READINESS_MISSING"
 
@@ -97,7 +98,9 @@ def run_command(repo_root: Path, run_dir: Path, label: str, command: str, timeou
 def summarize_readiness(doc: Dict[str, Any]) -> Dict[str, Any]:
     summary = dict(doc.get("summary", {}))
     readiness = str(summary.get("readiness") or summary.get("status") or "")
-    blocked = summary.get("blocked_gates")
+    blocked = summary.get("blocked_total")
+    if blocked is None:
+        blocked = summary.get("blocked_gates")
     if blocked is None:
         blocked = summary.get("failed_count", 0)
     try:
@@ -192,11 +195,16 @@ def main() -> int:
     reason_code = ""
     readiness_source = ""
     readiness_summary: Dict[str, Any] = {"readiness": "", "blocked": 0}
+    primary_status = str(commands[0].get("status") or "") if len(commands) >= 1 else ""
+    fallback_status = str(commands[1].get("status") or "") if len(commands) >= 2 else ""
 
     if primary_doc:
         readiness_summary = summarize_readiness(primary_doc)
         readiness_source = to_repo_rel(repo_root, primary_artifact_path)
-        if commands and commands[0]["status"] != "PASS":
+        if primary_status == "FAIL" and fallback_status == "FAIL":
+            status = "FAIL"
+            reason_code = REASON_PRIMARY_AND_FALLBACK_FAILED
+        elif primary_status == "FAIL":
             status = "WARN"
             reason_code = REASON_PRIMARY_FAILED
     elif fallback_doc:
