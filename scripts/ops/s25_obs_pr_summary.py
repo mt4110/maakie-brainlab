@@ -34,7 +34,9 @@ def sanitize_paths(repo_root: Path, value: Any) -> Any:
         return [sanitize_paths(repo_root, v) for v in value]
     if isinstance(value, str) and value.startswith("/"):
         rel = to_repo_rel(repo_root, value)
-        return rel or value
+        if rel:
+            return rel
+        return Path(value).name or "<redacted-abs-path>"
     return value
 
 
@@ -84,7 +86,6 @@ def write_observability_report(
     out_dir: Path,
 ) -> Dict[str, Any]:
     out_dir.mkdir(parents=True, exist_ok=True)
-    baseline = _load_json(baseline_path)
     latest_sanitized = sanitize_paths(repo_root, latest)
     report = {
         "schema_version": "s25-obs-report-v1",

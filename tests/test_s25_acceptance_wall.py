@@ -29,6 +29,10 @@ class S25AcceptanceWallTests(unittest.TestCase):
         self.assertFalse(ok2)
         self.assertIn("missing command", reason2)
 
+        ok3, reason3 = self.m.validate_case({"id": "A01", "command": "echo hi", "pass_regex": "("})
+        self.assertFalse(ok3)
+        self.assertIn("invalid pass_regex", reason3)
+
     def test_evaluate_case_rc_and_regex(self):
         case = {"must_pass": True, "pass_regex": "OK: done"}
         status, reason = self.m.evaluate_case(case, rc=0, output="OK: done\n")
@@ -42,6 +46,11 @@ class S25AcceptanceWallTests(unittest.TestCase):
         status3, reason3 = self.m.evaluate_case(case, rc=0, output="no match\n")
         self.assertEqual(status3, "FAIL")
         self.assertEqual(reason3, self.m.REASON_PASS_REGEX_MISSING)
+
+        bad_case = {"must_pass": True, "pass_regex": "("}
+        status4, reason4 = self.m.evaluate_case(bad_case, rc=0, output="anything\n")
+        self.assertEqual(status4, "FAIL")
+        self.assertEqual(reason4, self.m.REASON_PASS_REGEX_INVALID)
 
     def test_load_cases(self):
         with tempfile.TemporaryDirectory() as td:

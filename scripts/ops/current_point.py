@@ -15,7 +15,7 @@ import os
 import re
 import subprocess
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from scripts.ops.obs_contract import DEFAULT_OBS_ROOT, emit, make_run_context, write_events, write_summary
 
@@ -27,16 +27,24 @@ PERCENT_RX = re.compile(r"([0-9]+(?:\.[0-9]+)?)%")
 CHECKBOX_RX = re.compile(r"^\s*-\s*\[([xX ])\]\s+(.+?)\s*$", re.M)
 
 
-def run_git(args: List[str], cwd: Path) -> Optional[str]:
+def run_git(args: List[str], cwd: Path, events: Optional[List[Dict[str, Any]]] = None) -> Optional[str]:
     try:
         cp = subprocess.run(["git", *args], cwd=str(cwd), capture_output=True, text=True, check=False)
     except Exception as exc:
-        print(f"WARN: git exception args={' '.join(args)} err={exc}", flush=True)
+        msg = f"git exception args={' '.join(args)} err={exc}"
+        if events is None:
+            print(f"WARN: {msg}", flush=True)
+        else:
+            emit("WARN", msg, events)
         return None
     if cp.returncode != 0:
         stderr = (cp.stderr or "").strip()
         if stderr:
-            print(f"WARN: git failed args={' '.join(args)} err={stderr}", flush=True)
+            msg = f"git failed args={' '.join(args)} err={stderr}"
+            if events is None:
+                print(f"WARN: {msg}", flush=True)
+            else:
+                emit("WARN", msg, events)
         return None
     return (cp.stdout or "").strip()
 
@@ -140,7 +148,7 @@ def main() -> None:
 
     run_dir, meta, events = make_run_context(cwd, tool="current-point", obs_root=args.obs_root)
 
-    branch = args.branch or run_git(["branch", "--show-current"], cwd) or ""
+    branch = args.branch or run_git(["branch", "--show-current"], cwd, events=events) or ""
     track = detect_track(branch)
 
     if branch:
@@ -192,13 +200,13 @@ def main() -> None:
 
     if next_items:
         emit("OK", f"next_items={len(next_items)}", events)
-        print("NEXT:")
+        print("OK: NEXT:")
         for item in next_items:
-            print(f"- [ ] {item}")
+            print(f"OK: - [ ] {item}")
     else:
         emit("SKIP", "no pending checklist item found", events)
-        print("NEXT:")
-        print("- [ ] no pending checklist item found")
+        print("SKIP: NEXT:")
+        print("SKIP: - [ ] no pending checklist item found")
 
     snapshot = {
         "branch": branch,

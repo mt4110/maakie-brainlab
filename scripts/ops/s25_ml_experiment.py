@@ -28,6 +28,7 @@ DEFAULT_TIMEOUT_SEC = 600
 
 REASON_TEMPLATE_INVALID = "TEMPLATE_INVALID"
 REASON_BENCH_NONZERO = "BENCH_NONZERO"
+REASON_BENCH_TIMEOUT = "BENCH_TIMEOUT"
 REASON_SUMMARY_MISSING = "SUMMARY_MISSING"
 REASON_SUMMARY_SCHEMA_MISMATCH = "SUMMARY_SCHEMA_MISMATCH"
 REASON_THRESHOLD_FAILED = "THRESHOLD_FAILED"
@@ -169,24 +170,34 @@ def run_bench(cmd: List[str], repo_root: Path, run_dir: Path, timeout_sec: int, 
     env = dict()
     env.update({"PYTHONHASHSEED": str(seed), "S25_ML_SEED": str(seed)})
     merged_env = dict(**os.environ, **env)
-    cp = subprocess.run(
-        cmd,
-        cwd=str(repo_root),
-        capture_output=True,
-        text=True,
-        timeout=max(1, timeout_sec),
-        check=False,
-        env=merged_env,
-    )
+    timed_out = False
+    rc = 0
+    try:
+        cp = subprocess.run(
+            cmd,
+            cwd=str(repo_root),
+            capture_output=True,
+            text=True,
+            timeout=max(1, timeout_sec),
+            check=False,
+            env=merged_env,
+        )
+        output = (cp.stdout or "") + (cp.stderr or "")
+        rc = cp.returncode
+    except subprocess.TimeoutExpired as exc:
+        timed_out = True
+        rc = 124
+        out = (exc.stdout or "") + (exc.stderr or "")
+        output = out + f"\nERROR: timeout after {max(1, timeout_sec)}s\n"
     t1 = utc_now()
-    output = (cp.stdout or "") + (cp.stderr or "")
     (run_dir / "01_ml_experiment.log").write_text(output, encoding="utf-8")
     return {
-        "rc": cp.returncode,
+        "rc": rc,
         "duration_sec": round((t1 - t0).total_seconds(), 3),
         "started_at_utc": t0.isoformat(),
         "ended_at_utc": t1.isoformat(),
         "output": output,
+        "timed_out": timed_out,
     }
 
 
@@ -316,8 +327,12 @@ def main() -> int:
     summary_obj: Dict[str, Any] = {}
     bench_summary_path = run_dir / "ml_bench" / "il.compile.bench.summary.json"
     if run["rc"] != 0:
-        reason_code = REASON_BENCH_NONZERO
-        errors.append("il_compile_bench returned non-zero")
+        if bool(run.get("timed_out")):
+            reason_code = REASON_BENCH_TIMEOUT
+            errors.append("il_compile_bench timed out")
+        else:
+            reason_code = REASON_BENCH_NONZERO
+            errors.append("il_compile_bench returned non-zero")
     if not bench_summary_path.exists():
         reason_code = reason_code or REASON_SUMMARY_MISSING
         errors.append(f"bench summary missing path={bench_summary_path}")

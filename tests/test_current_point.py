@@ -1,7 +1,9 @@
 import importlib.util
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 
 def _load_module():
@@ -50,6 +52,17 @@ class CurrentPointTests(unittest.TestCase):
         self.assertEqual(checked, 1)
         self.assertEqual(total, 3)
         self.assertEqual(next_items, ["todo one"])
+
+    def test_run_git_emits_warn_when_events_passed(self):
+        cp = subprocess.CompletedProcess(args=["git", "x"], returncode=1, stdout="", stderr="fatal: bad")
+        with tempfile.TemporaryDirectory() as td:
+            events = []
+            with patch("subprocess.run", return_value=cp):
+                out = self.m.run_git(["x"], Path(td), events=events)
+        self.assertIsNone(out)
+        self.assertTrue(events)
+        self.assertEqual(events[0]["level"], "WARN")
+        self.assertIn("git failed args=x", events[0]["message"])
 
 
 if __name__ == "__main__":

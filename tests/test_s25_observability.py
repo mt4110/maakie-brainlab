@@ -71,6 +71,14 @@ class S25ObservabilityTests(unittest.TestCase):
             self.assertIn("S25-04 Observability", md)
             self.assertIn("current-point", md)
 
+    def test_sanitize_paths_masks_abs_outside_repo(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            payload = {"outside": "/Users/example/private/file.txt", "inside": str(root / "docs" / "a.json")}
+            out = self.sum.sanitize_paths(root, payload)
+            self.assertEqual(out["outside"], "file.txt")
+            self.assertEqual(out["inside"], "docs/a.json")
+
 
 if __name__ == "__main__":
     unittest.main()

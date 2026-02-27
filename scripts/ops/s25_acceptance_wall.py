@@ -25,6 +25,7 @@ DEFAULT_TIMEOUT_SEC = 600
 
 REASON_RC_NONZERO = "RC_NONZERO"
 REASON_PASS_REGEX_MISSING = "PASS_REGEX_MISSING"
+REASON_PASS_REGEX_INVALID = "PASS_REGEX_INVALID"
 REASON_CASE_INVALID = "CASE_INVALID"
 
 
@@ -67,6 +68,12 @@ def validate_case(case: Dict[str, Any]) -> Tuple[bool, str]:
         return False, "missing id"
     if not command:
         return False, "missing command"
+    pass_regex = str(case.get("pass_regex") or "").strip()
+    if pass_regex:
+        try:
+            re.compile(pass_regex, flags=re.M)
+        except re.error as exc:
+            return False, f"invalid pass_regex: {exc}"
     return True, ""
 
 
@@ -94,7 +101,11 @@ def evaluate_case(case: Dict[str, Any], rc: int, output: str) -> Tuple[str, str]
     if must_pass and rc != 0:
         return "FAIL", REASON_RC_NONZERO
     if pass_regex:
-        if re.search(pass_regex, output, flags=re.M) is None:
+        try:
+            matched = re.search(pass_regex, output, flags=re.M) is not None
+        except re.error:
+            return "FAIL", REASON_PASS_REGEX_INVALID
+        if not matched:
             return "FAIL", REASON_PASS_REGEX_MISSING
     return "PASS", ""
 

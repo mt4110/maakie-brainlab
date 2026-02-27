@@ -48,6 +48,18 @@ class S25RagTuningLoopTests(unittest.TestCase):
         self.assertFalse(ok3)
         self.assertIn("unsafe", why3)
 
+        bad3 = dict(cfg)
+        bad3["cases"] = ["not-a-dict"]
+        ok4, why4 = self.m.validate_config(bad3)
+        self.assertFalse(ok4)
+        self.assertIn("cases[1]", why4)
+
+        bad4 = dict(cfg)
+        bad4["cases"] = [{"id": "R01", "query": "q"}]
+        ok5, why5 = self.m.validate_config(bad4)
+        self.assertFalse(ok5)
+        self.assertIn("expected_source", why5)
+
     def test_compare_profiles(self):
         base = {"metrics": {"hit_rate": 0.5, "avg_latency_ms": 10}}
         cand = {"metrics": {"hit_rate": 0.7, "avg_latency_ms": 12}}

@@ -163,6 +163,12 @@ def validate_config(cfg: Dict[str, Any]) -> Tuple[bool, str]:
             return False, f"docs[{idx}].path unsafe"
     if not isinstance(cases, list) or not cases:
         return False, "cases missing"
+    for idx, item in enumerate(cases, start=1):
+        if not isinstance(item, dict):
+            return False, f"cases[{idx}] invalid"
+        for field in ("id", "query", "expected_source"):
+            if not str(item.get(field) or "").strip():
+                return False, f"cases[{idx}].{field} missing"
     return True, ""
 
 

@@ -558,7 +558,9 @@ def main() -> int:
 
     errors: List[str] = []
     warnings: List[str] = []
+    reason_code = ""
     if not rows:
+        reason_code = REASON_NO_RETRIEVAL
         errors.append("retrieval empty")
 
     poc_eval: Dict[str, Any] = {"status": "SKIP", "backend": "skipped", "reason_code": "", "answer": "", "error": "", "matched_expected_source": False}
@@ -569,6 +571,7 @@ def main() -> int:
         poc_eval = evaluate_smoke(poc_flow, rows=rows, expected_source=expected_source)
         emit("OK" if poc_eval["status"] == "PASS" else "WARN", f"poc_smoke={poc_eval['status']} backend={poc_eval['backend']}", events)
         if poc_eval["status"] == "FAIL":
+            reason_code = reason_code or str(poc_eval.get("reason_code") or REASON_LANGCHAIN_FAILED)
             errors.append("poc smoke failed")
         elif poc_eval["status"] == "SKIP":
             warnings.append("poc smoke skipped (langchain unavailable)")
@@ -582,6 +585,7 @@ def main() -> int:
             events,
         )
         if rollback_eval["status"] != "PASS":
+            reason_code = reason_code or str(rollback_eval.get("reason_code") or REASON_ROLLBACK_FAILED)
             errors.append("rollback smoke failed")
 
     for err in errors:
@@ -619,6 +623,7 @@ def main() -> int:
         },
         "summary": {
             "status": status,
+            "reason_code": reason_code,
             "errors": errors,
             "warnings": warnings,
         },
