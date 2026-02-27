@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import shlex
 import subprocess
 import time
@@ -42,6 +43,12 @@ SKIP_CAUSE_ENV = "env"
 SKIP_CAUSE_CONFIG = "config"
 SKIP_CAUSE_RUNTIME = "runtime"
 SKIP_CAUSE_UNKNOWN = "unknown"
+
+SENSITIVE_PATTERNS = [
+    re.compile(r"(?i)(api[_-]?key\s*[=:]\s*)([^\s,;]+)"),
+    re.compile(r"(?i)(token\s*[=:]\s*)([^\s,;]+)"),
+    re.compile(r"(?i)(bearer\s+)([A-Za-z0-9._\-]+)"),
+]
 
 
 def to_repo_rel(repo_root: Path, value: str | Path) -> str:
@@ -155,7 +162,16 @@ def build_recommended_actions(rollback_cmd: str, top_cause: str, trailing: int, 
     return actions
 
 
-def run_recovery_command(repo_root: Path, command: str, timeout_sec: int) -> Dict[str, Any]:
+def redact_sensitive_text(text: str, max_len: int = 1200) -> str:
+    value = str(text or "")
+    for pat in SENSITIVE_PATTERNS:
+        value = pat.sub(r"\\1[REDACTED]", value)
+    if len(value) > max(1, int(max_len)):
+        return value[-max_len:]
+    return value
+
+
+def run_recovery_command(repo_root: Path, command: str, timeout_sec: int, *, include_command_output: bool) -> Dict[str, Any]:
     try:
         cp = subprocess.run(
             shlex.split(command),
@@ -171,14 +187,16 @@ def run_recovery_command(repo_root: Path, command: str, timeout_sec: int) -> Dic
             "returncode": 1,
             "status": "FAIL",
             "stdout_tail": "",
-            "stderr_tail": str(exc),
+            "stderr_tail": redact_sensitive_text(str(exc), max_len=220) if include_command_output else "",
         }
+    stdout_tail = redact_sensitive_text(str(cp.stdout or ""), max_len=1200) if include_command_output else ""
+    stderr_tail = redact_sensitive_text(str(cp.stderr or ""), max_len=1200) if include_command_output else ""
     return {
         "command": command,
         "returncode": int(cp.returncode),
         "status": "PASS" if cp.returncode == 0 else "FAIL",
-        "stdout_tail": str(cp.stdout or "")[-1200:],
-        "stderr_tail": str(cp.stderr or "")[-1200:],
+        "stdout_tail": stdout_tail,
+        "stderr_tail": stderr_tail,
     }
 
 
@@ -234,6 +252,7 @@ def main() -> int:
     parser.add_argument("--rollback-cmd", default=DEFAULT_ROLLBACK_CMD)
     parser.add_argument("--recovery-timeout-sec", type=int, default=300)
     parser.add_argument("--allow-recovery-exec", action="store_true")
+    parser.add_argument("--include-command-output", action="store_true")
     args = parser.parse_args()
 
     repo_root = Path(git_out(Path.cwd(), ["rev-parse", "--show-toplevel"]) or Path.cwd()).resolve()
@@ -312,7 +331,12 @@ def main() -> int:
         reason_code = REASON_RECOVERY_REQUIRED
         emit("WARN", f"recovery required trailing_nonpass_streak={trailing}", events)
         if args.allow_recovery_exec:
-            recovery_exec = run_recovery_command(repo_root, recovery_cmd, int(args.recovery_timeout_sec))
+            recovery_exec = run_recovery_command(
+                repo_root,
+                recovery_cmd,
+                int(args.recovery_timeout_sec),
+                include_command_output=bool(args.include_command_output),
+            )
             recovery_exec["attempted"] = True
             if recovery_exec.get("status") != "PASS":
                 status = "FAIL"
@@ -348,6 +372,7 @@ def main() -> int:
             "window_size": window,
             "recovery_threshold": recovery_threshold,
             "skip_rate_warn_threshold": skip_rate_warn_threshold,
+            "include_command_output": bool(args.include_command_output),
         },
         "trend": {
             "window_count": total,

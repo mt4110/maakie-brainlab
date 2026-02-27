@@ -35,6 +35,10 @@ class S28EvidenceTrendIndexV3Tests(unittest.TestCase):
         self.assertTrue(self.m.is_stale("", now_epoch=now, stale_hours=1.0))
         self.assertFalse(self.m.is_stale("1970-01-12T13:46:40Z", now_epoch=1_000_001.0, stale_hours=1.0))
 
+    def test_infer_status_missing_summary_fields(self):
+        self.assertEqual(self.m.infer_status({}), "MISSING")
+        self.assertEqual(self.m.infer_status({"summary": {"status": "UNKNOWN"}}), "MISSING")
+
 
 if __name__ == "__main__":
     unittest.main()

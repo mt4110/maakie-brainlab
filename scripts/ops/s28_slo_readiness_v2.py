@@ -92,7 +92,7 @@ def is_stale_artifact(doc: Dict[str, Any], current_head: str, repo_root: Path) -
         return False
     doc_head = str(dict(doc.get("git", {})).get("head") or "")
     if not doc_head:
-        return False
+        return True
     relation = head_relation(repo_root, doc_head, current_head)
     return relation in {"diverged", "unknown"}
 

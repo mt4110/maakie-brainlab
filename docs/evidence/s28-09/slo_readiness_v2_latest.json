@@ -1,9 +1,9 @@
 {
   "schema_version": "s28-slo-readiness-v2",
-  "captured_at_utc": "2026-02-27T09:25:49Z",
+  "captured_at_utc": "2026-02-27T10:16:34Z",
   "git": {
     "branch": "ops/S28-01-S28-10",
-    "head": "129afaeb82571d9ff46ba5b2904ac0e0dc80b85d"
+    "head": "2a3af57247941708ebc55133a88ee4900018b6aa"
   },
   "inputs": {
     "S28-01": "docs/evidence/s28-01/provider_canary_recovery_latest.json",

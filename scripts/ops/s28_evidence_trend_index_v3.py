@@ -59,8 +59,14 @@ def read_json_if_exists(path: Path) -> Dict[str, Any]:
 def infer_status(doc: Dict[str, Any]) -> str:
     summary = dict(doc.get("summary", {}))
     status = str(summary.get("status") or "").upper().strip()
-    if status:
+    if status in {"PASS", "WARN", "FAIL", "MISSING", "SKIP"}:
         return status
+    if status in {"OK", "SUCCESS"}:
+        return "PASS"
+    if status in {"ERROR"}:
+        return "FAIL"
+    if status:
+        return "MISSING"
     readiness = str(summary.get("readiness") or "").upper().strip()
     if readiness == "READY":
         return "PASS"
@@ -68,7 +74,7 @@ def infer_status(doc: Dict[str, Any]) -> str:
         return "WARN"
     if readiness == "BLOCKED":
         return "FAIL"
-    return "PASS"
+    return "MISSING"
 
 
 def parse_captured_at_epoch(value: str) -> float:

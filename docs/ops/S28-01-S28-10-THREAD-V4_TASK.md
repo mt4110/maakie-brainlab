@@ -4,7 +4,7 @@ Last Updated: 2026-02-27
 
 ## Progress
 
-- S28-01-S28-10 v4: 95% (実装・テスト・S28一気通貫実行・`verify-il` 完了。`ci-self` 実行準備のみ残り)
+- S28-01-S28-10 v4: 100% (実装・テスト・S28一気通貫実行・`verify-il`・`ci-self`・PR反映まで完了)
 
 ## Current Facts
 
@@ -93,8 +93,8 @@ Last Updated: 2026-02-27
 ### 8. Ship Readiness
 
 - [x] 8-1. `make verify-il`
-- [ ] 8-2. `ci-self up --ref "$(git branch --show-current)"` 事前条件を確認
-- [ ] 8-3. PR bodyへコマンド結果・readiness差分を記録可能な形に整理
+- [x] 8-2. `ci-self up --ref "$(git branch --show-current)"` 事前条件を確認
+- [x] 8-3. PR bodyへコマンド結果・readiness差分を記録可能な形に整理
 
 ## Validation Commands
 

@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import time
 import urllib.error
 import urllib.request
@@ -30,6 +31,13 @@ REASON_READINESS_MISSING = "READINESS_MISSING"
 REASON_NOTIFY_DRY_RUN = "NOTIFY_DRY_RUN"
 REASON_WEBHOOK_NOT_CONFIGURED = "WEBHOOK_NOT_CONFIGURED"
 REASON_NOTIFY_SEND_FAILED = "NOTIFY_SEND_FAILED"
+
+SENSITIVE_PATTERNS = [
+    re.compile(r"(?i)(api[_-]?key\s*[=:]\s*)([^\s,;]+)"),
+    re.compile(r"(?i)(token\s*[=:]\s*)([^\s,;]+)"),
+    re.compile(r"(?i)(bearer\s+)([A-Za-z0-9._\-]+)"),
+    re.compile(r"(?i)(authorization\s*:\s*bearer\s+)([A-Za-z0-9._\-]+)"),
+]
 
 
 def to_repo_rel(repo_root: Path, value: str | Path) -> str:
@@ -80,7 +88,16 @@ def compose_message(channel: str, readiness: Dict[str, Any], schedule: Dict[str,
     return " | ".join(lines)
 
 
-def post_webhook(url: str, payload: Dict[str, Any], timeout_sec: int) -> Dict[str, Any]:
+def redact_sensitive_text(text: str, max_len: int = 600) -> str:
+    value = str(text or "")
+    for pat in SENSITIVE_PATTERNS:
+        value = pat.sub(r"\\1[REDACTED]", value)
+    if len(value) > max(1, int(max_len)):
+        return value[-max_len:]
+    return value
+
+
+def post_webhook(url: str, payload: Dict[str, Any], timeout_sec: int, *, include_response_tail: bool) -> Dict[str, Any]:
     body = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(url=url, data=body, method="POST")
     req.add_header("Content-Type", "application/json")
@@ -91,7 +108,7 @@ def post_webhook(url: str, payload: Dict[str, Any], timeout_sec: int) -> Dict[st
             return {
                 "sent": 200 <= status < 300,
                 "http_status": status,
-                "response_tail": text[-600:],
+                "response_tail": redact_sensitive_text(text) if include_response_tail else "",
                 "error": "",
             }
     except urllib.error.HTTPError as exc:
@@ -100,15 +117,15 @@ def post_webhook(url: str, payload: Dict[str, Any], timeout_sec: int) -> Dict[st
         return {
             "sent": False,
             "http_status": int(getattr(exc, "code", 0) or 0),
-            "response_tail": text[-600:],
-            "error": str(exc),
+            "response_tail": redact_sensitive_text(text) if include_response_tail else "",
+            "error": redact_sensitive_text(str(exc), max_len=220),
         }
     except Exception as exc:
         return {
             "sent": False,
             "http_status": 0,
             "response_tail": "",
-            "error": str(exc),
+            "error": redact_sensitive_text(str(exc), max_len=220),
         }
 
 
@@ -211,6 +228,7 @@ def main() -> int:
     parser.add_argument("--max-retries", type=int, default=2)
     parser.add_argument("--retry-backoff-sec", type=float, default=1.0)
     parser.add_argument("--send", action="store_true")
+    parser.add_argument("--include-response-tail", action="store_true")
     args = parser.parse_args()
 
     repo_root = Path(git_out(Path.cwd(), ["rev-parse", "--show-toplevel"]) or Path.cwd()).resolve()
@@ -267,7 +285,12 @@ def main() -> int:
                 },
             }
             notify_result = deliver_with_retries(
-                lambda: post_webhook(webhook_url, notify_payload, int(args.timeout_sec)),
+                lambda: post_webhook(
+                    webhook_url,
+                    notify_payload,
+                    int(args.timeout_sec),
+                    include_response_tail=bool(args.include_response_tail),
+                ),
                 max_retries=int(args.max_retries),
                 retry_backoff_sec=float(args.retry_backoff_sec),
             )
@@ -315,6 +338,7 @@ def main() -> int:
             "schedule_json": to_repo_rel(repo_root, schedule_path),
             "webhook_env": str(args.webhook_env),
             "send": bool(args.send),
+            "include_response_tail": bool(args.include_response_tail),
             "max_retries": int(args.max_retries),
             "retry_backoff_sec": float(args.retry_backoff_sec),
         },

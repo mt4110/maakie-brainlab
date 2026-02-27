@@ -60,6 +60,13 @@ class S28ProviderCanaryRecoveryTests(unittest.TestCase):
         self.assertTrue(any("env variables" in a for a in actions))
         self.assertTrue(any("status transition to PASS" in a for a in actions))
 
+    def test_redact_sensitive_text(self):
+        redacted = self.m.redact_sensitive_text("api_key=abc token=def bearer ghp_zzz")
+        self.assertIn("[REDACTED]", redacted)
+        self.assertNotIn("abc", redacted)
+        self.assertNotIn("def", redacted)
+        self.assertNotIn("ghp_zzz", redacted)
+
 
 if __name__ == "__main__":
     unittest.main()

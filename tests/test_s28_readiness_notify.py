@@ -67,6 +67,14 @@ class S28ReadinessNotifyTests(unittest.TestCase):
         self.assertEqual(self.m.delivery_state(sent=False, attempt_count=1, attempted=True), "FAILED")
         self.assertEqual(self.m.delivery_state(sent=True, attempt_count=1, attempted=True), "SENT")
 
+    def test_redact_sensitive_text(self):
+        text = "api_key=abc123 bearer sk_test_foo token=bar"
+        redacted = self.m.redact_sensitive_text(text)
+        self.assertIn("[REDACTED]", redacted)
+        self.assertNotIn("abc123", redacted)
+        self.assertNotIn("sk_test_foo", redacted)
+        self.assertNotIn("bar", redacted)
+
     def test_send_requested_without_webhook_keeps_not_attempted(self):
         root = Path(__file__).resolve().parents[1]
         script = root / "scripts" / "ops" / "s28_readiness_notify.py"

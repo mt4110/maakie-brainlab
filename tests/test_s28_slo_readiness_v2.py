@@ -106,6 +106,14 @@ class S28SLOReadinessV2Tests(unittest.TestCase):
             )
         self.assertTrue(stale)
 
+    def test_is_stale_artifact_missing_head(self):
+        stale = self.m.is_stale_artifact(
+            {"git": {}},
+            current_head="bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            repo_root=self.m.Path("."),
+        )
+        self.assertTrue(stale)
+
     def test_build_waiver_context(self):
         context = self.m.build_waiver_context(
             d01={"trend": {"dominant_skip_cause": "env", "env_skip_rate": 1.0}},

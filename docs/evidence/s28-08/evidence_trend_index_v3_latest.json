@@ -1,9 +1,9 @@
 {
   "schema_version": "s28-evidence-trend-index-v3",
-  "captured_at_utc": "2026-02-27T08:06:03Z",
+  "captured_at_utc": "2026-02-27T10:16:34Z",
   "git": {
     "branch": "ops/S28-01-S28-10",
-    "head": "55d5d962dd6b70a577e42f33ae301a6ab76e4f7d"
+    "head": "2a3af57247941708ebc55133a88ee4900018b6aa"
   },
   "phases": [
     {
@@ -11,7 +11,7 @@
       "artifact": "docs/evidence/s28-01/provider_canary_recovery_latest.json",
       "present": true,
       "status": "WARN",
-      "captured_at_utc": "2026-02-27T08:06:03Z",
+      "captured_at_utc": "2026-02-27T10:16:33Z",
       "stale": false
     },
     {
@@ -27,7 +27,7 @@
       "artifact": "docs/evidence/s28-03/readiness_notify_latest.json",
       "present": true,
       "status": "WARN",
-      "captured_at_utc": "2026-02-27T08:06:03Z",
+      "captured_at_utc": "2026-02-27T10:16:33Z",
       "stale": false
     },
     {
@@ -65,7 +65,7 @@
   ],
   "history": {
     "path": "docs/evidence/s28-08/evidence_trend_history_v3.json",
-    "size": 4,
+    "size": 5,
     "deltas": {
       "missing_delta": 0,
       "failed_delta": 0,
@@ -74,7 +74,7 @@
   },
   "summary": {
     "status": "WARN",
-    "history_size": 4,
+    "history_size": 5,
     "present_count": 7,
     "missing_count": 0,
     "pass_count": 1,
