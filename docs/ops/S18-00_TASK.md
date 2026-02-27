@@ -163,7 +163,7 @@ SKIP rule:
 ### 3.2 S18 epic minimal header (future phases blocked until defined)
 - [x] In `docs/ops/S18_PLAN.md`, write minimal:
   - `S18-00: Template kit bootstrap (this PR)`
-  - `S18-01+: TBD (must be defined in ops docs before starting)`
+  - `S18-01..S18-03: defined in ops docs and handled as separate phases`
 
 STOP rule:
 - If scope text diverges from this TASK, fix the docs now (no ambiguity)

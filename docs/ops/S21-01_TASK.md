@@ -22,7 +22,7 @@
 - [x] STATUS に “NEXT（次に触る）” が必ず1個以上ある状態にする
 
 ## Mechanical Evidence (No-Exit)
-- [x] TODOホットスポット（ファイル別件数）を再採取して貼る（上位だけでOK）
+- [x] backlogホットスポット（ファイル別件数）を再採取して貼る（上位だけでOK）
     - docs/ops/S8_TASK.md: 10 items
     - docs/ops/S18-00_TASK.md: 10 items
     - ... (Total 10 files processed in Triage v1)

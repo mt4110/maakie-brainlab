@@ -5,7 +5,7 @@
 - Canonical: NO UPDATE (this phase only produces Observation bundles)
 
 ## Goal
-TBDを消す。次フェーズの PLAN/TASK を決定論で安全生成できる「道具」を1つ実装し、以後の ops フェーズ開始を止めない。
+未確定項目を消す。次フェーズの PLAN/TASK を決定論で安全生成できる「道具」を1つ実装し、以後の ops フェーズ開始を止めない。
 
 ## Scope Lock (NO LATE CHANGES)
 This phase includes ONLY:

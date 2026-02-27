@@ -9,7 +9,7 @@ ILの入口が複数あると、仕様分岐・テスト片落ち・ログ揺れ
 - 旧入口は canonical へ委譲（wrapper化）または明示禁止
 - 常時検証で「canonical以外の入口参照」を検知して ERROR を出す（exitでは止めない）
 
-## Canonical（TODO: discovery後に確定）
+## Canonical（確定）
 - CANONICAL_ENTRYPOINT: **scripts/il_entry.py**
 - LEGACY_WRAPPERS: discovery結果に基づき列挙（wrapper化する場合）
 - INTERNAL_REFERENCES: Makefile/ops/workflow/docs からの参照は canonical に寄せる

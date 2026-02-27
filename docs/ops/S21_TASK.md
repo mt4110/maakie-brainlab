@@ -2,12 +2,12 @@
 
 ## Always (運用の外壁)
 - [x] STATUS を単一の入口として維持する（ACTIVE/NEXT/PARKED/GRAVEYARD）
-- [x] “単一SOT原則” を守る（漂流TODOを作らない）
+- [x] “単一SOT原則” を守る（漂流backlog項目を作らない）
 - [x] Triage 儀式を定期実行できる形で残す（手で回せることが最優先）
 
 ## Backlog Index (MIGRATED SOT)
 > ここが「移植先の単一SOT」。
-> 古いSxxのTODOは、必要ならここへ移植して“参照化”する。
+> 古いSxxのbacklog項目は、必要ならここへ移植して“参照化”する。
 
 ### From S8_TASK.md
 - [x] S21-MIG-S8-0001: if `git status --porcelain=v1` が空 ではない:
@@ -36,8 +36,8 @@
 ### From S15_07_TASK.md
 - [x] S21-MIG-S15-07-0001: confirm branch and clean status
 - [x] S21-MIG-S15-07-0002: capture baseline pointers (HEAD sha etc)
-- [x] S21-MIG-S15-07-0003: run relevant tests / gates (TBD)
-- [x] S21-MIG-S15-07-0004: record evidence artifact paths (TBD)
+- [x] S21-MIG-S15-07-0003: run relevant tests / gates (`make verify-il`, `.venv/bin/python scripts/il_exec_selftest.py`, `python3 -m compileall scripts`)
+- [x] S21-MIG-S15-07-0004: record evidence artifact paths (`.local/obs/s15-07-resolution/20260227T133703Z/10_make_verify_il.log`, `.local/obs/s15-07-resolution/20260227T133703Z/20_il_exec_selftest.log`, `.local/obs/s15-07-resolution/20260227T133703Z/30_compileall_scripts.log`)
 - [x] S21-MIG-S15-07-0005: commit with scoped message
 - [x] S21-MIG-S15-07-0006: push branch
 - [x] S21-MIG-S15-07-0007: PR body includes evidence + risks + rollback note
@@ -48,11 +48,11 @@
 - [x] S21-MIG-S15-08-0003: main の S15 docs が存在する（存在確認できない場合は error）
 - [x] S21-MIG-S15-08-0004: test -f docs/ops/S15_07_10_DEPENDENCY_MATRIX.md を確認
 - [x] S21-MIG-S15-08-0005: 確定：docs/ops/S15_07_10_DEPENDENCY_MATRIX.md を採用
-- [x] S21-MIG-S15-08-0006: S15_08_PLAN.md 内が全確定済み (rg -n "TBD" docs/ops/S15_08_PLAN.md)
+- [x] S21-MIG-S15-08-0006: S15_08_PLAN.md 内が全確定済み (no unresolved placeholder)
 - [x] S21-MIG-S15-08-0007: PR分割ルール（原則/例外/例外判定）が 機械的に書かれている
 - [x] S21-MIG-S15-08-0008: DependsOn / Touch / NoTouch / Gate の確定方針が書かれている
 - [x] S21-MIG-S15-08-0009: Done条件が “検証可能” な形で書かれている
-- [x] S21-MIG-S15-08-0010: S15_08_TASK.md 内が全確定済み (rg -n "TBD" docs/ops/S15_08_TASK.md)
+- [x] S21-MIG-S15-08-0010: S15_08_TASK.md 内が全確定済み (no unresolved placeholder)
 
 ### From S16_TASK.md
 - [x] S21-MIG-S16-0001: Create/Update: docs/ops/S16-02_PLAN.md

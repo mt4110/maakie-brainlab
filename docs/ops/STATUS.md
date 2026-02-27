@@ -39,10 +39,10 @@
 
 | Item | Reason | Ref |
 |---|---|---|
-| TBD | TBD | TBD |
+| (none) | no parked item at this point | - |
 
 ## GRAVEYARD
 
 | Item | Reason | Ref |
 |---|---|---|
-| TBD | TBD | TBD |
+| (none) | no graveyard item tracked in this file | - |

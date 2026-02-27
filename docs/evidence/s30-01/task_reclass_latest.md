@@ -1,11 +1,10 @@
 # S30 Task Reclassification (Latest)
 
-- CapturedAtUTC: `2026-02-27T13:24:32Z`
+- CapturedAtUTC: `2026-02-27T13:38:38Z`
 - Branch: `ops/S30-1-S30-900`
-- HeadSHA: `7a921e3abca148bef3b4372c91c7088f4c79aa28`
+- HeadSHA: `1f096e584058f4aa9a952922fb4acbecd78c8bf3`
 - Pending total: `0`
 - Batch size: `0`
-- Apply batch: `targeted=0 applied=0 already_done=0 invalid=0`
 
 ## Axis Counts
 

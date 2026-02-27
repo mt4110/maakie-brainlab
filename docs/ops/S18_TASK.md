@@ -6,8 +6,8 @@
 - [x] Initialize S18-00 PLAN/TASK (Scope Pin)
 - [x] Canonical Pin & PR
 
-## S18-01+ (TBD)
-- [x] (Future tasks must be explicitly defined in S18_PLAN.md before adding here)
+## S18-01+ (Defined)
+- [x] Future tasks are defined in `S18-01_PLAN.md`..`S18-03_PLAN.md`
 
 ## Tools
 - Phase scaffold generator (v1): ops/new_ops_phase.sh

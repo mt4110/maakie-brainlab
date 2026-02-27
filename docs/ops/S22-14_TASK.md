@@ -7,7 +7,7 @@
 - [x] 00. OBS作成（.local/obs/s22-14_*）
 - [x] 01. 現状観測：入口候補探索（rg --threads 2）→ OBS保存
 - [x] 02. 入口候補の一覧を抽出（ファイルパスのユニーク化）→ OBS保存
-- [x] 03. Canonical Entrypoint を 1つ確定（docsに反映：CANONICAL_ENTRYPOINT_TBD を置換）
+- [x] 03. Canonical Entrypoint を 1つ確定（docsに反映：CANONICAL_ENTRYPOINT placeholder を置換）
 - [x] 04. 旧入口を canonical へ委譲（wrapper化）or 明示禁止
 - [x] 05. repo内参照（Makefile/ops/workflow/docs/ops）を canonical に寄せる
 - [x] 06. 常時検証（guard）追加：canonical以外の参照を検知し ERROR を出す（exitしない）

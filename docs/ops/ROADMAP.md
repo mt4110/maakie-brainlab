@@ -16,30 +16,30 @@
 
 ## シリーズ俯瞰（自動生成）
 
-### S7 — TBD
+### S7 — Historical
 - 全体図: `docs/ops/S7_PLAN.md`
 
-### S8 — TBD
+### S8 — Historical
 - 全体図: `docs/ops/S8_PLAN.md`
 - 実行: `docs/ops/S8_TASK.md`
 
-### S9 — TBD
+### S9 — Historical
 - 全体図: `docs/ops/S9_PLAN.md`
 - 実行: `docs/ops/S9_TASK.md`
 
-### S15 — TBD
+### S15 — Historical
 - 全体図: `docs/ops/S15_PLAN.md`
 - 実行: `docs/ops/S15_TASK.md`
 
-### S16 — TBD
+### S16 — Historical
 - 全体図: `docs/ops/S16_PLAN.md`
 - 実行: `docs/ops/S16_TASK.md`
 
-### S17 — TBD
+### S17 — Historical
 - 全体図: `docs/ops/S17_PLAN.md`
 - 実行: `docs/ops/S17_TASK.md`
 
-### S18 — TBD
+### S18 — Historical
 - 全体図: `docs/ops/S18_PLAN.md`
 - 実行: `docs/ops/S18_TASK.md`
 
@@ -52,11 +52,11 @@
 - 実行: `docs/ops/S20_TASK.md`
 
 ### S21 — Active
-- 全体図: `docs/ops/S21_PLAN.md` (TBD or derived)
+- 全体図: `docs/ops/S21_PLAN.md`
 - Phase 01-07: `docs/ops/S21-0x_PLAN.md` (See STATUS.md for breakdown)
 
 ### S22 — Active
-- 全体図: `docs/ops/S22_PLAN.md` (TBD or derived)
+- 全体図: `docs/ops/S22_PLAN.md` (derived from `S22-01..S22-20`)
 - S22-01: Done ✅ (Merged PR #76)
 - S22-02: WIP (Review PR #77)
 - S22-03: Done ✅ (Merged PR #78)
