@@ -113,7 +113,7 @@ Last Updated: 2026-02-27
 
 - [x] `make verify-il`
 - [x] `source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh`
-- [ ] `ci-self up --ref "$(git branch --show-current)"`
+- [x] `ci-self up --ref "$(git branch --show-current)"`
 
 ## Evidence Policy
 
