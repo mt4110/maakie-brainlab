@@ -235,6 +235,12 @@ def should_retry(reason_code: str, retryable_codes: List[str], non_retryable_cod
     return reason_code in retryable
 
 
+def is_must_pass_violation(case: Dict[str, Any], out: Dict[str, Any]) -> bool:
+    if not bool(case.get("must_pass", False)):
+        return False
+    return str(out.get("status") or "FAIL") != "PASS"
+
+
 def run_case_with_retry(
     *,
     case: Dict[str, Any],
@@ -596,15 +602,24 @@ def main() -> int:
         if state == "SKIP":
             skipped += 1
             emit("WARN", f"case={out.get('case_id')} status=SKIP reason={out.get('reason_code')}", events)
-            continue
-        failed += 1
-        emit("ERROR", f"case={out.get('case_id')} status=FAIL reason={out.get('reason_code')}", events)
-        if bool(case.get("must_pass", False)):
-            errors.append(f"must_pass case failed id={out.get('case_id')}")
+        else:
+            failed += 1
+            emit("ERROR", f"case={out.get('case_id')} status=FAIL reason={out.get('reason_code')}", events)
+        if is_must_pass_violation(case, out):
+            errors.append(f"must_pass case not passed id={out.get('case_id')} status={state}")
 
     reason_code = ""
     if errors:
-        reason_code = str(next((r.get("reason_code") for r in results if r.get("status") == "FAIL"), REASON_BAD_RESPONSE))
+        reason_code = str(
+            next(
+                (
+                    r.get("reason_code")
+                    for c, r in zip(cases, results)
+                    if is_must_pass_violation(c, r) and str(r.get("reason_code") or "").strip()
+                ),
+                REASON_BAD_RESPONSE,
+            )
+        )
     status = "PASS" if not errors else "FAIL"
     rollback = dict(cfg.get("rollback", {}))
     payload = {

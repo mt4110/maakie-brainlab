@@ -86,10 +86,9 @@ def load_cases(path: Path) -> Tuple[str, List[Dict[str, Any]]]:
         raise ValueError("cases must be non-empty list")
     out: List[Dict[str, Any]] = []
     for row in rows:
-        if isinstance(row, dict):
-            out.append(row)
-    if not out:
-        raise ValueError("cases must include at least one object")
+        if not isinstance(row, dict):
+            raise ValueError("cases must contain only objects")
+        out.append(row)
     return schema, out
 
 

@@ -95,6 +95,11 @@ class S26ProviderCanaryTests(unittest.TestCase):
         self.assertTrue(self.m.should_retry("TIMEOUT", ["TIMEOUT"], ["AUTH_ERROR"]))
         self.assertFalse(self.m.should_retry("AUTH_ERROR", ["AUTH_ERROR"], ["AUTH_ERROR"]))
 
+    def test_is_must_pass_violation(self):
+        self.assertFalse(self.m.is_must_pass_violation({"must_pass": True}, {"status": "PASS"}))
+        self.assertTrue(self.m.is_must_pass_violation({"must_pass": True}, {"status": "SKIP"}))
+        self.assertFalse(self.m.is_must_pass_violation({"must_pass": False}, {"status": "FAIL"}))
+
     def test_run_case_with_retry_recovers_after_timeout(self):
         calls = {"n": 0}
 

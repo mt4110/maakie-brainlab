@@ -142,6 +142,10 @@ class S26AcceptanceWallTests(unittest.TestCase):
             p2.write_text(json.dumps({"schema_version": "x", "cases": []}), encoding="utf-8")
             with self.assertRaises(ValueError):
                 self.m.load_cases(p2)
+            p3 = Path(td) / "non_object_rows.json"
+            p3.write_text(json.dumps({"schema_version": "x", "cases": [{"id": "ok"}, 1]}), encoding="utf-8")
+            with self.assertRaises(ValueError):
+                self.m.load_cases(p3)
 
 
 if __name__ == "__main__":
