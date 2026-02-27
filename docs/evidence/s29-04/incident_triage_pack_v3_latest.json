@@ -1,0 +1,68 @@
+{
+  "schema_version": "s29-incident-triage-pack-v3",
+  "captured_at_utc": "2026-02-27T11:07:47Z",
+  "git": {
+    "branch": "ops/S29-01-S29-10",
+    "head": "4d5916728a1831687c05062a875520825c77e1db"
+  },
+  "inputs": {
+    "recovery_json": "docs/evidence/s29-01/canary_recovery_success_rate_slo_latest.json",
+    "taxonomy_json": "docs/evidence/s29-02/taxonomy_pipeline_integration_latest.json",
+    "notify_json": "docs/evidence/s29-03/readiness_notify_multichannel_latest.json",
+    "triage_v1_json": "docs/evidence/s27-04/incident_triage_pack_latest.json"
+  },
+  "missing_inputs": [],
+  "top_reasons": [
+    {
+      "reason_code": "MISSING_PROVIDER_ENV",
+      "count": 1,
+      "severity": "major"
+    },
+    {
+      "reason_code": "NOTIFY_DRY_RUN",
+      "count": 1,
+      "severity": "minor"
+    },
+    {
+      "reason_code": "RECOVERY_REQUIRED",
+      "count": 1,
+      "severity": "major"
+    },
+    {
+      "reason_code": "SKIP_RATE_HIGH",
+      "count": 1,
+      "severity": "major"
+    },
+    {
+      "reason_code": "UNKNOWN_RATIO_ABOVE_TARGET",
+      "count": 1,
+      "severity": "major"
+    }
+  ],
+  "alerts_by_severity": {
+    "critical": 0,
+    "major": 4,
+    "minor": 1
+  },
+  "priority_actions": [
+    "Validate provider env variables (`base_url/api_key/model`) in runtime and CI contexts.",
+    "Run strict canary once and verify status transition to PASS after recovery action.",
+    "Keep rollback path ready: python3 scripts/ops/s25_langchain_poc.py --mode rollback-only",
+    "Collect at least 2 additional labeled cases for taxonomy 'provider'.",
+    "Collect at least 1 additional labeled cases for taxonomy 'network'.",
+    "Collect at least 1 additional labeled cases for taxonomy 'schema'.",
+    "Configure readiness webhook and enable re-delivery with retries.",
+    "Resolve notification issue: NOTIFY_DRY_RUN."
+  ],
+  "summary": {
+    "status": "WARN",
+    "reason_code": "TRIAGE_ALERT",
+    "missing_inputs": 0,
+    "alerts": 5,
+    "critical_alerts": 0
+  },
+  "artifact_names": {
+    "json": "incident_triage_pack_v3_latest.json",
+    "md": "incident_triage_pack_v3_latest.md"
+  }
+}

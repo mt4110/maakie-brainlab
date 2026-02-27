@@ -1,8 +1,8 @@
 # S28-10 Closeout (Latest)
 
-- CapturedAtUTC: `2026-02-27T10:16:34Z`
+- CapturedAtUTC: `2026-02-27T10:30:33Z`
 - Branch: `ops/S28-01-S28-10`
-- HeadSHA: `2a3af57247941708ebc55133a88ee4900018b6aa`
+- HeadSHA: `d5065ad84191b3738c1ce27f09af2e12cb0372c6`
 
 ## Summary
 

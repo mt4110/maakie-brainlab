@@ -83,6 +83,10 @@
 - 全体図: `docs/ops/S27-01-S27-10-THREAD-V1_PLAN.md`
 - 実行: `docs/ops/S27-01-S27-10-THREAD-V1_TASK.md`
 
-### S28 — Active (Thread v4: S28-01..S28-10)
-- 全体図: `docs/ops/S28-01-S28-10-THREAD-V4_PLAN.md`
-- 実行: `docs/ops/S28-01-S28-10-THREAD-V4_TASK.md`
+### S28 — Active (Thread v5: S28-01..S28-10)
+- 全体図: `docs/ops/S28-01-S28-10-THREAD-V5_PLAN.md`
+- 実行: `docs/ops/S28-01-S28-10-THREAD-V5_TASK.md`
+
+### S29 — Active (Thread v3: S29-01..S29-10)
+- 全体図: `docs/ops/S29-01-S29-10-THREAD-V3_PLAN.md`
+- 実行: `docs/ops/S29-01-S29-10-THREAD-V3_TASK.md`

@@ -1,0 +1,85 @@
+{
+  "schema_version": "s29-acceptance-cases-v5",
+  "cases": [
+    {
+      "id": "S29A-001",
+      "title": "canary recovery SLO artifact is non-failing",
+      "severity": "critical",
+      "fallback": "Run S29-01 and inspect summary + recovery_slo.",
+      "artifact": "docs/evidence/s29-01/canary_recovery_success_rate_slo_latest.json",
+      "assertion": {"path": "summary.status", "op": "in", "value": ["PASS", "WARN"]}
+    },
+    {
+      "id": "S29A-002",
+      "title": "canary recovery SLO exposes attempts",
+      "severity": "major",
+      "fallback": "Run S29-01 and verify recovery_slo.attempts is emitted.",
+      "artifact": "docs/evidence/s29-01/canary_recovery_success_rate_slo_latest.json",
+      "assertion": {"path": "recovery_slo.attempts", "op": "gte", "value": 0}
+    },
+    {
+      "id": "S29A-003",
+      "title": "taxonomy pipeline integration remains non-failing",
+      "severity": "critical",
+      "fallback": "Run S29-02 and inspect unknown_ratio + collection_actions.",
+      "artifact": "docs/evidence/s29-02/taxonomy_pipeline_integration_latest.json",
+      "assertion": {"path": "summary.status", "op": "in", "value": ["PASS", "WARN"]}
+    },
+    {
+      "id": "S29A-004",
+      "title": "taxonomy pipeline record count is emitted",
+      "severity": "major",
+      "fallback": "Run S29-02 and verify pipeline.record_count is emitted.",
+      "artifact": "docs/evidence/s29-02/taxonomy_pipeline_integration_latest.json",
+      "assertion": {"path": "pipeline.record_count", "op": "gte", "value": 0}
+    },
+    {
+      "id": "S29A-005",
+      "title": "readiness notify multi-channel remains non-failing",
+      "severity": "major",
+      "fallback": "Run S29-03 with --send after configuring channel webhook env.",
+      "artifact": "docs/evidence/s29-03/readiness_notify_multichannel_latest.json",
+      "assertion": {"path": "summary.status", "op": "in", "value": ["PASS", "WARN"]}
+    },
+    {
+      "id": "S29A-006",
+      "title": "readiness notify records at least two attempted channels",
+      "severity": "critical",
+      "fallback": "Run S29-03 with --send and ensure attempted_channels >= 2.",
+      "artifact": "docs/evidence/s29-03/readiness_notify_multichannel_latest.json",
+      "assertion": {"path": "notification.attempted_channels", "op": "gte", "value": 2}
+    },
+    {
+      "id": "S29A-007",
+      "title": "triage v4 exports priority actions",
+      "severity": "major",
+      "fallback": "Run S29-04 and verify priority_actions is populated.",
+      "artifact": "docs/evidence/s29-04/incident_triage_pack_v4_latest.json",
+      "assertion": {"path": "priority_actions", "op": "truthy", "value": true}
+    },
+    {
+      "id": "S29A-008",
+      "title": "policy drift guard v4 is non-failing by default",
+      "severity": "minor",
+      "fallback": "Run S29-05 with baseline update and inspect drift classification.",
+      "artifact": "docs/evidence/s29-05/policy_drift_guard_v4_latest.json",
+      "assertion": {"path": "summary.status", "op": "neq", "value": "FAIL"}
+    },
+    {
+      "id": "S29A-009",
+      "title": "soak v4 remains actionable",
+      "severity": "major",
+      "fallback": "Run S29-06 and inspect max_consecutive_nonpass + reason_code.",
+      "artifact": "docs/evidence/s29-06/reliability_soak_v4_latest.json",
+      "assertion": {"path": "summary.status", "op": "in", "value": ["PASS", "WARN"]}
+    },
+    {
+      "id": "S29A-010",
+      "title": "triage v4 includes exit conditions",
+      "severity": "major",
+      "fallback": "Run S29-04 and verify exit_conditions is emitted.",
+      "artifact": "docs/evidence/s29-04/incident_triage_pack_v4_latest.json",
+      "assertion": {"path": "exit_conditions", "op": "truthy", "value": true}
+    }
+  ]
+}
