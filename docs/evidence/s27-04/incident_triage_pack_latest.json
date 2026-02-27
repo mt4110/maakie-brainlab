@@ -1,0 +1,43 @@
+{
+  "schema_version": "s27-incident-triage-pack-v1",
+  "captured_at_utc": "2026-02-27T04:16:28Z",
+  "git": {
+    "branch": "ops/S27-01-S27-10",
+    "head": "02f0f008326b975d7100e79201a4370e4f5c81aa"
+  },
+  "inputs": {
+    "canary_ops_json": "docs/evidence/s27-01/provider_canary_ops_latest.json",
+    "canary_base_json": "docs/evidence/s27-01/provider_canary_latest.json",
+    "medium_json": "docs/evidence/s27-02/medium_eval_wall_v2_latest.json",
+    "schedule_json": "docs/evidence/s27-03/release_readiness_schedule_latest.json"
+  },
+  "missing_inputs": [],
+  "top_reasons": [
+    {
+      "reason_code": "MISSING_PROVIDER_ENV",
+      "count": 1
+    },
+    {
+      "reason_code": "SKIP_RATE_HIGH",
+      "count": 1
+    }
+  ],
+  "recent_failures": [
+    {
+      "captured_at_utc": "2026-02-27T04:14:21Z",
+      "status": "SKIP",
+      "reason_code": "MISSING_PROVIDER_ENV"
+    }
+  ],
+  "rollback_command": "python3 scripts/ops/s25_langchain_poc.py --mode rollback-only",
+  "summary": {
+    "status": "WARN",
+    "reason_code": "TRIAGE_ALERT",
+    "missing_inputs": 0,
+    "alerts": 2
+  },
+  "artifact_names": {
+    "json": "incident_triage_pack_latest.json",
+    "md": "incident_triage_pack_latest.md"
+  }
+}
