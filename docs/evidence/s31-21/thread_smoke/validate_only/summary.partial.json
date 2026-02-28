@@ -6,7 +6,7 @@
   "entry_error_count": 0,
   "entry_ok_count": 0,
   "entry_retries": 0,
-  "entry_script": "/Users/takemuramasaki/dev/maakie-brainlab/scripts/il_entry.py",
+  "entry_script": "/home/runner/work/maakie-brainlab/maakie-brainlab/scripts/il_entry.py",
   "entry_skip_count": 2,
   "entry_timeout_sec": 30,
   "error_count": 0,

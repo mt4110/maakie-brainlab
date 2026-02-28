@@ -1,6 +1,6 @@
 {
   "schema": "S31_HANDOFF_PACK_V1",
-  "captured_at_utc": "2026-02-28T04:49:03Z",
+  "captured_at_utc": "2026-02-28T04:52:13Z",
   "s31_closeout_status": "PASS",
   "s32_start_conditions": {
     "closeout_available": true,

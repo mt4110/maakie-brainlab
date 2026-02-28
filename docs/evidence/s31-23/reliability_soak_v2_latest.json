@@ -1,6 +1,6 @@
 {
   "schema": "S31_RELIABILITY_SOAK_V2",
-  "captured_at_utc": "2026-02-28T04:49:02Z",
+  "captured_at_utc": "2026-02-28T04:52:15Z",
   "status": "PASS",
   "metrics": {
     "total_runs": 3,
