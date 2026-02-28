@@ -20,7 +20,9 @@ class TestS32CloseoutV2(unittest.TestCase):
             )
             output = (cp.stdout or "") + (cp.stderr or "")
             self.assertIn(cp.returncode, {0, 1}, msg=output)
-            payload = json.loads((out_dir / "closeout_latest.json").read_text(encoding="utf-8"))
+            payload_path = out_dir / "closeout_latest.json"
+            self.assertTrue(payload_path.exists(), msg=output)
+            payload = json.loads(payload_path.read_text(encoding="utf-8"))
             self.assertEqual(payload.get("schema"), "S32_CLOSEOUT_V2")
             self.assertIn("before_after", payload)
             self.assertIn("unresolved_risks", payload)

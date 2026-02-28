@@ -795,6 +795,8 @@ def _repair_trailing_commas(text: str) -> Optional[str]:
 
 
 def _repair_missing_closing_braces(text: str) -> Optional[str]:
+    # Intentionally only repairs unmatched "}" depth.
+    # Unclosed arrays/brackets are left fail-closed to keep repair scope narrow.
     depth = 0
     in_string = False
     escape = False

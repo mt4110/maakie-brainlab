@@ -1017,7 +1017,7 @@ def _run_thread_runner_impl(
                             continue
                         if attempt < total_attempts and not retriable:
                             log(
-                                "SKIP",
+                                "WARN",
                                 (
                                     f"phase=entry_retry_blocked index={idx} id={case_id} attempt={attempt} "
                                     f"reason={entry_error_reason} policy=non_retriable"

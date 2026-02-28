@@ -88,7 +88,11 @@ def main() -> int:
     baseline_doc = _read_json(baseline_path)
     baseline_hashes = dict(baseline_doc.get("hashes", {})) if baseline_doc else {}
 
-    diff = diff_hashes(baseline_hashes, current_hashes, TRACKED) if baseline_hashes else {"missing": [], "changed": []}
+    if baseline_hashes:
+        diff = diff_hashes(baseline_hashes, current_hashes, TRACKED)
+    else:
+        missing = [rel for rel in TRACKED if rel not in current_hashes]
+        diff = {"missing": sorted(missing), "changed": []}
     status = "PASS" if not diff["missing"] and not diff["changed"] else "WARN"
 
     payload = {

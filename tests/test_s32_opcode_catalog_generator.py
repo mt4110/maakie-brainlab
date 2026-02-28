@@ -41,7 +41,9 @@ class TestS32OpcodeCatalogGenerator(unittest.TestCase):
             )
             output = (cp.stdout or "") + (cp.stderr or "")
             self.assertIn(cp.returncode, {0, 1}, msg=output)
-            payload = json.loads((out_dir / "opcode_catalog_latest.json").read_text(encoding="utf-8"))
+            payload_path = out_dir / "opcode_catalog_latest.json"
+            self.assertTrue(payload_path.exists(), msg=output)
+            payload = json.loads(payload_path.read_text(encoding="utf-8"))
             self.assertEqual(payload.get("schema"), "S32_OPCODE_CATALOG_V1")
             self.assertTrue((out_dir / "opcode_catalog_latest.md").exists())
 
