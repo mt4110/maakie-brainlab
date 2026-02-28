@@ -1,0 +1,29 @@
+{
+  "artifact_pointers": [
+    {
+      "path": "tests/fixtures/il_exec/retrieve_db.json"
+    }
+  ],
+  "constraints": {
+    "allowed_opcodes": [
+      "SEARCH_TERMS",
+      "RETRIEVE",
+      "CITE"
+    ],
+    "forbidden_keys": [],
+    "max_steps": 3
+  },
+  "context": {
+    "keywords": [
+      "beta"
+    ]
+  },
+  "determinism": {
+    "seed": 7,
+    "stream": false,
+    "temperature": 0.0,
+    "top_p": 1.0
+  },
+  "request_text": "Retrieve beta note",
+  "schema": "IL_COMPILE_REQUEST_v1"
+}

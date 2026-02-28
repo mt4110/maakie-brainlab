@@ -23,6 +23,7 @@ class CurrentPointTests(unittest.TestCase):
 
     def test_detect_track_thread_and_phase(self):
         self.assertEqual(self.m.detect_track("ops/S25-01-25-10"), "S25-01-25-10")
+        self.assertEqual(self.m.detect_track("ops/S31-01--S31-30"), "S31-01-S31-30")
         self.assertEqual(self.m.detect_track("feature/s24-01-S24-10-work"), "S24-01-S24-10")
         self.assertEqual(self.m.detect_track("ops/S30-1-S30-900"), "S30-1-S30-900")
         self.assertEqual(self.m.detect_track("hotfix/S20-08"), "S20-08")

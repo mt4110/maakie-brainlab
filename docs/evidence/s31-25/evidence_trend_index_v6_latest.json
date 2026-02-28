@@ -1,0 +1,36 @@
+{
+  "schema": "S31_EVIDENCE_TREND_INDEX_V6",
+  "captured_at_utc": "2026-02-28T02:19:29Z",
+  "status": "PASS",
+  "summary": {
+    "phase_total": 4,
+    "missing_count": 0,
+    "warn_count": 0
+  },
+  "rows": [
+    {
+      "phase": "s31-21",
+      "status": "PASS",
+      "path": "docs/evidence/s31-21/acceptance_wall_v5_latest.json",
+      "missing": false
+    },
+    {
+      "phase": "s31-22",
+      "status": "PASS",
+      "path": "docs/evidence/s31-22/regression_safety_v2_latest.json",
+      "missing": false
+    },
+    {
+      "phase": "s31-23",
+      "status": "PASS",
+      "path": "docs/evidence/s31-23/reliability_soak_v2_latest.json",
+      "missing": false
+    },
+    {
+      "phase": "s31-24",
+      "status": "PASS",
+      "path": "docs/evidence/s31-24/policy_drift_guard_latest.json",
+      "missing": false
+    }
+  ]
+}

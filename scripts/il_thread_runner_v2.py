@@ -1,5 +1,5 @@
 """
-S23-04: Compile -> Entry thread runner v2.
+S23/S31: Compile -> Entry thread runner v2.
 
 Stopless policy for core run logic:
 - continue per-case even if one case fails
@@ -12,7 +12,7 @@ import json
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 repo_root = Path(__file__).resolve().parent.parent
 if str(repo_root) not in sys.path:
@@ -41,7 +41,9 @@ def usage() -> str:
         "--cases <cases.jsonl> --mode <validate-only|run> --out <out_dir> "
         "[--provider <rule_based|local_llm>] [--model <name>] "
         "[--prompt-profile <v1|strict_json_v2|contract_json_v3>] [--seed <int>] [--no-fallback] "
-        "[--entry-timeout-sec <int>] [--entry-retries <int>] [--entry-script <path>]"
+        "[--entry-timeout-sec <int>] [--entry-retries <int>] [--entry-script <path>] "
+        "[--resume] [--shard-index <int>] [--shard-count <int>] "
+        "[--exclude-case-id <id>]... [--exclude-file <ids.txt>]"
     )
 
 
@@ -72,7 +74,26 @@ def _make_error(code: str, message: str, path: str = "") -> Dict[str, Any]:
 
 def parse_args(
     args: List[str],
-) -> Tuple[Optional[Path], str, Optional[Path], str, str, str, int, bool, int, int, Path, List[str], bool]:
+) -> Tuple[
+    Optional[Path],
+    str,
+    Optional[Path],
+    str,
+    str,
+    str,
+    int,
+    bool,
+    int,
+    int,
+    Path,
+    bool,
+    int,
+    int,
+    Set[str],
+    Optional[Path],
+    List[str],
+    bool,
+]:
     cases_path: Optional[Path] = None
     mode = "validate-only"
     out_dir: Optional[Path] = None
@@ -84,6 +105,11 @@ def parse_args(
     entry_timeout_sec = 30
     entry_retries = 0
     entry_script = repo_root / "scripts" / "il_entry.py"
+    resume = False
+    shard_index = 0
+    shard_count = 1
+    excluded_ids: Set[str] = set()
+    exclude_file: Optional[Path] = None
     errors: List[str] = []
 
     if "--help" in args or "-h" in args:
@@ -99,6 +125,11 @@ def parse_args(
             entry_timeout_sec,
             entry_retries,
             entry_script,
+            resume,
+            shard_index,
+            shard_count,
+            excluded_ids,
+            exclude_file,
             errors,
             True,
         )
@@ -195,6 +226,51 @@ def parse_args(
             except Exception:
                 errors.append(f"invalid --entry-retries: {raw}")
             i += 2
+        elif token == "--resume":
+            resume = True
+            i += 1
+        elif token == "--shard-index":
+            if i + 1 >= len(args):
+                errors.append("missing value for --shard-index")
+                i += 1
+                continue
+            raw = args[i + 1]
+            try:
+                shard_index = int(raw)
+                if shard_index < 0:
+                    errors.append("shard-index must be >= 0")
+            except Exception:
+                errors.append(f"invalid --shard-index: {raw}")
+            i += 2
+        elif token == "--shard-count":
+            if i + 1 >= len(args):
+                errors.append("missing value for --shard-count")
+                i += 1
+                continue
+            raw = args[i + 1]
+            try:
+                shard_count = int(raw)
+                if shard_count <= 0:
+                    errors.append("shard-count must be > 0")
+            except Exception:
+                errors.append(f"invalid --shard-count: {raw}")
+            i += 2
+        elif token == "--exclude-case-id":
+            if i + 1 >= len(args):
+                errors.append("missing value for --exclude-case-id")
+                i += 1
+                continue
+            value = str(args[i + 1]).strip()
+            if value:
+                excluded_ids.add(value)
+            i += 2
+        elif token == "--exclude-file":
+            if i + 1 >= len(args):
+                errors.append("missing value for --exclude-file")
+                i += 1
+                continue
+            exclude_file = _resolve_path(args[i + 1])
+            i += 2
         elif token.startswith("-"):
             errors.append(f"unknown option: {token}")
             i += 1
@@ -208,6 +284,21 @@ def parse_args(
         errors.append("missing required --out")
     if mode not in {"validate-only", "run"}:
         errors.append(f"invalid --mode: {mode}")
+    if shard_index >= shard_count:
+        errors.append("shard-index must be < shard-count")
+
+    if exclude_file is not None:
+        if not exclude_file.exists():
+            errors.append(f"exclude-file not found: {exclude_file}")
+        else:
+            try:
+                for line in exclude_file.read_text(encoding="utf-8").splitlines():
+                    text = line.strip()
+                    if not text or text.startswith("#"):
+                        continue
+                    excluded_ids.add(text)
+            except Exception as exc:
+                errors.append(f"exclude-file read failed: {exc}")
 
     return (
         cases_path,
@@ -221,6 +312,11 @@ def parse_args(
         entry_timeout_sec,
         entry_retries,
         entry_script,
+        resume,
+        shard_index,
+        shard_count,
+        excluded_ids,
+        exclude_file,
         errors,
         False,
     )
@@ -251,6 +347,70 @@ def _sha256_file(path: Path) -> str:
     return h.hexdigest()
 
 
+def _load_records_jsonl(path: Path) -> List[Dict[str, Any]]:
+    rows: List[Dict[str, Any]] = []
+    if not path.exists():
+        return rows
+    with open(path, "r", encoding="utf-8") as f:
+        for line in f:
+            raw = line.strip()
+            if not raw:
+                continue
+            try:
+                obj = json.loads(raw)
+            except Exception:
+                continue
+            if isinstance(obj, dict):
+                rows.append(obj)
+    return rows
+
+
+def _write_failure_digest(out_dir: Path, records: List[Dict[str, Any]]) -> None:
+    failures: List[Dict[str, Any]] = []
+    for row in records:
+        compile_status = str(row.get("compile_status", ""))
+        entry_status = str(row.get("entry_status", ""))
+        if compile_status != "ERROR" and entry_status != "ERROR":
+            continue
+        failures.append(
+            {
+                "id": row.get("id", ""),
+                "index": row.get("index", 0),
+                "compile_status": compile_status,
+                "entry_status": entry_status,
+                "compile_error_codes": row.get("compile_error_codes", []),
+                "entry_error_codes": row.get("entry_error_codes", []),
+                "entry_error_reason": row.get("entry_error_reason", ""),
+                "artifacts": row.get("artifacts", {}),
+            }
+        )
+
+    failures = sorted(failures, key=lambda x: (x.get("index", 0), str(x.get("id", ""))))
+    payload = {
+        "schema": "IL_THREAD_RUNNER_V2_FAILURE_DIGEST_v1",
+        "failure_count": len(failures),
+        "failures": failures,
+    }
+    _write_json(out_dir / "failure_digest.json", payload)
+
+    md_lines = ["# Failure Digest", "", f"- failure_count: `{len(failures)}`", ""]
+    if not failures:
+        md_lines.append("- (no failures)")
+    for row in failures:
+        md_lines.append(
+            "- idx={idx} id={id} compile={compile} entry={entry} compile_codes={cc} entry_codes={ec} reason={reason}".format(
+                idx=row.get("index", 0),
+                id=row.get("id", ""),
+                compile=row.get("compile_status", ""),
+                entry=row.get("entry_status", ""),
+                cc=",".join(row.get("compile_error_codes", [])),
+                ec=",".join(row.get("entry_error_codes", [])),
+                reason=row.get("entry_error_reason", ""),
+            )
+        )
+    _write_text(out_dir / "failure_digest.md", "\n".join(md_lines).rstrip() + "\n")
+
+
 def _build_summary(
     records: List[Dict[str, Any]],
     mode: str,
@@ -262,13 +422,20 @@ def _build_summary(
     entry_timeout_sec: int,
     entry_retries: int,
     selected_entry_script: Path,
+    *,
+    resume: bool,
+    shard_index: int,
+    shard_count: int,
+    excluded_count: int,
     cases_jsonl_sha256: str = "",
 ) -> Dict[str, Any]:
-    compile_ok_count = sum(1 for r in records if r["compile_status"] == "OK")
-    compile_error_count = sum(1 for r in records if r["compile_status"] == "ERROR")
-    entry_ok_count = sum(1 for r in records if r["entry_status"] == "OK")
-    entry_error_count = sum(1 for r in records if r["entry_status"] == "ERROR")
-    entry_skip_count = sum(1 for r in records if r["entry_status"] == "SKIP")
+    compile_ok_count = sum(1 for r in records if r.get("compile_status") == "OK")
+    compile_error_count = sum(1 for r in records if r.get("compile_status") == "ERROR")
+    compile_skip_count = sum(1 for r in records if r.get("compile_status") == "SKIP")
+    quarantined_count = sum(1 for r in records if bool(r.get("quarantined", False)))
+    entry_ok_count = sum(1 for r in records if r.get("entry_status") == "OK")
+    entry_error_count = sum(1 for r in records if r.get("entry_status") == "ERROR")
+    entry_skip_count = sum(1 for r in records if r.get("entry_status") == "SKIP")
     retries_used_count = sum(max(0, int(r.get("entry_attempts", 0)) - 1) for r in records)
     return {
         "schema": SUMMARY_SCHEMA,
@@ -281,9 +448,15 @@ def _build_summary(
         "entry_timeout_sec": entry_timeout_sec,
         "entry_retries": entry_retries,
         "entry_script": str(selected_entry_script),
+        "resume": resume,
+        "shard_index": shard_index,
+        "shard_count": shard_count,
+        "excluded_count": excluded_count,
         "total_cases": len(records),
         "compile_ok_count": compile_ok_count,
         "compile_error_count": compile_error_count,
+        "compile_skip_count": compile_skip_count,
+        "quarantined_count": quarantined_count,
         "entry_ok_count": entry_ok_count,
         "entry_error_count": entry_error_count,
         "entry_skip_count": entry_skip_count,
@@ -455,6 +628,15 @@ def _run_entry_subprocess(
     return 1, ["E_ENTRY_PROTOCOL"], "entry_missing_stop_marker"
 
 
+def _load_resume_records(out_dir: Path) -> List[Dict[str, Any]]:
+    partial = out_dir / "cases.partial.jsonl"
+    final = out_dir / "cases.jsonl"
+    rows = _load_records_jsonl(partial)
+    if rows:
+        return rows
+    return _load_records_jsonl(final)
+
+
 def run_thread_runner(
     cases_path: Path,
     mode: str,
@@ -467,14 +649,21 @@ def run_thread_runner(
     entry_timeout_sec: int = 30,
     entry_retries: int = 0,
     entry_script: Optional[Path] = None,
+    *,
+    resume: bool = False,
+    shard_index: int = 0,
+    shard_count: int = 1,
+    excluded_ids: Optional[Set[str]] = None,
 ) -> int:
+    excluded_ids = excluded_ids or set()
     selected_entry_script = entry_script or (repo_root / "scripts" / "il_entry.py")
     log(
         "OK",
         (
             f"phase=boot mode={mode} out={out_dir} cases={cases_path} provider={provider} "
             f"model={model} prompt_profile={prompt_profile} seed={seed} allow_fallback={allow_fallback} "
-            f"entry_timeout_sec={entry_timeout_sec} entry_retries={entry_retries} entry_script={selected_entry_script}"
+            f"entry_timeout_sec={entry_timeout_sec} entry_retries={entry_retries} entry_script={selected_entry_script} "
+            f"resume={resume} shard={shard_index}/{shard_count} excluded={len(excluded_ids)}"
         ),
     )
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -491,24 +680,45 @@ def run_thread_runner(
 
     seen_ids: Dict[str, int] = {}
     records: List[Dict[str, Any]] = []
+    completed_ids: Set[str] = set()
     stop = 0
     cases_partial_path = out_dir / "cases.partial.jsonl"
     summary_partial_path = out_dir / "summary.partial.json"
-    try:
-        if cases_partial_path.exists():
-            cases_partial_path.unlink()
-    except Exception as exc:
-        log("ERROR", f"phase=checkpoint reason=cannot_reset_cases_partial err={exc}")
-        stop = 1
-    try:
-        if summary_partial_path.exists():
-            summary_partial_path.unlink()
-    except Exception as exc:
-        log("ERROR", f"phase=checkpoint reason=cannot_reset_summary_partial err={exc}")
-        stop = 1
+
+    if resume:
+        prev_records = _load_resume_records(out_dir)
+        if prev_records:
+            records.extend(prev_records)
+            completed_ids = {str(r.get("id", "")) for r in prev_records if isinstance(r, dict) and r.get("id")}
+            for r in prev_records:
+                rid = str(r.get("id", ""))
+                if rid:
+                    seen_ids[rid] = seen_ids.get(rid, 0) + 1
+            log("OK", f"phase=resume loaded_records={len(prev_records)}")
+    else:
+        try:
+            if cases_partial_path.exists():
+                cases_partial_path.unlink()
+        except Exception as exc:
+            log("ERROR", f"phase=checkpoint reason=cannot_reset_cases_partial err={exc}")
+            stop = 1
+        try:
+            if summary_partial_path.exists():
+                summary_partial_path.unlink()
+        except Exception as exc:
+            log("ERROR", f"phase=checkpoint reason=cannot_reset_summary_partial err={exc}")
+            stop = 1
 
     for idx, case in enumerate(cases, 1):
+        if shard_count > 1 and ((idx - 1) % shard_count != shard_index):
+            continue
+
         case_id = str(case.get("id", f"line_{idx:04d}"))
+
+        if resume and case_id in completed_ids:
+            log("SKIP", f"phase=case_skip index={idx} id={case_id} reason=resume_already_done")
+            continue
+
         seen_ids[case_id] = seen_ids.get(case_id, 0) + 1
         case_errors = list(case.get("errors", []))
         if seen_ids[case_id] > 1:
@@ -518,6 +728,38 @@ def run_thread_runner(
         case_dir = out_dir / "cases" / f"{idx:04d}_{case_slug}"
         compile_dir = case_dir / "compile"
         entry_dir = case_dir / "entry"
+
+        if case_id in excluded_ids:
+            record = {
+                "schema": CASE_SCHEMA,
+                "index": idx,
+                "id": case_id,
+                "mode": mode,
+                "compile_status": "SKIP",
+                "entry_status": "SKIP",
+                "entry_stop": 0,
+                "entry_attempts": 0,
+                "entry_skip_reason": "quarantined_case",
+                "entry_error_codes": [],
+                "entry_error_reason": "",
+                "compile_error_codes": ["E_QUARANTINED"],
+                "compile_error_count": 0,
+                "quarantined": True,
+                "artifacts": {
+                    "compile_dir": "",
+                    "compile_report": "",
+                    "compile_error": "",
+                    "compiled_json": "",
+                    "entry_dir": "",
+                    "entry_stdout": "",
+                    "entry_stderr": "",
+                },
+            }
+            records.append(record)
+            _append_jsonl_line(cases_partial_path, record)
+            log("SKIP", f"phase=case_quarantine index={idx} id={case_id}")
+            continue
+
         compile_dir.mkdir(parents=True, exist_ok=True)
 
         log("OK", f"phase=case_start index={idx} id={case_id}")
@@ -615,7 +857,7 @@ def run_thread_runner(
                     stop = 1
                     log("ERROR", f"phase=entry index={idx} id={case_id} reason=exception err={exc}")
 
-        if compile_status != "OK":
+        if compile_status == "ERROR":
             stop = 1
 
         artifacts: Dict[str, str] = {
@@ -654,6 +896,7 @@ def run_thread_runner(
             "entry_error_reason": entry_error_reason,
             "compile_error_codes": compile_error_codes,
             "compile_error_count": len(compile_errors),
+            "quarantined": False,
             "artifacts": artifacts,
         }
         records.append(record)
@@ -675,6 +918,10 @@ def run_thread_runner(
                 entry_timeout_sec=entry_timeout_sec,
                 entry_retries=entry_retries,
                 selected_entry_script=selected_entry_script,
+                resume=resume,
+                shard_index=shard_index,
+                shard_count=shard_count,
+                excluded_count=len(excluded_ids),
                 cases_jsonl_sha256="",
             )
             _write_json(summary_partial_path, partial_summary)
@@ -689,6 +936,8 @@ def run_thread_runner(
                 f"entry={entry_status} compile_errors={len(compile_errors)}"
             ),
         )
+
+    records = sorted(records, key=lambda r: (int(r.get("index", 0)), str(r.get("id", ""))))
 
     cases_path_out = out_dir / "cases.jsonl"
     with open(cases_path_out, "w", encoding="utf-8") as f:
@@ -706,9 +955,14 @@ def run_thread_runner(
         entry_timeout_sec=entry_timeout_sec,
         entry_retries=entry_retries,
         selected_entry_script=selected_entry_script,
+        resume=resume,
+        shard_index=shard_index,
+        shard_count=shard_count,
+        excluded_count=len(excluded_ids),
         cases_jsonl_sha256=_sha256_file(cases_path_out),
     )
     _write_json(out_dir / "summary.json", summary)
+    _write_failure_digest(out_dir, records)
 
     if summary["error_count"] > 0:
         stop = 1
@@ -717,7 +971,8 @@ def run_thread_runner(
         (
             f"phase=end STOP={stop} total={summary['total_cases']} compile_ok={summary['compile_ok_count']} "
             f"compile_error={summary['compile_error_count']} entry_ok={summary['entry_ok_count']} "
-            f"entry_error={summary['entry_error_count']} entry_skip={summary['entry_skip_count']}"
+            f"entry_error={summary['entry_error_count']} entry_skip={summary['entry_skip_count']} "
+            f"quarantined={summary['quarantined_count']}"
         ),
     )
     return stop
@@ -736,6 +991,11 @@ def main(argv: List[str]) -> int:
         entry_timeout_sec,
         entry_retries,
         entry_script,
+        resume,
+        shard_index,
+        shard_count,
+        excluded_ids,
+        _exclude_file,
         errors,
         show_help,
     ) = parse_args(argv)
@@ -761,6 +1021,10 @@ def main(argv: List[str]) -> int:
         entry_timeout_sec=entry_timeout_sec,
         entry_retries=entry_retries,
         entry_script=entry_script,
+        resume=resume,
+        shard_index=shard_index,
+        shard_count=shard_count,
+        excluded_ids=excluded_ids,
     )
 
 

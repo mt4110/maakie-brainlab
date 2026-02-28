@@ -1,0 +1,100 @@
+{
+  "schema": "IL_EXEC_REPORT_v1",
+  "overall_status": "OK",
+  "steps": [
+    {
+      "index": 0,
+      "opcode": "SEARCH_TERMS",
+      "status": "OK",
+      "reason": "validated 5 unique terms",
+      "in_summary": {
+        "terms_count": 5,
+        "terms_preview": [
+          "alpha",
+          "docs",
+          "find"
+        ]
+      },
+      "out_summary": {
+        "terms": [
+          "alpha",
+          "docs",
+          "find",
+          "greek",
+          "overview"
+        ]
+      }
+    },
+    {
+      "index": 1,
+      "opcode": "RETRIEVE",
+      "status": "OK",
+      "reason": "retrieved 3 docs from fixture DB",
+      "in_summary": {
+        "terms": [
+          "alpha",
+          "docs",
+          "find",
+          "greek",
+          "overview"
+        ],
+        "matched_ids": [
+          "doc_001",
+          "doc_002",
+          "doc_003"
+        ]
+      },
+      "out_summary": {
+        "retrieved_count": 3,
+        "doc_ids": [
+          "doc_001",
+          "doc_002",
+          "doc_003"
+        ],
+        "missing_doc_ids": []
+      }
+    },
+    {
+      "index": 2,
+      "opcode": "ANSWER",
+      "status": "OK",
+      "reason": "generated deterministic answer from 3 docs",
+      "in_summary": {
+        "retrieved_count": 3,
+        "terms": [
+          "alpha",
+          "docs",
+          "find",
+          "greek",
+          "overview"
+        ]
+      },
+      "out_summary": {
+        "answer_chars": 125,
+        "style": "brief"
+      }
+    },
+    {
+      "index": 3,
+      "opcode": "CITE",
+      "status": "OK",
+      "reason": "generated 3 cite keys",
+      "in_summary": {
+        "retrieved_count": 3
+      },
+      "out_summary": {
+        "cites_count": 3,
+        "cite_keys": [
+          "76d721e136c74504",
+          "bafb6d7b49b7878d",
+          "d6a00bb26af16174"
+        ]
+      }
+    }
+  ],
+  "budget": {
+    "max_steps": 4,
+    "max_retrieved_docs": 50,
+    "max_cites": 50
+  }
+}

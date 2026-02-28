@@ -134,6 +134,7 @@ Note:
 - `il.compile.request.normalized.json`（常に出力）
 - `il.compile.prompt.txt`（常に出力）
 - `il.compile.raw_response.txt`（常に出力）
+- `il.compile.explain.md`（常に出力）
 - `il.compiled.json`（success のみ）
 - `il.compiled.canonical.json`（success のみ）
 - `il.compile.error.json`（failure のみ）
@@ -150,6 +151,10 @@ Note:
 - `provider_selected`: `rule_based|local_llm`
 - `fallback_used`: bool
 - `canonical_sha256`: str（success のみ）
+- `request_sha256`: str
+- `prompt_sha256`: str
+- `artifact_pointer_count`: int
+- `compile_latency_ms`: int
 
 ## 7. Bridge to Execute (S23-03)
 - success の `il.compiled.json` はそのまま `scripts/il_entry.py` の入力に渡せること

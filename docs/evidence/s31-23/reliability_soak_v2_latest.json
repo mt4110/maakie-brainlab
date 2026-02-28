@@ -1,0 +1,33 @@
+{
+  "schema": "S31_RELIABILITY_SOAK_V2",
+  "captured_at_utc": "2026-02-28T02:19:29Z",
+  "status": "PASS",
+  "metrics": {
+    "total_runs": 3,
+    "pass_runs": 3,
+    "pass_rate": 1.0
+  },
+  "runs": [
+    {
+      "returncode": 0,
+      "match": true,
+      "ok": true,
+      "output_tail": "_end index=1 id=R01_alpha compile=OK entry=SKIP compile_errors=0\nOK: phase=case_start index=2 id=R02_beta\nSKIP: phase=entry index=2 id=R02_beta reason=mode_validate_only\nOK: phase=case_end index=2 id=R02_beta compile=OK entry=SKIP compile_errors=0\nOK: phase=end STOP=0 total=2 compile_ok=2 compile_error=0 entry_ok=0 entry_error=0 entry_skip=2 quarantined=0\nOK: replay_summary status=OK sha=f461fbed3a059ea5e3f9abbe1a7dd45bc98258d0b7be59b5df5e0c8105a6396d\nOK: il_thread_runner_v2_replay_check exit=0\n",
+      "run": 1
+    },
+    {
+      "returncode": 0,
+      "match": true,
+      "ok": true,
+      "output_tail": "_end index=1 id=R01_alpha compile=OK entry=SKIP compile_errors=0\nOK: phase=case_start index=2 id=R02_beta\nSKIP: phase=entry index=2 id=R02_beta reason=mode_validate_only\nOK: phase=case_end index=2 id=R02_beta compile=OK entry=SKIP compile_errors=0\nOK: phase=end STOP=0 total=2 compile_ok=2 compile_error=0 entry_ok=0 entry_error=0 entry_skip=2 quarantined=0\nOK: replay_summary status=OK sha=f461fbed3a059ea5e3f9abbe1a7dd45bc98258d0b7be59b5df5e0c8105a6396d\nOK: il_thread_runner_v2_replay_check exit=0\n",
+      "run": 2
+    },
+    {
+      "returncode": 0,
+      "match": true,
+      "ok": true,
+      "output_tail": "_end index=1 id=R01_alpha compile=OK entry=SKIP compile_errors=0\nOK: phase=case_start index=2 id=R02_beta\nSKIP: phase=entry index=2 id=R02_beta reason=mode_validate_only\nOK: phase=case_end index=2 id=R02_beta compile=OK entry=SKIP compile_errors=0\nOK: phase=end STOP=0 total=2 compile_ok=2 compile_error=0 entry_ok=0 entry_error=0 entry_skip=2 quarantined=0\nOK: replay_summary status=OK sha=f461fbed3a059ea5e3f9abbe1a7dd45bc98258d0b7be59b5df5e0c8105a6396d\nOK: il_thread_runner_v2_replay_check exit=0\n",
+      "run": 3
+    }
+  ]
+}

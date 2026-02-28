@@ -1,0 +1,32 @@
+{
+  "evidence": {
+    "compile_contract": "il_compile_contract_v1",
+    "notes": "compiled via il_compile_contract_v1 rule-based planner",
+    "prompt_template_id": "il_compile_prompt_v1"
+  },
+  "il": {
+    "opcodes": [
+      {
+        "args": {},
+        "op": "SEARCH_TERMS"
+      },
+      {
+        "args": {},
+        "op": "RETRIEVE"
+      },
+      {
+        "args": {},
+        "op": "CITE"
+      }
+    ],
+    "search_terms": [
+      "beta",
+      "note",
+      "retrieve"
+    ]
+  },
+  "meta": {
+    "generator": "rule_based_v1",
+    "version": "il_contract_v1"
+  }
+}

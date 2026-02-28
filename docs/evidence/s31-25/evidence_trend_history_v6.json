@@ -1,0 +1,11 @@
+[
+  {
+    "captured_at_utc": "2026-02-28T02:19:29Z",
+    "status": "PASS",
+    "summary": {
+      "phase_total": 4,
+      "missing_count": 0,
+      "warn_count": 0
+    }
+  }
+]

@@ -1,0 +1,70 @@
+{
+  "schema": "IL_EXEC_REPORT_v1",
+  "overall_status": "OK",
+  "steps": [
+    {
+      "index": 0,
+      "opcode": "SEARCH_TERMS",
+      "status": "OK",
+      "reason": "validated 3 unique terms",
+      "in_summary": {
+        "terms_count": 3,
+        "terms_preview": [
+          "beta",
+          "note",
+          "retrieve"
+        ]
+      },
+      "out_summary": {
+        "terms": [
+          "beta",
+          "note",
+          "retrieve"
+        ]
+      }
+    },
+    {
+      "index": 1,
+      "opcode": "RETRIEVE",
+      "status": "OK",
+      "reason": "retrieved 1 docs from fixture DB",
+      "in_summary": {
+        "terms": [
+          "beta",
+          "note",
+          "retrieve"
+        ],
+        "matched_ids": [
+          "doc_002"
+        ]
+      },
+      "out_summary": {
+        "retrieved_count": 1,
+        "doc_ids": [
+          "doc_002"
+        ],
+        "missing_doc_ids": []
+      }
+    },
+    {
+      "index": 2,
+      "opcode": "CITE",
+      "status": "OK",
+      "reason": "generated 1 cite keys",
+      "in_summary": {
+        "retrieved_count": 1
+      },
+      "out_summary": {
+        "cites_count": 1,
+        "cite_keys": [
+          "bafb6d7b49b7878d"
+        ]
+      }
+    }
+  ],
+  "budget": {
+    "max_steps": 3,
+    "max_retrieved_docs": 50,
+    "max_cites": 50
+  }
+}

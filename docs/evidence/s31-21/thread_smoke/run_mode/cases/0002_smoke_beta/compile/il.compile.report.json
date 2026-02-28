@@ -1,0 +1,22 @@
+{
+  "artifact_pointer_count": 1,
+  "canonical_sha256": "94739269e01e212b4217722cbd4723a778659db96921f5f3af9f8d301db6f44c",
+  "compile_latency_ms": 0,
+  "determinism": {
+    "seed": 7,
+    "stream": false,
+    "temperature": 0.0,
+    "top_p": 1.0
+  },
+  "error_count": 0,
+  "fallback_used": false,
+  "model": "rule_based_v1",
+  "prompt_profile": "v1",
+  "prompt_sha256": "faf14162d9788582c7deea22e1bc40a1ae72102de5fa08c41a61849d21fd4480",
+  "prompt_template_id": "il_compile_prompt_v1",
+  "provider_requested": "rule_based",
+  "provider_selected": "rule_based",
+  "request_sha256": "4e44e199890ffd1050f53128facba4de08d0e637dd0625544145acb3601e8a8f",
+  "schema": "IL_COMPILE_REPORT_v1",
+  "status": "OK"
+}

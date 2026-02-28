@@ -1,0 +1,10 @@
+OK: phase=boot obs_format=v1 obs_dir=/Users/takemuramasaki/dev/maakie-brainlab/docs/evidence/s31-21/thread_smoke/run_mode/cases/0002_smoke_beta/entry
+OK: phase=validate step=start
+OK: phase=validate step=success
+OK: phase=canonicalize step=start
+OK: phase=canonicalize step=success
+OK: phase=execute step=start
+OK: phase=execute step=success steps=3
+OK: phase=verify step=start
+OK: phase=verify step=success
+OK: phase=end STOP=0

@@ -54,6 +54,7 @@ class TestILCompile(unittest.TestCase):
             compile_output = (cp.stdout or "") + (cp.stderr or "")
             self.assertIn("OK: phase=end STOP=0", compile_output)
             self.assertTrue((compile_out / "il.compile.report.json").exists())
+            self.assertTrue((compile_out / "il.compile.explain.md").exists())
             self.assertTrue((compile_out / "il.compiled.json").exists())
             self.assertTrue((compile_out / "il.compiled.canonical.json").exists())
 
@@ -117,6 +118,7 @@ class TestILCompile(unittest.TestCase):
             output = (cp.stdout or "") + (cp.stderr or "")
             self.assertIn("OK: phase=end STOP=1", output)
             self.assertTrue((out_dir / "il.compile.report.json").exists())
+            self.assertTrue((out_dir / "il.compile.explain.md").exists())
             self.assertTrue((out_dir / "il.compile.error.json").exists())
             self.assertFalse((out_dir / "il.compiled.json").exists())
 
