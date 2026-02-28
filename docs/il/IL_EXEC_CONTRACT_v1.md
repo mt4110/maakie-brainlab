@@ -74,6 +74,13 @@ executor は「嘘をつかない」ことだけに全振りする。
 | `schema` | str | MUST be `"IL_EXEC_RESULT_v1"` |
 | `answer` | str | deterministic summary string（empty許容） |
 | `cites` | array | deterministic order; P2 では空でもOK |
+| `cites[].cite_key` | str | deterministic key generated from source identity |
+| `cites[].doc_id` | str | cited document id |
+| `cites[].source` | str | source locator (path/url) |
+| `cites[].title` | str | document title snapshot |
+| `cites[].source_path` | str | source path/url for provenance |
+| `cites[].snippet` | str | deterministic snippet extracted from cited doc |
+| `cites[].snippet_sha256` | str | SHA-256 of `snippet` |
 
 ---
 
@@ -82,10 +89,10 @@ executor は「嘘をつかない」ことだけに全振りする。
 | Opcode | P2 Behavior |
 |---|---|
 | `SEARCH_TERMS` | `il.search_terms` が list[str] なら OK。なければ SKIP |
-| `RETRIEVE` | fixture DB からルックアップ。fixture なければ SKIP |
+| `RETRIEVE` | fixture DB からルックアップ + ranking v2。fixture なければ SKIP |
 | `ANSWER` | retrieved docs から deterministic answer を生成。docsなしなら SKIP |
-| `CITE` | retrieved docs から cite_key を生成。docs なければ SKIP |
-| `COLLECT/NORMALIZE/INDEX/SEARCH_RAG/CITE_RAG` | deterministic RAG bridge（fixture中心） |
+| `CITE` | retrieved docs から cite + provenance を生成。docs なければ SKIP |
+| `COLLECT/NORMALIZE/INDEX/SEARCH_RAG/CITE_RAG` | deterministic RAG bridge（`COLLECT`: fixture/file_jsonl/rss） |
 
 ## Opcode Args Guard
 

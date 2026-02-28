@@ -4,7 +4,7 @@ Last Updated: 2026-02-28
 
 ## Progress
 
-- S32-01-S32-30 v1: 0% (design fixed, implementation pending)
+- S32-01-S32-30 v1: 10% (S32-01..S32-03 implemented and tested)
 
 ## Current Facts
 
@@ -23,9 +23,9 @@ Last Updated: 2026-02-28
 
 ### Phase-1: Retrieval Realism (S32-01..S32-05)
 
-- [ ] S32-01 `COLLECT` の non-fixture source（`file_jsonl` / `rss`）対応
-- [ ] S32-02 retrieval ranking v2（deterministic score + tie-break）
-- [ ] S32-03 cite provenance v2（snippet/hash/source_path）
+- [x] S32-01 `COLLECT` の non-fixture source（`file_jsonl` / `rss`）対応
+- [x] S32-02 retrieval ranking v2（deterministic score + tie-break）
+- [x] S32-03 cite provenance v2（snippet/hash/source_path）
 - [ ] S32-04 corpus policy filter（denylist/lang/size）
 - [ ] S32-05 retrieval eval wall v1（non-fixture corpus品質壁）
 
