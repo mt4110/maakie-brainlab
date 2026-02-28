@@ -4,7 +4,7 @@ Last Updated: 2026-02-28
 
 ## Progress
 
-- S32-01-S32-30 v1: 50% (S32-01..S32-15 implemented and tested)
+- S32-01-S32-30 v1: 67% (S32-01..S32-20 implemented and tested)
 
 ## Current Facts
 
@@ -47,11 +47,11 @@ Last Updated: 2026-02-28
 
 ### Phase-4: Quality Gates vNext (S32-16..S32-20)
 
-- [ ] S32-16 latency budget/SLO guard
-- [ ] S32-17 acceptance wall v6（S32契約受入）
-- [ ] S32-18 policy drift guard v2
-- [ ] S32-19 reliability soak v3（non-fixture + shard運用）
-- [ ] S32-20 evidence trend index v7
+- [x] S32-16 latency budget/SLO guard
+- [x] S32-17 acceptance wall v6（S32契約受入）
+- [x] S32-18 policy drift guard v2
+- [x] S32-19 reliability soak v3（non-fixture + shard運用）
+- [x] S32-20 evidence trend index v7
 
 ### Phase-5: IL UX vNext (S32-21..S32-25)
 
