@@ -1,0 +1,17 @@
+{
+  "schema": "S31_POLICY_DRIFT_GUARD_v1",
+  "captured_at_utc": "2026-02-28T04:49:02Z",
+  "status": "PASS",
+  "tracked_count": 7,
+  "missing": [],
+  "changed": [],
+  "hashes": {
+    "docs/il/IL_COMPILE_CONTRACT_v1.md": "7b84eb0e89fffd9c62a5fe80075db59e349dc32a141f554234abdd0adaeb81f5",
+    "docs/il/IL_EXEC_CONTRACT_v1.md": "61546063e4e1ab7efabb460c93f01b9a9d407cc0a75497f76e597c89814e6762",
+    "docs/ops/IL_THREAD_RUNNER_V2_CONTRACT.md": "5ee8b779187f00fa4efd425365127074905d2b4daef60d5a506ad2f563257013",
+    "scripts/il_compile.py": "9adf3a7f1a3782b62dd99b61e1097af78ff41823234aac410a6ccd45c3861dfb",
+    "scripts/il_thread_runner_v2.py": "592889bae3142170c40e0bbe386e26b72e2c957ff85c37c8a17a73f0cecbbc94",
+    "src/il_compile.py": "d20de72c9e4f04b8bd5882e9ddc4681346ee13b99878e9ca299280ffb1e455a9",
+    "src/il_executor.py": "42b76818ff995014d8886ad3aff355514fb7c490bed1fda46a23f63721bbc0bb"
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "schema": "S31_ACCEPTANCE_WALL_V5",
+  "captured_at_utc": "2026-02-28T04:49:00Z",
+  "status": "PASS",
+  "summary": {
+    "total": 3,
+    "pass": 3,
+    "warn": 0
+  },
+  "checks": [
+    {
+      "id": "ACC-01",
+      "cmd": "python3 scripts/il_lint.py --il tests/fixtures/il_exec/il_min.json",
+      "status": "PASS",
+      "returncode": 0,
+      "output_tail": "OK: lint_status=OK path=/Users/takemuramasaki/dev/maakie-brainlab/tests/fixtures/il_exec/il_min.json\nOK: lint_summary errors=0\n"
+    },
+    {
+      "id": "ACC-02",
+      "cmd": "python3 scripts/il_compile_entry_smoke.py",
+      "status": "PASS",
+      "returncode": 0,
+      "output_tail": "-brainlab/.local/obs/il_compile_entry_smoke_1772254140548/compile_out/il.compiled.json\nOK: start_case=entry\nOK: phase=boot obs_format=v1 obs_dir=/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/il_compile_entry_smoke_1772254140548/exec_out\nOK: phase=validate step=start\nOK: phase=validate step=success\nOK: phase=canonicalize step=start\nOK: phase=canonicalize step=success\nOK: phase=execute step=start\nOK: phase=execute step=success steps=4\nOK: phase=verify step=start\nOK: phase=verify step=success\nOK: phase=end STOP=0\nOK: end_case=entry STOP=0\nOK: smoke_summary STOP=0 cases=2 passed=2 failed=0\n"
+    },
+    {
+      "id": "ACC-03",
+      "cmd": "python3 scripts/il_thread_runner_v2_smoke.py --out /Users/takemuramasaki/dev/maakie-brainlab/docs/evidence/s31-21/thread_smoke",
+      "status": "PASS",
+      "returncode": 0,
+      "output_tail": "=0/1 excluded=0\nOK: phase=case_start index=1 id=smoke_alpha\nOK: phase=entry index=1 id=smoke_alpha status=OK attempts=1\nOK: phase=case_end index=1 id=smoke_alpha compile=OK entry=OK compile_errors=0\nOK: phase=case_start index=2 id=smoke_beta\nOK: phase=entry index=2 id=smoke_beta status=OK attempts=1\nOK: phase=case_end index=2 id=smoke_beta compile=OK entry=OK compile_errors=0\nOK: phase=end STOP=0 total=2 compile_ok=2 compile_error=0 entry_ok=2 entry_error=0 entry_skip=0 quarantined=0\nOK: il_thread_runner_v2 exit=0\nOK: end_case=run_mode STOP=0\nOK: smoke_summary STOP=0 cases=2 passed=2 failed=0\n"
+    }
+  ]
+}

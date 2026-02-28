@@ -82,12 +82,15 @@ def run_doctor(run_dir: Path) -> int:
     log("OK", f"phase=boot run_dir={run_dir}")
     summary_path = run_dir / "summary.json"
     cases_path = run_dir / "cases.jsonl"
+    failure_digest_path = run_dir / "failure_digest.json"
     errors: List[str] = []
 
     if not summary_path.exists():
         errors.append(f"missing summary.json: {summary_path}")
     if not cases_path.exists():
         errors.append(f"missing cases.jsonl: {cases_path}")
+    if not failure_digest_path.exists():
+        errors.append(f"missing failure_digest.json: {failure_digest_path}")
     if errors:
         for e in errors:
             log("ERROR", e)
@@ -137,6 +140,11 @@ def run_doctor(run_dir: Path) -> int:
             compile_error_rel = str(artifacts.get("compile_error", ""))
             if not compile_error_rel or not (run_dir / compile_error_rel).exists():
                 errors.append(f"case={case_id} compile_error missing for compile_status=ERROR")
+        elif compile_status == "SKIP":
+            # Quarantined or intentionally skipped compile cases are allowed in v2.
+            pass
+        else:
+            errors.append(f"case={case_id} unexpected compile_status={compile_status}")
 
         entry_status = str(case.get("entry_status", ""))
         if entry_status == "OK":
@@ -153,7 +161,24 @@ def run_doctor(run_dir: Path) -> int:
             log("ERROR", e)
         log("ERROR", f"doctor_summary status=ERROR errors={len(errors)}")
         return 1
-    log("OK", f"doctor_summary status=OK cases={len(cases)} sha256={sha_actual}")
+    try:
+        digest = json.loads(failure_digest_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        log("ERROR", f"failure_digest parse failed: {exc}")
+        return 1
+    if not isinstance(digest, dict):
+        log("ERROR", "failure_digest must be object")
+        return 1
+    digest_count = int(digest.get("failure_count", -1))
+    expected_failures = sum(
+        1
+        for row in cases
+        if str(row.get("compile_status", "")) == "ERROR" or str(row.get("entry_status", "")) == "ERROR"
+    )
+    if digest_count != expected_failures:
+        log("ERROR", f"failure_digest mismatch digest={digest_count} expected={expected_failures}")
+        return 1
+    log("OK", f"doctor_summary status=OK cases={len(cases)} sha256={sha_actual} failures={digest_count}")
     return 0
 
 

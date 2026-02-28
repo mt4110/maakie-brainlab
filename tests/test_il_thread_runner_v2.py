@@ -41,24 +41,34 @@ class TestILThreadRunnerV2(unittest.TestCase):
         return h.hexdigest()
 
     def test_parse_args_validation(self):
-        _, _, _, _, _, _, _, _, _, _, _, errors, _ = parse_args(["--mode", "run"])
+        parsed = parse_args(["--mode", "run"])
+        errors = parsed[-2]
         self.assertIn("missing required --cases", errors)
         self.assertIn("missing required --out", errors)
 
-        _, _, _, _, _, _, _, _, _, _, _, errors2, _ = parse_args(
+        parsed2 = parse_args(
             ["--cases", "x.jsonl", "--mode", "bad", "--out", "tmp/out"]
         )
+        errors2 = parsed2[-2]
         self.assertIn("invalid --mode: bad", errors2)
 
-        _, _, _, _, _, _, _, _, _, _, _, errors3, _ = parse_args(
+        parsed3 = parse_args(
             ["--cases", "x.jsonl", "--mode", "run", "--out", "tmp/out", "--entry-timeout-sec", "0"]
         )
+        errors3 = parsed3[-2]
         self.assertIn("entry-timeout-sec must be > 0", errors3)
 
-        _, _, _, _, _, _, _, _, _, _, _, errors4, _ = parse_args(
+        parsed4 = parse_args(
             ["--cases", "x.jsonl", "--mode", "run", "--out", "tmp/out", "--entry-retries", "-1"]
         )
+        errors4 = parsed4[-2]
         self.assertIn("entry-retries must be >= 0", errors4)
+
+        parsed5 = parse_args(
+            ["--cases", "x.jsonl", "--mode", "run", "--out", "tmp/out", "--shard-index", "2", "--shard-count", "2"]
+        )
+        errors5 = parsed5[-2]
+        self.assertIn("shard-index must be < shard-count", errors5)
 
     def test_load_cases_collects_schema_errors(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -104,6 +114,7 @@ class TestILThreadRunnerV2(unittest.TestCase):
             self.assertEqual(summary["compile_ok_count"], 2)
             self.assertEqual(summary["entry_skip_count"], 2)
             self.assertEqual(summary["entry_ok_count"], 0)
+            self.assertEqual(summary["entry_script"], "scripts/il_entry.py")
             self.assertEqual(summary["error_count"], 0)
 
             case0 = out_dir / "cases" / "0001_c1"
@@ -353,6 +364,119 @@ print("OK: phase=end STOP=0")
             self.assertEqual(rows_out[0]["entry_attempts"], 2)
             self.assertTrue((out_dir / "cases" / "0001_retry_ok" / "entry" / "entry.stdout.attempt01.log").exists())
             self.assertTrue((out_dir / "cases" / "0001_retry_ok" / "entry" / "entry.stdout.attempt02.log").exists())
+
+    def test_resume_and_shard_flow(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            cases_path = tmp_path / "cases.jsonl"
+            out_dir = tmp_path / "out_resume"
+            rows = [
+                {"id": "r1", "request": self._good_request("alpha")},
+                {"id": "r2", "request": self._good_request("beta")},
+            ]
+            self._write_cases(cases_path, rows)
+
+            rc1 = run_thread_runner(
+                cases_path=cases_path,
+                mode="validate-only",
+                out_dir=out_dir,
+                shard_index=0,
+                shard_count=2,
+            )
+            self.assertEqual(rc1, 0)
+            summary1 = json.loads((out_dir / "summary.json").read_text(encoding="utf-8"))
+            self.assertEqual(summary1["total_cases"], 1)
+
+            rc2 = run_thread_runner(
+                cases_path=cases_path,
+                mode="validate-only",
+                out_dir=out_dir,
+                resume=True,
+            )
+            self.assertEqual(rc2, 0)
+            summary2 = json.loads((out_dir / "summary.json").read_text(encoding="utf-8"))
+            self.assertEqual(summary2["total_cases"], 2)
+
+    def test_resume_merges_partial_and_final_records(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            cases_path = tmp_path / "cases.jsonl"
+            shard0_dir = tmp_path / "out_shard0"
+            shard1_dir = tmp_path / "out_shard1"
+            resume_dir = tmp_path / "out_resume_merge"
+            rows = [
+                {"id": "r1", "request": self._good_request("alpha")},
+                {"id": "r2", "request": self._good_request("beta")},
+            ]
+            self._write_cases(cases_path, rows)
+
+            rc0 = run_thread_runner(
+                cases_path=cases_path,
+                mode="validate-only",
+                out_dir=shard0_dir,
+                shard_index=0,
+                shard_count=2,
+            )
+            self.assertEqual(rc0, 0)
+            rc1 = run_thread_runner(
+                cases_path=cases_path,
+                mode="validate-only",
+                out_dir=shard1_dir,
+                shard_index=1,
+                shard_count=2,
+            )
+            self.assertEqual(rc1, 0)
+
+            row_r1 = json.loads((shard0_dir / "cases.jsonl").read_text(encoding="utf-8").strip())
+            row_r2 = json.loads((shard1_dir / "cases.jsonl").read_text(encoding="utf-8").strip())
+
+            resume_dir.mkdir(parents=True, exist_ok=True)
+            self._write_cases(resume_dir / "cases.jsonl", [row_r1])
+            self._write_cases(resume_dir / "cases.partial.jsonl", [row_r2])
+
+            rc_resume = run_thread_runner(
+                cases_path=cases_path,
+                mode="validate-only",
+                out_dir=resume_dir,
+                resume=True,
+            )
+            self.assertEqual(rc_resume, 0)
+
+            summary = json.loads((resume_dir / "summary.json").read_text(encoding="utf-8"))
+            self.assertEqual(summary["total_cases"], 2)
+            self.assertFalse((resume_dir / "cases" / "0001_r1").exists())
+            self.assertFalse((resume_dir / "cases" / "0002_r2").exists())
+
+            out_rows = [
+                json.loads(line)
+                for line in (resume_dir / "cases.jsonl").read_text(encoding="utf-8").splitlines()
+                if line.strip()
+            ]
+            self.assertEqual(sorted(str(r.get("id", "")) for r in out_rows), ["r1", "r2"])
+
+    def test_quarantine_case_exclusion(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            cases_path = tmp_path / "cases.jsonl"
+            out_dir = tmp_path / "out_quarantine"
+            rows = [
+                {"id": "q1", "request": self._good_request("alpha")},
+                {"id": "q2", "request": self._good_request("beta")},
+            ]
+            self._write_cases(cases_path, rows)
+
+            rc = run_thread_runner(
+                cases_path=cases_path,
+                mode="validate-only",
+                out_dir=out_dir,
+                excluded_ids={"q1"},
+            )
+            self.assertEqual(rc, 0)
+            summary = json.loads((out_dir / "summary.json").read_text(encoding="utf-8"))
+            self.assertEqual(summary["quarantined_count"], 1)
+            self.assertEqual(summary["compile_skip_count"], 1)
+            digest = json.loads((out_dir / "failure_digest.json").read_text(encoding="utf-8"))
+            self.assertEqual(digest.get("failure_count"), 0)
 
     def test_cli_help_and_invalid_mode(self):
         repo_root = Path(__file__).resolve().parent.parent

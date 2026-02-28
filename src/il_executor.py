@@ -1,14 +1,16 @@
 """
-S22-02: IL Executor (P2 minimal)
+S22/S31: IL Executor
 - Deterministic step interpreter
 - Always writes il.exec.report.json
 - Writes il.exec.result.json only when overall_status == "OK"
 - No sys.exit / assert / network I/O
 """
-import json
+
 import hashlib
+import json
+import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 
 # ---------------------------------------------------------------------------
@@ -45,39 +47,117 @@ def determine_overall_status(steps: List[dict]) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Args guards / budgets
+# ---------------------------------------------------------------------------
+
+OPCODE_ARGS_SPEC: Dict[str, Dict[str, type]] = {
+    "SEARCH_TERMS": {"max_terms": int},
+    "RETRIEVE": {"max_docs": int},
+    "ANSWER": {"style": str, "max_sentences": int},
+    "CITE": {"max_cites": int},
+    "COLLECT": {"source": str, "max_docs": int},
+    "NORMALIZE": {"lowercase": bool},
+    "INDEX": {"token_min_len": int},
+    "SEARCH_RAG": {"max_docs": int},
+    "CITE_RAG": {"max_cites": int},
+    "SEARCH": {"max_docs": int},
+}
+
+DEFAULT_BUDGET = {
+    "max_steps": 64,
+    "max_retrieved_docs": 50,
+    "max_cites": 50,
+}
+
+
+def _safe_int(value: Any, default: int) -> int:
+    try:
+        if isinstance(value, bool):
+            return default
+        parsed = int(value)
+    except Exception:
+        return default
+    return parsed
+
+
+def _build_budget(il_body: Dict[str, Any], opcode_count: int) -> Dict[str, int]:
+    raw = il_body.get("budget")
+    budget = dict(DEFAULT_BUDGET)
+    budget["max_steps"] = max(opcode_count, 1)
+    if isinstance(raw, dict):
+        budget["max_steps"] = max(1, _safe_int(raw.get("max_steps", budget["max_steps"]), budget["max_steps"]))
+        budget["max_retrieved_docs"] = max(
+            1,
+            _safe_int(raw.get("max_retrieved_docs", budget["max_retrieved_docs"]), budget["max_retrieved_docs"]),
+        )
+        budget["max_cites"] = max(1, _safe_int(raw.get("max_cites", budget["max_cites"]), budget["max_cites"]))
+    return budget
+
+
+def _validate_opcode_args(op_name: str, args: Any) -> Tuple[bool, str]:
+    if not isinstance(args, dict):
+        return False, f"E_OPCODE_ARGS: args must be object for {op_name}, got {type(args).__name__}"
+
+    spec = OPCODE_ARGS_SPEC.get(op_name)
+    if spec is None:
+        return True, ""
+
+    for key in args.keys():
+        if key not in spec:
+            return False, f"E_OPCODE_ARGS: unexpected arg '{key}' for {op_name}"
+
+    for key, expected_type in spec.items():
+        if key not in args:
+            continue
+        value = args[key]
+        if expected_type is int:
+            if not isinstance(value, int) or isinstance(value, bool):
+                return False, f"E_OPCODE_ARGS: {op_name}.args.{key} must be int"
+            if value <= 0:
+                return False, f"E_OPCODE_ARGS: {op_name}.args.{key} must be > 0"
+        elif expected_type is str:
+            if not isinstance(value, str) or not value.strip():
+                return False, f"E_OPCODE_ARGS: {op_name}.args.{key} must be non-empty string"
+        elif expected_type is bool:
+            if not isinstance(value, bool):
+                return False, f"E_OPCODE_ARGS: {op_name}.args.{key} must be bool"
+    return True, ""
+
+
+# ---------------------------------------------------------------------------
 # Opcode handlers (deterministic, no exceptions)
 # ---------------------------------------------------------------------------
 
-def _handle_search_terms(il: dict, _ctx: dict) -> dict:
-    """Validate explicit search_terms in IL. No derivation in P2."""
+def _handle_search_terms(il: dict, ctx: dict, args: dict) -> dict:
     terms = il.get("il", {}).get("search_terms")
     if terms is None:
         return {
             "status": "SKIP",
-            "reason": "no search_terms in IL (derivation deferred to next PR)",
+            "reason": "E_SEARCH_TERMS_MISSING: no search_terms in IL",
             "in_summary": "search_terms: missing",
             "out_summary": {},
         }
     if not isinstance(terms, list):
         return {
             "status": "ERROR",
-            "reason": f"search_terms must be list, got {type(terms).__name__}",
+            "reason": f"E_SEARCH_TERMS_TYPE: search_terms must be list, got {type(terms).__name__}",
             "in_summary": f"search_terms type: {type(terms).__name__}",
             "out_summary": {},
         }
-    # Validate all elements are strings
     for i, t in enumerate(terms):
         if not isinstance(t, str):
             return {
                 "status": "ERROR",
-                "reason": f"search_terms[{i}] must be str, got {type(t).__name__}",
+                "reason": f"E_SEARCH_TERMS_ITEM_TYPE: search_terms[{i}] must be str, got {type(t).__name__}",
                 "in_summary": {"terms_count": len(terms)},
                 "out_summary": {},
             }
-    # Sort and dedup for determinism
-    unique_terms = sorted(set(terms))
-    # Store in context for RETRIEVE
-    _ctx["search_terms"] = unique_terms
+
+    unique_terms = sorted({x.strip().lower() for x in terms if isinstance(x, str) and x.strip()})
+    max_terms = int(args.get("max_terms", len(unique_terms) or 1))
+    unique_terms = unique_terms[: max(1, max_terms)]
+
+    ctx["search_terms"] = unique_terms
     return {
         "status": "OK",
         "reason": f"validated {len(unique_terms)} unique terms",
@@ -86,13 +166,20 @@ def _handle_search_terms(il: dict, _ctx: dict) -> dict:
     }
 
 
-def _handle_retrieve(il: dict, ctx: dict) -> dict:
-    """Retrieve docs from fixture DB using search_terms."""
+def _handle_retrieve(_il: dict, ctx: dict, args: dict) -> dict:
+    if "fixture_db_error" in ctx:
+        return {
+            "status": "SKIP",
+            "reason": f"E_RETRIEVE_FIXTURE_LOAD: {ctx.get('fixture_db_error', '')}",
+            "in_summary": "fixture_db: load_error",
+            "out_summary": {},
+        }
+
     fixture_db = ctx.get("fixture_db")
     if fixture_db is None:
         return {
             "status": "SKIP",
-            "reason": "no fixture DB provided",
+            "reason": "E_RETRIEVE_NO_FIXTURE: no fixture DB provided",
             "in_summary": "fixture_db: missing",
             "out_summary": {},
         }
@@ -101,80 +188,142 @@ def _handle_retrieve(il: dict, ctx: dict) -> dict:
     if not terms:
         return {
             "status": "SKIP",
-            "reason": "no search_terms available from prior step",
+            "reason": "E_RETRIEVE_NO_TERMS: no search_terms available from prior step",
             "in_summary": "search_terms: empty",
             "out_summary": {},
         }
 
     index = fixture_db.get("index", {})
     docs_list = fixture_db.get("docs", [])
-    docs_by_id = {d["doc_id"]: d for d in docs_list if "doc_id" in d}
+    if not isinstance(index, dict):
+        return {
+            "status": "ERROR",
+            "reason": "E_RETRIEVE_INDEX_SCHEMA: fixture_db.index must be object",
+            "in_summary": {"index_type": type(index).__name__},
+            "out_summary": {},
+        }
+    if not isinstance(docs_list, list):
+        return {
+            "status": "ERROR",
+            "reason": "E_RETRIEVE_DOCS_SCHEMA: fixture_db.docs must be list",
+            "in_summary": {"docs_type": type(docs_list).__name__},
+            "out_summary": {},
+        }
 
-    # Collect doc_ids from index
+    docs_by_id = {str(d.get("doc_id", "")): d for d in docs_list if isinstance(d, dict) and "doc_id" in d}
+
     matched_ids = set()
     for term in terms:
         ids = index.get(term, [])
-        matched_ids.update(ids)
+        if isinstance(ids, list):
+            matched_ids.update(str(x) for x in ids)
 
     if not matched_ids:
+        ctx["retrieved"] = []
         return {
             "status": "SKIP",
-            "reason": f"no docs found for terms: {terms}",
+            "reason": f"E_RETRIEVE_NO_HIT: no docs found for terms={terms}",
             "in_summary": {"terms": terms},
             "out_summary": {"retrieved_count": 0},
         }
 
-    # Deterministic: sort by doc_id
     sorted_ids = sorted(matched_ids)
     retrieved = []
+    missing = []
     for did in sorted_ids:
         doc = docs_by_id.get(did)
-        if doc:
+        if isinstance(doc, dict):
             retrieved.append(doc)
+        else:
+            missing.append(did)
 
+    max_docs = min(int(args.get("max_docs", ctx["budget"]["max_retrieved_docs"])), ctx["budget"]["max_retrieved_docs"])
+    retrieved = retrieved[: max(1, max_docs)]
     ctx["retrieved"] = retrieved
+
+    if not retrieved:
+        return {
+            "status": "SKIP",
+            "reason": "E_RETRIEVE_EMPTY_AFTER_FILTER: retrieved docs empty",
+            "in_summary": {"matched_ids": sorted_ids},
+            "out_summary": {"missing_doc_ids": missing},
+        }
+
     return {
         "status": "OK",
         "reason": f"retrieved {len(retrieved)} docs from fixture DB",
         "in_summary": {"terms": terms, "matched_ids": sorted_ids},
-        "out_summary": {"retrieved_count": len(retrieved), "doc_ids": sorted_ids},
+        "out_summary": {
+            "retrieved_count": len(retrieved),
+            "doc_ids": [str(d.get("doc_id", "")) for d in retrieved],
+            "missing_doc_ids": missing,
+        },
     }
 
 
-def _handle_answer(_il: dict, _ctx: dict) -> dict:
-    """P2: Always SKIP. LLM/non-deterministic answering is deferred."""
-    return {
-        "status": "SKIP",
-        "reason": "P2: LLM/non-deterministic; answering is deferred",
-        "in_summary": "N/A (P2)",
-        "out_summary": {},
-    }
-
-
-def _handle_cite(_il: dict, ctx: dict) -> dict:
-    """Generate deterministic cite_keys from retrieved docs."""
-    retrieved = ctx.get("retrieved")
-    if not retrieved:
+def _handle_answer(_il: dict, ctx: dict, args: dict) -> dict:
+    retrieved = ctx.get("retrieved") or []
+    if not isinstance(retrieved, list) or not retrieved:
         return {
             "status": "SKIP",
-            "reason": "no retrieved docs to cite",
+            "reason": "E_ANSWER_NO_RETRIEVED: no retrieved docs",
             "in_summary": "retrieved: empty",
             "out_summary": {},
         }
 
+    terms = ctx.get("search_terms") or []
+    style = str(args.get("style", "brief")).strip().lower() or "brief"
+    max_sentences = int(args.get("max_sentences", 2))
+    max_sentences = min(max(1, max_sentences), 5)
+
+    docs = sorted(retrieved, key=lambda d: str(d.get("doc_id", "")))
+    docs_preview = [
+        f"{str(d.get('doc_id', ''))}: {str(d.get('title', '')).strip() or '(untitled)'}" for d in docs[: max_sentences]
+    ]
+    terms_text = ", ".join(sorted({str(t) for t in terms if isinstance(t, str)}))
+
+    if style == "bullets":
+        answer = "\n".join([f"- {line}" for line in docs_preview])
+    else:
+        answer = f"Matched {len(docs)} documents for terms [{terms_text}]. Top docs: " + "; ".join(docs_preview)
+
+    ctx["answer"] = answer
+    return {
+        "status": "OK",
+        "reason": f"generated deterministic answer from {len(docs)} docs",
+        "in_summary": {"retrieved_count": len(docs), "terms": terms},
+        "out_summary": {"answer_chars": len(answer), "style": style},
+    }
+
+
+def _handle_cite(_il: dict, ctx: dict, args: dict) -> dict:
+    retrieved = ctx.get("retrieved")
+    if not retrieved:
+        return {
+            "status": "SKIP",
+            "reason": "E_CITE_NO_RETRIEVED: no retrieved docs to cite",
+            "in_summary": "retrieved: empty",
+            "out_summary": {},
+        }
+
+    max_cites = int(args.get("max_cites", ctx["budget"]["max_cites"]))
+    max_cites = min(max(1, max_cites), ctx["budget"]["max_cites"])
+
     cites = []
-    for doc in retrieved:
-        doc_id = doc.get("doc_id", "")
-        source = doc.get("source", "")
-        title = doc.get("title", "")
+    for doc in sorted(retrieved, key=lambda d: str(d.get("doc_id", "")))[:max_cites]:
+        doc_id = str(doc.get("doc_id", ""))
+        source = str(doc.get("source", ""))
+        title = str(doc.get("title", ""))
         cite_input = f"{doc_id}\n{source}"
         cite_key = hashlib.sha256(cite_input.encode("utf-8")).hexdigest()[:16]
-        cites.append({
-            "cite_key": cite_key,
-            "doc_id": doc_id,
-            "source": source,
-            "title": title,
-        })
+        cites.append(
+            {
+                "cite_key": cite_key,
+                "doc_id": doc_id,
+                "source": source,
+                "title": title,
+            }
+        )
 
     ctx["cites"] = cites
     return {
@@ -185,31 +334,203 @@ def _handle_cite(_il: dict, ctx: dict) -> dict:
     }
 
 
+def _tokenize(text: str, min_len: int = 2) -> List[str]:
+    return [tok for tok in re.findall(r"[A-Za-z0-9_]{2,64}", (text or "").lower()) if len(tok) >= min_len]
+
+
+def _handle_collect(_il: dict, ctx: dict, args: dict) -> dict:
+    source = str(args.get("source", "fixture"))
+    max_docs = int(args.get("max_docs", ctx["budget"]["max_retrieved_docs"]))
+    max_docs = min(max(1, max_docs), ctx["budget"]["max_retrieved_docs"])
+
+    fixture_db = ctx.get("fixture_db")
+    if source == "fixture":
+        docs = []
+        if isinstance(fixture_db, dict) and isinstance(fixture_db.get("docs"), list):
+            docs = [d for d in fixture_db.get("docs", []) if isinstance(d, dict)]
+        docs = sorted(docs, key=lambda d: str(d.get("doc_id", "")))[:max_docs]
+        ctx["rag_docs_raw"] = docs
+        return {
+            "status": "OK" if docs else "SKIP",
+            "reason": "collected docs from fixture" if docs else "E_RAG_COLLECT_EMPTY: no fixture docs",
+            "in_summary": {"source": source},
+            "out_summary": {"collected_count": len(docs)},
+        }
+
+    return {
+        "status": "ERROR",
+        "reason": f"E_RAG_COLLECT_SOURCE: unsupported source={source}",
+        "in_summary": {"source": source},
+        "out_summary": {},
+    }
+
+
+def _handle_normalize(_il: dict, ctx: dict, args: dict) -> dict:
+    raw_docs = ctx.get("rag_docs_raw")
+    if not isinstance(raw_docs, list) or not raw_docs:
+        return {
+            "status": "SKIP",
+            "reason": "E_RAG_NORMALIZE_EMPTY: no collected docs",
+            "in_summary": "rag_docs_raw: empty",
+            "out_summary": {},
+        }
+    lowercase = bool(args.get("lowercase", True))
+    normalized = []
+    for doc in raw_docs:
+        title = str(doc.get("title", "")).strip()
+        content = str(doc.get("content", "")).strip()
+        if lowercase:
+            title = title.lower()
+            content = content.lower()
+        normalized.append(
+            {
+                "doc_id": str(doc.get("doc_id", "")),
+                "title": title,
+                "source": str(doc.get("source", "")),
+                "content": content,
+            }
+        )
+    ctx["rag_docs"] = sorted(normalized, key=lambda d: d["doc_id"])
+    return {
+        "status": "OK",
+        "reason": f"normalized {len(normalized)} docs",
+        "in_summary": {"collected_count": len(raw_docs)},
+        "out_summary": {"normalized_count": len(normalized)},
+    }
+
+
+def _handle_index(_il: dict, ctx: dict, args: dict) -> dict:
+    docs = ctx.get("rag_docs")
+    if not isinstance(docs, list) or not docs:
+        return {
+            "status": "SKIP",
+            "reason": "E_RAG_INDEX_EMPTY: no normalized docs",
+            "in_summary": "rag_docs: empty",
+            "out_summary": {},
+        }
+    token_min_len = int(args.get("token_min_len", 2))
+    token_min_len = max(2, token_min_len)
+
+    inverted: Dict[str, List[str]] = {}
+    for doc in docs:
+        doc_id = str(doc.get("doc_id", ""))
+        payload = f"{doc.get('title', '')}\n{doc.get('content', '')}"
+        tokens = sorted(set(_tokenize(payload, min_len=token_min_len)))
+        for tok in tokens:
+            inverted.setdefault(tok, []).append(doc_id)
+
+    for key in list(inverted.keys()):
+        inverted[key] = sorted(set(inverted[key]))
+    ctx["rag_index"] = dict(sorted(inverted.items(), key=lambda kv: kv[0]))
+    return {
+        "status": "OK",
+        "reason": f"indexed {len(docs)} docs",
+        "in_summary": {"docs_count": len(docs)},
+        "out_summary": {"token_count": len(inverted)},
+    }
+
+
+def _handle_search_rag(_il: dict, ctx: dict, args: dict) -> dict:
+    index = ctx.get("rag_index")
+    docs = ctx.get("rag_docs") or []
+    if not isinstance(index, dict) or not index:
+        return {
+            "status": "SKIP",
+            "reason": "E_RAG_SEARCH_NO_INDEX: missing rag index",
+            "in_summary": "rag_index: empty",
+            "out_summary": {},
+        }
+
+    terms = ctx.get("search_terms") or []
+    if not terms:
+        return {
+            "status": "SKIP",
+            "reason": "E_RAG_SEARCH_NO_TERMS: no search terms",
+            "in_summary": "search_terms: empty",
+            "out_summary": {},
+        }
+
+    max_docs = int(args.get("max_docs", ctx["budget"]["max_retrieved_docs"]))
+    max_docs = min(max(1, max_docs), ctx["budget"]["max_retrieved_docs"])
+
+    matched_ids = set()
+    for term in terms:
+        for tok, ids in index.items():
+            if term in tok:
+                matched_ids.update(ids)
+
+    doc_map = {str(d.get("doc_id", "")): d for d in docs if isinstance(d, dict)}
+    matched_docs = [doc_map[doc_id] for doc_id in sorted(matched_ids) if doc_id in doc_map][:max_docs]
+    ctx["rag_retrieved"] = matched_docs
+
+    if not matched_docs:
+        return {
+            "status": "SKIP",
+            "reason": "E_RAG_SEARCH_NO_HIT: no matched docs",
+            "in_summary": {"terms": terms},
+            "out_summary": {"retrieved_count": 0},
+        }
+
+    return {
+        "status": "OK",
+        "reason": f"rag search matched {len(matched_docs)} docs",
+        "in_summary": {"terms": terms},
+        "out_summary": {"doc_ids": [str(d.get('doc_id', '')) for d in matched_docs]},
+    }
+
+
+def _handle_cite_rag(_il: dict, ctx: dict, args: dict) -> dict:
+    docs = ctx.get("rag_retrieved")
+    if not isinstance(docs, list) or not docs:
+        return {
+            "status": "SKIP",
+            "reason": "E_RAG_CITE_NO_DOCS: no rag retrieved docs",
+            "in_summary": "rag_retrieved: empty",
+            "out_summary": {},
+        }
+
+    max_cites = int(args.get("max_cites", ctx["budget"]["max_cites"]))
+    max_cites = min(max(1, max_cites), ctx["budget"]["max_cites"])
+
+    cites = []
+    for doc in sorted(docs, key=lambda d: str(d.get("doc_id", "")))[:max_cites]:
+        doc_id = str(doc.get("doc_id", ""))
+        source = str(doc.get("source", ""))
+        title = str(doc.get("title", ""))
+        cite_input = f"rag\n{doc_id}\n{source}"
+        cite_key = hashlib.sha256(cite_input.encode("utf-8")).hexdigest()[:16]
+        cites.append(
+            {
+                "cite_key": cite_key,
+                "doc_id": doc_id,
+                "source": source,
+                "title": title,
+            }
+        )
+
+    ctx["cites"] = cites
+    return {
+        "status": "OK",
+        "reason": f"generated {len(cites)} rag cite keys",
+        "in_summary": {"retrieved_count": len(docs)},
+        "out_summary": {"cites_count": len(cites)},
+    }
+
+
 # Opcode dispatch table
 _OPCODE_HANDLERS = {
     "SEARCH_TERMS": _handle_search_terms,
     "RETRIEVE": _handle_retrieve,
     "ANSWER": _handle_answer,
     "CITE": _handle_cite,
-    # S22-04: RAG pipeline opcodes (IL-planned, observable)
-    "COLLECT": lambda il, ctx: _handle_rag_step("COLLECT", il, ctx),
-    "NORMALIZE": lambda il, ctx: _handle_rag_step("NORMALIZE", il, ctx),
-    "INDEX": lambda il, ctx: _handle_rag_step("INDEX", il, ctx),
-    "SEARCH_RAG": lambda il, ctx: _handle_rag_step("SEARCH_RAG", il, ctx),
-    "CITE_RAG": lambda il, ctx: _handle_rag_step("CITE_RAG", il, ctx),
-    # D9: SEARCH accepted as alias for SEARCH_RAG (CITE is NOT aliased: existing opcode)
-    "SEARCH": lambda il, ctx: _handle_rag_step("SEARCH_RAG", il, ctx),
+    "COLLECT": _handle_collect,
+    "NORMALIZE": _handle_normalize,
+    "INDEX": _handle_index,
+    "SEARCH_RAG": _handle_search_rag,
+    "CITE_RAG": _handle_cite_rag,
+    # Alias
+    "SEARCH": _handle_search_rag,
 }
-
-
-def _handle_rag_step(step_name: str, _il: dict, _ctx: dict) -> dict:
-    """S22-04: RAG pipeline step stub. Actual work is in scripts/rag_pipeline.py."""
-    return {
-        "status": "SKIP",
-        "reason": f"RAG step {step_name}: use scripts/rag_pipeline.py for full pipeline",
-        "in_summary": f"step={step_name}",
-        "out_summary": {},
-    }
 
 
 # ---------------------------------------------------------------------------
@@ -231,29 +552,27 @@ def execute_il(il: dict, out_dir: str, fixture_db_path: Optional[str] = None) ->
     steps_result: List[dict] = []
     ctx: Dict[str, Any] = {}
 
-    # Load fixture DB if provided
     if fixture_db_path:
         try:
             with open(fixture_db_path, "r", encoding="utf-8") as f:
                 ctx["fixture_db"] = json.load(f)
         except Exception as e:
-            # Not fatal: RETRIEVE will SKIP
             ctx["fixture_db_error"] = str(e)
 
-    # Extract opcodes from IL
-    il_body = il.get("il", {})
+    il_body = il.get("il", {}) if isinstance(il, dict) else {}
     opcodes = il_body.get("opcodes", [])
 
-    # Guard: opcodes must be a list
     if not isinstance(opcodes, list):
-        steps_result.append({
-            "index": 0,
-            "opcode": "OPCODES",
-            "status": "ERROR",
-            "reason": f"il.opcodes must be a list, got {type(opcodes).__name__}",
-            "in_summary": {"type": type(opcodes).__name__},
-            "out_summary": {},
-        })
+        steps_result.append(
+            {
+                "index": 0,
+                "opcode": "OPCODES",
+                "status": "ERROR",
+                "reason": f"il.opcodes must be a list, got {type(opcodes).__name__}",
+                "in_summary": {"type": type(opcodes).__name__},
+                "out_summary": {},
+            }
+        )
         report = {
             "schema": "IL_EXEC_REPORT_v1",
             "overall_status": "ERROR",
@@ -266,33 +585,67 @@ def execute_il(il: dict, out_dir: str, fixture_db_path: Optional[str] = None) ->
             print(f"ERROR: failed to write report: {e}")
         return report
 
-    for i, op_def in enumerate(opcodes):
-        # Guard: each opcode entry must be a dict
-        if not isinstance(op_def, dict):
-            steps_result.append({
-                "index": i,
-                "opcode": "UNKNOWN",
+    budget = _build_budget(il_body if isinstance(il_body, dict) else {}, len(opcodes))
+    ctx["budget"] = budget
+    if len(opcodes) > budget["max_steps"]:
+        steps_result.append(
+            {
+                "index": 0,
+                "opcode": "BUDGET",
                 "status": "ERROR",
-                "reason": f"opcode entry must be an object, got {type(op_def).__name__}",
-                "in_summary": {"type": type(op_def).__name__},
-                "out_summary": {},
-            })
-            continue
-        op_name = op_def.get("op", "UNKNOWN")
-        handler = _OPCODE_HANDLERS.get(op_name)
-
-        if handler is None:
-            step = {
-                "index": i,
-                "opcode": op_name,
-                "status": "SKIP",
-                "reason": f"unknown opcode: {op_name}",
-                "in_summary": {},
+                "reason": f"E_BUDGET_MAX_STEPS: opcodes={len(opcodes)} exceeds max_steps={budget['max_steps']}",
+                "in_summary": {"opcode_count": len(opcodes), "budget": budget},
                 "out_summary": {},
             }
-        else:
+        )
+
+    if not steps_result:
+        for i, op_def in enumerate(opcodes):
+            if not isinstance(op_def, dict):
+                steps_result.append(
+                    {
+                        "index": i,
+                        "opcode": "UNKNOWN",
+                        "status": "ERROR",
+                        "reason": f"opcode entry must be an object, got {type(op_def).__name__}",
+                        "in_summary": {"type": type(op_def).__name__},
+                        "out_summary": {},
+                    }
+                )
+                continue
+
+            op_name = str(op_def.get("op", "UNKNOWN"))
+            args = op_def.get("args", {})
+            valid_args, args_reason = _validate_opcode_args(op_name, args)
+            if not valid_args:
+                steps_result.append(
+                    {
+                        "index": i,
+                        "opcode": op_name,
+                        "status": "ERROR",
+                        "reason": args_reason,
+                        "in_summary": {"args": args},
+                        "out_summary": {},
+                    }
+                )
+                continue
+
+            handler = _OPCODE_HANDLERS.get(op_name)
+            if handler is None:
+                steps_result.append(
+                    {
+                        "index": i,
+                        "opcode": op_name,
+                        "status": "SKIP",
+                        "reason": f"unknown opcode: {op_name}",
+                        "in_summary": {},
+                        "out_summary": {},
+                    }
+                )
+                continue
+
             try:
-                result = handler(il, ctx)
+                result = handler(il, ctx, args)
                 step = {
                     "index": i,
                     "opcode": op_name,
@@ -310,29 +663,26 @@ def execute_il(il: dict, out_dir: str, fixture_db_path: Optional[str] = None) ->
                     "in_summary": {},
                     "out_summary": {},
                 }
-        steps_result.append(step)
+            steps_result.append(step)
 
     overall = determine_overall_status(steps_result)
-
     report = {
         "schema": "IL_EXEC_REPORT_v1",
         "overall_status": overall,
         "steps": steps_result,
+        "budget": budget,
     }
 
-    # Always write report
     report_path = str(Path(out_dir) / "il.exec.report.json")
     try:
         write_json(report_path, report)
     except Exception as e:
-        # Best-effort: report write failure is itself an error
         print(f"ERROR: failed to write report: {e}")
 
-    # Write result only when OK
     if overall == "OK":
         result_obj = {
             "schema": "IL_EXEC_RESULT_v1",
-            "answer": "",
+            "answer": str(ctx.get("answer", "")),
             "cites": ctx.get("cites", []),
         }
         result_path = str(Path(out_dir) / "il.exec.result.json")

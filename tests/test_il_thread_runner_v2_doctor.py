@@ -72,6 +72,30 @@ class TestILThreadRunnerV2Doctor(unittest.TestCase):
             self.assertIn("missing summary.json", out)
             self.assertIn("ERROR: il_thread_runner_v2_doctor exit=1", out)
 
+    def test_doctor_errors_for_corrupt_failure_digest(self):
+        repo_root = Path(__file__).resolve().parent.parent
+        doctor = repo_root / "scripts" / "il_thread_runner_v2_doctor.py"
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            cases = tmp_path / "cases.jsonl"
+            out_dir = tmp_path / "run_out"
+            self._write_cases(cases)
+            rc = run_thread_runner(cases_path=cases, mode="validate-only", out_dir=out_dir)
+            self.assertEqual(rc, 0)
+
+            (out_dir / "failure_digest.json").write_text("{bad json", encoding="utf-8")
+            cp = subprocess.run(
+                ["python3", str(doctor), "--run-dir", str(out_dir)],
+                cwd=repo_root,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            out = (cp.stdout or "") + (cp.stderr or "")
+            self.assertEqual(cp.returncode, 1)
+            self.assertIn("failure_digest parse failed", out)
+            self.assertIn("ERROR: il_thread_runner_v2_doctor exit=1", out)
+
 
 if __name__ == "__main__":
     unittest.main()

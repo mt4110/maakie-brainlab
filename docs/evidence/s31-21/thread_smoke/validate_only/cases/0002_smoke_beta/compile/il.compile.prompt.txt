@@ -1,0 +1,10 @@
+SYSTEM: compile natural language request into deterministic IL JSON
+REQUEST_TEXT: Retrieve beta note
+ALLOWED_OPCODES: SEARCH_TERMS,RETRIEVE,CITE
+FORBIDDEN_KEYS: (none)
+MAX_STEPS: 3
+ARTIFACT_POINTERS:
+- tests/fixtures/il_exec/retrieve_db.json
+CONTEXT_JSON: {"keywords":["beta"]}
+DETERMINISM_JSON: {"seed":7,"stream":false,"temperature":0.0,"top_p":1.0}
+OUTPUT: JSON object with il/meta/evidence only; no errors key on success

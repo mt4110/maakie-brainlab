@@ -72,16 +72,22 @@ executor は「嘘をつかない」ことだけに全振りする。
 | Field | Type | Rule |
 |---|---|---|
 | `schema` | str | MUST be `"IL_EXEC_RESULT_v1"` |
-| `answer` | str | P2 では空文字でOK |
+| `answer` | str | deterministic summary string（empty許容） |
 | `cites` | array | deterministic order; P2 では空でもOK |
 
 ---
 
-## Opcodes (P2 v1)
+## Opcodes (P2/S31 v1)
 
 | Opcode | P2 Behavior |
 |---|---|
 | `SEARCH_TERMS` | `il.search_terms` が list[str] なら OK。なければ SKIP |
 | `RETRIEVE` | fixture DB からルックアップ。fixture なければ SKIP |
-| `ANSWER` | 常に SKIP（P2: LLM は非決定論） |
+| `ANSWER` | retrieved docs から deterministic answer を生成。docsなしなら SKIP |
 | `CITE` | retrieved docs から cite_key を生成。docs なければ SKIP |
+| `COLLECT/NORMALIZE/INDEX/SEARCH_RAG/CITE_RAG` | deterministic RAG bridge（fixture中心） |
+
+## Opcode Args Guard
+
+- 各 opcode の `args` は型検証される（不正時は `ERROR`）。
+- unknown arg key は `E_OPCODE_ARGS` として fail-closed。

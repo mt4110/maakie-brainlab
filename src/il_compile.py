@@ -2,6 +2,7 @@ import hashlib
 import json
 import os
 import re
+import time
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from src.il_validator import ILCanonicalizer, ILValidator
@@ -55,6 +56,7 @@ STOP_WORDS = {
 }
 _WIN_ABS_RE = re.compile(r"^[A-Za-z]:[\\/]")
 _TOKEN_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{1,31}")
+_CODE_FENCE_RX = re.compile(r"```(?:json)?\s*([\s\S]*?)```", re.IGNORECASE)
 
 
 def normalize_prompt_profile(prompt_profile: str) -> str:
@@ -569,50 +571,79 @@ def _extract_first_json_object_text(text: str) -> Optional[str]:
     return None
 
 
-def _parse_llm_json_response(raw_response: str) -> Tuple[Optional[Dict[str, Any]], List[Dict[str, Any]]]:
+def _extract_llm_json_candidates(text: str) -> List[str]:
+    candidates: List[str] = []
+    stripped = (text or "").strip()
+    if stripped:
+        candidates.append(stripped)
+
+    for match in _CODE_FENCE_RX.finditer(text or ""):
+        body = match.group(1).strip()
+        if body:
+            candidates.append(body)
+
+    extracted = _extract_first_json_object_text(text or "")
+    if extracted:
+        candidates.append(extracted.strip())
+
+    # Keep deterministic order while removing duplicates.
+    unique: List[str] = []
+    seen = set()
+    for c in candidates:
+        if c not in seen:
+            seen.add(c)
+            unique.append(c)
+    return unique
+
+
+def _is_success_payload_shape(payload: Any) -> Tuple[bool, List[Dict[str, Any]]]:
     errors: List[Dict[str, Any]] = []
-    payload_text = raw_response.strip()
-    payload: Any = None
-
-    try:
-        payload = json.loads(payload_text)
-    except Exception:
-        extracted = _extract_first_json_object_text(payload_text)
-        if not extracted:
-            return None, [
-                _make_error(
-                    "E_PARSE",
-                    "model response is not valid JSON object text",
-                    path="/",
-                    hint="return only JSON object with il/meta/evidence",
-                )
-            ]
-        try:
-            payload = json.loads(extracted)
-        except Exception as exc:
-            return None, [
-                _make_error(
-                    "E_PARSE",
-                    f"json parse failed: {exc}",
-                    path="/",
-                    hint="return strict JSON object",
-                )
-            ]
-
     if not isinstance(payload, dict):
-        errors.append(_make_error("E_PARSE", "model response must be JSON object", path="/"))
-        return None, errors
-
+        return False, [_make_error("E_PARSE", "model response must be JSON object", path="/")]
     for key in ("il", "meta", "evidence"):
         if key not in payload:
             errors.append(_make_error("E_PARSE", f"missing key in model JSON: {key}", path=f"/{key}"))
-
     if "errors" in payload:
         errors.append(_make_error("E_PARSE", "model output must not include top-level errors on success", path="/errors"))
+    return len(errors) == 0, errors
 
-    if errors:
-        return None, errors
-    return payload, []
+
+def _parse_llm_json_response(raw_response: str) -> Tuple[Optional[Dict[str, Any]], List[Dict[str, Any]]]:
+    candidates = _extract_llm_json_candidates(raw_response)
+    if not candidates:
+        return None, [
+            _make_error(
+                "E_PARSE",
+                "model response is not valid JSON object text",
+                path="/",
+                hint="return only JSON object with il/meta/evidence",
+            )
+        ]
+
+    parse_errors: List[str] = []
+    shape_errors: List[Dict[str, Any]] = []
+    for candidate in candidates:
+        try:
+            payload = json.loads(candidate)
+        except Exception as exc:
+            parse_errors.append(str(exc))
+            continue
+        ok_shape, errors = _is_success_payload_shape(payload)
+        if ok_shape:
+            return payload, []
+        shape_errors = errors
+
+    if shape_errors:
+        return None, shape_errors
+    parse_hint = parse_errors[0] if parse_errors else "unknown parse error"
+    return None, [
+        _make_error(
+            "E_PARSE",
+            f"json parse failed: {parse_hint}",
+            path="/",
+            hint="return strict JSON object",
+        )
+    ]
 
 
 def _call_local_llm_default(prompt_text: str, model: str, determinism: Dict[str, Any]) -> str:
@@ -809,6 +840,7 @@ def compile_request_bundle(
     prompt_profile: str = DEFAULT_PROMPT_PROFILE,
     llm_adapter: Optional[LLMAdapter] = None,
 ) -> Dict[str, Any]:
+    started = time.perf_counter()
     normalized, errors = normalize_compile_request(raw_request, seed_override=seed_override)
     provider_requested = (provider or DEFAULT_PROVIDER).strip().lower()
     if provider_requested not in {"rule_based", "local_llm"}:
@@ -916,10 +948,32 @@ def compile_request_bundle(
         "provider_requested": provider_requested,
         "provider_selected": provider_selected,
         "fallback_used": fallback_used,
+        "compile_latency_ms": int((time.perf_counter() - started) * 1000),
     }
     if fallback_reason:
         report["fallback_reason"] = fallback_reason
     if bundle["canonical_bytes"] is not None:
         report["canonical_sha256"] = hashlib.sha256(bundle["canonical_bytes"]).hexdigest()
+    request_for_hash = normalized if normalized is not None else (raw_request if isinstance(raw_request, dict) else {})
+    try:
+        request_bytes = json.dumps(
+            request_for_hash,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+            allow_nan=False,
+        ).encode("utf-8")
+        report["request_sha256"] = hashlib.sha256(request_bytes).hexdigest()
+    except Exception:
+        report["request_sha256"] = ""
+    report["prompt_sha256"] = hashlib.sha256(bundle["prompt_text"].encode("utf-8")).hexdigest()
+    report["artifact_pointer_count"] = len((normalized or {}).get("artifact_pointers", []))
+    code_hist: Dict[str, int] = {}
+    for err in bundle["errors"]:
+        code = str(err.get("code", "")).strip()
+        if code:
+            code_hist[code] = code_hist.get(code, 0) + 1
+    if code_hist:
+        report["error_codes"] = dict(sorted(code_hist.items(), key=lambda kv: kv[0]))
     bundle["report"] = report
     return bundle

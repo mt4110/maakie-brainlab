@@ -1,0 +1,15 @@
+{
+  "schema": "S31_REGRESSION_SAFETY_V2",
+  "captured_at_utc": "2026-02-28T04:49:02Z",
+  "status": "PASS",
+  "tests": [
+    "tests/test_il_compile.py",
+    "tests/test_il_validator.py",
+    "tests/test_il_thread_runner_v2.py"
+  ],
+  "result": {
+    "status": "PASS",
+    "returncode": 0,
+    "output_tail": "v2.TestILThreadRunnerV2) ... ok\ntest_parse_args_validation (tests.test_il_thread_runner_v2.TestILThreadRunnerV2) ... ok\ntest_quarantine_case_exclusion (tests.test_il_thread_runner_v2.TestILThreadRunnerV2) ... ok\ntest_resume_and_shard_flow (tests.test_il_thread_runner_v2.TestILThreadRunnerV2) ... ok\ntest_retry_recovers_transient_entry_failure (tests.test_il_thread_runner_v2.TestILThreadRunnerV2) ... ok\ntest_run_executes_entry_for_compile_success (tests.test_il_thread_runner_v2.TestILThreadRunnerV2) ... ok\ntest_timeout_does_not_block_next_case (tests.test_il_thread_runner_v2.TestILThreadRunnerV2) ... ok\ntest_validate_only_skips_entry (tests.test_il_thread_runner_v2.TestILThreadRunnerV2) ... ok\n\n----------------------------------------------------------------------\nRan 34 tests in 1.380s\n\nOK\n"
+  }
+}

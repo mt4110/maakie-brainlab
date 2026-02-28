@@ -94,3 +94,11 @@
 ### S30 — Active (Thread v1: S30-1..S30-900)
 - 全体図: `docs/ops/S30-1-S30-900-THREAD-V1_PLAN.md`
 - 実行: `docs/ops/S30-1-S30-900-THREAD-V1_TASK.md`
+
+### S31 — Active (Thread v1: S31-01..S31-30)
+- 全体図: `docs/ops/S31-01-S31-30-THREAD-V1_PLAN.md`
+- 実行: `docs/ops/S31-01-S31-30-THREAD-V1_TASK.md`
+- 実装プロンプト: `docs/ops/S31-01-S31-30-THREAD-V1_PROMPTS.md`
+
+### S32 — Planned (Thread v1: S32-01..S32-10)
+- 全体図: `docs/ops/S32-01-S32-10-THREAD-V1_PLAN.md`

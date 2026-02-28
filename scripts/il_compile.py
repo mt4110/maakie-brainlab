@@ -150,6 +150,64 @@ def _write_json(path: Path, data: Dict[str, Any], obs: OBSWriter) -> None:
         obs.log("ERROR", phase="write_file", path=str(path), reason=str(exc))
 
 
+def _build_explain_markdown(bundle: Dict[str, Any]) -> str:
+    report = bundle.get("report", {}) if isinstance(bundle.get("report"), dict) else {}
+    status = str(bundle.get("status", "ERROR"))
+    normalized = bundle.get("normalized_request", {}) if isinstance(bundle.get("normalized_request"), dict) else {}
+    errors = bundle.get("errors", []) if isinstance(bundle.get("errors"), list) else []
+    lines = [
+        "# IL Compile Explain",
+        "",
+        f"- status: `{status}`",
+        f"- provider_requested: `{report.get('provider_requested', '')}`",
+        f"- provider_selected: `{report.get('provider_selected', '')}`",
+        f"- fallback_used: `{report.get('fallback_used', False)}`",
+        f"- prompt_profile: `{report.get('prompt_profile', '')}`",
+        f"- prompt_template_id: `{report.get('prompt_template_id', '')}`",
+        f"- request_sha256: `{report.get('request_sha256', '')}`",
+        f"- prompt_sha256: `{report.get('prompt_sha256', '')}`",
+        f"- compile_latency_ms: `{report.get('compile_latency_ms', '')}`",
+        "",
+        "## Request Snapshot",
+        "",
+        f"- request_text: `{str(normalized.get('request_text', '')).strip()}`",
+        f"- allowed_opcodes: `{','.join((normalized.get('constraints', {}) or {}).get('allowed_opcodes', []))}`",
+        f"- max_steps: `{((normalized.get('constraints', {}) or {}).get('max_steps', ''))}`",
+        f"- artifact_pointer_count: `{report.get('artifact_pointer_count', 0)}`",
+        "",
+    ]
+    if status == "OK":
+        lines.extend(
+            [
+                "## Result",
+                "",
+                "- compile succeeded and generated `il.compiled.json`.",
+                "- next action: run `scripts/il_entry.py` with compiled IL.",
+            ]
+        )
+    else:
+        lines.extend(["## Errors", ""])
+        if not errors:
+            lines.append("- (no structured errors)")
+        for err in errors:
+            if not isinstance(err, dict):
+                continue
+            code = str(err.get("code", ""))
+            msg = str(err.get("message", ""))
+            path = str(err.get("path", ""))
+            hint = str(err.get("hint", ""))
+            lines.append(f"- `{code}` path=`{path}` message=`{msg}` hint=`{hint}`")
+        lines.extend(
+            [
+                "",
+                "## Next Action",
+                "",
+                "- fix request schema/determinism issues first, then re-run compile.",
+            ]
+        )
+    return "\n".join(lines).rstrip() + "\n"
+
+
 def run_il_compile(
     request_path: str,
     out_dir: Optional[str] = None,
@@ -240,6 +298,7 @@ def run_il_compile(
     _write_text(obs.obs_dir / "il.compile.prompt.txt", bundle["prompt_text"], obs)
     _write_text(obs.obs_dir / "il.compile.raw_response.txt", bundle["raw_response_text"], obs)
     _write_json(obs.obs_dir / "il.compile.report.json", bundle["report"], obs)
+    _write_text(obs.obs_dir / "il.compile.explain.md", _build_explain_markdown(bundle), obs)
 
     if bundle["status"] == "OK" and bundle["compiled_output"] is not None:
         _write_json(obs.obs_dir / "il.compiled.json", bundle["compiled_output"], obs)

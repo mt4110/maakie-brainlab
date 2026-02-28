@@ -1,0 +1,12 @@
+{
+  "schema": "IL_EXEC_RESULT_v1",
+  "answer": "",
+  "cites": [
+    {
+      "cite_key": "bafb6d7b49b7878d",
+      "doc_id": "doc_002",
+      "source": "tests/fixtures/il_exec/beta.md",
+      "title": "Beta Overview"
+    }
+  ]
+}

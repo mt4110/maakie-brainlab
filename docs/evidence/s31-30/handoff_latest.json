@@ -1,0 +1,24 @@
+{
+  "schema": "S31_HANDOFF_PACK_V1",
+  "captured_at_utc": "2026-02-28T04:49:03Z",
+  "s31_closeout_status": "PASS",
+  "s32_start_conditions": {
+    "closeout_available": true,
+    "verify_il_green_required": true,
+    "thread_runner_suite_green_required": true
+  },
+  "priority_backlog": [
+    {
+      "id": "S32-01",
+      "title": "RAG quality uplift for non-fixture corpora"
+    },
+    {
+      "id": "S32-02",
+      "title": "Compile prompt profile auto-selection"
+    },
+    {
+      "id": "S32-03",
+      "title": "Runner distributed shard orchestrator"
+    }
+  ]
+}

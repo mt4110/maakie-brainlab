@@ -1,0 +1,21 @@
+{
+  "schema": "S31_CLOSEOUT_V1",
+  "captured_at_utc": "2026-02-28T04:49:03Z",
+  "status": "PASS",
+  "statuses": {
+    "acceptance": "PASS",
+    "regression": "PASS",
+    "reliability": "PASS",
+    "policy_drift": "PASS",
+    "trend": "PASS"
+  },
+  "summary": {
+    "checks_total": 5,
+    "checks_pass": 5,
+    "checks_warn": 0
+  },
+  "unresolved_risks": [
+    "RAG opcode bridge still relies on fixture-centric deterministic flow.",
+    "local_llm quality variability remains outside deterministic compile contract."
+  ]
+}
