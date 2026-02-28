@@ -396,6 +396,63 @@ print("OK: phase=end STOP=0")
             summary2 = json.loads((out_dir / "summary.json").read_text(encoding="utf-8"))
             self.assertEqual(summary2["total_cases"], 2)
 
+    def test_resume_merges_partial_and_final_records(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            cases_path = tmp_path / "cases.jsonl"
+            shard0_dir = tmp_path / "out_shard0"
+            shard1_dir = tmp_path / "out_shard1"
+            resume_dir = tmp_path / "out_resume_merge"
+            rows = [
+                {"id": "r1", "request": self._good_request("alpha")},
+                {"id": "r2", "request": self._good_request("beta")},
+            ]
+            self._write_cases(cases_path, rows)
+
+            rc0 = run_thread_runner(
+                cases_path=cases_path,
+                mode="validate-only",
+                out_dir=shard0_dir,
+                shard_index=0,
+                shard_count=2,
+            )
+            self.assertEqual(rc0, 0)
+            rc1 = run_thread_runner(
+                cases_path=cases_path,
+                mode="validate-only",
+                out_dir=shard1_dir,
+                shard_index=1,
+                shard_count=2,
+            )
+            self.assertEqual(rc1, 0)
+
+            row_r1 = json.loads((shard0_dir / "cases.jsonl").read_text(encoding="utf-8").strip())
+            row_r2 = json.loads((shard1_dir / "cases.jsonl").read_text(encoding="utf-8").strip())
+
+            resume_dir.mkdir(parents=True, exist_ok=True)
+            self._write_cases(resume_dir / "cases.jsonl", [row_r1])
+            self._write_cases(resume_dir / "cases.partial.jsonl", [row_r2])
+
+            rc_resume = run_thread_runner(
+                cases_path=cases_path,
+                mode="validate-only",
+                out_dir=resume_dir,
+                resume=True,
+            )
+            self.assertEqual(rc_resume, 0)
+
+            summary = json.loads((resume_dir / "summary.json").read_text(encoding="utf-8"))
+            self.assertEqual(summary["total_cases"], 2)
+            self.assertFalse((resume_dir / "cases" / "0001_r1").exists())
+            self.assertFalse((resume_dir / "cases" / "0002_r2").exists())
+
+            out_rows = [
+                json.loads(line)
+                for line in (resume_dir / "cases.jsonl").read_text(encoding="utf-8").splitlines()
+                if line.strip()
+            ]
+            self.assertEqual(sorted(str(r.get("id", "")) for r in out_rows), ["r1", "r2"])
+
     def test_quarantine_case_exclusion(self):
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)

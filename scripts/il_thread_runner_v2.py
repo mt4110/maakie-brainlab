@@ -631,10 +631,21 @@ def _run_entry_subprocess(
 def _load_resume_records(out_dir: Path) -> List[Dict[str, Any]]:
     partial = out_dir / "cases.partial.jsonl"
     final = out_dir / "cases.jsonl"
-    rows = _load_records_jsonl(partial)
-    if rows:
-        return rows
-    return _load_records_jsonl(final)
+    partial_rows = _load_records_jsonl(partial)
+    final_rows = _load_records_jsonl(final)
+    if not partial_rows:
+        return final_rows
+    if not final_rows:
+        return partial_rows
+
+    merged: Dict[Tuple[int, str], Dict[str, Any]] = {}
+    for row in final_rows:
+        key = (int(row.get("index", 0)), str(row.get("id", "")))
+        merged[key] = row
+    for row in partial_rows:
+        key = (int(row.get("index", 0)), str(row.get("id", "")))
+        merged[key] = row
+    return [merged[key] for key in sorted(merged.keys(), key=lambda x: (x[0], x[1]))]
 
 
 def run_thread_runner(
