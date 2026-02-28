@@ -16,6 +16,7 @@ import (
 )
 
 type Event struct {
+	Action      string       `json:"action"`
 	PullRequest *PullRequest `json:"pull_request"`
 }
 
@@ -66,6 +67,11 @@ func main() {
 	pr := event.PullRequest
 	if pr == nil {
 		log.Println("Not a pull_request event. Exiting.")
+		return
+	}
+	action := strings.ToLower(strings.TrimSpace(event.Action))
+	if !shouldMutateBody(action) {
+		log.Printf("Skip PR body mutation for action=%q.", action)
 		return
 	}
 
@@ -128,6 +134,15 @@ func main() {
 		log.Println("PR body updated successfully.")
 	} else {
 		log.Println("PR body satisfies requirements.")
+	}
+}
+
+func shouldMutateBody(action string) bool {
+	switch action {
+	case "opened", "reopened", "ready_for_review":
+		return true
+	default:
+		return false
 	}
 }
 
