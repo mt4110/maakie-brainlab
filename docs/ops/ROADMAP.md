@@ -104,3 +104,7 @@
 - 全体図: `docs/ops/S32-01-S32-30-THREAD-V1_PLAN.md`
 - 実行: `docs/ops/S32-01-S32-30-THREAD-V1_TASK.md`
 - 実装プロンプト: `docs/ops/S32-01-S32-30-THREAD-V1_PROMPTS.md`
+
+### S33 — Planned (Handoff Ready)
+- 起点資料: `docs/evidence/s32-30/handoff_latest.json`
+- 初期バックログ: `docs/evidence/s32-29/s33_backlog_seed_latest.json`

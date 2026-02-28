@@ -4,7 +4,7 @@ Last Updated: 2026-02-28
 
 ## Progress
 
-- S32-01-S32-30 v1: 83% (S32-01..S32-25 implemented and tested)
+- S32-01-S32-30 v1: 100% (S32-01..S32-30 implemented and tested)
 
 ## Current Facts
 
@@ -63,11 +63,11 @@ Last Updated: 2026-02-28
 
 ### Phase-6: Release and Handoff (S32-26..S32-30)
 
-- [ ] S32-26 regression safety v3（S22/S23/S31/S32 回帰監査）
-- [ ] S32-27 release readiness v2（go/no-go 統合判定）
-- [ ] S32-28 closeout generator v2
-- [ ] S32-29 S33 backlog seed pack
-- [ ] S32-30 S33 handoff pack
+- [x] S32-26 regression safety v3（S22/S23/S31/S32 回帰監査）
+- [x] S32-27 release readiness v2（go/no-go 統合判定）
+- [x] S32-28 closeout generator v2
+- [x] S32-29 S33 backlog seed pack
+- [x] S32-30 S33 handoff pack
 
 ## Validation Commands
 
