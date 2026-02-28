@@ -104,3 +104,7 @@ walkthrough.md.resolved
 # Temporary test files
 .tmp/
 cache/
+
+# S31 smoke runtime logs (contamination check prohibited files)
+docs/evidence/s31-21/thread_smoke/**/entry/entry.stdout*.log
+docs/evidence/s31-21/thread_smoke/**/entry/entry.stderr*.log
