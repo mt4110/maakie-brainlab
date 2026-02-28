@@ -18,11 +18,11 @@ if str(repo_root) not in sys.path:
 
 from scripts.obs_writer import OBSWriter
 from src.il_compile import (
+    AUTO_PROMPT_PROFILE,
     DEFAULT_MODEL,
-    DEFAULT_PROMPT_PROFILE,
     DEFAULT_PROVIDER,
     compile_request_bundle,
-    normalize_prompt_profile,
+    normalize_prompt_profile_input,
     resolve_prompt_template_id,
 )
 
@@ -40,7 +40,7 @@ def _usage() -> str:
     return (
         "python3 scripts/il_compile.py --request <request_json> --out <out_dir> "
         "[--model <model_name>] [--provider <rule_based|local_llm>] "
-        "[--prompt-profile <v1|strict_json_v2|contract_json_v3>] [--seed <int>] [--no-fallback]"
+        "[--prompt-profile <auto|v1|strict_json_v2|contract_json_v3>] [--seed <int>] [--no-fallback]"
     )
 
 
@@ -51,7 +51,7 @@ def _parse_args(
     out_dir: Optional[str] = None
     model = DEFAULT_MODEL
     provider = DEFAULT_PROVIDER
-    prompt_profile = DEFAULT_PROMPT_PROFILE
+    prompt_profile = AUTO_PROMPT_PROFILE
     seed: Optional[int] = None
     allow_fallback = True
     errors: List[str] = []
@@ -163,6 +163,8 @@ def _build_explain_markdown(bundle: Dict[str, Any]) -> str:
         f"- provider_selected: `{report.get('provider_selected', '')}`",
         f"- fallback_used: `{report.get('fallback_used', False)}`",
         f"- prompt_profile: `{report.get('prompt_profile', '')}`",
+        f"- profile_selected_by: `{report.get('profile_selected_by', '')}`",
+        f"- profile_select_reason: `{report.get('profile_select_reason', '')}`",
         f"- prompt_template_id: `{report.get('prompt_template_id', '')}`",
         f"- request_sha256: `{report.get('request_sha256', '')}`",
         f"- prompt_sha256: `{report.get('prompt_sha256', '')}`",
@@ -213,11 +215,11 @@ def run_il_compile(
     out_dir: Optional[str] = None,
     model: str = DEFAULT_MODEL,
     provider: str = DEFAULT_PROVIDER,
-    prompt_profile: str = DEFAULT_PROMPT_PROFILE,
+    prompt_profile: str = AUTO_PROMPT_PROFILE,
     seed: Optional[int] = None,
     allow_fallback: bool = True,
 ) -> int:
-    prompt_profile_selected = normalize_prompt_profile(prompt_profile)
+    prompt_profile_selected = normalize_prompt_profile_input(prompt_profile)
     prompt_template_id = resolve_prompt_template_id(prompt_profile_selected)
 
     obs = OBSWriter("il_compile", repo_root=repo_root)

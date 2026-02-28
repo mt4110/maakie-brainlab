@@ -19,11 +19,11 @@ if str(repo_root) not in sys.path:
     sys.path.insert(0, str(repo_root))
 
 from src.il_compile import (
+    AUTO_PROMPT_PROFILE,
     DEFAULT_MODEL,
-    DEFAULT_PROMPT_PROFILE,
     DEFAULT_PROVIDER,
     compile_request_bundle,
-    normalize_prompt_profile,
+    normalize_prompt_profile_input,
     resolve_prompt_template_id,
 )
 
@@ -40,7 +40,7 @@ def usage() -> str:
         "python3 scripts/il_thread_runner_v2.py "
         "--cases <cases.jsonl> --mode <validate-only|run> --out <out_dir> "
         "[--provider <rule_based|local_llm>] [--model <name>] "
-        "[--prompt-profile <v1|strict_json_v2|contract_json_v3>] [--seed <int>] [--no-fallback] "
+        "[--prompt-profile <auto|v1|strict_json_v2|contract_json_v3>] [--seed <int>] [--no-fallback] "
         "[--entry-timeout-sec <int>] [--entry-retries <int>] [--entry-script <path>] "
         "[--resume] [--shard-index <int>] [--shard-count <int>] "
         "[--exclude-case-id <id>]... [--exclude-file <ids.txt>]"
@@ -107,7 +107,7 @@ def parse_args(
     out_dir: Optional[Path] = None
     provider = DEFAULT_PROVIDER
     model = DEFAULT_MODEL
-    prompt_profile = DEFAULT_PROMPT_PROFILE
+    prompt_profile = AUTO_PROMPT_PROFILE
     seed = 7
     allow_fallback = True
     entry_timeout_sec = 30
@@ -314,7 +314,7 @@ def parse_args(
         out_dir,
         provider,
         model,
-        normalize_prompt_profile(prompt_profile),
+        normalize_prompt_profile_input(prompt_profile),
         seed,
         allow_fallback,
         entry_timeout_sec,
@@ -662,7 +662,7 @@ def run_thread_runner(
     out_dir: Path,
     provider: str = DEFAULT_PROVIDER,
     model: str = DEFAULT_MODEL,
-    prompt_profile: str = DEFAULT_PROMPT_PROFILE,
+    prompt_profile: str = AUTO_PROMPT_PROFILE,
     seed: int = 7,
     allow_fallback: bool = True,
     entry_timeout_sec: int = 30,

@@ -9,6 +9,7 @@ from src.il_validator import ILCanonicalizer, ILValidator
 
 
 DEFAULT_PROMPT_PROFILE = "v1"
+AUTO_PROMPT_PROFILE = "auto"
 PROMPT_TEMPLATE_IDS = {
     "v1": "il_compile_prompt_v1",
     "strict_json_v2": "il_compile_prompt_strict_json_v2",
@@ -59,6 +60,11 @@ _TOKEN_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{1,31}")
 _CODE_FENCE_RX = re.compile(r"```(?:json)?\s*([\s\S]*?)```", re.IGNORECASE)
 
 
+def is_auto_prompt_profile(prompt_profile: Optional[str]) -> bool:
+    text = str(prompt_profile or "").strip().lower()
+    return text in {"", AUTO_PROMPT_PROFILE}
+
+
 def normalize_prompt_profile(prompt_profile: str) -> str:
     profile = (prompt_profile or DEFAULT_PROMPT_PROFILE).strip()
     if profile in PROMPT_TEMPLATE_IDS:
@@ -66,9 +72,62 @@ def normalize_prompt_profile(prompt_profile: str) -> str:
     return DEFAULT_PROMPT_PROFILE
 
 
+def normalize_prompt_profile_input(prompt_profile: Optional[str]) -> str:
+    if is_auto_prompt_profile(prompt_profile):
+        return AUTO_PROMPT_PROFILE
+    return normalize_prompt_profile(str(prompt_profile or DEFAULT_PROMPT_PROFILE))
+
+
 def resolve_prompt_template_id(prompt_profile: str) -> str:
     normalized = normalize_prompt_profile(prompt_profile)
     return PROMPT_TEMPLATE_IDS.get(normalized, PROMPT_TEMPLATE_IDS[DEFAULT_PROMPT_PROFILE])
+
+
+def select_prompt_profile(
+    normalized_request: Dict[str, Any],
+    requested_prompt_profile: Optional[str],
+    provider_requested: str,
+) -> Tuple[str, str, str]:
+    requested = str(requested_prompt_profile or "").strip()
+    if not is_auto_prompt_profile(requested):
+        normalized = normalize_prompt_profile(requested)
+        selected_by = "manual" if requested in PROMPT_TEMPLATE_IDS else "manual_fallback_default"
+        reason = (
+            f"requested={requested}"
+            if selected_by == "manual"
+            else f"requested={requested} unsupported -> fallback={normalized}"
+        )
+        return normalized, selected_by, reason
+
+    request_text = str(normalized_request.get("request_text", "") or "")
+    constraints = dict(normalized_request.get("constraints", {}) or {})
+    artifact_pointers = list(normalized_request.get("artifact_pointers", []) or [])
+    forbidden_keys = list(constraints.get("forbidden_keys", []) or [])
+    max_steps = int(constraints.get("max_steps", len(DEFAULT_OPCODES)))
+
+    request_len = len(request_text)
+    artifact_count = len(artifact_pointers)
+    forbidden_count = len(forbidden_keys)
+
+    if forbidden_count > 0 or artifact_count >= 4 or request_len >= 260 or max_steps >= 6:
+        reason = (
+            f"auto_high_complexity(request_len={request_len}, artifact_count={artifact_count}, "
+            f"forbidden_count={forbidden_count}, max_steps={max_steps})"
+        )
+        return "contract_json_v3", "auto", reason
+
+    if provider_requested == "local_llm" or artifact_count >= 2 or request_len >= 140 or max_steps >= 5:
+        reason = (
+            f"auto_medium_complexity(request_len={request_len}, artifact_count={artifact_count}, "
+            f"provider={provider_requested}, max_steps={max_steps})"
+        )
+        return "strict_json_v2", "auto", reason
+
+    reason = (
+        f"auto_low_complexity(request_len={request_len}, artifact_count={artifact_count}, "
+        f"provider={provider_requested}, max_steps={max_steps})"
+    )
+    return "v1", "auto", reason
 
 
 def _make_error(
@@ -837,7 +896,7 @@ def compile_request_bundle(
     seed_override: Optional[int] = None,
     provider: str = DEFAULT_PROVIDER,
     allow_fallback: bool = True,
-    prompt_profile: str = DEFAULT_PROMPT_PROFILE,
+    prompt_profile: str = AUTO_PROMPT_PROFILE,
     llm_adapter: Optional[LLMAdapter] = None,
 ) -> Dict[str, Any]:
     started = time.perf_counter()
@@ -854,8 +913,10 @@ def compile_request_bundle(
         )
         provider_requested = "rule_based"
 
-    prompt_profile_selected = normalize_prompt_profile(prompt_profile)
+    prompt_profile_selected = DEFAULT_PROMPT_PROFILE
     prompt_template_id = resolve_prompt_template_id(prompt_profile_selected)
+    profile_selected_by = "fallback_default"
+    profile_select_reason = "request_normalization_failed"
 
     bundle: Dict[str, Any] = {
         "status": "ERROR",
@@ -873,6 +934,12 @@ def compile_request_bundle(
         determinism["seed"] = seed_override
 
     if normalized:
+        prompt_profile_selected, profile_selected_by, profile_select_reason = select_prompt_profile(
+            normalized_request=normalized,
+            requested_prompt_profile=prompt_profile,
+            provider_requested=provider_requested,
+        )
+        prompt_template_id = resolve_prompt_template_id(prompt_profile_selected)
         bundle["prompt_text"] = render_compile_prompt(
             normalized,
             prompt_profile=prompt_profile_selected,
@@ -944,6 +1011,8 @@ def compile_request_bundle(
         "determinism": determinism,
         "prompt_template_id": prompt_template_id,
         "prompt_profile": prompt_profile_selected,
+        "profile_selected_by": profile_selected_by,
+        "profile_select_reason": profile_select_reason,
         "model": model,
         "provider_requested": provider_requested,
         "provider_selected": provider_selected,

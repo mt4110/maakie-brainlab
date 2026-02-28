@@ -4,7 +4,7 @@ Last Updated: 2026-02-28
 
 ## Progress
 
-- S32-01-S32-30 v1: 17% (S32-01..S32-05 implemented and tested)
+- S32-01-S32-30 v1: 20% (S32-01..S32-06 implemented and tested)
 
 ## Current Facts
 
@@ -31,7 +31,7 @@ Last Updated: 2026-02-28
 
 ### Phase-2: Compile Reliability (S32-06..S32-10)
 
-- [ ] S32-06 compile prompt profile auto-selection
+- [x] S32-06 compile prompt profile auto-selection
 - [ ] S32-07 compile confidence contract（confidence/rationale）
 - [ ] S32-08 compile parse repair guard v3（bounded repair）
 - [ ] S32-09 prompt loop dataset v2（golden case 拡張）

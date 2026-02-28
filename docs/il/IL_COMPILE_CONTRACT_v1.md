@@ -22,13 +22,14 @@
 
 ## 1. Compile CLI Interface (S23-03 実装ターゲット)
 ```bash
-python3 scripts/il_compile.py --request <request_json> --out <out_dir> [--model <model_name>] [--provider <rule_based|local_llm>] [--prompt-profile <v1|strict_json_v2|contract_json_v3>] [--seed <int>] [--no-fallback]
+python3 scripts/il_compile.py --request <request_json> --out <out_dir> [--model <model_name>] [--provider <rule_based|local_llm>] [--prompt-profile <auto|v1|strict_json_v2|contract_json_v3>] [--seed <int>] [--no-fallback]
 ```
 
 - MUST: `--request` は UTF-8 JSON ファイル
 - MUST: `--out` に obs 成果物を出力
 - MUST NOT: compile 成否を終了コードだけで表現しない（真実は `OK:/ERROR:/SKIP:` + report）
 - MUST: `--provider local_llm` で失敗した場合、デフォルトは rule-based fallback（`--no-fallback` 指定時は fail-closed）
+- MUST: `--prompt-profile` 未指定（`auto`）時は request 複雑度に応じて profile を自動選択する
 
 ## 2. Input Envelope (`IL_COMPILE_REQUEST_v1`)
 
@@ -146,6 +147,8 @@ Note:
 - `determinism`: `{temperature, top_p, seed, stream}`
 - `prompt_template_id`: str
 - `prompt_profile`: str
+- `profile_selected_by`: `auto|manual|manual_fallback_default`
+- `profile_select_reason`: str
 - `model`: str
 - `provider_requested`: `rule_based|local_llm`
 - `provider_selected`: `rule_based|local_llm`
