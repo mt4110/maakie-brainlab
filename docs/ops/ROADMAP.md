@@ -100,5 +100,7 @@
 - 実行: `docs/ops/S31-01-S31-30-THREAD-V1_TASK.md`
 - 実装プロンプト: `docs/ops/S31-01-S31-30-THREAD-V1_PROMPTS.md`
 
-### S32 — Planned (Thread v1: S32-01..S32-10)
-- 全体図: `docs/ops/S32-01-S32-10-THREAD-V1_PLAN.md`
+### S32 — Active (Thread v1: S32-01..S32-30)
+- 全体図: `docs/ops/S32-01-S32-30-THREAD-V1_PLAN.md`
+- 実行: `docs/ops/S32-01-S32-30-THREAD-V1_TASK.md`
+- 実装プロンプト: `docs/ops/S32-01-S32-30-THREAD-V1_PROMPTS.md`
