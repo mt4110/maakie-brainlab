@@ -148,7 +148,10 @@ def main(argv: List[str]) -> int:
             print(f"ERROR: {err}")
         print(f"OK: usage: {usage()}")
         return 1
-    assert out_dir is not None
+    if out_dir is None:
+        print("ERROR: missing required --out")
+        print(f"OK: usage: {usage()}")
+        return 1
     return run_init(out_dir=out_dir, force=force)
 
 

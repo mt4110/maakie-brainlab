@@ -10,16 +10,17 @@ from typing import Dict, List
 
 
 repo_root = Path(__file__).resolve().parent.parent
+PYTHON = sys.executable or "python3"
 
 
 COMMAND_MAP: Dict[str, List[str]] = {
-    "init": ["python3", str(repo_root / "scripts" / "il_workspace_init.py")],
-    "fmt": ["python3", str(repo_root / "scripts" / "il_fmt.py")],
-    "lint": ["python3", str(repo_root / "scripts" / "il_lint.py")],
-    "compile": ["python3", str(repo_root / "scripts" / "il_compile.py")],
-    "entry": ["python3", str(repo_root / "scripts" / "il_entry.py")],
-    "thread": ["python3", str(repo_root / "scripts" / "il_thread_runner_v2.py")],
-    "doctor": ["python3", str(repo_root / "scripts" / "il_doctor.py")],
+    "init": [PYTHON, str(repo_root / "scripts" / "il_workspace_init.py")],
+    "fmt": [PYTHON, str(repo_root / "scripts" / "il_fmt.py")],
+    "lint": [PYTHON, str(repo_root / "scripts" / "il_lint.py")],
+    "compile": [PYTHON, str(repo_root / "scripts" / "il_compile.py")],
+    "entry": [PYTHON, str(repo_root / "scripts" / "il_entry.py")],
+    "thread": [PYTHON, str(repo_root / "scripts" / "il_thread_runner_v2.py")],
+    "doctor": [PYTHON, str(repo_root / "scripts" / "il_doctor.py")],
 }
 
 

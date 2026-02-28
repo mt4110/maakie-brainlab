@@ -141,7 +141,10 @@ def main(argv: List[str]) -> int:
             print(f"ERROR: {err}")
         print(f"OK: usage: {usage()}")
         return 1
-    assert il_path is not None
+    if il_path is None:
+        print("ERROR: missing required --il")
+        print(f"OK: usage: {usage()}")
+        return 1
     return run_lint(il_path=il_path, out_path=out_path, strict=strict)
 
 
