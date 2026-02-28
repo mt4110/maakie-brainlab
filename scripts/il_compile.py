@@ -8,7 +8,6 @@ This script is stopless:
 """
 
 import json
-import os
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -22,6 +21,7 @@ from src.il_compile import (
     AUTO_PROMPT_PROFILE,
     DEFAULT_MODEL,
     DEFAULT_PROVIDER,
+    _resolve_confidence_threshold,
     compile_request_bundle,
     normalize_prompt_profile_input,
     resolve_prompt_template_id,
@@ -240,19 +240,6 @@ def _build_explain_markdown(bundle: Dict[str, Any]) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
-def _resolve_confidence_warn_threshold(override: Optional[float]) -> float:
-    if override is not None:
-        try:
-            return max(0.0, min(1.0, float(override)))
-        except Exception:
-            return 0.60
-    raw = os.environ.get("IL_COMPILE_CONFIDENCE_WARN_BELOW", "0.60")
-    try:
-        return max(0.0, min(1.0, float(raw)))
-    except Exception:
-        return 0.60
-
-
 def run_il_compile(
     request_path: str,
     out_dir: Optional[str] = None,
@@ -265,7 +252,7 @@ def run_il_compile(
 ) -> int:
     prompt_profile_selected = normalize_prompt_profile_input(prompt_profile)
     prompt_template_id = resolve_prompt_template_id(prompt_profile_selected)
-    confidence_warn_threshold = _resolve_confidence_warn_threshold(confidence_warn_below)
+    confidence_warn_threshold = _resolve_confidence_threshold(confidence_warn_below)
 
     obs = OBSWriter("il_compile", repo_root=repo_root)
     resolved_out = _resolve_out_dir(out_dir)

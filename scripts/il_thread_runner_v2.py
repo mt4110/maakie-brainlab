@@ -405,6 +405,16 @@ def _release_artifact_lock(out_dir: Path) -> None:
     if not lock_path.exists():
         return
     try:
+        payload = json.loads(lock_path.read_text(encoding="utf-8"))
+    except Exception:
+        return
+    if not isinstance(payload, dict):
+        return
+    if str(payload.get("owner", "")) != LOCK_OWNER:
+        return
+    if _safe_int(payload.get("pid", -1), -1) != os.getpid():
+        return
+    try:
         lock_path.unlink()
     except Exception:
         pass

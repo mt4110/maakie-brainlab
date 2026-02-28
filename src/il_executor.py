@@ -173,6 +173,14 @@ def _resolve_repo_relative_path(path_text: str) -> Tuple[Optional[Path], str]:
     return resolved, ""
 
 
+def _to_repo_relative_posix(path: Path) -> str:
+    resolved = path.resolve()
+    try:
+        return resolved.relative_to(REPO_ROOT).as_posix()
+    except Exception:
+        return path.as_posix()
+
+
 def _doc_text(doc: Dict[str, Any]) -> str:
     body = str(doc.get("content", "") or doc.get("text", "")).strip()
     title = str(doc.get("title", "")).strip()
@@ -329,6 +337,7 @@ def _apply_collect_policy(docs: List[Dict[str, Any]], args: Dict[str, Any]) -> T
 
 def _load_docs_from_jsonl(path: Path) -> Tuple[List[Dict[str, Any]], str]:
     docs: List[Dict[str, Any]] = []
+    source_base = _to_repo_relative_posix(path)
     try:
         with open(path, "r", encoding="utf-8") as f:
             for lineno, line in enumerate(f, 1):
@@ -343,7 +352,7 @@ def _load_docs_from_jsonl(path: Path) -> Tuple[List[Dict[str, Any]], str]:
                     return [], f"line {lineno}: row must be object"
                 doc_id = str(item.get("doc_id") or item.get("id") or f"{path.stem}_{lineno:04d}").strip()
                 title = str(item.get("title") or "").strip()
-                source = str(item.get("source") or f"{path.as_posix()}#L{lineno}").strip()
+                source = str(item.get("source") or f"{source_base}#L{lineno}").strip()
                 text = str(
                     item.get("text")
                     or item.get("content")
@@ -387,6 +396,7 @@ def _load_docs_from_rss(path: Path) -> Tuple[List[Dict[str, Any]], str]:
         items = list(root.findall(f".//{ns_atom}entry"))
 
     docs: List[Dict[str, Any]] = []
+    source_base = _to_repo_relative_posix(path)
     for idx, item in enumerate(items, 1):
         title = _xml_find_text(item, ["title", f"{ns_atom}title"])
         description = _xml_find_text(
@@ -405,7 +415,7 @@ def _load_docs_from_rss(path: Path) -> Tuple[List[Dict[str, Any]], str]:
         guid = _xml_find_text(item, ["guid", f"{ns_atom}id"])
         id_seed = guid or link or f"{title}:{idx}"
         doc_id = f"rss_{hashlib.sha256(id_seed.encode('utf-8')).hexdigest()[:12]}"
-        source = link or f"{path.as_posix()}#item={idx}"
+        source = link or f"{source_base}#item={idx}"
         docs.append(
             {
                 "doc_id": doc_id,

@@ -28,6 +28,13 @@ class TestS32PolicyDriftGuardV2(unittest.TestCase):
         self.assertEqual(diff.get("missing"), [])
         self.assertEqual(diff.get("changed"), ["c.txt"])
 
+    def test_diff_hashes_marks_missing_when_tracked_file_absent_in_current(self):
+        baseline = {"a.txt": "x"}
+        current = {}
+        diff = self.m.diff_hashes(baseline, current, ["a.txt"])
+        self.assertEqual(diff.get("missing"), ["a.txt"])
+        self.assertEqual(diff.get("changed"), [])
+
     def test_missing_baseline_key_is_drift(self):
         repo_root = Path(__file__).resolve().parent.parent
         script = repo_root / "scripts" / "ops" / "s32_policy_drift_guard_v2.py"

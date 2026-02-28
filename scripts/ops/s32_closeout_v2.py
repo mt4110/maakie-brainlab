@@ -54,11 +54,13 @@ def main() -> int:
     s32_reliability = _read_json((repo_root / "docs/evidence/s32-19/reliability_soak_v3_latest.json").resolve())
 
     readiness = str(dict(s32_readiness.get("summary", {})).get("readiness", "BLOCKED"))
-    status = "PASS" if readiness == "READY" else "WARN"
 
     before_quality = _to_float(dict(s31_closeout.get("summary", {})).get("checks_pass", 0))
-    after_quality = 0.0
-    if s32_readiness:
+    s32_summary = dict(s32_readiness.get("summary", {}))
+    if "checks_pass" in s32_summary:
+        after_quality = _to_float(s32_summary.get("checks_pass", 0))
+    else:
+        after_quality = 0.0
         rows = list(s32_readiness.get("inputs", []))
         after_quality = float(sum(1 for r in rows if str(r.get("status")) == "PASS"))
 
@@ -84,6 +86,8 @@ def main() -> int:
         unresolved_risks.append(f"retry_rate_high:{retry_rate:.4f}")
     if run_success_rate < 1.0:
         unresolved_risks.append(f"run_success_rate_below_one:{run_success_rate:.4f}")
+
+    status = "PASS" if readiness == "READY" and not unresolved_risks else "WARN"
 
     payload = {
         "schema": "S32_CLOSEOUT_V2",

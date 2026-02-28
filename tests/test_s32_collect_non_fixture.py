@@ -100,6 +100,55 @@ class TestS32CollectNonFixture(unittest.TestCase):
             reason = report.get("steps", [])[1].get("reason", "")
             self.assertIn("E_RAG_COLLECT_PATH", reason)
 
+    def test_collect_jsonl_source_fallback_is_repo_relative(self):
+        repo_root = Path(__file__).resolve().parent.parent
+        fixtures_root = repo_root / "tests" / "fixtures"
+        with tempfile.TemporaryDirectory(dir=fixtures_root) as td:
+            tmp_path = Path(td)
+            source_path = tmp_path / "collect_no_source.jsonl"
+            source_path.write_text(
+                json.dumps(
+                    {
+                        "doc_id": "src001",
+                        "title": "Alpha",
+                        "text": "alpha evidence",
+                    },
+                    ensure_ascii=False,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            rel_path = source_path.resolve().relative_to(repo_root).as_posix()
+            il = {
+                "il": {
+                    "opcodes": [
+                        {"op": "SEARCH_TERMS", "args": {}},
+                        {
+                            "op": "COLLECT",
+                            "args": {
+                                "source": "file_jsonl",
+                                "path": rel_path,
+                            },
+                        },
+                        {"op": "NORMALIZE", "args": {}},
+                        {"op": "INDEX", "args": {}},
+                        {"op": "SEARCH_RAG", "args": {}},
+                        {"op": "CITE_RAG", "args": {}},
+                    ],
+                    "search_terms": ["alpha"],
+                },
+                "meta": {"version": "il_contract_v1"},
+                "evidence": {},
+            }
+            with tempfile.TemporaryDirectory() as out_tmp:
+                report = execute_il(il, out_tmp)
+                self.assertEqual(report.get("overall_status"), "OK")
+                result = json.loads((Path(out_tmp) / "il.exec.result.json").read_text(encoding="utf-8"))
+                self.assertGreater(len(result.get("cites", [])), 0)
+                source_ref = str(result["cites"][0].get("source_path", ""))
+                self.assertTrue(source_ref.startswith("tests/fixtures/"))
+                self.assertIn("#L1", source_ref)
+
 
 if __name__ == "__main__":
     unittest.main()

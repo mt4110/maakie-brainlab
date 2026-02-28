@@ -97,7 +97,17 @@ class TestS32ArtifactLockGuard(unittest.TestCase):
 
             def _raise_after_creating_lock(*args, **kwargs):
                 lock = out_dir / ".artifact.lock.json"
-                lock.write_text('{"owner":"test"}', encoding="utf-8")
+                lock.write_text(
+                    json.dumps(
+                        {
+                            "owner": runner.LOCK_OWNER,
+                            "pid": os.getpid(),
+                            "acquired_at": int(time.time()),
+                        },
+                        ensure_ascii=False,
+                    ),
+                    encoding="utf-8",
+                )
                 raise RuntimeError("unexpected")
 
             with mock.patch.object(runner, "_run_thread_runner_impl", side_effect=_raise_after_creating_lock):
@@ -105,6 +115,24 @@ class TestS32ArtifactLockGuard(unittest.TestCase):
                     run_thread_runner(cases_path=cases, mode="validate-only", out_dir=out_dir)
 
             self.assertFalse((out_dir / ".artifact.lock.json").exists())
+
+    def test_early_input_error_does_not_release_foreign_lock(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            out_dir = tmp_path / "out"
+            out_dir.mkdir(parents=True, exist_ok=True)
+            lock = out_dir / ".artifact.lock.json"
+            payload = {
+                "owner": runner.LOCK_OWNER,
+                "pid": os.getpid() + 100000,
+                "acquired_at": int(time.time()),
+            }
+            lock.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+
+            missing_cases = tmp_path / "missing_cases.jsonl"
+            rc = run_thread_runner(cases_path=missing_cases, mode="validate-only", out_dir=out_dir)
+            self.assertEqual(rc, 1)
+            self.assertTrue(lock.exists())
 
 
 if __name__ == "__main__":
