@@ -189,6 +189,7 @@ def _run_profile(
         "reproducible_rate": float(summary.get("reproducible_rate", 0.0)),
         "term_micro_f1": summary.get("term_summary", {}).get("micro_f1"),
         "opcode_micro_f1": summary.get("opcode_summary", {}).get("micro_f1"),
+        "tag_summary": summary.get("tag_summary", {}),
         "fallback_reason_histogram": summary.get("fallback_reason_histogram", {}),
     }
 

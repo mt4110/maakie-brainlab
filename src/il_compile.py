@@ -9,6 +9,7 @@ from src.il_validator import ILCanonicalizer, ILValidator
 
 
 DEFAULT_PROMPT_PROFILE = "v1"
+AUTO_PROMPT_PROFILE = "auto"
 PROMPT_TEMPLATE_IDS = {
     "v1": "il_compile_prompt_v1",
     "strict_json_v2": "il_compile_prompt_strict_json_v2",
@@ -57,6 +58,12 @@ STOP_WORDS = {
 _WIN_ABS_RE = re.compile(r"^[A-Za-z]:[\\/]")
 _TOKEN_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{1,31}")
 _CODE_FENCE_RX = re.compile(r"```(?:json)?\s*([\s\S]*?)```", re.IGNORECASE)
+_MAX_REPAIR_CLOSE_DEPTH = 6
+
+
+def is_auto_prompt_profile(prompt_profile: Optional[str]) -> bool:
+    text = str(prompt_profile or "").strip().lower()
+    return text in {"", AUTO_PROMPT_PROFILE}
 
 
 def normalize_prompt_profile(prompt_profile: str) -> str:
@@ -66,9 +73,145 @@ def normalize_prompt_profile(prompt_profile: str) -> str:
     return DEFAULT_PROMPT_PROFILE
 
 
+def normalize_prompt_profile_input(prompt_profile: Optional[str]) -> str:
+    if is_auto_prompt_profile(prompt_profile):
+        return AUTO_PROMPT_PROFILE
+    return normalize_prompt_profile(str(prompt_profile or DEFAULT_PROMPT_PROFILE))
+
+
 def resolve_prompt_template_id(prompt_profile: str) -> str:
     normalized = normalize_prompt_profile(prompt_profile)
     return PROMPT_TEMPLATE_IDS.get(normalized, PROMPT_TEMPLATE_IDS[DEFAULT_PROMPT_PROFILE])
+
+
+def select_prompt_profile(
+    normalized_request: Dict[str, Any],
+    requested_prompt_profile: Optional[str],
+    provider_requested: str,
+) -> Tuple[str, str, str]:
+    requested = str(requested_prompt_profile or "").strip()
+    if not is_auto_prompt_profile(requested):
+        normalized = normalize_prompt_profile(requested)
+        selected_by = "manual" if requested in PROMPT_TEMPLATE_IDS else "manual_fallback_default"
+        reason = (
+            f"requested={requested}"
+            if selected_by == "manual"
+            else f"requested={requested} unsupported -> fallback={normalized}"
+        )
+        return normalized, selected_by, reason
+
+    request_text = str(normalized_request.get("request_text", "") or "")
+    constraints = dict(normalized_request.get("constraints", {}) or {})
+    artifact_pointers = list(normalized_request.get("artifact_pointers", []) or [])
+    forbidden_keys = list(constraints.get("forbidden_keys", []) or [])
+    max_steps = int(constraints.get("max_steps", len(DEFAULT_OPCODES)))
+
+    request_len = len(request_text)
+    artifact_count = len(artifact_pointers)
+    forbidden_count = len(forbidden_keys)
+
+    if forbidden_count > 0 or artifact_count >= 4 or request_len >= 260 or max_steps >= 6:
+        reason = (
+            f"auto_high_complexity(request_len={request_len}, artifact_count={artifact_count}, "
+            f"forbidden_count={forbidden_count}, max_steps={max_steps})"
+        )
+        return "contract_json_v3", "auto", reason
+
+    if provider_requested == "local_llm" or artifact_count >= 2 or request_len >= 140 or max_steps >= 5:
+        reason = (
+            f"auto_medium_complexity(request_len={request_len}, artifact_count={artifact_count}, "
+            f"provider={provider_requested}, max_steps={max_steps})"
+        )
+        return "strict_json_v2", "auto", reason
+
+    reason = (
+        f"auto_low_complexity(request_len={request_len}, artifact_count={artifact_count}, "
+        f"provider={provider_requested}, max_steps={max_steps})"
+    )
+    return "v1", "auto", reason
+
+
+def _clamp01(value: float) -> float:
+    return max(0.0, min(1.0, value))
+
+
+def _resolve_confidence_threshold(override: Optional[float] = None) -> float:
+    if override is not None:
+        try:
+            return _clamp01(float(override))
+        except Exception:
+            return 0.60
+
+    raw = os.environ.get("IL_COMPILE_CONFIDENCE_WARN_BELOW", "0.60")
+    try:
+        return _clamp01(float(raw))
+    except Exception:
+        return 0.60
+
+
+def _compute_compile_confidence(
+    *,
+    status: str,
+    normalized_request: Optional[Dict[str, Any]],
+    provider_selected: str,
+    fallback_used: bool,
+    prompt_profile_selected: str,
+) -> Tuple[float, List[Dict[str, Any]]]:
+    factors: List[Dict[str, Any]] = []
+    if status != "OK" or not isinstance(normalized_request, dict):
+        factors.append({"id": "compile_not_ok", "delta": -1.0, "detail": "compile status is not OK"})
+        return 0.0, factors
+
+    score = 0.80
+    factors.append({"id": "base", "delta": 0.80, "detail": "base confidence for deterministic compile path"})
+
+    constraints = dict(normalized_request.get("constraints", {}) or {})
+    artifact_pointers = list(normalized_request.get("artifact_pointers", []) or [])
+    terms = extract_search_terms(normalized_request)
+
+    artifact_count = len(artifact_pointers)
+    if artifact_count == 0:
+        score -= 0.15
+        factors.append({"id": "artifact_context_missing", "delta": -0.15, "detail": "no artifact pointers"})
+    else:
+        bonus = min(0.10, artifact_count * 0.03)
+        score += bonus
+        factors.append({"id": "artifact_context_present", "delta": round(bonus, 3), "detail": f"artifact_count={artifact_count}"})
+
+    term_count = len(terms)
+    if term_count < 2:
+        score -= 0.10
+        factors.append({"id": "few_terms", "delta": -0.10, "detail": f"term_count={term_count}"})
+    else:
+        bonus = min(0.10, term_count * 0.02)
+        score += bonus
+        factors.append({"id": "enough_terms", "delta": round(bonus, 3), "detail": f"term_count={term_count}"})
+
+    max_steps = int(constraints.get("max_steps", len(DEFAULT_OPCODES)))
+    if max_steps >= 6:
+        score -= 0.05
+        factors.append({"id": "high_step_budget", "delta": -0.05, "detail": f"max_steps={max_steps}"})
+
+    if provider_selected == "rule_based":
+        score += 0.03
+        factors.append({"id": "provider_rule_based", "delta": 0.03, "detail": "deterministic provider"})
+    else:
+        score -= 0.02
+        factors.append({"id": "provider_local_llm", "delta": -0.02, "detail": "model variance risk"})
+
+    if fallback_used:
+        score -= 0.25
+        factors.append({"id": "fallback_used", "delta": -0.25, "detail": "provider fallback indicates instability"})
+
+    if prompt_profile_selected == "contract_json_v3":
+        score += 0.05
+        factors.append({"id": "profile_contract_json_v3", "delta": 0.05, "detail": "strict profile bonus"})
+    elif prompt_profile_selected == "strict_json_v2":
+        score += 0.03
+        factors.append({"id": "profile_strict_json_v2", "delta": 0.03, "detail": "strict profile bonus"})
+
+    final_score = round(_clamp01(score), 6)
+    return final_score, factors
 
 
 def _make_error(
@@ -608,7 +751,105 @@ def _is_success_payload_shape(payload: Any) -> Tuple[bool, List[Dict[str, Any]]]
     return len(errors) == 0, errors
 
 
-def _parse_llm_json_response(raw_response: str) -> Tuple[Optional[Dict[str, Any]], List[Dict[str, Any]]]:
+def _repair_trailing_commas(text: str) -> Optional[str]:
+    # Only remove trailing commas that are outside JSON strings.
+    out: List[str] = []
+    in_string = False
+    escape = False
+    changed = False
+    i = 0
+    while i < len(text):
+        ch = text[i]
+        if in_string:
+            out.append(ch)
+            if escape:
+                escape = False
+            elif ch == "\\":
+                escape = True
+            elif ch == '"':
+                in_string = False
+            i += 1
+            continue
+
+        if ch == '"':
+            in_string = True
+            out.append(ch)
+            i += 1
+            continue
+
+        if ch == ",":
+            j = i + 1
+            while j < len(text) and text[j] in {" ", "\t", "\r", "\n"}:
+                j += 1
+            if j < len(text) and text[j] in {"}", "]"}:
+                changed = True
+                i += 1
+                continue
+
+        out.append(ch)
+        i += 1
+
+    if not changed:
+        return None
+    return "".join(out)
+
+
+def _repair_missing_closing_braces(text: str) -> Optional[str]:
+    # Intentionally only repairs unmatched "}" depth.
+    # Unclosed arrays/brackets are left fail-closed to keep repair scope narrow.
+    depth = 0
+    in_string = False
+    escape = False
+    for ch in text:
+        if in_string:
+            if escape:
+                escape = False
+            elif ch == "\\":
+                escape = True
+            elif ch == '"':
+                in_string = False
+            continue
+        if ch == '"':
+            in_string = True
+            continue
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth < 0:
+                return None
+    if in_string:
+        return None
+    if depth <= 0 or depth > _MAX_REPAIR_CLOSE_DEPTH:
+        return None
+    return text + ("}" * depth)
+
+
+def _parse_candidate_with_repair(candidate: str) -> Tuple[Optional[Any], str, bool, str]:
+    try:
+        return json.loads(candidate), "", False, ""
+    except Exception as exc:
+        parse_hint = str(exc)
+
+    # S32-08 bounded repair rules (allowlist only).
+    repair_rules = [
+        ("R_PARSE_TRAILING_COMMA", _repair_trailing_commas),
+        ("R_PARSE_CLOSE_BRACE", _repair_missing_closing_braces),
+    ]
+    for rule_id, repair_fn in repair_rules:
+        repaired = repair_fn(candidate)
+        if repaired is None:
+            continue
+        try:
+            payload = json.loads(repaired)
+            return payload, "", True, rule_id
+        except Exception as exc:
+            parse_hint = str(exc)
+
+    return None, parse_hint, False, ""
+
+
+def _parse_llm_json_response(raw_response: str) -> Tuple[Optional[Dict[str, Any]], List[Dict[str, Any]], bool, str]:
     candidates = _extract_llm_json_candidates(raw_response)
     if not candidates:
         return None, [
@@ -618,23 +859,22 @@ def _parse_llm_json_response(raw_response: str) -> Tuple[Optional[Dict[str, Any]
                 path="/",
                 hint="return only JSON object with il/meta/evidence",
             )
-        ]
+        ], False, ""
 
     parse_errors: List[str] = []
     shape_errors: List[Dict[str, Any]] = []
     for candidate in candidates:
-        try:
-            payload = json.loads(candidate)
-        except Exception as exc:
-            parse_errors.append(str(exc))
+        payload, parse_hint, repair_applied, repair_rule_id = _parse_candidate_with_repair(candidate)
+        if payload is None:
+            parse_errors.append(parse_hint)
             continue
         ok_shape, errors = _is_success_payload_shape(payload)
         if ok_shape:
-            return payload, []
+            return payload, [], repair_applied, repair_rule_id
         shape_errors = errors
 
     if shape_errors:
-        return None, shape_errors
+        return None, shape_errors, False, ""
     parse_hint = parse_errors[0] if parse_errors else "unknown parse error"
     return None, [
         _make_error(
@@ -643,7 +883,7 @@ def _parse_llm_json_response(raw_response: str) -> Tuple[Optional[Dict[str, Any]
             path="/",
             hint="return strict JSON object",
         )
-    ]
+    ], False, ""
 
 
 def _call_local_llm_default(prompt_text: str, model: str, determinism: Dict[str, Any]) -> str:
@@ -767,7 +1007,7 @@ def _compile_local_llm(
     determinism: Dict[str, Any],
     model: str,
     llm_adapter: Optional[LLMAdapter] = None,
-) -> Tuple[Optional[Dict[str, Any]], str, List[Dict[str, Any]]]:
+) -> Tuple[Optional[Dict[str, Any]], str, List[Dict[str, Any]], bool, str]:
     adapter = llm_adapter or _call_local_llm_default
     try:
         raw_response = adapter(prompt_text, model, determinism)
@@ -779,7 +1019,7 @@ def _compile_local_llm(
                 path="/",
                 retriable=True,
             )
-        ]
+        ], False, ""
 
     if not isinstance(raw_response, str) or not raw_response.strip():
         return None, "", [
@@ -789,12 +1029,12 @@ def _compile_local_llm(
                 path="/",
                 retriable=True,
             )
-        ]
+        ], False, ""
 
-    parsed, parse_errors = _parse_llm_json_response(raw_response)
+    parsed, parse_errors, repair_applied, repair_rule_id = _parse_llm_json_response(raw_response)
     if parse_errors:
-        return None, raw_response, parse_errors
-    return parsed, raw_response, []
+        return None, raw_response, parse_errors, False, ""
+    return parsed, raw_response, [], repair_applied, repair_rule_id
 
 
 def _finalize_compiled_output(
@@ -837,7 +1077,8 @@ def compile_request_bundle(
     seed_override: Optional[int] = None,
     provider: str = DEFAULT_PROVIDER,
     allow_fallback: bool = True,
-    prompt_profile: str = DEFAULT_PROMPT_PROFILE,
+    prompt_profile: str = AUTO_PROMPT_PROFILE,
+    confidence_warn_threshold: Optional[float] = None,
     llm_adapter: Optional[LLMAdapter] = None,
 ) -> Dict[str, Any]:
     started = time.perf_counter()
@@ -854,8 +1095,10 @@ def compile_request_bundle(
         )
         provider_requested = "rule_based"
 
-    prompt_profile_selected = normalize_prompt_profile(prompt_profile)
+    prompt_profile_selected = DEFAULT_PROMPT_PROFILE
     prompt_template_id = resolve_prompt_template_id(prompt_profile_selected)
+    profile_selected_by = "fallback_default"
+    profile_select_reason = "request_normalization_failed"
 
     bundle: Dict[str, Any] = {
         "status": "ERROR",
@@ -873,6 +1116,12 @@ def compile_request_bundle(
         determinism["seed"] = seed_override
 
     if normalized:
+        prompt_profile_selected, profile_selected_by, profile_select_reason = select_prompt_profile(
+            normalized_request=normalized,
+            requested_prompt_profile=prompt_profile,
+            provider_requested=provider_requested,
+        )
+        prompt_template_id = resolve_prompt_template_id(prompt_profile_selected)
         bundle["prompt_text"] = render_compile_prompt(
             normalized,
             prompt_profile=prompt_profile_selected,
@@ -884,9 +1133,11 @@ def compile_request_bundle(
         provider_selected = provider_requested
         fallback_used = False
         fallback_reason = ""
+        repair_applied = False
+        repair_rule_id = ""
 
         if provider_requested == "local_llm":
-            compiled, raw_response, compile_errors = _compile_local_llm(
+            compiled, raw_response, compile_errors, repair_applied, repair_rule_id = _compile_local_llm(
                 prompt_text=bundle["prompt_text"],
                 determinism=normalized["determinism"],
                 model=model,
@@ -898,6 +1149,8 @@ def compile_request_bundle(
                 model=model,
                 prompt_template_id=prompt_template_id,
             )
+            repair_applied = False
+            repair_rule_id = ""
 
         bundle["raw_response_text"] = raw_response or "RULE_BASED_COMPILER: no IL output"
 
@@ -911,6 +1164,8 @@ def compile_request_bundle(
                 prompt_template_id=prompt_template_id,
             )
             bundle["raw_response_text"] = fallback_raw_response
+            repair_applied = False
+            repair_rule_id = ""
 
         if compile_errors:
             bundle["errors"].extend(compile_errors)
@@ -930,6 +1185,8 @@ def compile_request_bundle(
         provider_selected = provider_requested
         fallback_used = False
         fallback_reason = ""
+        repair_applied = False
+        repair_rule_id = ""
 
     if not bundle["raw_response_text"]:
         bundle["raw_response_text"] = "RULE_BASED_COMPILER: no IL output"
@@ -944,10 +1201,14 @@ def compile_request_bundle(
         "determinism": determinism,
         "prompt_template_id": prompt_template_id,
         "prompt_profile": prompt_profile_selected,
+        "profile_selected_by": profile_selected_by,
+        "profile_select_reason": profile_select_reason,
         "model": model,
         "provider_requested": provider_requested,
         "provider_selected": provider_selected,
         "fallback_used": fallback_used,
+        "repair_applied": repair_applied,
+        "repair_rule_id": repair_rule_id,
         "compile_latency_ms": int((time.perf_counter() - started) * 1000),
     }
     if fallback_reason:
@@ -975,5 +1236,19 @@ def compile_request_bundle(
             code_hist[code] = code_hist.get(code, 0) + 1
     if code_hist:
         report["error_codes"] = dict(sorted(code_hist.items(), key=lambda kv: kv[0]))
+
+    confidence, confidence_factors = _compute_compile_confidence(
+        status=status,
+        normalized_request=normalized,
+        provider_selected=provider_selected,
+        fallback_used=fallback_used,
+        prompt_profile_selected=prompt_profile_selected,
+    )
+    confidence_warn_threshold = _resolve_confidence_threshold(confidence_warn_threshold)
+    report["confidence"] = confidence
+    report["confidence_warn_threshold"] = confidence_warn_threshold
+    report["confidence_status"] = "OK" if confidence >= confidence_warn_threshold else "LOW"
+    report["confidence_factors"] = confidence_factors
+
     bundle["report"] = report
     return bundle

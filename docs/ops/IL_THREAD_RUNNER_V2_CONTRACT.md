@@ -19,9 +19,18 @@ python3 scripts/il_thread_runner_v2.py \
   [--entry-script <path/to/il_entry.py>] \
   [--provider <rule_based|local_llm>] \
   [--model <model_name>] \
-  [--prompt-profile <v1|strict_json_v2|contract_json_v3>] \
+  [--prompt-profile <auto|v1|strict_json_v2|contract_json_v3>] \
   [--seed <int>] \
   [--no-fallback]
+```
+
+Orchestrator companion (S32-11):
+```bash
+python3 scripts/il_thread_runner_v2_orchestrator.py \
+  --cases <cases.jsonl> \
+  --mode <validate-only|run> \
+  --out <out_dir> \
+  --shard-count <N>
 ```
 
 ## Input Cases (`cases.jsonl`)
@@ -61,6 +70,7 @@ Rules:
 - compile が `ERROR` の case は `il_entry` を実行してはならない
 - 失敗時は `errors[]` を保持し、`il.compiled.json` を生成しない
 - stopless: 他caseへ継続し、最終 summary に集計する
+- `E_ARTIFACT_LOCK` 時は out_dir 競合とみなし実行を fail-closed で停止する
 
 ## Artifacts
 `--out` 配下:
@@ -69,6 +79,7 @@ Rules:
 - `summary.json`
 - `cases.partial.jsonl`（caseごとに追記）
 - `summary.partial.json`（caseごとに更新）
+- `failure_digest.json` / `failure_digest.md`
 - `cases/<id>/compile/`
   - `il.compile.report.json`
   - `il.compile.request.normalized.json`
@@ -95,6 +106,9 @@ Rules:
 - `entry_attempts`: int
 - `artifacts`: relative paths object
 
+`failure_digest.json`（S32-14）では各 failure に `root_cause_class` を付与し、
+`class_summary` と `representative_cases` を出力する（旧 `failures[]` フィールドは維持）。
+
 ## Summary (`IL_THREAD_RUNNER_V2_SUMMARY_v1`)
 最低必須フィールド:
 - `schema`: `IL_THREAD_RUNNER_V2_SUMMARY_v1`
@@ -112,8 +126,16 @@ Rules:
 - `entry_ok_count`
 - `entry_error_count`
 - `entry_skip_count`
+- `retries_used_count`
+- `retry_attempts_total`
+- `retry_final_reason_histogram`
 - `error_count`
 - `sha256_cases_jsonl`
+
+Retry policy matrix (S32-13):
+- retriable: `E_TIMEOUT`, `E_ENTRY_SUBPROCESS`, `E_ENTRY_RETURN_CODE`, `E_ENTRY_EXCEPTION`, `E_ENTRY_STOP`
+- non-retriable: `E_ENTRY_PROTOCOL`, `E_ENTRY_ARTIFACT_MISSING`, `E_MISSING_COMPILED`
+- retry backoff は seed/case_id/attempt に基づく deterministic exponential backoff
 
 ## Determinism
 - 同一 `cases.jsonl` + 同一 flags + 同一 code で、`cases.jsonl` の sha256 は一致しなければならない

@@ -18,11 +18,12 @@ if str(repo_root) not in sys.path:
 
 from scripts.obs_writer import OBSWriter
 from src.il_compile import (
+    AUTO_PROMPT_PROFILE,
     DEFAULT_MODEL,
-    DEFAULT_PROMPT_PROFILE,
     DEFAULT_PROVIDER,
+    _resolve_confidence_threshold,
     compile_request_bundle,
-    normalize_prompt_profile,
+    normalize_prompt_profile_input,
     resolve_prompt_template_id,
 )
 
@@ -40,24 +41,26 @@ def _usage() -> str:
     return (
         "python3 scripts/il_compile.py --request <request_json> --out <out_dir> "
         "[--model <model_name>] [--provider <rule_based|local_llm>] "
-        "[--prompt-profile <v1|strict_json_v2|contract_json_v3>] [--seed <int>] [--no-fallback]"
+        "[--prompt-profile <auto|v1|strict_json_v2|contract_json_v3>] [--seed <int>] [--no-fallback] "
+        "[--confidence-warn-below <0.0-1.0>]"
     )
 
 
 def _parse_args(
     args: List[str],
-) -> Tuple[Optional[str], Optional[str], str, str, str, Optional[int], bool, List[str], bool]:
+) -> Tuple[Optional[str], Optional[str], str, str, str, Optional[int], bool, Optional[float], List[str], bool]:
     request_path: Optional[str] = None
     out_dir: Optional[str] = None
     model = DEFAULT_MODEL
     provider = DEFAULT_PROVIDER
-    prompt_profile = DEFAULT_PROMPT_PROFILE
+    prompt_profile = AUTO_PROMPT_PROFILE
     seed: Optional[int] = None
     allow_fallback = True
+    confidence_warn_below: Optional[float] = None
     errors: List[str] = []
 
     if "--help" in args or "-h" in args:
-        return request_path, out_dir, model, provider, prompt_profile, seed, allow_fallback, errors, True
+        return request_path, out_dir, model, provider, prompt_profile, seed, allow_fallback, confidence_warn_below, errors, True
 
     i = 0
     while i < len(args):
@@ -111,6 +114,17 @@ def _parse_args(
         elif token == "--no-fallback":
             allow_fallback = False
             i += 1
+        elif token == "--confidence-warn-below":
+            if i + 1 >= len(args):
+                errors.append("missing value for --confidence-warn-below")
+                i += 1
+                continue
+            raw = args[i + 1]
+            try:
+                confidence_warn_below = float(raw)
+            except Exception:
+                errors.append(f"invalid --confidence-warn-below: {raw}")
+            i += 2
         elif token.startswith("-"):
             errors.append(f"unknown option: {token}")
             i += 1
@@ -122,7 +136,18 @@ def _parse_args(
         errors.append("missing required --request")
     if out_dir is None:
         errors.append("missing required --out")
-    return request_path, out_dir, model, provider, prompt_profile, seed, allow_fallback, errors, False
+    return (
+        request_path,
+        out_dir,
+        model,
+        provider,
+        prompt_profile,
+        seed,
+        allow_fallback,
+        confidence_warn_below,
+        errors,
+        False,
+    )
 
 
 def _read_json(path: Path) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
@@ -163,10 +188,17 @@ def _build_explain_markdown(bundle: Dict[str, Any]) -> str:
         f"- provider_selected: `{report.get('provider_selected', '')}`",
         f"- fallback_used: `{report.get('fallback_used', False)}`",
         f"- prompt_profile: `{report.get('prompt_profile', '')}`",
+        f"- profile_selected_by: `{report.get('profile_selected_by', '')}`",
+        f"- profile_select_reason: `{report.get('profile_select_reason', '')}`",
         f"- prompt_template_id: `{report.get('prompt_template_id', '')}`",
+        f"- repair_applied: `{report.get('repair_applied', False)}`",
+        f"- repair_rule_id: `{report.get('repair_rule_id', '')}`",
         f"- request_sha256: `{report.get('request_sha256', '')}`",
         f"- prompt_sha256: `{report.get('prompt_sha256', '')}`",
         f"- compile_latency_ms: `{report.get('compile_latency_ms', '')}`",
+        f"- confidence: `{report.get('confidence', '')}`",
+        f"- confidence_status: `{report.get('confidence_status', '')}`",
+        f"- confidence_warn_threshold: `{report.get('confidence_warn_threshold', '')}`",
         "",
         "## Request Snapshot",
         "",
@@ -213,12 +245,14 @@ def run_il_compile(
     out_dir: Optional[str] = None,
     model: str = DEFAULT_MODEL,
     provider: str = DEFAULT_PROVIDER,
-    prompt_profile: str = DEFAULT_PROMPT_PROFILE,
+    prompt_profile: str = AUTO_PROMPT_PROFILE,
     seed: Optional[int] = None,
     allow_fallback: bool = True,
+    confidence_warn_below: Optional[float] = None,
 ) -> int:
-    prompt_profile_selected = normalize_prompt_profile(prompt_profile)
+    prompt_profile_selected = normalize_prompt_profile_input(prompt_profile)
     prompt_template_id = resolve_prompt_template_id(prompt_profile_selected)
+    confidence_warn_threshold = _resolve_confidence_threshold(confidence_warn_below)
 
     obs = OBSWriter("il_compile", repo_root=repo_root)
     resolved_out = _resolve_out_dir(out_dir)
@@ -265,6 +299,7 @@ def run_il_compile(
             provider=provider,
             allow_fallback=allow_fallback,
             prompt_profile=prompt_profile_selected,
+            confidence_warn_threshold=confidence_warn_threshold,
         )
         if bundle["status"] == "OK":
             obs.log("OK", phase="compile", step="success")
@@ -290,6 +325,12 @@ def run_il_compile(
                 "provider_requested": provider,
                 "provider_selected": provider,
                 "fallback_used": False,
+                "repair_applied": False,
+                "repair_rule_id": "",
+                "confidence": 0.0,
+                "confidence_warn_threshold": confidence_warn_threshold,
+                "confidence_status": "LOW",
+                "confidence_factors": [{"id": "input_error", "delta": -1.0, "detail": "request could not be loaded"}],
             },
         }
 
@@ -316,7 +357,7 @@ def run_il_compile(
 
 
 def main(args: List[str]) -> int:
-    request_path, out_dir, model, provider, prompt_profile, seed, allow_fallback, arg_errors, show_help = _parse_args(args)
+    request_path, out_dir, model, provider, prompt_profile, seed, allow_fallback, confidence_warn_below, arg_errors, show_help = _parse_args(args)
     if show_help:
         print(f"OK: usage: {_usage()}")
         return 0
@@ -333,6 +374,7 @@ def main(args: List[str]) -> int:
         prompt_profile=prompt_profile,
         seed=seed,
         allow_fallback=allow_fallback,
+        confidence_warn_below=confidence_warn_below,
     )
 
 

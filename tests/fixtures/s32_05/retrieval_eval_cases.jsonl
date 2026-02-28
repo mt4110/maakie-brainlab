@@ -1,0 +1,4 @@
+{"case_id":"r001","expected_doc_ids":["doc_a"],"retrieved_doc_ids":["doc_a","doc_b"],"cited_doc_ids":["doc_a"],"policy_rejected_count":1}
+{"case_id":"r002","expected_doc_ids":["doc_b"],"retrieved_doc_ids":["doc_b","doc_c"],"cited_doc_ids":["doc_b"],"policy_rejected_count":0}
+{"case_id":"r003","expected_doc_ids":["doc_c"],"retrieved_doc_ids":["doc_c"],"cited_doc_ids":["doc_c"],"policy_rejected_count":0}
+{"case_id":"r004","expected_doc_ids":["doc_d"],"retrieved_doc_ids":["doc_x","doc_d"],"cited_doc_ids":["doc_d"],"policy_rejected_count":0}

@@ -22,13 +22,15 @@
 
 ## 1. Compile CLI Interface (S23-03 実装ターゲット)
 ```bash
-python3 scripts/il_compile.py --request <request_json> --out <out_dir> [--model <model_name>] [--provider <rule_based|local_llm>] [--prompt-profile <v1|strict_json_v2|contract_json_v3>] [--seed <int>] [--no-fallback]
+python3 scripts/il_compile.py --request <request_json> --out <out_dir> [--model <model_name>] [--provider <rule_based|local_llm>] [--prompt-profile <auto|v1|strict_json_v2|contract_json_v3>] [--seed <int>] [--no-fallback] [--confidence-warn-below <0.0-1.0>]
 ```
 
 - MUST: `--request` は UTF-8 JSON ファイル
 - MUST: `--out` に obs 成果物を出力
 - MUST NOT: compile 成否を終了コードだけで表現しない（真実は `OK:/ERROR:/SKIP:` + report）
 - MUST: `--provider local_llm` で失敗した場合、デフォルトは rule-based fallback（`--no-fallback` 指定時は fail-closed）
+- MUST: `--prompt-profile` 未指定（`auto`）時は request 複雑度に応じて profile を自動選択する
+- MUST: confidence warning 閾値は `--confidence-warn-below` または `IL_COMPILE_CONFIDENCE_WARN_BELOW` で上書き可能（既定 `0.60`）
 
 ## 2. Input Envelope (`IL_COMPILE_REQUEST_v1`)
 
@@ -119,6 +121,13 @@ Note:
 - MUST: IL validator 不合格は `E_VALIDATE` で終了
 - MUST: forbidden key（`timestamp`/`uuid`/`random` 等）検出時は `E_FORBIDDEN`
 
+### Parse Repair Guard v3 (S32-08)
+- MUST: JSON repair は allowlist ルールのみ適用する（bounded repair）。
+- ALLOW: `R_PARSE_TRAILING_COMMA`（末尾カンマ除去）
+- ALLOW: `R_PARSE_CLOSE_BRACE`（閉じ `}` 不足の補完、上限あり）
+- MUST NOT: 上記以外の修復を実施しない（未知パターンは `E_PARSE` fail-closed）
+- MUST: report に `repair_applied` と `repair_rule_id` を記録する
+
 ## 5. Determinism Rules
 - MUST: decoding params を固定（`temperature=0.0`, `top_p=1.0`, `stream=false`）
 - MUST: `seed` を明示し、report に記録
@@ -146,15 +155,23 @@ Note:
 - `determinism`: `{temperature, top_p, seed, stream}`
 - `prompt_template_id`: str
 - `prompt_profile`: str
+- `profile_selected_by`: `auto|manual|manual_fallback_default`
+- `profile_select_reason`: str
 - `model`: str
 - `provider_requested`: `rule_based|local_llm`
 - `provider_selected`: `rule_based|local_llm`
 - `fallback_used`: bool
+- `repair_applied`: bool
+- `repair_rule_id`: str
 - `canonical_sha256`: str（success のみ）
 - `request_sha256`: str
 - `prompt_sha256`: str
 - `artifact_pointer_count`: int
 - `compile_latency_ms`: int
+- `confidence`: float (`0.0..1.0`)
+- `confidence_warn_threshold`: float (`0.0..1.0`)
+- `confidence_status`: `OK|LOW`
+- `confidence_factors`: array<object>
 
 ## 7. Bridge to Execute (S23-03)
 - success の `il.compiled.json` はそのまま `scripts/il_entry.py` の入力に渡せること

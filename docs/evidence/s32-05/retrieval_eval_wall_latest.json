@@ -1,0 +1,55 @@
+{
+  "schema": "S32_RETRIEVAL_EVAL_WALL_V1",
+  "captured_at_utc": "2026-02-28T07:08:44Z",
+  "summary": {
+    "status": "PASS",
+    "total_cases": 4,
+    "hit_checked_cases": 4,
+    "metrics": {
+      "hit_rate_at_k": 1.0,
+      "citation_coverage": 0.625,
+      "no_hit_rate": 0.0,
+      "policy_reject_rate": 0.125
+    },
+    "thresholds": {
+      "k": 3,
+      "min_hit_rate": 0.8,
+      "min_citation_coverage": 0.5,
+      "max_no_hit_rate": 0.2,
+      "max_policy_reject_rate": 0.6
+    }
+  },
+  "checks": [
+    {
+      "id": "RET-01",
+      "metric": "hit_rate_at_k",
+      "observed": 1.0,
+      "target": ">= 0.800",
+      "status": "PASS"
+    },
+    {
+      "id": "RET-02",
+      "metric": "citation_coverage",
+      "observed": 0.625,
+      "target": ">= 0.500",
+      "status": "PASS"
+    },
+    {
+      "id": "RET-03",
+      "metric": "no_hit_rate",
+      "observed": 0.0,
+      "target": "<= 0.200",
+      "status": "PASS"
+    },
+    {
+      "id": "RET-04",
+      "metric": "policy_reject_rate",
+      "observed": 0.125,
+      "target": "<= 0.600",
+      "status": "PASS"
+    }
+  ],
+  "inputs": {
+    "cases_jsonl": "tests/fixtures/s32_05/retrieval_eval_cases.jsonl"
+  }
+}
