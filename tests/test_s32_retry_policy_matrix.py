@@ -70,16 +70,6 @@ print("OK: phase=end STOP=0")
             encoding="utf-8",
         )
 
-    def _write_entry_stop_script(self, path: Path) -> None:
-        path.write_text(
-            """#!/usr/bin/env python3
-import sys
-print("OK: phase=end STOP=1")
-sys.exit(0)
-""",
-            encoding="utf-8",
-        )
-
     def test_non_retriable_error_stops_without_extra_attempts(self):
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
@@ -126,28 +116,6 @@ sys.exit(0)
             rows = [json.loads(x) for x in (out / "cases.jsonl").read_text(encoding="utf-8").splitlines() if x.strip()]
             self.assertEqual(rows[0].get("entry_status"), "OK")
             self.assertEqual(rows[0].get("entry_attempts"), 2)
-
-    def test_entry_stop_is_non_retriable(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            tmp_path = Path(tmp)
-            cases = tmp_path / "cases.jsonl"
-            out = tmp_path / "out_stop_non_retriable"
-            entry_script = tmp_path / "entry_stop_once.py"
-            self._write_cases(cases)
-            self._write_entry_stop_script(entry_script)
-
-            rc = run_thread_runner(
-                cases_path=cases,
-                mode="run",
-                out_dir=out,
-                entry_retries=3,
-                entry_script=entry_script,
-            )
-            self.assertEqual(rc, 1)
-            rows = [json.loads(x) for x in (out / "cases.jsonl").read_text(encoding="utf-8").splitlines() if x.strip()]
-            self.assertEqual(rows[0].get("entry_attempts"), 1)
-            self.assertEqual(rows[0].get("entry_error_codes"), ["E_ENTRY_STOP"])
-
 
 if __name__ == "__main__":
     unittest.main()

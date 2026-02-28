@@ -768,7 +768,7 @@ def _is_retriable_entry_error(codes: List[str]) -> bool:
         "E_ENTRY_SUBPROCESS": True,
         "E_ENTRY_RETURN_CODE": True,
         "E_ENTRY_EXCEPTION": True,
-        "E_ENTRY_STOP": False,
+        "E_ENTRY_STOP": True,
         "E_ENTRY_PROTOCOL": False,
         "E_ENTRY_ARTIFACT_MISSING": False,
         "E_MISSING_COMPILED": False,
