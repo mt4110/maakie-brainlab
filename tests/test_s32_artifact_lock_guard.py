@@ -1,5 +1,6 @@
 import json
 import os
+import subprocess
 import tempfile
 import time
 import unittest
@@ -133,6 +134,40 @@ class TestS32ArtifactLockGuard(unittest.TestCase):
             rc = run_thread_runner(cases_path=missing_cases, mode="validate-only", out_dir=out_dir)
             self.assertEqual(rc, 1)
             self.assertTrue(lock.exists())
+
+    def test_active_lock_pid_is_not_treated_as_stale(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            cases = tmp_path / "cases.jsonl"
+            out_dir = tmp_path / "out"
+            self._write_cases(cases)
+            out_dir.mkdir(parents=True, exist_ok=True)
+            lock = out_dir / ".artifact.lock.json"
+
+            hold = subprocess.Popen(["python3", "-c", "import time; time.sleep(5)"])
+            try:
+                payload = {
+                    "owner": runner.LOCK_OWNER,
+                    "pid": hold.pid,
+                    "acquired_at": int(time.time()) - 120,
+                }
+                lock.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+                old_mtime = time.time() - 120
+                os.utime(lock, (old_mtime, old_mtime))
+
+                old_timeout = self._set_env("IL_THREAD_LOCK_TIMEOUT_SEC", "1")
+                old_stale = self._set_env("IL_THREAD_LOCK_STALE_SEC", "1")
+                try:
+                    rc = run_thread_runner(cases_path=cases, mode="validate-only", out_dir=out_dir)
+                finally:
+                    self._restore_env("IL_THREAD_LOCK_TIMEOUT_SEC", old_timeout)
+                    self._restore_env("IL_THREAD_LOCK_STALE_SEC", old_stale)
+
+                self.assertEqual(rc, 1)
+                self.assertTrue(lock.exists())
+            finally:
+                hold.terminate()
+                hold.wait(timeout=2)
 
 
 if __name__ == "__main__":

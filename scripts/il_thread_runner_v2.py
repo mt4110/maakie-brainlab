@@ -368,6 +368,28 @@ def _lock_stale_sec() -> int:
     return max(1, _safe_int(os.environ.get("IL_THREAD_LOCK_STALE_SEC", "120"), 120))
 
 
+def _read_lock_payload(lock_path: Path) -> Dict[str, Any]:
+    try:
+        obj = json.loads(lock_path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    return obj if isinstance(obj, dict) else {}
+
+
+def _pid_is_alive(pid: int) -> bool:
+    if pid <= 0:
+        return False
+    try:
+        os.kill(pid, 0)
+        return True
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    except Exception:
+        return False
+
+
 def _acquire_artifact_lock(out_dir: Path) -> Tuple[bool, str]:
     lock_path = out_dir / LOCK_FILENAME
     timeout_sec = _lock_timeout_sec()
@@ -388,6 +410,17 @@ def _acquire_artifact_lock(out_dir: Path) -> Tuple[bool, str]:
             except Exception:
                 age_sec = 0
             if age_sec >= stale_sec:
+                lock_payload = _read_lock_payload(lock_path)
+                lock_owner = str(lock_payload.get("owner", ""))
+                lock_pid = _safe_int(lock_payload.get("pid", -1), -1)
+                if lock_owner == LOCK_OWNER and _pid_is_alive(lock_pid):
+                    if now - started >= timeout_sec:
+                        return (
+                            False,
+                            f"E_ARTIFACT_LOCK: lock timeout after {timeout_sec}s path={lock_path} owner_pid={lock_pid}",
+                        )
+                    time.sleep(0.1)
+                    continue
                 try:
                     lock_path.unlink()
                     continue
@@ -404,11 +437,8 @@ def _release_artifact_lock(out_dir: Path) -> None:
     lock_path = out_dir / LOCK_FILENAME
     if not lock_path.exists():
         return
-    try:
-        payload = json.loads(lock_path.read_text(encoding="utf-8"))
-    except Exception:
-        return
-    if not isinstance(payload, dict):
+    payload = _read_lock_payload(lock_path)
+    if not payload:
         return
     if str(payload.get("owner", "")) != LOCK_OWNER:
         return
