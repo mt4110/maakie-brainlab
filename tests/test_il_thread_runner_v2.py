@@ -114,6 +114,7 @@ class TestILThreadRunnerV2(unittest.TestCase):
             self.assertEqual(summary["compile_ok_count"], 2)
             self.assertEqual(summary["entry_skip_count"], 2)
             self.assertEqual(summary["entry_ok_count"], 0)
+            self.assertEqual(summary["entry_script"], "scripts/il_entry.py")
             self.assertEqual(summary["error_count"], 0)
 
             case0 = out_dir / "cases" / "0001_c1"

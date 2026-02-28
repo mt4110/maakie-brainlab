@@ -54,7 +54,8 @@ def main() -> int:
         current[rel] = _sha256(path)
 
     baseline: Dict[str, Any] = {}
-    if baseline_path.exists():
+    baseline_exists = baseline_path.exists()
+    if baseline_exists:
         try:
             baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
         except Exception:
@@ -63,7 +64,12 @@ def main() -> int:
     baseline_hashes = dict(baseline.get("hashes", {})) if isinstance(baseline, dict) else {}
     changed = []
     for rel, digest in sorted(current.items()):
-        if baseline_hashes.get(rel) and baseline_hashes.get(rel) != digest:
+        if not baseline_exists:
+            continue
+        if rel not in baseline_hashes:
+            changed.append(rel)
+            continue
+        if baseline_hashes.get(rel) != digest:
             changed.append(rel)
 
     status = "PASS" if not missing and not changed else "WARN"

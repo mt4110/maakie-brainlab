@@ -161,7 +161,14 @@ def run_doctor(run_dir: Path) -> int:
             log("ERROR", e)
         log("ERROR", f"doctor_summary status=ERROR errors={len(errors)}")
         return 1
-    digest = json.loads(failure_digest_path.read_text(encoding="utf-8"))
+    try:
+        digest = json.loads(failure_digest_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        log("ERROR", f"failure_digest parse failed: {exc}")
+        return 1
+    if not isinstance(digest, dict):
+        log("ERROR", "failure_digest must be object")
+        return 1
     digest_count = int(digest.get("failure_count", -1))
     expected_failures = sum(
         1

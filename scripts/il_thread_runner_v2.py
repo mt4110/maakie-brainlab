@@ -54,6 +54,14 @@ def _resolve_path(path_text: str) -> Path:
     return (repo_root / p).resolve()
 
 
+def _to_repo_rel(path: Path) -> str:
+    resolved = path.resolve()
+    try:
+        return str(resolved.relative_to(repo_root))
+    except Exception:
+        return str(resolved)
+
+
 def _safe_slug(raw: str) -> str:
     safe_chars = []
     for ch in raw:
@@ -447,7 +455,7 @@ def _build_summary(
         "allow_fallback": allow_fallback,
         "entry_timeout_sec": entry_timeout_sec,
         "entry_retries": entry_retries,
-        "entry_script": str(selected_entry_script),
+        "entry_script": _to_repo_rel(selected_entry_script),
         "resume": resume,
         "shard_index": shard_index,
         "shard_count": shard_count,
