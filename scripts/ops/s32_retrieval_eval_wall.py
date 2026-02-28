@@ -43,6 +43,13 @@ def _as_str_list(value: Any) -> List[str]:
     return out
 
 
+def _to_repo_rel(path: Path, repo_root: Path) -> str:
+    try:
+        return str(path.resolve().relative_to(repo_root.resolve()))
+    except Exception:
+        return str(path)
+
+
 def load_cases_jsonl(path: Path) -> Tuple[List[Dict[str, Any]], str]:
     if not path.exists():
         return [], f"cases file not found: {path}"
@@ -276,7 +283,7 @@ def main(argv: List[str] | None = None) -> int:
             },
             "checks": [],
             "inputs": {
-                "cases_jsonl": str(cases_path),
+                "cases_jsonl": _to_repo_rel(cases_path, repo_root),
             },
         }
     else:
@@ -293,7 +300,7 @@ def main(argv: List[str] | None = None) -> int:
             "captured_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             **eval_payload,
             "inputs": {
-                "cases_jsonl": str(cases_path),
+                "cases_jsonl": _to_repo_rel(cases_path, repo_root),
             },
         }
 

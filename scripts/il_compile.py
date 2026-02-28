@@ -312,7 +312,7 @@ def run_il_compile(
             provider=provider,
             allow_fallback=allow_fallback,
             prompt_profile=prompt_profile_selected,
-            confidence_warn_threshold=confidence_warn_below,
+            confidence_warn_threshold=confidence_warn_threshold,
         )
         if bundle["status"] == "OK":
             obs.log("OK", phase="compile", step="success")

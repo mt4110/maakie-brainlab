@@ -58,7 +58,6 @@ STOP_WORDS = {
 _WIN_ABS_RE = re.compile(r"^[A-Za-z]:[\\/]")
 _TOKEN_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{1,31}")
 _CODE_FENCE_RX = re.compile(r"```(?:json)?\s*([\s\S]*?)```", re.IGNORECASE)
-_TRAILING_COMMA_RX = re.compile(r",(\s*[}\]])")
 _MAX_REPAIR_CLOSE_DEPTH = 6
 
 
@@ -753,10 +752,46 @@ def _is_success_payload_shape(payload: Any) -> Tuple[bool, List[Dict[str, Any]]]
 
 
 def _repair_trailing_commas(text: str) -> Optional[str]:
-    repaired = _TRAILING_COMMA_RX.sub(r"\1", text)
-    if repaired == text:
+    # Only remove trailing commas that are outside JSON strings.
+    out: List[str] = []
+    in_string = False
+    escape = False
+    changed = False
+    i = 0
+    while i < len(text):
+        ch = text[i]
+        if in_string:
+            out.append(ch)
+            if escape:
+                escape = False
+            elif ch == "\\":
+                escape = True
+            elif ch == '"':
+                in_string = False
+            i += 1
+            continue
+
+        if ch == '"':
+            in_string = True
+            out.append(ch)
+            i += 1
+            continue
+
+        if ch == ",":
+            j = i + 1
+            while j < len(text) and text[j] in {" ", "\t", "\r", "\n"}:
+                j += 1
+            if j < len(text) and text[j] in {"}", "]"}:
+                changed = True
+                i += 1
+                continue
+
+        out.append(ch)
+        i += 1
+
+    if not changed:
         return None
-    return repaired
+    return "".join(out)
 
 
 def _repair_missing_closing_braces(text: str) -> Optional[str]:

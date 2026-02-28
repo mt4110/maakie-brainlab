@@ -109,16 +109,6 @@ def _request_template(template: str) -> dict:
     }
 
 
-def _cases_template() -> str:
-    spec = _template_spec("faq")
-    row = {
-        "id": spec["case_id"],
-        "request": _request_template("faq"),
-        "fixture_db": "tests/fixtures/il_exec/retrieve_db.json",
-    }
-    return json.dumps(row, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n"
-
-
 def _cases_template_for(template: str) -> str:
     spec = _template_spec(template)
     row = {

@@ -50,6 +50,6 @@
     }
   ],
   "inputs": {
-    "cases_jsonl": "/Users/takemuramasaki/dev/maakie-brainlab/tests/fixtures/s32_05/retrieval_eval_cases.jsonl"
+    "cases_jsonl": "tests/fixtures/s32_05/retrieval_eval_cases.jsonl"
   }
 }

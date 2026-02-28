@@ -21,9 +21,12 @@ class TestS32S33HandoffPack(unittest.TestCase):
             )
             output = (cp.stdout or "") + (cp.stderr or "")
             self.assertIn(cp.returncode, {0, 1}, msg=output)
-
-            backlog = json.loads((out29 / "s33_backlog_seed_latest.json").read_text(encoding="utf-8"))
-            handoff = json.loads((out30 / "handoff_latest.json").read_text(encoding="utf-8"))
+            backlog_path = out29 / "s33_backlog_seed_latest.json"
+            handoff_path = out30 / "handoff_latest.json"
+            self.assertTrue(backlog_path.exists(), msg=output)
+            self.assertTrue(handoff_path.exists(), msg=output)
+            backlog = json.loads(backlog_path.read_text(encoding="utf-8"))
+            handoff = json.loads(handoff_path.read_text(encoding="utf-8"))
             self.assertEqual(backlog.get("schema"), "S32_S33_BACKLOG_SEED_PACK_V1")
             self.assertEqual(handoff.get("schema"), "S32_S33_HANDOFF_PACK_V1")
             self.assertIn("s33_start_conditions", handoff)

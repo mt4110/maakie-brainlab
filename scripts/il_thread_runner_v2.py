@@ -768,7 +768,7 @@ def _is_retriable_entry_error(codes: List[str]) -> bool:
         "E_ENTRY_SUBPROCESS": True,
         "E_ENTRY_RETURN_CODE": True,
         "E_ENTRY_EXCEPTION": True,
-        "E_ENTRY_STOP": True,
+        "E_ENTRY_STOP": False,
         "E_ENTRY_PROTOCOL": False,
         "E_ENTRY_ARTIFACT_MISSING": False,
         "E_MISSING_COMPILED": False,
@@ -806,7 +806,7 @@ def _load_resume_records(out_dir: Path) -> List[Dict[str, Any]]:
     return [merged[key] for key in sorted(merged.keys(), key=lambda x: (x[0], x[1]))]
 
 
-def run_thread_runner(
+def _run_thread_runner_impl(
     cases_path: Path,
     mode: str,
     out_dir: Path,
@@ -1163,6 +1163,46 @@ def run_thread_runner(
     )
     _release_artifact_lock(out_dir)
     return stop
+
+
+def run_thread_runner(
+    cases_path: Path,
+    mode: str,
+    out_dir: Path,
+    provider: str = DEFAULT_PROVIDER,
+    model: str = DEFAULT_MODEL,
+    prompt_profile: str = AUTO_PROMPT_PROFILE,
+    seed: int = 7,
+    allow_fallback: bool = True,
+    entry_timeout_sec: int = 30,
+    entry_retries: int = 0,
+    entry_script: Optional[Path] = None,
+    *,
+    resume: bool = False,
+    shard_index: int = 0,
+    shard_count: int = 1,
+    excluded_ids: Optional[Set[str]] = None,
+) -> int:
+    try:
+        return _run_thread_runner_impl(
+            cases_path=cases_path,
+            mode=mode,
+            out_dir=out_dir,
+            provider=provider,
+            model=model,
+            prompt_profile=prompt_profile,
+            seed=seed,
+            allow_fallback=allow_fallback,
+            entry_timeout_sec=entry_timeout_sec,
+            entry_retries=entry_retries,
+            entry_script=entry_script,
+            resume=resume,
+            shard_index=shard_index,
+            shard_count=shard_count,
+            excluded_ids=excluded_ids,
+        )
+    finally:
+        _release_artifact_lock(out_dir)
 
 
 def main(argv: List[str]) -> int:

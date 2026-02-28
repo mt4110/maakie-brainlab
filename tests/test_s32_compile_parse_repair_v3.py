@@ -62,6 +62,30 @@ class TestS32CompileParseRepairV3(unittest.TestCase):
         self.assertTrue(report.get("repair_applied"))
         self.assertEqual(report.get("repair_rule_id"), "R_PARSE_CLOSE_BRACE")
 
+    def test_trailing_comma_repair_does_not_mutate_string_literals(self):
+        raw = (
+            '{"il":{"opcodes":[{"op":"SEARCH_TERMS","args":{}},{"op":"RETRIEVE","args":{}}],"search_terms":["alpha"]},'
+            '"meta":{"version":"il_contract_v1","generator":"local"},'
+            '"evidence":{"notes":"tag,}"},}'
+        )
+
+        def adapter(_prompt: str, _model: str, _det: dict) -> str:
+            return raw
+
+        bundle = compile_request_bundle(
+            self._request(),
+            provider="local_llm",
+            allow_fallback=False,
+            llm_adapter=adapter,
+        )
+        self.assertEqual(bundle.get("status"), "OK")
+        compiled = dict(bundle.get("compiled_output", {}))
+        evidence = dict(compiled.get("evidence", {}))
+        self.assertEqual(evidence.get("notes"), "tag,}")
+        report = bundle.get("report", {})
+        self.assertTrue(report.get("repair_applied"))
+        self.assertEqual(report.get("repair_rule_id"), "R_PARSE_TRAILING_COMMA")
+
     def test_out_of_allowlist_repair_fails_closed(self):
         def adapter(_prompt: str, _model: str, _det: dict) -> str:
             return "{'il': {'opcodes': []}}"  # single-quote JSON is out-of-allowlist repair

@@ -5,7 +5,9 @@ import time
 import unittest
 from pathlib import Path
 from typing import Optional
+from unittest import mock
 
+import scripts.il_thread_runner_v2 as runner
 from scripts.il_thread_runner_v2 import run_thread_runner
 
 
@@ -84,6 +86,25 @@ class TestS32ArtifactLockGuard(unittest.TestCase):
             summary = json.loads((out_dir / "summary.json").read_text(encoding="utf-8"))
             self.assertEqual(summary.get("total_cases"), 1)
             self.assertFalse(lock.exists())
+
+    def test_lock_is_released_on_unhandled_exception(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            cases = tmp_path / "cases.jsonl"
+            out_dir = tmp_path / "out"
+            self._write_cases(cases)
+            out_dir.mkdir(parents=True, exist_ok=True)
+
+            def _raise_after_creating_lock(*args, **kwargs):
+                lock = out_dir / ".artifact.lock.json"
+                lock.write_text('{"owner":"test"}', encoding="utf-8")
+                raise RuntimeError("unexpected")
+
+            with mock.patch.object(runner, "_run_thread_runner_impl", side_effect=_raise_after_creating_lock):
+                with self.assertRaises(RuntimeError):
+                    run_thread_runner(cases_path=cases, mode="validate-only", out_dir=out_dir)
+
+            self.assertFalse((out_dir / ".artifact.lock.json").exists())
 
 
 if __name__ == "__main__":

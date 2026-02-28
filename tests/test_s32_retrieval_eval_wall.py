@@ -86,6 +86,15 @@ class TestS32RetrievalEvalWall(unittest.TestCase):
             payload = json.loads((out_dir / "retrieval_eval_wall_latest.json").read_text(encoding="utf-8"))
             self.assertEqual(payload["summary"]["status"], "ERROR")
 
+    def test_inputs_path_is_repo_relative(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out_dir = Path(tmp) / "out"
+            rc = self.m.main(["--out-dir", str(out_dir)])
+            self.assertIn(rc, {0, 1})
+            payload = json.loads((out_dir / "retrieval_eval_wall_latest.json").read_text(encoding="utf-8"))
+            inputs = dict(payload.get("inputs", {}))
+            self.assertEqual(inputs.get("cases_jsonl"), "tests/fixtures/s32_05/retrieval_eval_cases.jsonl")
+
 
 if __name__ == "__main__":
     unittest.main()
