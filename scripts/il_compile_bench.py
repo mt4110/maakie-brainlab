@@ -28,6 +28,8 @@ from src.il_compile import (
     compile_request_bundle,
 )
 
+ALLOWED_DIFFICULTY_TAGS = {"easy", "medium", "hard"}
+
 
 def log(level: str, message: str) -> None:
     print(f"{level}: {message}")
@@ -182,6 +184,18 @@ def _normalize_opcodes(values: Any) -> List[str]:
     return sorted(out)
 
 
+def _normalize_error_codes(values: Any) -> List[str]:
+    if values is None:
+        return []
+    if not isinstance(values, list):
+        raise ValueError("expected_failure_codes must be array")
+    out: Set[str] = set()
+    for v in values:
+        if isinstance(v, str) and v.strip():
+            out.add(v.strip().upper())
+    return sorted(out)
+
+
 def load_cases(path: Path) -> List[Dict[str, Any]]:
     rows: List[Dict[str, Any]] = []
     with open(path, "r", encoding="utf-8") as f:
@@ -201,6 +215,10 @@ def load_cases(path: Path) -> List[Dict[str, Any]]:
             expected_status = obj.get("expected_status", "OK")
             if expected_status not in {"OK", "ERROR"}:
                 raise ValueError(f"line {lineno}: expected_status must be OK|ERROR")
+            difficulty_tag = str(obj.get("difficulty_tag", "medium")).strip().lower()
+            if difficulty_tag not in ALLOWED_DIFFICULTY_TAGS:
+                raise ValueError(f"line {lineno}: difficulty_tag must be one of easy|medium|hard")
+            expected_failure_codes = _normalize_error_codes(obj.get("expected_failure_codes"))
             rows.append(
                 {
                     "id": case_id,
@@ -208,6 +226,8 @@ def load_cases(path: Path) -> List[Dict[str, Any]]:
                     "expected_status": expected_status,
                     "required_terms": _normalize_terms(obj.get("required_terms")),
                     "required_opcodes": _normalize_opcodes(obj.get("required_opcodes")),
+                    "difficulty_tag": difficulty_tag,
+                    "expected_failure_codes": expected_failure_codes,
                 }
             )
     return rows
@@ -359,7 +379,18 @@ def run_case(
     status = first.get("status", "ERROR")
     status2 = second.get("status", "ERROR")
     expected = case["expected_status"]
-    expected_match = status == expected
+    actual_error_codes = sorted(
+        {
+            str(e.get("code", "")).strip().upper()
+            for e in first.get("errors", [])
+            if isinstance(e, dict) and isinstance(e.get("code"), str) and str(e.get("code")).strip()
+        }
+    )
+    expected_failure_codes = list(case.get("expected_failure_codes", []))
+    expected_failure_match = True
+    if expected == "ERROR" and expected_failure_codes:
+        expected_failure_match = all(code in actual_error_codes for code in expected_failure_codes)
+    expected_match = (status == expected) and expected_failure_match
 
     if status == "OK" and status2 == "OK":
         reproducible = first.get("canonical_bytes") == second.get("canonical_bytes")
@@ -378,11 +409,15 @@ def run_case(
 
     result = {
         "id": case["id"],
+        "difficulty_tag": case.get("difficulty_tag", "medium"),
         "expected_status": expected,
+        "expected_failure_codes": expected_failure_codes,
+        "expected_failure_match": expected_failure_match,
         "status": status,
         "expected_match": expected_match,
         "reproducible": reproducible,
         "error_count": len(first.get("errors", [])),
+        "actual_error_codes": actual_error_codes,
         "provider_requested": report.get("provider_requested", provider),
         "provider_selected": report.get("provider_selected", provider),
         "fallback_used": bool(report.get("fallback_used", False)),
@@ -397,6 +432,33 @@ def run_case(
     else:
         result["errors"] = first.get("errors", [])
     return result
+
+
+def _aggregate_by_tag(rows: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+    out: Dict[str, Dict[str, Any]] = {}
+    for tag in sorted(ALLOWED_DIFFICULTY_TAGS):
+        selected = [r for r in rows if str(r.get("difficulty_tag", "medium")).strip().lower() == tag]
+        total = len(selected)
+        if total == 0:
+            out[tag] = {
+                "total_cases": 0,
+                "expected_match_count": 0,
+                "expected_match_rate": 0.0,
+                "reproducible_rate": 0.0,
+                "fallback_rate": 0.0,
+            }
+            continue
+        expected_match_count = sum(1 for r in selected if bool(r.get("expected_match", False)))
+        reproducible_count = sum(1 for r in selected if bool(r.get("reproducible", False)))
+        fallback_count = sum(1 for r in selected if bool(r.get("fallback_used", False)))
+        out[tag] = {
+            "total_cases": total,
+            "expected_match_count": expected_match_count,
+            "expected_match_rate": expected_match_count / total,
+            "reproducible_rate": reproducible_count / total,
+            "fallback_rate": fallback_count / total,
+        }
+    return out
 
 
 def _aggregate_metric(rows: List[Dict[str, Any]], key: str) -> Dict[str, Any]:
@@ -553,6 +615,7 @@ def run_bench(
         "fallback_reason_histogram": dict(sorted(fallback_reason_histogram.items(), key=lambda kv: kv[0])),
         "term_summary": term_summary,
         "opcode_summary": opcode_summary,
+        "tag_summary": _aggregate_by_tag(rows),
         "objective_score": objective_score,
     }
 

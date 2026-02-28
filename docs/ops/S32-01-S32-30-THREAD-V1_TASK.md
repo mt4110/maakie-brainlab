@@ -4,7 +4,7 @@ Last Updated: 2026-02-28
 
 ## Progress
 
-- S32-01-S32-30 v1: 20% (S32-01..S32-06 implemented and tested)
+- S32-01-S32-30 v1: 33% (S32-01..S32-10 implemented and tested)
 
 ## Current Facts
 
@@ -32,10 +32,10 @@ Last Updated: 2026-02-28
 ### Phase-2: Compile Reliability (S32-06..S32-10)
 
 - [x] S32-06 compile prompt profile auto-selection
-- [ ] S32-07 compile confidence contract（confidence/rationale）
-- [ ] S32-08 compile parse repair guard v3（bounded repair）
-- [ ] S32-09 prompt loop dataset v2（golden case 拡張）
-- [ ] S32-10 compile doctor v2（compile起因障害の診断拡張）
+- [x] S32-07 compile confidence contract（confidence/rationale）
+- [x] S32-08 compile parse repair guard v3（bounded repair）
+- [x] S32-09 prompt loop dataset v2（golden case 拡張）
+- [x] S32-10 compile doctor v2（compile起因障害の診断拡張）
 
 ### Phase-3: Runner Scale & Observability (S32-11..S32-15)
 

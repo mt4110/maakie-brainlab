@@ -569,6 +569,12 @@ def _bundle_from_case_errors(
             "provider_requested": provider,
             "provider_selected": provider,
             "fallback_used": False,
+            "repair_applied": False,
+            "repair_rule_id": "",
+            "confidence": 0.0,
+            "confidence_warn_threshold": 0.60,
+            "confidence_status": "LOW",
+            "confidence_factors": [{"id": "case_schema_error", "delta": -1.0, "detail": "case schema error before compile"}],
         },
     }
 
