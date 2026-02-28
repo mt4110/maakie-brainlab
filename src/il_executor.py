@@ -210,6 +210,18 @@ def _split_csv(value: str) -> List[str]:
     return out
 
 
+def _safe_bool(value: Any, default: bool) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        token = value.strip().lower()
+        if token in {"true", "1", "yes", "on"}:
+            return True
+        if token in {"false", "0", "no", "off"}:
+            return False
+    return default
+
+
 def _detect_lang_tag(text: str) -> str:
     payload = str(text or "")
     if not payload.strip():
@@ -236,7 +248,7 @@ def _resolve_collect_policy(args: Dict[str, Any]) -> Dict[str, Any]:
     soft_warnlist = _split_csv(
         args.get("policy_soft_warnlist_csv", ",".join(DEFAULT_COLLECT_POLICY_SOFT_WARNLIST))
     )
-    max_chars = int(args.get("policy_max_chars", DEFAULT_COLLECT_POLICY_MAX_CHARS))
+    max_chars = _safe_int(args.get("policy_max_chars", DEFAULT_COLLECT_POLICY_MAX_CHARS), DEFAULT_COLLECT_POLICY_MAX_CHARS)
     max_chars = max(1, max_chars)
 
     return {
@@ -668,7 +680,7 @@ def _handle_collect(_il: dict, ctx: dict, args: dict) -> dict:
     max_docs = min(max(1, max_docs), ctx["budget"]["max_retrieved_docs"])
 
     fixture_db = ctx.get("fixture_db")
-    policy_enabled = bool(args.get("policy_filter", True))
+    policy_enabled = _safe_bool(args.get("policy_filter", True), True)
 
     def _apply_policy_and_finalize(loaded_docs: List[Dict[str, Any]], source_label: str, in_summary: Dict[str, Any]) -> dict:
         docs = list(loaded_docs)
@@ -714,7 +726,7 @@ def _handle_collect(_il: dict, ctx: dict, args: dict) -> dict:
         docs = []
         if isinstance(fixture_db, dict) and isinstance(fixture_db.get("docs"), list):
             docs = [d for d in fixture_db.get("docs", []) if isinstance(d, dict)]
-        docs = sorted(docs, key=lambda d: str(d.get("doc_id", "")))[:max_docs]
+        docs = sorted(docs, key=lambda d: str(d.get("doc_id", "")))
         return _apply_policy_and_finalize(docs, "fixture", {"source": source, "policy_filter": policy_enabled})
 
     if source in {"file_jsonl", "rss"}:

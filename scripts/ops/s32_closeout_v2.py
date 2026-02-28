@@ -29,6 +29,15 @@ def _to_float(value: Any, default: float = 0.0) -> float:
         return default
 
 
+def _to_optional_float(value: Any) -> float | None:
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except Exception:
+        return None
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-dir", default="docs/evidence/s32-28")
@@ -53,10 +62,12 @@ def main() -> int:
         rows = list(s32_readiness.get("inputs", []))
         after_quality = float(sum(1 for r in rows if str(r.get("status")) == "PASS"))
 
-    before_latency = None
+    before_latency = _to_optional_float(
+        dict(dict(s31_closeout.get("before_after", {})).get("latency", {})).get("after_p95_latency_ms")
+    )
+    if before_latency is None:
+        before_latency = _to_optional_float(dict(s31_closeout.get("summary", {})).get("p95_latency_ms"))
     after_latency = dict(s32_latency.get("summary", {})).get("p95_latency_ms")
-    if isinstance(before_quality, float) and before_quality >= 0:
-        before_latency = None
 
     retry_rate = _to_float(dict(s32_dashboard.get("metrics", {})).get("retry_rate", 0.0))
     run_success_rate = _to_float(dict(s32_reliability.get("metrics", {})).get("run_success_rate", 0.0))

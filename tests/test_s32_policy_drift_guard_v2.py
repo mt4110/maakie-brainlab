@@ -1,11 +1,33 @@
 import json
+import importlib.util
 import subprocess
 import tempfile
 import unittest
 from pathlib import Path
 
 
+def _load_module():
+    root = Path(__file__).resolve().parents[1]
+    path = root / "scripts" / "ops" / "s32_policy_drift_guard_v2.py"
+    spec = importlib.util.spec_from_file_location("s32_policy_drift_guard_v2", path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec is not None and spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
 class TestS32PolicyDriftGuardV2(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.m = _load_module()
+
+    def test_diff_hashes_respects_tracked_argument(self):
+        baseline = {"a.txt": "x", "b.txt": "y"}
+        current = {"a.txt": "x", "b.txt": "y", "c.txt": "z"}
+        diff = self.m.diff_hashes(baseline, current, ["c.txt"])
+        self.assertEqual(diff.get("missing"), [])
+        self.assertEqual(diff.get("changed"), ["c.txt"])
+
     def test_missing_baseline_key_is_drift(self):
         repo_root = Path(__file__).resolve().parent.parent
         script = repo_root / "scripts" / "ops" / "s32_policy_drift_guard_v2.py"

@@ -57,10 +57,10 @@ def scan_current(repo_root: Path, tracked: List[str]) -> Dict[str, str]:
     return dict(sorted(hashes.items(), key=lambda kv: kv[0]))
 
 
-def diff_hashes(baseline: Dict[str, str], current: Dict[str, str]) -> Dict[str, List[str]]:
+def diff_hashes(baseline: Dict[str, str], current: Dict[str, str], tracked: List[str]) -> Dict[str, List[str]]:
     missing: List[str] = []
     changed: List[str] = []
-    for rel in sorted(TRACKED):
+    for rel in sorted(tracked):
         if rel not in current:
             missing.append(rel)
             continue
@@ -88,7 +88,7 @@ def main() -> int:
     baseline_doc = _read_json(baseline_path)
     baseline_hashes = dict(baseline_doc.get("hashes", {})) if baseline_doc else {}
 
-    diff = diff_hashes(baseline_hashes, current_hashes) if baseline_hashes else {"missing": [], "changed": []}
+    diff = diff_hashes(baseline_hashes, current_hashes, TRACKED) if baseline_hashes else {"missing": [], "changed": []}
     status = "PASS" if not diff["missing"] and not diff["changed"] else "WARN"
 
     payload = {

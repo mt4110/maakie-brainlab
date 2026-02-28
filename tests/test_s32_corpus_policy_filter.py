@@ -7,7 +7,7 @@ from src.il_executor import execute_il
 
 
 class TestS32CorpusPolicyFilter(unittest.TestCase):
-    def _run_pipeline(self, collect_args):
+    def _run_pipeline(self, collect_args, fixture_docs=None):
         il = {
             "il": {
                 "opcodes": [
@@ -24,7 +24,14 @@ class TestS32CorpusPolicyFilter(unittest.TestCase):
             "evidence": {},
         }
         with tempfile.TemporaryDirectory() as tmp:
-            report = execute_il(il, tmp)
+            fixture_db_path = None
+            if fixture_docs is not None:
+                fixture_db_path = str(Path(tmp) / "fixture_db.json")
+                Path(fixture_db_path).write_text(
+                    json.dumps({"docs": fixture_docs}, ensure_ascii=False, indent=2) + "\n",
+                    encoding="utf-8",
+                )
+            report = execute_il(il, tmp, fixture_db_path=fixture_db_path)
             result = json.loads((Path(tmp) / "il.exec.result.json").read_text(encoding="utf-8"))
             return report, result
 
@@ -79,6 +86,30 @@ class TestS32CorpusPolicyFilter(unittest.TestCase):
         self.assertFalse(policy.get("policy_enabled"))
         self.assertEqual(policy.get("rejected_count"), 0)
         self.assertEqual(collect_step.get("out_summary", {}).get("collected_count"), 5)
+
+    def test_policy_filter_fixture_applies_before_max_docs_truncation(self):
+        report, result = self._run_pipeline(
+            {
+                "source": "fixture",
+                "max_docs": 1,
+                "policy_hard_denylist_csv": "password",
+            },
+            fixture_docs=[
+                {"doc_id": "f001", "title": "bad", "source": "a", "content": "contains password token"},
+                {"doc_id": "f002", "title": "good", "source": "b", "content": "alpha evidence is safe"},
+            ],
+        )
+        self.assertEqual(report.get("overall_status"), "OK")
+        collect_step = report.get("steps", [])[1]
+        self.assertEqual(collect_step.get("status"), "OK")
+        out_summary = collect_step.get("out_summary", {})
+        self.assertEqual(out_summary.get("collected_count"), 1)
+        policy = out_summary.get("policy", {})
+        self.assertEqual(policy.get("accepted_count"), 1)
+        self.assertEqual(policy.get("rejected_count"), 1)
+        cited_doc_ids = {str(c.get("doc_id", "")) for c in result.get("cites", [])}
+        self.assertIn("f002", cited_doc_ids)
+        self.assertNotIn("f001", cited_doc_ids)
 
 
 if __name__ == "__main__":

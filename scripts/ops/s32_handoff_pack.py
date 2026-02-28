@@ -50,7 +50,7 @@ def _risk_priority(text: str) -> int:
 def generate_backlog_seed(closeout: Dict[str, Any], trend: Dict[str, Any], pending_ops: List[str]) -> List[Dict[str, Any]]:
     candidates: List[Dict[str, Any]] = []
     unresolved = list(closeout.get("unresolved_risks", []))
-    for idx, risk in enumerate(unresolved, 1):
+    for risk in unresolved:
         text = str(risk)
         candidates.append(
             {
