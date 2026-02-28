@@ -204,6 +204,25 @@ def run_doctor(out_dir: Path) -> int:
         ),
     ]
 
+    hint_rules = {
+        "workspace_init": {
+            "hint": "workspace template generation failed; verify --out path permissions and template options.",
+            "next_command": "python3 scripts/il_workspace_init.py --out .local/obs/il_ws --force",
+        },
+        "lint_fixture": {
+            "hint": "fixture IL failed lint; inspect IL schema and opcode/args shape.",
+            "next_command": "python3 scripts/il_lint.py --il tests/fixtures/il_exec/il_min.json --out .local/obs/il_lint.report.json",
+        },
+        "compile_entry_smoke": {
+            "hint": "compile/entry smoke failed; inspect compile and entry artifacts for first failing phase.",
+            "next_command": "python3 scripts/il_compile_entry_smoke.py",
+        },
+        "thread_smoke": {
+            "hint": "thread smoke failed; inspect summary/failure digest and retry or lock conditions.",
+            "next_command": "python3 scripts/il_thread_runner_v2_smoke.py --out .local/obs/il_thread_smoke",
+        },
+    }
+
     for name, cmd, expected in checks:
         rc, output = _run(cmd, repo_root)
         (out_dir / f"{name}.log").write_text(output, encoding="utf-8")
@@ -228,6 +247,25 @@ def run_doctor(out_dir: Path) -> int:
     else:
         print(f"ERROR: doctor_step=compile_health status=WARN errors={compile_error_count}")
 
+    fix_hints: List[str] = []
+    next_commands: List[str] = []
+    for step in steps:
+        if step.get("status") == "OK":
+            continue
+        rule = hint_rules.get(str(step.get("name", "")), {})
+        hint = str(rule.get("hint", "")).strip()
+        cmd = str(rule.get("next_command", "")).strip()
+        if hint:
+            fix_hints.append(hint)
+        if cmd:
+            next_commands.append(cmd)
+
+    fix_hints.extend(compile_fix_hints)
+    next_commands.extend(compile_next_commands)
+    # keep deterministic order and deduplicate
+    fix_hints = sorted(set(fix_hints))
+    next_commands = sorted(set(next_commands))
+
     overall_ok = all(step["status"] == "OK" for step in steps) and compile_error_count == 0
     summary = {
         "schema": "IL_DOCTOR_REPORT_v1",
@@ -235,7 +273,8 @@ def run_doctor(out_dir: Path) -> int:
         "out_dir": str(out_dir),
         "steps": steps,
         "compile_health": compile_health,
-        "next_commands": compile_next_commands,
+        "fix_hints": fix_hints,
+        "next_commands": next_commands,
     }
     (out_dir / "il.doctor.summary.json").write_text(
         json.dumps(summary, ensure_ascii=False, indent=2) + "\n",

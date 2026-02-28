@@ -4,7 +4,7 @@ Last Updated: 2026-02-28
 
 ## Progress
 
-- S32-01-S32-30 v1: 67% (S32-01..S32-20 implemented and tested)
+- S32-01-S32-30 v1: 83% (S32-01..S32-25 implemented and tested)
 
 ## Current Facts
 
@@ -55,11 +55,11 @@ Last Updated: 2026-02-28
 
 ### Phase-5: IL UX vNext (S32-21..S32-25)
 
-- [ ] S32-21 IL opcode catalog generator
-- [ ] S32-22 `ilctl` scenario commands（`quickstart/triage`）
-- [ ] S32-23 runbook v3（decision playbooks）
-- [ ] S32-24 workspace init v2 templates（domain別雛形）
-- [ ] S32-25 doctor v3 with fix hints
+- [x] S32-21 IL opcode catalog generator
+- [x] S32-22 `ilctl` scenario commands（`quickstart/triage`）
+- [x] S32-23 runbook v3（decision playbooks）
+- [x] S32-24 workspace init v2 templates（domain別雛形）
+- [x] S32-25 doctor v3 with fix hints
 
 ### Phase-6: Release and Handoff (S32-26..S32-30)
 
