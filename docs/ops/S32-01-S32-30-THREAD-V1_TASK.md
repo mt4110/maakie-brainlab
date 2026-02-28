@@ -4,7 +4,7 @@ Last Updated: 2026-02-28
 
 ## Progress
 
-- S32-01-S32-30 v1: 33% (S32-01..S32-10 implemented and tested)
+- S32-01-S32-30 v1: 50% (S32-01..S32-15 implemented and tested)
 
 ## Current Facts
 
@@ -39,11 +39,11 @@ Last Updated: 2026-02-28
 
 ### Phase-3: Runner Scale & Observability (S32-11..S32-15)
 
-- [ ] S32-11 shard orchestrator v1（分散実行統括CLI）
-- [ ] S32-12 artifact lease/lock guard（衝突回避）
-- [ ] S32-13 retry policy matrix（error code別制御）
-- [ ] S32-14 failure digest classifier v2（root-cause class）
-- [ ] S32-15 operator dashboard export（JSON出力）
+- [x] S32-11 shard orchestrator v1（分散実行統括CLI）
+- [x] S32-12 artifact lease/lock guard（衝突回避）
+- [x] S32-13 retry policy matrix（error code別制御）
+- [x] S32-14 failure digest classifier v2（root-cause class）
+- [x] S32-15 operator dashboard export（JSON出力）
 
 ### Phase-4: Quality Gates vNext (S32-16..S32-20)
 

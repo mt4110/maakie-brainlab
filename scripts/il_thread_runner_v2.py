@@ -9,8 +9,10 @@ Stopless policy for core run logic:
 
 import hashlib
 import json
+import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
@@ -29,6 +31,8 @@ from src.il_compile import (
 
 CASE_SCHEMA = "IL_THREAD_RUNNER_V2_CASE_v1"
 SUMMARY_SCHEMA = "IL_THREAD_RUNNER_V2_SUMMARY_v1"
+LOCK_FILENAME = ".artifact.lock.json"
+LOCK_OWNER = "il_thread_runner_v2"
 
 
 def log(level: str, message: str) -> None:
@@ -347,6 +351,65 @@ def _append_jsonl_line(path: Path, row: Dict[str, Any]) -> None:
         f.write(json.dumps(row, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n")
 
 
+def _safe_int(value: Any, default: int) -> int:
+    try:
+        if isinstance(value, bool):
+            return default
+        return int(value)
+    except Exception:
+        return default
+
+
+def _lock_timeout_sec() -> int:
+    return max(1, _safe_int(os.environ.get("IL_THREAD_LOCK_TIMEOUT_SEC", "3"), 3))
+
+
+def _lock_stale_sec() -> int:
+    return max(1, _safe_int(os.environ.get("IL_THREAD_LOCK_STALE_SEC", "120"), 120))
+
+
+def _acquire_artifact_lock(out_dir: Path) -> Tuple[bool, str]:
+    lock_path = out_dir / LOCK_FILENAME
+    timeout_sec = _lock_timeout_sec()
+    stale_sec = _lock_stale_sec()
+    started = time.time()
+
+    while True:
+        now = time.time()
+        payload = {"owner": LOCK_OWNER, "pid": os.getpid(), "acquired_at": int(now)}
+        try:
+            fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                json.dump(payload, f, ensure_ascii=False, sort_keys=True)
+            return True, ""
+        except FileExistsError:
+            try:
+                age_sec = int(now - lock_path.stat().st_mtime)
+            except Exception:
+                age_sec = 0
+            if age_sec >= stale_sec:
+                try:
+                    lock_path.unlink()
+                    continue
+                except Exception as exc:
+                    return False, f"E_ARTIFACT_LOCK: stale lock cleanup failed: {exc}"
+            if now - started >= timeout_sec:
+                return False, f"E_ARTIFACT_LOCK: lock timeout after {timeout_sec}s path={lock_path}"
+            time.sleep(0.1)
+        except Exception as exc:
+            return False, f"E_ARTIFACT_LOCK: lock acquire failed: {exc}"
+
+
+def _release_artifact_lock(out_dir: Path) -> None:
+    lock_path = out_dir / LOCK_FILENAME
+    if not lock_path.exists():
+        return
+    try:
+        lock_path.unlink()
+    except Exception:
+        pass
+
+
 def _sha256_file(path: Path) -> str:
     h = hashlib.sha256()
     with open(path, "rb") as f:
@@ -373,6 +436,30 @@ def _load_records_jsonl(path: Path) -> List[Dict[str, Any]]:
     return rows
 
 
+def _classify_failure_row(row: Dict[str, Any]) -> str:
+    compile_codes = [str(x) for x in row.get("compile_error_codes", []) if str(x)]
+    entry_codes = [str(x) for x in row.get("entry_error_codes", []) if str(x)]
+    all_codes = compile_codes + entry_codes
+
+    if any(code in {"E_CASE_SCHEMA", "E_INPUT", "E_SCHEMA", "E_FORBIDDEN"} for code in compile_codes):
+        return "INPUT"
+    if any(code in {"E_MODEL", "E_PARSE", "E_VALIDATE", "E_NONDETERMINISTIC", "E_UNSUPPORTED"} for code in compile_codes):
+        return "COMPILE"
+    if any(code in {"E_ENTRY_STOP", "E_ENTRY_PROTOCOL", "E_ENTRY_ARTIFACT_MISSING", "E_MISSING_COMPILED"} for code in entry_codes):
+        return "ENTRY"
+    if any(code in {"E_TIMEOUT", "E_ENTRY_SUBPROCESS", "E_ENTRY_RETURN_CODE", "E_ENTRY_EXCEPTION", "E_ARTIFACT_LOCK"} for code in entry_codes):
+        return "INFRA"
+    if any(code.startswith("E_RAG_COLLECT") or code.startswith("E_RAG_POLICY") for code in all_codes):
+        return "RAG"
+    if any(code.startswith("E_RAG") for code in all_codes):
+        return "RETRIEVE"
+    if any(code.startswith("E_ENTRY") for code in all_codes):
+        return "ENTRY"
+    if any(code.startswith("E_") for code in all_codes):
+        return "COMPILE"
+    return "INFRA"
+
+
 def _write_failure_digest(out_dir: Path, records: List[Dict[str, Any]]) -> None:
     failures: List[Dict[str, Any]] = []
     for row in records:
@@ -389,26 +476,49 @@ def _write_failure_digest(out_dir: Path, records: List[Dict[str, Any]]) -> None:
                 "compile_error_codes": row.get("compile_error_codes", []),
                 "entry_error_codes": row.get("entry_error_codes", []),
                 "entry_error_reason": row.get("entry_error_reason", ""),
+                "root_cause_class": _classify_failure_row(row),
                 "artifacts": row.get("artifacts", {}),
             }
         )
 
     failures = sorted(failures, key=lambda x: (x.get("index", 0), str(x.get("id", ""))))
+    class_counts: Dict[str, int] = {}
+    representatives: Dict[str, Dict[str, Any]] = {}
+    for row in failures:
+        cls = str(row.get("root_cause_class", "INFRA"))
+        class_counts[cls] = class_counts.get(cls, 0) + 1
+        if cls not in representatives:
+            representatives[cls] = {
+                "id": row.get("id", ""),
+                "index": row.get("index", 0),
+                "compile_error_codes": row.get("compile_error_codes", []),
+                "entry_error_codes": row.get("entry_error_codes", []),
+            }
+
     payload = {
         "schema": "IL_THREAD_RUNNER_V2_FAILURE_DIGEST_v1",
         "failure_count": len(failures),
+        "class_summary": dict(sorted(class_counts.items(), key=lambda kv: kv[0])),
+        "representative_cases": dict(sorted(representatives.items(), key=lambda kv: kv[0])),
         "failures": failures,
     }
     _write_json(out_dir / "failure_digest.json", payload)
 
     md_lines = ["# Failure Digest", "", f"- failure_count: `{len(failures)}`", ""]
+    if class_counts:
+        md_lines.append("## Class Summary")
+        md_lines.append("")
+        for cls in sorted(class_counts.keys()):
+            md_lines.append(f"- {cls}: `{class_counts[cls]}`")
+        md_lines.append("")
     if not failures:
         md_lines.append("- (no failures)")
     for row in failures:
         md_lines.append(
-            "- idx={idx} id={id} compile={compile} entry={entry} compile_codes={cc} entry_codes={ec} reason={reason}".format(
+            "- idx={idx} id={id} class={cls} compile={compile} entry={entry} compile_codes={cc} entry_codes={ec} reason={reason}".format(
                 idx=row.get("index", 0),
                 id=row.get("id", ""),
+                cls=row.get("root_cause_class", ""),
                 compile=row.get("compile_status", ""),
                 entry=row.get("entry_status", ""),
                 cc=",".join(row.get("compile_error_codes", [])),
@@ -445,6 +555,12 @@ def _build_summary(
     entry_error_count = sum(1 for r in records if r.get("entry_status") == "ERROR")
     entry_skip_count = sum(1 for r in records if r.get("entry_status") == "SKIP")
     retries_used_count = sum(max(0, int(r.get("entry_attempts", 0)) - 1) for r in records)
+    retry_final_reason_hist: Dict[str, int] = {}
+    for row in records:
+        reason = str(row.get("entry_error_reason", "")).strip()
+        if not reason:
+            continue
+        retry_final_reason_hist[reason] = retry_final_reason_hist.get(reason, 0) + 1
     return {
         "schema": SUMMARY_SCHEMA,
         "mode": mode,
@@ -469,6 +585,8 @@ def _build_summary(
         "entry_error_count": entry_error_count,
         "entry_skip_count": entry_skip_count,
         "retries_used_count": retries_used_count,
+        "retry_attempts_total": retries_used_count,
+        "retry_final_reason_histogram": dict(sorted(retry_final_reason_hist.items(), key=lambda kv: kv[0])),
         "error_count": compile_error_count + entry_error_count,
         "sha256_cases_jsonl": cases_jsonl_sha256,
     }
@@ -642,6 +760,32 @@ def _run_entry_subprocess(
     return 1, ["E_ENTRY_PROTOCOL"], "entry_missing_stop_marker"
 
 
+def _is_retriable_entry_error(codes: List[str]) -> bool:
+    if not codes:
+        return False
+    policy = {
+        "E_TIMEOUT": True,
+        "E_ENTRY_SUBPROCESS": True,
+        "E_ENTRY_RETURN_CODE": True,
+        "E_ENTRY_EXCEPTION": True,
+        "E_ENTRY_STOP": True,
+        "E_ENTRY_PROTOCOL": False,
+        "E_ENTRY_ARTIFACT_MISSING": False,
+        "E_MISSING_COMPILED": False,
+    }
+    first = str(codes[0])
+    return bool(policy.get(first, False))
+
+
+def _retry_backoff_sec(seed: int, case_id: str, attempt_index: int) -> float:
+    # deterministic pseudo-jitter to avoid synchronized retries across shards
+    jitter_seed = f"{seed}:{case_id}:{attempt_index}"
+    jitter_raw = int(hashlib.sha256(jitter_seed.encode("utf-8")).hexdigest()[:2], 16)
+    jitter = (jitter_raw % 10) / 1000.0
+    base = 0.05
+    return min(0.30, base * (2 ** max(0, attempt_index - 1)) + jitter)
+
+
 def _load_resume_records(out_dir: Path) -> List[Dict[str, Any]]:
     partial = out_dir / "cases.partial.jsonl"
     final = out_dir / "cases.jsonl"
@@ -701,6 +845,11 @@ def run_thread_runner(
         cases = load_cases(cases_path)
     except Exception as exc:
         log("ERROR", f"phase=input reason=load_cases_failed err={exc}")
+        return 1
+
+    lock_ok, lock_reason = _acquire_artifact_lock(out_dir)
+    if not lock_ok:
+        log("ERROR", f"phase=artifact_lock reason={lock_reason}")
         return 1
 
     seen_ids: Dict[str, int] = {}
@@ -854,15 +1003,26 @@ def run_thread_runner(
                             log("OK", f"phase=entry index={idx} id={case_id} status=OK attempts={attempt}")
                             break
 
-                        if attempt < total_attempts:
+                        retriable = _is_retriable_entry_error(entry_error_codes)
+                        if attempt < total_attempts and retriable:
+                            backoff_s = _retry_backoff_sec(seed=seed, case_id=case_id, attempt_index=attempt)
                             log(
                                 "SKIP",
                                 (
                                     f"phase=entry_retry index={idx} id={case_id} attempt={attempt} "
-                                    f"reason={entry_error_reason} next_attempt={attempt+1}"
+                                    f"reason={entry_error_reason} next_attempt={attempt+1} backoff_s={backoff_s:.3f}"
                                 ),
                             )
+                            time.sleep(backoff_s)
                             continue
+                        if attempt < total_attempts and not retriable:
+                            log(
+                                "SKIP",
+                                (
+                                    f"phase=entry_retry_blocked index={idx} id={case_id} attempt={attempt} "
+                                    f"reason={entry_error_reason} policy=non_retriable"
+                                ),
+                            )
 
                         entry_status = "ERROR"
                         stop = 1
@@ -873,6 +1033,7 @@ def run_thread_runner(
                                 f"codes={','.join(entry_error_codes)} reason={entry_error_reason}"
                             ),
                         )
+                        break
                 except Exception as exc:
                     entry_status = "ERROR"
                     entry_stop = 1
@@ -1000,6 +1161,7 @@ def run_thread_runner(
             f"quarantined={summary['quarantined_count']}"
         ),
     )
+    _release_artifact_lock(out_dir)
     return stop
 
 
