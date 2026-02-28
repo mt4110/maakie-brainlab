@@ -1,0 +1,5 @@
+{"doc_id":"p001","title":"Alpha Safe","text":"alpha release notes and deterministic checks","source":"docs/evidence/p001.md"}
+{"doc_id":"p002","title":"Alpha Internal","text":"alpha internal_only operator memo for session review","source":"docs/evidence/p002.md"}
+{"doc_id":"p003","title":"Alpha Secret","text":"alpha contains api_key=SECRET-123 for debug","source":"docs/evidence/p003.md"}
+{"doc_id":"p004","title":"","text":"12345 67890 24680","source":"docs/evidence/p004.md"}
+{"doc_id":"p005","title":"Alpha Long","text":"alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha alpha","source":"docs/evidence/p005.md"}

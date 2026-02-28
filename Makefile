@@ -2,7 +2,7 @@
 .PHONY: sat-collect sat-normalize sat-manifest sat-verify sat-gate sat-store sat-digest sat-index sat-run
 .PHONY: server-start server-stop server-status log ingest ask
 .PHONY: ai-smoke ai-verify
-.PHONY: s22-16-ship phase-ship ops-now s25-baseline-freeze s25-obs-summary s25-regression-safety s25-acceptance-wall s25-ml-experiment s25-rag-tuning s25-langchain-poc s26-provider-canary s26-medium-eval-wall s26-rollback-artifact s26-orchestration-core s26-regression-safety s26-acceptance-wall s26-reliability-report s26-evidence-index s26-release-readiness s26-closeout s27-provider-canary-ops s27-medium-eval-wall-v2 s27-release-readiness-schedule s27-incident-triage-pack s27-policy-drift-guard s27-reliability-soak s27-acceptance-wall-v2 s27-evidence-trend-index s27-slo-readiness s27-closeout s28-provider-canary-recovery s28-taxonomy-feedback-loop s28-readiness-notify s28-incident-triage-pack-v2 s28-policy-drift-guard-v2 s28-reliability-soak-v2 s28-acceptance-wall-v3 s28-evidence-trend-index-v3 s28-slo-readiness-v2 s28-closeout s29-canary-recovery-success-rate-slo s29-taxonomy-pipeline-integration s29-readiness-notify-multichannel s29-incident-triage-pack-v3 s29-policy-drift-guard-v3 s29-reliability-soak-v3 s29-acceptance-wall-v4 s29-evidence-trend-index-v4 s29-slo-readiness-v3 s29-closeout s30-task-reclassify s30-task-reclassify-apply s30-task-reclassify-apply-all s30-quality-burndown bench-il-compile tune-il-compile-prompt il-thread-smoke il-thread-replay-check verify-il-thread-v2 il-init-workspace il-fmt-check il-fmt-write il-lint il-doctor ilctl il-thread-merge bench-il-compile-diff s31-acceptance-wall-v5 s31-regression-safety-v2 s31-reliability-soak-v2 s31-policy-drift-guard s31-evidence-trend-index-v6 s31-closeout s31-handoff-pack
+.PHONY: s22-16-ship phase-ship ops-now s25-baseline-freeze s25-obs-summary s25-regression-safety s25-acceptance-wall s25-ml-experiment s25-rag-tuning s25-langchain-poc s26-provider-canary s26-medium-eval-wall s26-rollback-artifact s26-orchestration-core s26-regression-safety s26-acceptance-wall s26-reliability-report s26-evidence-index s26-release-readiness s26-closeout s27-provider-canary-ops s27-medium-eval-wall-v2 s27-release-readiness-schedule s27-incident-triage-pack s27-policy-drift-guard s27-reliability-soak s27-acceptance-wall-v2 s27-evidence-trend-index s27-slo-readiness s27-closeout s28-provider-canary-recovery s28-taxonomy-feedback-loop s28-readiness-notify s28-incident-triage-pack-v2 s28-policy-drift-guard-v2 s28-reliability-soak-v2 s28-acceptance-wall-v3 s28-evidence-trend-index-v3 s28-slo-readiness-v2 s28-closeout s29-canary-recovery-success-rate-slo s29-taxonomy-pipeline-integration s29-readiness-notify-multichannel s29-incident-triage-pack-v3 s29-policy-drift-guard-v3 s29-reliability-soak-v3 s29-acceptance-wall-v4 s29-evidence-trend-index-v4 s29-slo-readiness-v3 s29-closeout s30-task-reclassify s30-task-reclassify-apply s30-task-reclassify-apply-all s30-quality-burndown bench-il-compile tune-il-compile-prompt il-thread-smoke il-thread-replay-check verify-il-thread-v2 il-init-workspace il-fmt-check il-fmt-write il-lint il-doctor ilctl il-thread-merge bench-il-compile-diff s31-acceptance-wall-v5 s31-regression-safety-v2 s31-reliability-soak-v2 s31-policy-drift-guard s31-evidence-trend-index-v6 s31-closeout s31-handoff-pack s32-retrieval-eval-wall
 
 PY=.venv/bin/python
 PYENV=PYTHONPATH=./src:.
@@ -307,6 +307,9 @@ s31-closeout:
 
 s31-handoff-pack:
 	$(PYENV) $(PY) scripts/ops/s31_handoff_pack.py
+
+s32-retrieval-eval-wall:
+	$(PYENV) $(PY) scripts/ops/s32_retrieval_eval_wall.py
 
 bootstrap:
 	# S20-08: Canonical bootstrap via uv (using system python only to install uv)

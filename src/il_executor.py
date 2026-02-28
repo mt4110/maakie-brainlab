@@ -59,7 +59,16 @@ OPCODE_ARGS_SPEC: Dict[str, Dict[str, type]] = {
     "RETRIEVE": {"max_docs": int},
     "ANSWER": {"style": str, "max_sentences": int},
     "CITE": {"max_cites": int},
-    "COLLECT": {"source": str, "max_docs": int, "path": str},
+    "COLLECT": {
+        "source": str,
+        "max_docs": int,
+        "path": str,
+        "policy_filter": bool,
+        "policy_max_chars": int,
+        "policy_allow_langs_csv": str,
+        "policy_hard_denylist_csv": str,
+        "policy_soft_warnlist_csv": str,
+    },
     "NORMALIZE": {"lowercase": bool},
     "INDEX": {"token_min_len": int},
     "SEARCH_RAG": {"max_docs": int},
@@ -72,6 +81,25 @@ DEFAULT_BUDGET = {
     "max_retrieved_docs": 50,
     "max_cites": 50,
 }
+
+DEFAULT_COLLECT_POLICY_ALLOW_LANGS = ("ja", "en")
+DEFAULT_COLLECT_POLICY_MAX_CHARS = 12000
+DEFAULT_COLLECT_POLICY_HARD_DENYLIST = (
+    "password",
+    "passwd",
+    "secret",
+    "api_key",
+    "access_token",
+    "private_key",
+    "authorization",
+    "bearer",
+)
+DEFAULT_COLLECT_POLICY_SOFT_WARNLIST = (
+    "credential",
+    "cookie",
+    "session",
+    "internal_only",
+)
 
 
 def _safe_int(value: Any, default: int) -> int:
@@ -168,6 +196,123 @@ def _extract_snippet(doc: Dict[str, Any], terms: List[str], max_chars: int = 180
             min_idx = idx
     start = max(0, (min_idx or 0) - 40)
     return payload[start : start + max_chars].strip()
+
+
+def _split_csv(value: str) -> List[str]:
+    out: List[str] = []
+    seen = set()
+    for raw in str(value or "").split(","):
+        token = raw.strip().lower()
+        if not token or token in seen:
+            continue
+        seen.add(token)
+        out.append(token)
+    return out
+
+
+def _detect_lang_tag(text: str) -> str:
+    payload = str(text or "")
+    if not payload.strip():
+        return "und"
+    ja_count = len(re.findall(r"[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]", payload))
+    en_count = len(re.findall(r"[A-Za-z]", payload))
+    if ja_count == 0 and en_count == 0:
+        return "und"
+    if ja_count >= en_count and ja_count > 0:
+        return "ja"
+    if en_count > 0:
+        return "en"
+    return "und"
+
+
+def _resolve_collect_policy(args: Dict[str, Any]) -> Dict[str, Any]:
+    allow_langs = _split_csv(args.get("policy_allow_langs_csv", ",".join(DEFAULT_COLLECT_POLICY_ALLOW_LANGS)))
+    if not allow_langs:
+        allow_langs = list(DEFAULT_COLLECT_POLICY_ALLOW_LANGS)
+
+    hard_denylist = _split_csv(
+        args.get("policy_hard_denylist_csv", ",".join(DEFAULT_COLLECT_POLICY_HARD_DENYLIST))
+    )
+    soft_warnlist = _split_csv(
+        args.get("policy_soft_warnlist_csv", ",".join(DEFAULT_COLLECT_POLICY_SOFT_WARNLIST))
+    )
+    max_chars = int(args.get("policy_max_chars", DEFAULT_COLLECT_POLICY_MAX_CHARS))
+    max_chars = max(1, max_chars)
+
+    return {
+        "allow_langs": allow_langs,
+        "max_chars": max_chars,
+        "hard_denylist": hard_denylist,
+        "soft_warnlist": soft_warnlist,
+    }
+
+
+def _apply_collect_policy(docs: List[Dict[str, Any]], args: Dict[str, Any]) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+    policy = _resolve_collect_policy(args)
+    allow_langs = set(policy["allow_langs"])
+    max_chars = int(policy["max_chars"])
+    hard_denylist = list(policy["hard_denylist"])
+    soft_warnlist = list(policy["soft_warnlist"])
+
+    accepted: List[Dict[str, Any]] = []
+    rejected_count_by_code: Dict[str, int] = {}
+    soft_warn_hits: List[Dict[str, Any]] = []
+    rejected_samples: List[Dict[str, Any]] = []
+
+    for doc in docs:
+        doc_id = str(doc.get("doc_id", ""))
+        payload = _doc_text(doc)
+        payload_lower = payload.lower()
+        lang = _detect_lang_tag(payload)
+
+        reasons: List[Tuple[str, str]] = []
+        if len(payload) > max_chars:
+            reasons.append(("E_RAG_POLICY_SIZE", f"chars={len(payload)} max_chars={max_chars}"))
+        if allow_langs and lang not in allow_langs:
+            reasons.append(("E_RAG_POLICY_LANG", f"lang={lang} allowed={sorted(allow_langs)}"))
+
+        hard_hits: List[str] = []
+        for token in hard_denylist:
+            if token and token in payload_lower:
+                hard_hits.append(token)
+        if hard_hits:
+            reasons.append(("E_RAG_POLICY_DENYLIST", f"matched={','.join(hard_hits[:3])}"))
+
+        soft_hits = [token for token in soft_warnlist if token and token in payload_lower]
+        if reasons:
+            unique_codes = sorted({code for code, _ in reasons})
+            for code in unique_codes:
+                rejected_count_by_code[code] = rejected_count_by_code.get(code, 0) + 1
+            rejected_samples.append(
+                {
+                    "doc_id": doc_id,
+                    "lang": lang,
+                    "codes": unique_codes,
+                }
+            )
+            continue
+
+        accepted_doc = dict(doc)
+        accepted_doc["_policy"] = {"lang": lang, "soft_warn_hits": soft_hits}
+        accepted.append(accepted_doc)
+        if soft_hits:
+            soft_warn_hits.append({"doc_id": doc_id, "hits": soft_hits[:5]})
+
+    summary = {
+        "policy_enabled": True,
+        "allow_langs": sorted(allow_langs),
+        "max_chars": max_chars,
+        "hard_denylist_size": len(hard_denylist),
+        "soft_warnlist_size": len(soft_warnlist),
+        "accepted_count": len(accepted),
+        "rejected_count": len(docs) - len(accepted),
+        "warn_count": len(soft_warn_hits),
+        "reject_reason_codes": sorted(rejected_count_by_code.keys()),
+        "reject_reason_counts": dict(sorted(rejected_count_by_code.items(), key=lambda kv: kv[0])),
+        "warn_samples": soft_warn_hits[:5],
+        "rejected_samples": rejected_samples[:5],
+    }
+    return accepted, summary
 
 
 def _load_docs_from_jsonl(path: Path) -> Tuple[List[Dict[str, Any]], str]:
@@ -523,18 +668,54 @@ def _handle_collect(_il: dict, ctx: dict, args: dict) -> dict:
     max_docs = min(max(1, max_docs), ctx["budget"]["max_retrieved_docs"])
 
     fixture_db = ctx.get("fixture_db")
+    policy_enabled = bool(args.get("policy_filter", True))
+
+    def _apply_policy_and_finalize(loaded_docs: List[Dict[str, Any]], source_label: str, in_summary: Dict[str, Any]) -> dict:
+        docs = list(loaded_docs)
+        policy_summary: Dict[str, Any] = {
+            "policy_enabled": False,
+            "accepted_count": len(docs),
+            "rejected_count": 0,
+            "warn_count": 0,
+            "reject_reason_codes": [],
+            "reject_reason_counts": {},
+            "warn_samples": [],
+            "rejected_samples": [],
+        }
+        if policy_enabled:
+            docs, policy_summary = _apply_collect_policy(docs, args)
+
+        docs = docs[:max_docs]
+        ctx["rag_docs_raw"] = docs
+
+        reason = f"collected docs from {source_label}"
+        if not docs:
+            if policy_enabled and policy_summary.get("reject_reason_codes"):
+                primary_code = str(policy_summary.get("reject_reason_codes", [])[0])
+                reason = f"{primary_code}: no docs after policy filter"
+            else:
+                reason = f"E_RAG_COLLECT_EMPTY: no docs loaded from {source_label}"
+        elif policy_enabled and int(policy_summary.get("rejected_count", 0)) > 0:
+            reason = (
+                f"collected docs from {source_label} "
+                f"(policy accepted={policy_summary.get('accepted_count', 0)} "
+                f"rejected={policy_summary.get('rejected_count', 0)})"
+            )
+
+        out_summary = {"collected_count": len(docs), "policy": policy_summary}
+        return {
+            "status": "OK" if docs else "SKIP",
+            "reason": reason,
+            "in_summary": in_summary,
+            "out_summary": out_summary,
+        }
+
     if source == "fixture":
         docs = []
         if isinstance(fixture_db, dict) and isinstance(fixture_db.get("docs"), list):
             docs = [d for d in fixture_db.get("docs", []) if isinstance(d, dict)]
         docs = sorted(docs, key=lambda d: str(d.get("doc_id", "")))[:max_docs]
-        ctx["rag_docs_raw"] = docs
-        return {
-            "status": "OK" if docs else "SKIP",
-            "reason": "collected docs from fixture" if docs else "E_RAG_COLLECT_EMPTY: no fixture docs",
-            "in_summary": {"source": source},
-            "out_summary": {"collected_count": len(docs)},
-        }
+        return _apply_policy_and_finalize(docs, "fixture", {"source": source, "policy_filter": policy_enabled})
 
     if source in {"file_jsonl", "rss"}:
         raw_path = str(args.get("path", "")).strip()
@@ -573,18 +754,11 @@ def _handle_collect(_il: dict, ctx: dict, args: dict) -> dict:
                 "out_summary": {},
             }
 
-        docs = loaded_docs[:max_docs]
-        ctx["rag_docs_raw"] = docs
-        return {
-            "status": "OK" if docs else "SKIP",
-            "reason": (
-                f"collected docs from {source}"
-                if docs
-                else f"E_RAG_COLLECT_EMPTY: no docs loaded from {source}"
-            ),
-            "in_summary": {"source": source, "path": raw_path},
-            "out_summary": {"collected_count": len(docs)},
-        }
+        return _apply_policy_and_finalize(
+            loaded_docs,
+            source,
+            {"source": source, "path": raw_path, "policy_filter": policy_enabled},
+        )
 
     return {
         "status": "ERROR",

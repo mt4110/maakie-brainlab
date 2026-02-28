@@ -84,7 +84,7 @@ executor は「嘘をつかない」ことだけに全振りする。
 
 ---
 
-## Opcodes (P2/S31 v1)
+## Opcodes (P2/S32 v1)
 
 | Opcode | P2 Behavior |
 |---|---|
@@ -93,6 +93,18 @@ executor は「嘘をつかない」ことだけに全振りする。
 | `ANSWER` | retrieved docs から deterministic answer を生成。docsなしなら SKIP |
 | `CITE` | retrieved docs から cite + provenance を生成。docs なければ SKIP |
 | `COLLECT/NORMALIZE/INDEX/SEARCH_RAG/CITE_RAG` | deterministic RAG bridge（`COLLECT`: fixture/file_jsonl/rss） |
+
+### `COLLECT` Policy Filter (S32-04)
+
+- 既定で policy filter が有効（`policy_filter=true`）。
+- 既定パラメータ（A: バランス運用）:
+  - `allow_langs`: `ja,en`
+  - `max_chars`: `12000`
+  - `hard_denylist`: `password,passwd,secret,api_key,access_token,private_key,authorization,bearer`
+  - `soft_warnlist`: `credential,cookie,session,internal_only`
+- hard違反は reject（`E_RAG_POLICY_DENYLIST`, `E_RAG_POLICY_SIZE`, `E_RAG_POLICY_LANG`）。
+- soft一致は reject しない（`warn_count` と samples のみ記録）。
+- `COLLECT` の `out_summary.policy` に `accepted/rejected/warn` 集計が記録される。
 
 ## Opcode Args Guard
 
