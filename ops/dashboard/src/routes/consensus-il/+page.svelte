@@ -168,12 +168,22 @@
 			</label>
 		</div>
 		<div class="actions">
-			<button class="btn-primary" disabled={running} onclick={runConsensus}
+			<button
+				class="btn-primary"
+				data-testid="run-consensus"
+				disabled={running}
+				onclick={runConsensus}
+			>
 				>{running
 					? tx('実行中...', 'Running...')
 					: tx('Consensus を実行', 'Run Consensus')}</button
 			>
-			<button class="btn-ghost" disabled={running} onclick={refreshHistory}
+			<button
+				class="btn-ghost"
+				data-testid="refresh-consensus-history"
+				disabled={running}
+				onclick={refreshHistory}
+			>
 				>{tx('履歴を更新', 'Refresh History')}</button
 			>
 		</div>

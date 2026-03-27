@@ -1,3 +1,8 @@
+function ensureInteractive() {
+	cy.wait(1200);
+	cy.get('[data-testid="run-consensus"]').should('be.visible').and('not.be.disabled');
+}
+
 describe('consensus mocked run', () => {
 	it('submits form and renders mocked consensus result/history', () => {
 		const mockPrompt = 'モックで履歴登録テスト';
@@ -79,10 +84,9 @@ describe('consensus mocked run', () => {
 		}).as('consensusHistory');
 
 		cy.visit('/consensus-il');
+		ensureInteractive();
 		cy.get('textarea').type('{selectall}{backspace}').type(mockPrompt);
-		cy.get('button')
-			.contains(/Run Consensus|Consensus を実行/)
-			.click();
+		cy.get('[data-testid="run-consensus"]').click({ force: true });
 
 		cy.wait('@consensusRun');
 		cy.wait('@consensusHistory');
