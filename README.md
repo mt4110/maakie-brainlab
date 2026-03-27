@@ -33,19 +33,55 @@ graph TD
 
 プロジェクトは多数のマイルストーン（S21系、S22系など）に分かれて進行しており、運用基盤の大部分が完了しています。現状（2026年2月）のステータスは以下の通りです：
 
-**完了 (マージ済み)**: S21-02, S21-03, S21-04, S21-05, S21-06, S21-07, S22-01, S22-03, S22-04, S22-05, S22-06, S22-07, S22-08, S22-09, S22-10, S22-11, S22-12, S22-13, S22-14 (IL入口単一化)
+**完了 (マージ済み)**: S21-02, S21-03, S21-04, S21-05, S21-06, S21-07, S22-01, S22-03, S22-04, S22-05, S22-06, S22-07, S22-08,
+S22-09, S22-10, S22-11, S22-12, S22-13, S22-14 (IL入口単一化)
 
 **進行中 / 次のタスク**: AMBI-01, S21-01, S22-02 (レビュー中)
 
-
 ## クイックスタート
 
-システムの真実性を検証する（Gate-1）手順は以下の通りです：
+### 1) ダッシュボードを使うだけ（`make gate1` は不要）
 
-1. **llama-server の起動**（LLM推論用）
-2. **インデックスのビルド**
-3. **検証の実行**
+`make gate1` はCI向け検証です。UI確認だけなら以下の2ターミナルで十分です。
 
+```bash
+# ターミナルA: ローカルLLMサーバー起動（起動しっぱなし）
+./infra/run-llama-server.sh /Users/takemuramasaki/brainvault/maakie-brainvault/models/Qwen2.5-7B-Instruct-Q4_K_M.gguf
+```
+
+```bash
+# ターミナルB: ダッシュボード起動
+cd ops/dashboard
+cp .env.example .env  # 初回のみ
+export OPENAI_API_BASE=http://127.0.0.1:11434/v1
+npm install
+npm run dev
+```
+
+ブラウザで `http://127.0.0.1:3033` を開いてください。
+
+### 2) `make gate1` を実行する場合（検証フロー）
+
+`gate1` は以下4つが「外部ストレージへのシンボリックリンク」であることを必須にしています。
+
+- `data`
+- `index`
+- `logs`
+- `models`
+
+また、`gate1` 実行には `go` コマンドが必要です（`make test` 内で `go test ./...` を実行するため）。
+`mise` を使う場合は `eval "$(mise activate zsh)"` 後に実行するか、`mise exec -- make gate1` を使用してください。
+
+現在のエラー `[FAIL] 'data' must be a symlink to external storage.` は、この前提未充足によるものです。
+
+```bash
+# 例: brainvault を外部ストレージとしてリンク
+mv data data.local.bak  # 既存ディレクトリ退避
+ln -sfn /Users/takemuramasaki/brainvault/maakie-brainvault/data data
+ln -sfn /Users/takemuramasaki/brainvault/maakie-brainvault/index index
+ln -sfn /Users/takemuramasaki/brainvault/maakie-brainvault/logs logs
+ln -sfn /Users/takemuramasaki/brainvault/maakie-brainvault/models models
+```
 
 ```bash
 # 通常モード (評価を実行)
@@ -54,8 +90,6 @@ make gate1
 # 検証専用モード (既存の結果をチェックのみ)
 bash ops/gate1.sh --verify-only
 ```
-
-*(配布されたレビューパック内では、`./VERIFY.sh` を実行することで整合性と Gate-1 のパスを確認できます。)*
 
 ## ライセンス
 

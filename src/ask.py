@@ -4,6 +4,7 @@ import os
 import re
 import sqlite3
 from pathlib import Path
+from typing import Any
 
 import requests
 
@@ -177,15 +178,85 @@ def to_fts_or_query(terms: list[str]) -> str:
     return " OR ".join(f'"{t}"' for t in safe)
 
 
+def _dedupe_keep_order(items: list[str]) -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for item in items:
+        if item in seen:
+            continue
+        seen.add(item)
+        out.append(item)
+    return out
+
+
+def chat_completion_url_candidates(base_url: str) -> list[str]:
+    raw = (base_url or "").strip().rstrip("/")
+    if not raw:
+        raw = "http://127.0.0.1:11434/v1"
+
+    if raw.endswith("/chat/completions"):
+        raw = raw[: -len("/chat/completions")].rstrip("/")
+
+    candidates = [f"{raw}/chat/completions"]
+    if raw.endswith("/v1"):
+        root = raw[: -len("/v1")].rstrip("/")
+        if root:
+            candidates.append(f"{root}/chat/completions")
+    else:
+        candidates.append(f"{raw}/v1/chat/completions")
+
+    return _dedupe_keep_order([c for c in candidates if c.strip()])
+
+
+def _truncate_line(text: str, limit: int = 220) -> str:
+    one = " ".join((text or "").split())
+    if len(one) <= limit:
+        return one
+    return one[:limit].rstrip() + "..."
+
+
 def chat_openai_compat(
     base_url: str, model: str, messages, temperature: float = 0.2
 ) -> str:
-    url = base_url.rstrip("/") + "/chat/completions"
     payload = {"model": model, "messages": messages, "temperature": temperature}
     headers = {"Authorization": f"Bearer {os.getenv('OPENAI_API_KEY', 'dummy')}"}
-    r = requests.post(url, json=payload, headers=headers, timeout=180)
-    r.raise_for_status()
-    return r.json()["choices"][0]["message"]["content"]
+    attempts: list[str] = []
+
+    for url in chat_completion_url_candidates(base_url):
+        try:
+            r = requests.post(url, json=payload, headers=headers, timeout=180)
+        except requests.RequestException as exc:
+            attempts.append(f"{url} -> network_error: {_truncate_line(str(exc), 140)}")
+            continue
+
+        if r.status_code == 404:
+            attempts.append(f"{url} -> 404")
+            continue
+
+        try:
+            r.raise_for_status()
+        except requests.HTTPError as exc:
+            detail = _truncate_line(r.text, 180)
+            raise RuntimeError(
+                f"local model api error status={r.status_code} url={url} detail={detail}"
+            ) from exc
+
+        data: dict[str, Any] = r.json()
+        content = (
+            (data.get("choices") or [{}])[0]
+            .get("message", {})
+            .get("content", "")
+        )
+        if isinstance(content, str) and content.strip():
+            return content
+        raise RuntimeError(f"local model api returned empty content: {url}")
+
+    attempted = "; ".join(attempts) if attempts else "(no attempts)"
+    raise RuntimeError(
+        "openai-compatible endpoint not found. "
+        f"OPENAI_API_BASE={base_url or '(empty)'} tried=[{attempted}]. "
+        "Set OPENAI_API_BASE to your LLM server (e.g. http://127.0.0.1:11434/v1)."
+    )
 
 
 def main() -> None:
@@ -276,10 +347,30 @@ def main() -> None:
         {"role": "user", "content": user_prompt},
     ]
 
-    base_url = os.getenv("OPENAI_API_BASE", "http://127.0.0.1:8080/v1")
+    base_url = os.getenv("OPENAI_API_BASE", "http://127.0.0.1:11434/v1")
     model = os.getenv("LOCAL_GGUF_MODEL", "Qwen2.5-7B-Instruct-Q4_K_M.gguf")
-
-    out = chat_openai_compat(base_url, model, messages, temperature=args.temperature)
+    try:
+        out = chat_openai_compat(base_url, model, messages, temperature=args.temperature)
+    except Exception as exc:
+        refs = "\n".join(f"- {s}" for s in sources) if sources else "- 不明（参照なし）"
+        out = "\n".join(
+            [
+                "結論:",
+                "- ローカルモデル API に接続できず、回答を生成できませんでした。",
+                "",
+                "根拠:",
+                f"- {_truncate_line(str(exc), 220)}",
+                "",
+                "参照:",
+                refs,
+                "",
+                "不確実性:",
+                "- OPENAI_API_BASE が LLM サーバーを指していない可能性があります。",
+                "- 例: http://127.0.0.1:11434/v1",
+            ]
+        )
+        print(normalize_rag_blocks(out))
+        return
 
     if ("参照:" not in out) and ("sources" not in out.lower()):
         out = out.rstrip() + "\n\n参照:\n" + "\n".join(f"- {s}" for s in sources) + "\n"

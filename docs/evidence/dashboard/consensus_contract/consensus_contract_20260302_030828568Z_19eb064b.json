@@ -1,0 +1,53 @@
+{
+  "schema_version": "consensus_contract.v1",
+  "captured_at_utc": "2026-03-02T03:08:28.568Z",
+  "status": "WARN",
+  "summary": {
+    "status": "WARN",
+    "errors": [
+      "api: guard failed (empty output or execution failure)",
+      "contract: evidence refs are empty",
+      "contract: one or more guards failed"
+    ],
+    "contract": {
+      "minAgents": 2,
+      "requiredEvidence": true,
+      "requiredGuards": true
+    },
+    "passAgents": 2,
+    "activeAgents": 3,
+    "evidenceRefCount": 0
+  },
+  "record_id": "19eb064b-96a4-4dc1-b9d0-9efcc1a2b8f2",
+  "run_path": "docs/evidence/dashboard/consensus_contract/consensus_contract_20260302_030828568Z_19eb064b.json",
+  "prompt_preview": "test",
+  "timeline_ms": {
+    "total": 92,
+    "local": 92,
+    "cli": 51,
+    "api": 8
+  },
+  "agents": [
+    {
+      "agent": "local",
+      "status": "PASS",
+      "duration_ms": 92,
+      "guard_passed": true,
+      "evidence_ref_count": 0
+    },
+    {
+      "agent": "cli",
+      "status": "PASS",
+      "duration_ms": 51,
+      "guard_passed": true,
+      "evidence_ref_count": 0
+    },
+    {
+      "agent": "api",
+      "status": "FAIL",
+      "duration_ms": 8,
+      "guard_passed": false,
+      "evidence_ref_count": 0
+    }
+  ]
+}

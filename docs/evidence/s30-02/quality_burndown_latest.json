@@ -3,7 +3,7 @@
     "json": "quality_burndown_latest.json",
     "md": "quality_burndown_latest.md"
   },
-  "captured_at_utc": "2026-02-27T13:59:27Z",
+  "captured_at_utc": "2026-02-28T09:50:13Z",
   "checks": [
     {
       "bucket": "waiver_exit",
@@ -213,8 +213,8 @@
     "waived_hard_count": 0
   },
   "git": {
-    "branch": "ops/S30-1-S30-900",
-    "head": "eb11d99e73e0ea59ecc59aaa2c776cca1825a752"
+    "branch": "ops/dashboardV1",
+    "head": "c211b3df87aa81e7113449dbba2725345f32c39b"
   },
   "inputs": {
     "canary_json": "docs/evidence/s29-01/canary_recovery_success_rate_slo_latest.json",

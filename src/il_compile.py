@@ -17,7 +17,7 @@ PROMPT_TEMPLATE_IDS = {
 }
 DEFAULT_MODEL = "rule_based_v1"
 DEFAULT_PROVIDER = "rule_based"
-DEFAULT_LOCAL_LLM_API_BASE = "http://127.0.0.1:8080/v1"
+DEFAULT_LOCAL_LLM_API_BASE = "http://127.0.0.1:11434/v1"
 DEFAULT_DETERMINISM = {
     "temperature": 0.0,
     "top_p": 1.0,
@@ -921,16 +921,41 @@ def _call_local_llm_default(prompt_text: str, model: str, determinism: Dict[str,
     headers = {"Content-Type": "application/json"}
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
-    url = f"{api_base}/chat/completions"
+    def _chat_completion_urls(base: str) -> List[str]:
+        src = (base or "").rstrip("/")
+        if not src:
+            src = DEFAULT_LOCAL_LLM_API_BASE
+        if src.endswith("/chat/completions"):
+            src = src[: -len("/chat/completions")].rstrip("/")
+        rows = [f"{src}/chat/completions"]
+        if src.endswith("/v1"):
+            root = src[: -len("/v1")].rstrip("/")
+            if root:
+                rows.append(f"{root}/chat/completions")
+        else:
+            rows.append(f"{src}/v1/chat/completions")
+        uniq: List[str] = []
+        for item in rows:
+            if item and item not in uniq:
+                uniq.append(item)
+        return uniq
 
     # Prefer requests when available.
     try:
         import requests  # type: ignore
 
-        resp = requests.post(url, json=payload, headers=headers, timeout=timeout_s)
-        resp.raise_for_status()
-        data = resp.json()
-        return data["choices"][0]["message"]["content"]
+        attempts: List[str] = []
+        for url in _chat_completion_urls(api_base):
+            resp = requests.post(url, json=payload, headers=headers, timeout=timeout_s)
+            if resp.status_code == 404:
+                attempts.append(f"{url}:404")
+                continue
+            resp.raise_for_status()
+            data = resp.json()
+            return data["choices"][0]["message"]["content"]
+        raise RuntimeError(
+            f"local llm endpoint not found for api_base={api_base}; attempts={', '.join(attempts) or 'none'}"
+        )
     except ModuleNotFoundError:
         pass
 
@@ -940,11 +965,19 @@ def _call_local_llm_default(prompt_text: str, model: str, determinism: Dict[str,
         from urllib import request as urllib_request
 
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
-        req = urllib_request.Request(url, data=body, headers=headers, method="POST")
-        with urllib_request.urlopen(req, timeout=timeout_s) as resp:  # nosec B310: URL from local config
-            raw = resp.read().decode("utf-8")
-        data = json.loads(raw)
-        return data["choices"][0]["message"]["content"]
+        for url in _chat_completion_urls(api_base):
+            req = urllib_request.Request(url, data=body, headers=headers, method="POST")
+            try:
+                with urllib_request.urlopen(req, timeout=timeout_s) as resp:  # nosec B310: URL from local config
+                    raw = resp.read().decode("utf-8")
+                data = json.loads(raw)
+                return data["choices"][0]["message"]["content"]
+            except urllib_error.HTTPError as exc:
+                if exc.code == 404:
+                    continue
+                detail = exc.read().decode("utf-8", errors="replace")
+                raise RuntimeError(f"local llm http_error status={exc.code} body={detail[:200]}") from exc
+        raise RuntimeError(f"local llm endpoint not found for api_base={api_base}")
     except urllib_error.HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="replace")
         raise RuntimeError(f"local llm http_error status={exc.code} body={detail[:200]}") from exc

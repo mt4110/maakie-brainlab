@@ -1,2 +1,0 @@
-{"case_id":"c001","query":"RAGとは何ですか？","expectation":{"must_answer":true,"must_cite":true,"keywords":["Retrieval-Augmented Generation","検索拡張生成"]},"tags":["basic","def"],"notes":"基本定義"}
-{"case_id":"c002","query":"存在しない用語「ホゲホゲふがふが」について教えて","expectation":{"must_answer":false,"must_cite":false},"tags":["negative","hallucination-check"],"notes":"未知の用語には答えない（拒否する）べき"}

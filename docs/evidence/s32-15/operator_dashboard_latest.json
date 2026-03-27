@@ -1,0 +1,23 @@
+{
+  "schema": "S32_OPERATOR_DASHBOARD_V1",
+  "captured_at_utc": "2026-02-28T09:50:14Z",
+  "status": "PASS",
+  "run_dir": "/Users/takemuramasaki/dev/maakie-brainlab/.local/obs/il_thread_runner_v2_suite_20260228T085030Z/thread_smoke_out/run_mode",
+  "metrics": {
+    "throughput_cases_per_sec": 2.0,
+    "success_rate": 1.0,
+    "skip_breakdown": {
+      "compile_skip_count": 0,
+      "entry_skip_count": 0
+    },
+    "retry_rate": 0.0,
+    "p95_latency_ms": 0.0
+  },
+  "counts": {
+    "total_cases": 2,
+    "success_numerator": 2,
+    "retries_used_count": 0,
+    "latency_sample_count": 2
+  },
+  "reasons": []
+}

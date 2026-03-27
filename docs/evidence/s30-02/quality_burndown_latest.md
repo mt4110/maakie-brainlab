@@ -1,8 +1,8 @@
 # S30-02 Quality Burndown (Latest)
 
-- CapturedAtUTC: `2026-02-27T13:59:27Z`
-- Branch: `ops/S30-1-S30-900`
-- HeadSHA: `eb11d99e73e0ea59ecc59aaa2c776cca1825a752`
+- CapturedAtUTC: `2026-02-28T09:50:13Z`
+- Branch: `ops/dashboardV1`
+- HeadSHA: `c211b3df87aa81e7113449dbba2725345f32c39b`
 
 ## Summary
 
