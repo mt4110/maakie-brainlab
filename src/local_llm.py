@@ -25,6 +25,28 @@ except Exception:
 __all__ = ["LocalLlamaCppLLM", "ChatMessage", "ChatResponse", "MessageRole"]
 
 
+def _chat_completion_candidates(api_base: str) -> list[str]:
+    base = (api_base or "").rstrip("/")
+    if not base:
+        base = "http://127.0.0.1:11434/v1"
+    if base.endswith("/chat/completions"):
+        base = base[: -len("/chat/completions")].rstrip("/")
+
+    candidates = [f"{base}/chat/completions"]
+    if base.endswith("/v1"):
+        root = base[: -len("/v1")].rstrip("/")
+        if root:
+            candidates.append(f"{root}/chat/completions")
+    else:
+        candidates.append(f"{base}/v1/chat/completions")
+
+    uniq: list[str] = []
+    for item in candidates:
+        if item and item not in uniq:
+            uniq.append(item)
+    return uniq
+
+
 class LocalLlamaCppLLM(CustomLLM):
     """
     Minimal OpenAI-compatible chat client for llama.cpp server.
@@ -67,8 +89,6 @@ class LocalLlamaCppLLM(CustomLLM):
         )
 
     def chat(self, messages: List[ChatMessage], **kwargs: Any) -> ChatResponse:
-        url = f"{self.api_base}/chat/completions"
-
         payload: dict[str, Any] = {
             "model": self.model,
             "temperature": self.temperature,
@@ -88,13 +108,21 @@ class LocalLlamaCppLLM(CustomLLM):
         # llama.cpp は通常認証しないが、クライアント側が要求することがあるのでダミーでも送る
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
+        attempts: list[str] = []
+        for url in _chat_completion_candidates(self.api_base):
+            r = requests.post(url, json=payload, headers=headers, timeout=self.timeout_s)
+            if r.status_code == 404:
+                attempts.append(f"{url}:404")
+                continue
+            r.raise_for_status()
+            data = r.json()
+            content = data["choices"][0]["message"]["content"]
+            return ChatResponse(message=ChatMessage(role=MessageRole.ASSISTANT, content=content))
 
-        r = requests.post(url, json=payload, headers=headers, timeout=self.timeout_s)
-        r.raise_for_status()
-        data = r.json()
-
-        content = data["choices"][0]["message"]["content"]
-        return ChatResponse(message=ChatMessage(role=MessageRole.ASSISTANT, content=content))
+        attempts_text = ", ".join(attempts) if attempts else "no_attempts"
+        raise RuntimeError(
+            f"openai-compatible chat endpoint not found for api_base={self.api_base}; attempts={attempts_text}"
+        )
 
     def complete(self, prompt: str, **kwargs: Any) -> CompletionResponse:
         resp = self.chat([ChatMessage(role=MessageRole.USER, content=prompt)], **kwargs)

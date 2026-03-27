@@ -652,7 +652,7 @@ def main() -> None:
     evidence_path = evidence_dir / f"eval_{mode}_{timestamp}.jsonl"
 
     # --- Pre-flight Check ---
-    base_url = os.getenv("OPENAI_API_BASE", "http://127.0.0.1:8080/v1")
+    base_url = os.getenv("OPENAI_API_BASE", "http://127.0.0.1:11434/v1")
     if provider == "real":
         pf = check_server_status(base_url)
         model_id = pf["model_id"]
