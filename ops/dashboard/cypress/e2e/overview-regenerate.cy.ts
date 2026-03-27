@@ -7,6 +7,15 @@ function mockOverview() {
 	};
 }
 
+function ensureInteractive() {
+	cy.wait(1200);
+	cy.get('[data-testid="reload-overview"]')
+		.should('be.visible')
+		.and('not.be.disabled')
+		.click({ force: true });
+	cy.wait('@overview');
+}
+
 describe('overview regenerate actions', () => {
 	it('runs rag regenerate and shows progress/result', () => {
 		cy.intercept('GET', '**/api/dashboard/overview*', {
@@ -36,9 +45,10 @@ describe('overview regenerate actions', () => {
 		}).as('runRag');
 
 		cy.visit('/');
-		cy.wait(200);
+		ensureInteractive();
 		cy.get('[data-testid="regen-rag"]')
 			.should('be.visible')
+			.and('not.be.disabled')
 			.scrollIntoView()
 			.click({ force: true });
 
@@ -79,9 +89,10 @@ describe('overview regenerate actions', () => {
 		}).as('runMl');
 
 		cy.visit('/');
-		cy.wait(200);
+		ensureInteractive();
 		cy.get('[data-testid="regen-ml"]')
 			.should('be.visible')
+			.and('not.be.disabled')
 			.scrollIntoView()
 			.click({ force: true });
 
