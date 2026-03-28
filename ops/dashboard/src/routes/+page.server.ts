@@ -5,6 +5,7 @@ export async function load() {
 	return {
 		sources: sourceState.items,
 		sourcesDegraded: sourceState.degraded,
-		sourcesMessage: sourceState.message
+		sourcesMessageJa: sourceState.messageJa,
+		sourcesMessageEn: sourceState.messageEn
 	};
 }

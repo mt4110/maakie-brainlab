@@ -74,7 +74,8 @@ interface ChatRunLogRecord {
 export interface RagSourceReadOnlyResult {
 	items: RagSourceItem[];
 	degraded: boolean;
-	message: string | null;
+	messageJa: string | null;
+	messageEn: string | null;
 }
 
 function trimOutput(text: string): string {
@@ -484,7 +485,8 @@ export async function listRagSourcesReadOnlyFromPaths(paths: {
 		return {
 			items: readLegacyRagSourcesFileFromPath(paths.legacyPath),
 			degraded: false,
-			message: null
+			messageJa: null,
+			messageEn: null
 		};
 	}
 
@@ -498,7 +500,8 @@ export async function listRagSourcesReadOnlyFromPaths(paths: {
 			return {
 				items: dbItems,
 				degraded: false,
-				message: null
+				messageJa: null,
+				messageEn: null
 			};
 		} finally {
 			db.close();
@@ -508,10 +511,14 @@ export async function listRagSourcesReadOnlyFromPaths(paths: {
 		return {
 			items: fallback,
 			degraded: true,
-			message:
+			messageJa:
 				fallback.length > 0
-					? 'Could not read the main storage for the documents list, so a previously saved simplified list is being shown. / 資料一覧の保存領域を直接読めなかったため、保存済みの簡易一覧を表示しています。'
-					: 'Could not read the main storage for the documents list, so an empty list is being shown for now. / 資料一覧の保存領域を読めなかったため、現在は空の一覧を表示しています。'
+					? '資料一覧の保存領域を直接読めなかったため、保存済みの簡易一覧を表示しています。'
+					: '資料一覧の保存領域を読めなかったため、現在は空の一覧を表示しています。',
+			messageEn:
+				fallback.length > 0
+					? 'Could not read the main storage for the documents list, so a previously saved simplified list is being shown.'
+					: 'Could not read the main storage for the documents list, so an empty list is being shown for now.'
 		};
 	}
 }

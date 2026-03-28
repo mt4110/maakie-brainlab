@@ -49,7 +49,7 @@
 			</p>
 			<div class="inline-actions">
 				<a class="btn-link btn-primary" href="/ops"
-					>{tx('詳細比較は Ops へ', 'Open detailed comparison in Ops')}</a
+					>{tx('Ops ハブを開く', 'Open Ops hub')}</a
 				>
 				<a class="btn-link btn-ghost" href="/questions">{tx('質問面へ戻る', 'Back to Questions')}</a>
 			</div>

@@ -232,6 +232,7 @@ describe('listRagSourcesReadOnlyFromPaths', () => {
 
 		expect(result.degraded).toBe(false);
 		expect(result.items).toEqual([]);
-		expect(result.message).toBeNull();
+		expect(result.messageJa).toBeNull();
+		expect(result.messageEn).toBeNull();
 	});
 });

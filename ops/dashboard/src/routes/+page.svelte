@@ -7,7 +7,8 @@
 	interface PageData {
 		sources: RagSourceItem[];
 		sourcesDegraded: boolean;
-		sourcesMessage: string | null;
+		sourcesMessageJa: string | null;
+		sourcesMessageEn: string | null;
 	}
 
 	const localeState = getContext<LocaleState>(I18N_CONTEXT_KEY);
@@ -144,8 +145,8 @@
 				>
 				<a class="btn-link btn-ghost" href="/ops">{tx('詳細管理は Ops', 'Detailed management in Ops')}</a>
 			</div>
-			{#if data.sourcesDegraded && data.sourcesMessage}
-				<p class="section-copy">{data.sourcesMessage}</p>
+			{#if data.sourcesDegraded && (data.sourcesMessageJa || data.sourcesMessageEn)}
+				<p class="section-copy">{tx(data.sourcesMessageJa ?? '', data.sourcesMessageEn ?? '')}</p>
 			{/if}
 		</article>
 	</section>
