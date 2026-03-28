@@ -495,16 +495,8 @@ export async function listRagSourcesReadOnlyFromPaths(paths: {
 		});
 		try {
 			const dbItems = readRagSourcesFromDb(db);
-			if (dbItems.length > 0) {
-				return {
-					items: dbItems,
-					degraded: false,
-					message: null
-				};
-			}
-			const legacyItems = readLegacyRagSourcesFileFromPath(paths.legacyPath);
 			return {
-				items: legacyItems,
+				items: dbItems,
 				degraded: false,
 				message: null
 			};

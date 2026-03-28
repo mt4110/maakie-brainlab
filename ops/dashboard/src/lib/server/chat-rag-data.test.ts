@@ -155,7 +155,7 @@ describe('rankRagSourcesForText', () => {
 });
 
 describe('listRagSourcesReadOnlyFromPaths', () => {
-	it('returns legacy JSON items when sqlite exists but is empty', async () => {
+	it('keeps sqlite as the source of truth when the table exists but is empty', async () => {
 		const { dbPath, legacyPath } = makeTempStorage();
 		createSqlite(dbPath, []);
 		writeLegacyJson(legacyPath, [
@@ -170,7 +170,7 @@ describe('listRagSourcesReadOnlyFromPaths', () => {
 		const result = await listRagSourcesReadOnlyFromPaths({ dbPath, legacyPath });
 
 		expect(result.degraded).toBe(false);
-		expect(result.items.map((item) => item.id)).toEqual(['legacy-1']);
+		expect(result.items).toEqual([]);
 
 		const db = new DatabaseSync(dbPath, { readOnly: true });
 		try {
@@ -181,6 +181,23 @@ describe('listRagSourcesReadOnlyFromPaths', () => {
 		} finally {
 			db.close();
 		}
+	});
+
+	it('returns legacy JSON items when sqlite does not exist yet', async () => {
+		const { dbPath, legacyPath } = makeTempStorage();
+		writeLegacyJson(legacyPath, [
+			source({
+				id: 'legacy-1',
+				name: 'Legacy Source',
+				path: 'docs/evidence/legacy.json',
+				tags: ['legacy']
+			})
+		]);
+
+		const result = await listRagSourcesReadOnlyFromPaths({ dbPath, legacyPath });
+
+		expect(result.degraded).toBe(false);
+		expect(result.items.map((item) => item.id)).toEqual(['legacy-1']);
 	});
 
 	it('uses sqlite results when sqlite already has rows', async () => {
