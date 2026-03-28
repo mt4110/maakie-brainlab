@@ -518,8 +518,8 @@ export async function listRagSourcesReadOnlyFromPaths(paths: {
 			degraded: true,
 			message:
 				fallback.length > 0
-					? '資料一覧の保存領域を直接読めなかったため、保存済みの簡易一覧を表示しています。'
-					: '資料一覧の保存領域を読めなかったため、現在は空の一覧を表示しています。'
+					? 'Could not read the main storage for the documents list, so a previously saved simplified list is being shown. / 資料一覧の保存領域を直接読めなかったため、保存済みの簡易一覧を表示しています。'
+					: 'Could not read the main storage for the documents list, so an empty list is being shown for now. / 資料一覧の保存領域を読めなかったため、現在は空の一覧を表示しています。'
 		};
 	}
 }
