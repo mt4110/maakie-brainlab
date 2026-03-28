@@ -18,6 +18,14 @@
 		items: OpsLink[];
 	}
 
+	interface InventoryGroup {
+		titleJa: string;
+		titleEn: string;
+		copyJa: string;
+		copyEn: string;
+		items: string[];
+	}
+
 	const localeState = getContext<LocaleState>(I18N_CONTEXT_KEY);
 
 	const groups: OpsGroup[] = [
@@ -127,6 +135,46 @@
 		}
 	];
 
+	const inventoryGroups: InventoryGroup[] = [
+		{
+			titleJa: '残す',
+			titleEn: 'Keep',
+			copyJa: '通常ユーザーの main path として維持する面です。',
+			copyEn: 'These surfaces remain the main user path.',
+			items: ['/', '/questions', '/evidence', '/ops', '/ops/overview']
+		},
+		{
+			titleJa: 'Ops へ退避',
+			titleEn: 'Move behind Ops',
+			copyJa: 'いきなり削除せず、まず製品導線から外して隔離する面です。',
+			copyEn: 'These stay available, but behind Ops instead of the product front door.',
+			items: [
+				'/history',
+				'/chat-lab',
+				'/prompt-trace',
+				'/fine-tune',
+				'/ai-lab',
+				'/consensus-il',
+				'/ml-studio',
+				'/rag-lab',
+				'/langchain-lab'
+			]
+		},
+		{
+			titleJa: '削除候補の条件',
+			titleEn: 'Deletion candidate criteria',
+			copyJa: '次の条件を満たしたときだけ削除判断します。まだ今は消しません。',
+			copyEn: 'Delete only after these conditions are met. Do not remove them yet.',
+			items: [
+				'/ops からも実質使っていない',
+				'代替導線ができている',
+				'API や test がもう依存していない',
+				'最近の作業で誰も触っていない',
+				'Site Map / Site Docs のように役割が薄い面から先に見る'
+			]
+		}
+	];
+
 	function tx(ja: string, en: string): string {
 		return localeState.value === 'ja' ? ja : en;
 	}
@@ -150,6 +198,21 @@
 			</p>
 		</article>
 		<article class="panel">
+			<p class="eyebrow">{tx('棚卸し方針', 'Inventory policy')}</p>
+			<h2 class="section-title">
+				{tx(
+					'古い面は、削除より先に「主役かどうか」で分けます。',
+					'Before deleting old pages, we sort them by whether they belong on the product path.'
+				)}
+			</h2>
+			<p class="section-copy">
+				{tx(
+					'不要スクリプトや旧画面は、いきなり消さずに 凍結 → Ops へ退避 → 観察 → 削除判断 の順で扱います。',
+					'Old pages and scripts are handled in order: freeze, move behind Ops, observe, then decide on deletion.'
+				)}
+			</p>
+		</article>
+		<article class="panel">
 			<p class="eyebrow">{tx('戻り先', 'Back to main path')}</p>
 			<div class="inline-actions">
 				<a class="btn-link btn-primary" href="/">{tx('資料へ戻る', 'Back to Documents')}</a>
@@ -161,6 +224,33 @@
 				>
 			</div>
 		</article>
+	</section>
+
+	<section class="panel">
+		<div class="section-head">
+			<div>
+				<p class="eyebrow">{tx('棚卸し', 'Surface inventory')}</p>
+				<h2 class="section-title">
+					{tx(
+						'残す・退避する・削除候補にする条件を、ここで固定します。',
+						'This is where we lock the rules for keep, isolate, and eventual deletion.'
+					)}
+				</h2>
+			</div>
+		</div>
+		<div class="route-grid">
+			{#each inventoryGroups as group}
+				<article class="surface-card">
+					<p class="eyebrow">{tx(group.titleJa, group.titleEn)}</p>
+					<p class="section-copy">{tx(group.copyJa, group.copyEn)}</p>
+					<ul class="flat-list">
+						{#each group.items as item}
+							<li>{item}</li>
+						{/each}
+					</ul>
+				</article>
+			{/each}
+		</div>
 	</section>
 
 	{#each groups as group}

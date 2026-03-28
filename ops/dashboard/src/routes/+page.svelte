@@ -35,28 +35,63 @@
 <div class="surface-stack">
 	<section class="hero">
 		<article class="panel panel-strong">
-			<p class="eyebrow">{tx('資料', 'Documents')}</p>
+			<p class="eyebrow">{tx('はじめての30秒', 'Your first 30 seconds')}</p>
 			<h1 class="title">
 				{tx(
-					'通常導線を、今使う資料に戻しました。',
-					'The main path is back to the documents you actually use.'
+					'まず見るのは、資料・質問・根拠の 3 つだけです。',
+					'Start with only three things: documents, questions, and evidence.'
 				)}
 			</h1>
 			<p class="muted">
 				{tx(
-					'Phase 1 では表面を削り、資料・質問・根拠の3面だけを前に出します。実験系や operator 面は Ops に退避しました。',
-					'Phase 1 trims the surface back to three user-facing views: documents, questions, and evidence. Experimental and operator pages are now tucked behind Ops.'
+					'答えが出ないときは失敗ではありません。資料が足りないか、質問が広すぎる可能性があります。',
+					'Not getting an answer is not a failure. The documents may be missing or the question may still be too broad.'
+				)}
+			</p>
+			<ol class="flat-list">
+				<li>
+					{tx(
+						'資料で、今入っている資料を確認する',
+						'Use Documents to confirm what is currently loaded'
+					)}
+				</li>
+				<li>
+					{tx(
+						'質問で、知りたいことをそのまま聞く',
+						'Use Questions to ask what you want to know in natural language'
+					)}
+				</li>
+				<li>
+					{tx(
+						'根拠で、答えの裏付けを確認する',
+						'Use Evidence to confirm what supports the answer'
+					)}
+				</li>
+			</ol>
+			<p class="section-copy">
+				{tx(
+					'運用・再生成・実験・追跡は Ops にあります。まずはこの 3 面だけで進めてください。',
+					'Operations, regeneration, experiments, and trace views live in Ops. Stay with these three surfaces first.'
 				)}
 			</p>
 			<div class="inline-actions">
 				<a class="btn-link btn-primary" href="/questions"
-					>{tx('質問面を見る', 'Open Questions')}</a
+					>{tx('質問へ進む', 'Go to Questions')}</a
+				>
+				<a class="btn-link btn-ghost" href="/evidence"
+					>{tx('根拠を見る', 'Open Evidence')}</a
 				>
 				<a class="btn-link btn-ghost" href="/ops">{tx('Ops を開く', 'Open Ops')}</a>
 			</div>
 		</article>
 		<article class="panel">
-			<p class="eyebrow">{tx('現在の見え方', 'Current surface')}</p>
+			<p class="eyebrow">{tx('資料', 'Documents')}</p>
+			<h2 class="section-title">
+				{tx(
+					'この画面では、いま使える資料の輪郭だけを最初に掴めるようにしています。',
+					'This screen helps you grasp the currently available document set before anything else.'
+				)}
+			</h2>
 			<div class="surface-meta">
 				<div class="meta-card">
 					<p class="meta-label">{tx('登録済み資料', 'Registered documents')}</p>
@@ -74,14 +109,14 @@
 			<ul class="flat-list">
 				<li>
 					{tx(
-						'この面では登録済み資料を全件表示します。',
+						'登録済み資料を全件表示します。',
 						'This surface shows the full registered document list.'
 					)}
 				</li>
 				<li>
 					{tx(
-						'資料追加や再インデックスの本実装は Phase 2 でここへ寄せます。',
-						'Document add/reindex actions will move here in Phase 2.'
+						'資料追加や再インデックスの本実装は、製品導線に乗る形で Phase 2 に寄せます。',
+						'Document add and reindex actions will move here in Phase 2 once they fit the product path.'
 					)}
 				</li>
 			</ul>
@@ -94,7 +129,7 @@
 	<section class="panel">
 		<div class="section-head">
 			<div>
-				<p class="eyebrow">{tx('登録済み資料', 'Registered documents')}</p>
+				<p class="eyebrow">{tx('資料一覧', 'Document list')}</p>
 				<h2 class="section-title">
 					{tx(
 						'現在の知識ベース候補を、名前と経路だけで把握できるようにしました。',
