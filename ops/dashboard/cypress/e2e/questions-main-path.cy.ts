@@ -1,6 +1,13 @@
 describe('questions main path', () => {
+	const resultCard = (label: RegExp) =>
+		cy.contains('.result-card .eyebrow', label).closest('.result-card');
+
 	it('keeps the question flow on /questions and shows the four blocks', () => {
-		cy.visit('/questions');
+		cy.visit('/questions', {
+			onBeforeLoad(win) {
+				win.localStorage.setItem('dashboard.locale', 'ja');
+			}
+		});
 		cy.get('h1').should('contain.text', '質問');
 
 		cy.contains('.meta-card', /有効な資料|Enabled documents/)
@@ -64,22 +71,20 @@ describe('questions main path', () => {
 				if (enabledCount > 0) {
 					cy.wait('@chatRun');
 					cy.url().should('include', '/questions');
-					cy.contains('.result-card', '答え').should('contain.text', '3 面');
-					cy.contains('.result-card', '根拠').should(
-						'contain.text',
-						'Official Product Requirements'
-					);
-					cy.contains('.result-card', '使われた資料').should('contain.text', 'PRODUCT.md');
-					cy.contains('.result-card', '分からないこと / 注意点').should(
+					resultCard(/^答え$|^Answer$/).should('contain.text', '3 面');
+					resultCard(/^根拠$|^Evidence$/).should('contain.text', 'Official Product Requirements');
+					resultCard(/^使われた資料$|^Documents used$/).should('contain.text', 'PRODUCT.md');
+					resultCard(/^分からないこと \/ 注意点$|^Unknowns \/ Cautions$/).should(
 						'contain.text',
 						'Evidence'
 					);
 				} else {
-					cy.contains('.result-card', '答え').should('contain.text', '資料が 0 件');
-					cy.contains('.result-card', '分からないこと / 注意点').should(
-						'contain.text',
-						'Documents'
-					);
+					resultCard(/^答え$|^Answer$/).should(($card) => {
+						expect($card.text()).to.match(/資料が 0 件|There are no documents yet/);
+					});
+					resultCard(/^分からないこと \/ 注意点$|^Unknowns \/ Cautions$/).should(($card) => {
+						expect($card.text()).to.match(/Documents|資料がまだ 0 件/);
+					});
 				}
 
 				cy.get('a[href="/chat-lab"]').should('not.exist');
