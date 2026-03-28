@@ -29,7 +29,7 @@ describe('questions main path', () => {
 	});
 
 	it('keeps the question flow on /questions and shows the four blocks', () => {
-		cy.intercept('POST', '/api/dashboard/chat/run', {
+		cy.intercept('POST', '**/api/dashboard/chat/run', {
 			statusCode: 200,
 			body: {
 				status: 'PASS',
@@ -81,6 +81,7 @@ describe('questions main path', () => {
 				win.localStorage.setItem('dashboard.locale', 'ja');
 			}
 		});
+		cy.document().its('documentElement.lang').should('eq', 'ja');
 		cy.get('h1').should('contain.text', '質問');
 		cy.contains('.meta-card', /有効な資料|Enabled documents/)
 			.find('.meta-value')
@@ -89,7 +90,7 @@ describe('questions main path', () => {
 			});
 
 		cy.get('textarea').type('main path は何面？');
-		cy.contains('button', /質問する|Ask/).click();
+		cy.contains('button', /^質問する$|^Ask$/).should('not.be.disabled').click();
 
 		cy.wait('@chatRun');
 		cy.url().should('include', '/questions');
