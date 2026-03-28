@@ -17,18 +17,9 @@
 	setContext(I18N_CONTEXT_KEY, localeState);
 
 	const navItems: Array<{ href: string; key: I18nKey }> = [
-		{ href: '/', key: 'navOverview' },
-		{ href: '/history', key: 'navHistory' },
-		{ href: '/prompt-trace', key: 'navPromptTrace' },
-		{ href: '/fine-tune', key: 'navFineTune' },
-		{ href: '/ai-lab', key: 'navAiLab' },
-		{ href: '/chat-lab', key: 'navChatLab' },
-		{ href: '/consensus-il', key: 'navConsensus' },
-		{ href: '/ml-studio', key: 'navMlStudio' },
-		{ href: '/rag-lab', key: 'navRagLab' },
-		{ href: '/langchain-lab', key: 'navLangChainLab' },
-		{ href: '/sitemap', key: 'navSitemap' },
-		{ href: '/site-docs', key: 'navDocs' }
+		{ href: '/', key: 'navDocuments' },
+		{ href: '/questions', key: 'navQuestions' },
+		{ href: '/evidence', key: 'navEvidence' }
 	];
 
 	function isActive(href: string): boolean {
@@ -69,7 +60,7 @@
 	<header class="topbar">
 		<div class="topbar-inner">
 			<div class="brand">
-				<span>{t(localeState.value, 'brand')}</span>
+				<a href="/">{t(localeState.value, 'brand')}</a>
 			</div>
 			<div class="topbar-controls">
 				<div
@@ -96,6 +87,12 @@
 						>
 					{/each}
 				</nav>
+				<div class="utility-nav">
+					<a
+						class={`utility-link ${isActive('/ops') ? 'utility-link-active' : ''}`}
+						href="/ops">{t(localeState.value, 'utilityOps')}</a
+					>
+				</div>
 			</div>
 		</div>
 	</header>
