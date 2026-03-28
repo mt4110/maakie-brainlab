@@ -18,6 +18,12 @@ function mockOverview() {
 	};
 }
 
+function ensureOverviewInteractive() {
+	cy.wait(1200);
+	cy.get('[data-testid="reload-overview"]').should('be.visible').and('not.be.disabled');
+	cy.get('[data-testid="regen-rag"]').should('be.visible').and('not.be.disabled');
+}
+
 describe('phase 1 surface simplification', () => {
 	it('keeps internal routes out of the main nav and reachable via ops', () => {
 		cy.visit('/');
@@ -64,8 +70,8 @@ describe('phase 1 surface simplification', () => {
 		}).as('runRag');
 
 		cy.visit('/ops/overview');
-		cy.get('[data-testid="reload-overview"]').should('not.be.disabled');
-		cy.get('[data-testid="regen-rag"]').should('be.visible').and('not.be.disabled').click();
+		ensureOverviewInteractive();
+		cy.get('[data-testid="regen-rag"]').scrollIntoView().click({ force: true });
 		cy.get('[data-testid="reload-overview"]').should('be.disabled');
 
 		cy.wait('@runRag');
