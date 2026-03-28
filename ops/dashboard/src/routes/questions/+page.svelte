@@ -1,40 +1,378 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
 
+	import {
+		classifyChatRunFailure,
+		presentQuestionRun,
+		type PresentedQuestionRun,
+		type QuestionEvidenceItem,
+		type QuestionNoticeCode,
+		type QuestionsFailureKind
+	} from '$lib/questions/presenter';
 	import { I18N_CONTEXT_KEY, type LocaleState } from '$lib/i18n';
+	import type { ChatRunResponse, RagSourceItem } from '$lib/server/types';
+
+	interface PageData {
+		sources: RagSourceItem[];
+		sourcesDegraded: boolean;
+		sourcesMessageJa: string | null;
+		sourcesMessageEn: string | null;
+	}
+
+	type QuestionUiState =
+		| 'idle'
+		| 'blank'
+		| 'no_documents'
+		| 'answer'
+		| 'unknown'
+		| QuestionsFailureKind;
 
 	const localeState = getContext<LocaleState>(I18N_CONTEXT_KEY);
+	let { data }: { data: PageData } = $props();
+
+	let question = $state('');
+	let submitting = $state(false);
+	let uiState = $state<QuestionUiState>('idle');
+	let result = $state<PresentedQuestionRun | null>(null);
+	let lastQuestion = $state('');
+
+	const enabledSources = $derived(data.sources.filter((item) => item.enabled));
+	const enabledSourceIds = $derived(enabledSources.map((item) => item.id));
+	const latestUpdatedAt = $derived(data.sources[0]?.updatedAt ?? null);
 
 	function tx(ja: string, en: string): string {
 		return localeState.value === 'ja' ? ja : en;
 	}
 
-	const answerBlocks = [
-		{
-			ja: '答え',
-			en: 'Answer',
-			copyJa: '最初に短く結論を返す。',
-			copyEn: 'Return a short conclusion first.'
-		},
-		{
-			ja: '根拠',
-			en: 'Evidence',
-			copyJa: 'どの資料のどの断片を使ったか見せる。',
-			copyEn: 'Show which document fragments supported the answer.'
-		},
-		{
-			ja: '使われた資料',
-			en: 'Documents used',
-			copyJa: '参照した資料へ戻れる導線を残す。',
-			copyEn: 'Keep a clear path back to the cited documents.'
-		},
-		{
-			ja: '分からないこと',
-			en: 'Unknowns',
-			copyJa: '足りない資料や質問の曖昧さを明示する。',
-			copyEn: 'State missing documents or ambiguity explicitly.'
+	function dt(isoLike: string | null): string {
+		if (!isoLike) {
+			return tx('未登録', 'Not available');
 		}
-	];
+		return new Date(isoLike).toLocaleString(localeState.value === 'ja' ? 'ja-JP' : 'en-US');
+	}
+
+	function stateBannerClass(): string {
+		if (submitting) {
+			return 'status-banner status-banner-info';
+		}
+		if (uiState === 'answer') {
+			return 'status-banner status-banner-ok';
+		}
+		if (uiState === 'backend_unavailable' || uiState === 'server_failure') {
+			return 'status-banner status-banner-fail';
+		}
+		if (uiState === 'blank' || uiState === 'no_documents' || uiState === 'unknown') {
+			return 'status-banner status-banner-warn';
+		}
+		return 'status-banner status-banner-info';
+	}
+
+	function stateBannerText(): string {
+		if (submitting) {
+			return tx(
+				'質問を送信しています。答えと根拠候補をこの画面でまとめます。',
+				'Sending the question. The answer and supporting document candidates will appear on this screen.'
+			);
+		}
+		switch (uiState) {
+			case 'blank':
+				return tx(
+					'質問文が空です。まず 1 つだけ自然言語で入れてください。',
+					'The question is empty. Enter one natural-language question first.'
+				);
+			case 'no_documents':
+				return tx(
+					'今は使える資料がありません。まず Documents で一覧を確認してください。',
+					'No usable documents are available yet. Check Documents first.'
+				);
+			case 'answer':
+				return tx(
+					'答えと関連資料を同じ画面にまとめました。',
+					'The answer and related documents are summarized on the same screen.'
+				);
+			case 'unknown':
+				return tx(
+					'不明は失敗ではありません。今の資料で足りない点を下に示します。',
+					'Unknown is not a failure. The missing support in the current documents is shown below.'
+				);
+			case 'backend_unavailable':
+				return tx(
+					'モデルまたはバックエンドに接続できません。',
+					'The model or backend is not reachable right now.'
+				);
+			case 'server_failure':
+				return tx(
+					'サーバー処理に失敗しました。時間をおいて再実行してください。',
+					'The server failed to process the request. Try again in a moment.'
+				);
+			default:
+				return tx(
+					'資料に入っていそうなことを 1 つだけ質問してください。',
+					'Ask one thing that should be answerable from the loaded documents.'
+				);
+		}
+	}
+
+	function answerText(): string {
+		if (uiState === 'answer') {
+			return (
+				result?.answer ||
+				tx('答えをまとめました。', 'The answer has been summarized.')
+			);
+		}
+		if (uiState === 'unknown') {
+			return (
+				result?.answer ||
+				tx(
+					'現在の資料だけでは、この質問に答え切る根拠を確認できません。',
+					'The current documents do not provide enough support to answer this question yet.'
+				)
+			);
+		}
+		if (uiState === 'blank') {
+			return tx(
+				'質問を入力すると、ここに短い答えが表示されます。',
+				'Enter a question to see a short answer here.'
+			);
+		}
+		if (uiState === 'no_documents') {
+			return tx(
+				'資料が 0 件のため、まだ答えを作れません。',
+				'There are no documents yet, so an answer cannot be produced.'
+			);
+		}
+		if (uiState === 'backend_unavailable') {
+			return tx(
+				'今はモデルに接続できないため、回答を返せません。',
+				'The system cannot reach the model right now, so it cannot return an answer.'
+			);
+		}
+		if (uiState === 'server_failure') {
+			return tx(
+				'今は処理に失敗しているため、回答を返せません。',
+				'The request failed during processing, so no answer can be returned right now.'
+			);
+		}
+		return tx(
+			'質問を送ると、この場所に最初の答えが短く表示されます。',
+			'Send a question and the first concise answer will appear here.'
+		);
+	}
+
+	function evidenceReasonText(item: QuestionEvidenceItem): string {
+		if (item.matches.length === 0) {
+			return tx(
+				'今回の質問に関連すると判断された資料候補です。',
+				'This document was treated as relevant to the current question.'
+			);
+		}
+		const lines = item.matches.map((match) => {
+			switch (match.kind) {
+				case 'selected':
+					return tx(
+						'現在の知識ベースに含まれている資料です。',
+						'This document is currently included in the knowledge base.'
+					);
+				case 'name':
+					return tx(
+						`資料名に「${match.term ?? ''}」が含まれます。`,
+						`Its title includes "${match.term ?? ''}".`
+					);
+				case 'tag':
+					return tx(
+						`タグに「${match.term ?? ''}」が含まれます。`,
+						`Its tags include "${match.term ?? ''}".`
+					);
+				case 'path':
+					return tx(
+						`保存先に「${match.term ?? ''}」が含まれます。`,
+						`Its path includes "${match.term ?? ''}".`
+					);
+				case 'description':
+					return tx(
+						`説明文に「${match.term ?? ''}」が含まれます。`,
+						`Its description includes "${match.term ?? ''}".`
+					);
+				default:
+					return tx(
+						'質問に関連する資料候補として参照されました。',
+						'It was referenced as a candidate related to the question.'
+					);
+			}
+		});
+		return lines.slice(0, 2).join(' ');
+	}
+
+	function evidenceEmptyText(): string {
+		if (uiState === 'idle' || uiState === 'blank') {
+			return tx(
+				'質問を送ると、ここに関連資料の候補が並びます。',
+				'Send a question to see the related document candidates here.'
+			);
+		}
+		if (uiState === 'no_documents') {
+			return tx(
+				'まだ参照できる資料がありません。',
+				'There are no documents available to cite yet.'
+			);
+		}
+		if (uiState === 'backend_unavailable' || uiState === 'server_failure') {
+			return tx(
+				'資料候補を整形する前に処理が止まりました。',
+				'The request stopped before supporting documents could be prepared.'
+			);
+		}
+		return tx(
+			'今回の質問に合う資料候補が見つかっていません。',
+			'No document candidates matched this question.'
+		);
+	}
+
+	function documentsEmptyText(): string {
+		if (uiState === 'no_documents') {
+			return tx(
+				'まず Documents で登録済み資料を確認してください。',
+				'Check the registered documents in Documents first.'
+			);
+		}
+		if (uiState === 'backend_unavailable' || uiState === 'server_failure') {
+			return tx(
+				'今回は資料一覧まで整理できませんでした。',
+				'The request did not reach the point where the used documents could be listed.'
+			);
+		}
+		return tx(
+			'今回の質問で使われた資料はまだありません。',
+			'No documents were used for this question yet.'
+		);
+	}
+
+	function noticeText(code: QuestionNoticeCode): string {
+		switch (code) {
+			case 'candidate_evidence_only':
+				return tx(
+					'今の根拠表示は「関連資料候補」です。必要なら Evidence で元資料を見直してください。',
+					'The current evidence view shows related document candidates. Use Evidence to inspect the originals when needed.'
+				);
+			case 'no_matching_documents':
+				return tx(
+					'この質問に合う資料が、今の知識ベースから見つかっていません。',
+					'The current knowledge base does not yet contain a matching document for this question.'
+				);
+			case 'clarify_question':
+				return tx(
+					'文書名、期間、対象機能を入れて質問を絞ると次は答えやすくなります。',
+					'Add a document name, timeframe, or target feature to narrow the next question.'
+				);
+			case 'verify_before_reuse':
+				return tx(
+					'この答えをそのまま使う前に、Evidence で元資料を確認してください。',
+					'Before reusing this answer, verify the original documents in Evidence.'
+				);
+		}
+	}
+
+	function noteItems(): string[] {
+		const items: string[] = [];
+
+		if (uiState === 'blank') {
+			items.push(
+				tx(
+					'まず 1 つだけ質問を入力してください。',
+					'Enter one question first.'
+				)
+			);
+		}
+		if (uiState === 'no_documents') {
+			items.push(
+				tx(
+					'資料がまだ 0 件です。Documents で一覧を確認し、必要な資料をそろえてから再実行してください。',
+					'There are still zero documents. Review Documents and gather the needed material before trying again.'
+				)
+			);
+		}
+		if (uiState === 'backend_unavailable') {
+			items.push(
+				tx(
+					'ローカルモデルかバックエンドの起動状態を確認してから再実行してください。',
+					'Check whether the local model or backend is running, then try again.'
+				)
+			);
+		}
+		if (uiState === 'server_failure') {
+			items.push(
+				tx(
+					'一時的な失敗の可能性があります。少し待ってから再実行してください。',
+					'This may be a temporary failure. Wait briefly and try again.'
+				)
+			);
+		}
+		for (const code of result?.notices || []) {
+			items.push(noticeText(code));
+		}
+		if (uiState === 'unknown') {
+			items.push(
+				tx(
+					'次は、文書名や対象範囲を質問文に入れてもう一度試してください。',
+					'Next, include the document name or scope in the question and try again.'
+				)
+			);
+		}
+		if (data.sourcesDegraded && (data.sourcesMessageJa || data.sourcesMessageEn)) {
+			items.push(tx(data.sourcesMessageJa ?? '', data.sourcesMessageEn ?? ''));
+		}
+		return Array.from(new Set(items.filter(Boolean)));
+	}
+
+	function showResultBlocks(): boolean {
+		return submitting || uiState !== 'idle';
+	}
+
+	async function submitQuestion(event: SubmitEvent) {
+		event.preventDefault();
+		const text = question.trim();
+		lastQuestion = text;
+		result = null;
+
+		if (!text) {
+			uiState = 'blank';
+			return;
+		}
+		if (enabledSourceIds.length === 0) {
+			uiState = 'no_documents';
+			return;
+		}
+
+		submitting = true;
+		try {
+			const res = await fetch('/api/dashboard/chat/run', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({
+					message: text,
+					selectedRagIds: enabledSourceIds
+				})
+			});
+			const payload = (await res.json()) as
+				| ChatRunResponse
+				| {
+						error?: string;
+						kind?: QuestionsFailureKind;
+				  };
+			if (!res.ok) {
+				uiState =
+					('kind' in payload && payload.kind) ||
+					classifyChatRunFailure(('error' in payload && payload.error) || '');
+				return;
+			}
+			result = presentQuestionRun(payload as ChatRunResponse);
+			uiState = result.kind;
+		} catch {
+			uiState = 'server_failure';
+		} finally {
+			submitting = false;
+		}
+	}
 </script>
 
 <div class="surface-stack">
@@ -43,69 +381,311 @@
 			<p class="eyebrow">{tx('質問', 'Questions')}</p>
 			<h1 class="title">
 				{tx(
-					'質問面は、答えと根拠に集中する入口へ整理中です。',
-					'The question surface is being reduced to answers and evidence.'
+					'資料に入っていることを、1回で確かめるための質問面です。',
+					'This is the question surface for checking one thing from your loaded documents.'
 				)}
 			</h1>
 			<p class="muted">
 				{tx(
-					'Phase 1 では main path と internal path を混ぜません。この画面では質問の形だけを教え、暫定 UI は Ops 側に退避します。',
-					'Phase 1 keeps the main path separate from internal flows. This page teaches the question shape while the transitional UI stays behind Ops.'
+					'ここでは、質問して、答えと根拠候補を同じ画面で読み切ります。内部ルートへ飛ばさず、まず 1 回完走できることを優先します。',
+					'Ask a question and read the answer plus supporting document candidates on the same screen. The priority is to complete one useful pass without jumping into internal routes.'
 				)}
 			</p>
-			<div class="inline-actions">
-				<a class="btn-link btn-primary" href="/ops"
-					>{tx('暫定質問UIを開く（Ops）', 'Open the transitional question UI (Ops)')}</a
-				>
-				<a class="btn-link btn-ghost" href="/evidence"
-					>{tx('根拠の見え方を見る', 'See how evidence should look')}</a
-				>
+
+			<form class="question-form" onsubmit={submitQuestion}>
+				<label class="question-label" for="main-question-input">
+					{tx('知りたいこと', 'What do you want to know?')}
+				</label>
+				<textarea
+					id="main-question-input"
+					class="question-input"
+					bind:value={question}
+					rows="5"
+					placeholder={tx(
+						'例: PRODUCT.md で main path は何面に整理されている？',
+						'Example: According to PRODUCT.md, how many surfaces define the main path?'
+					)}
+				></textarea>
+				<div class="question-toolbar">
+					<button type="submit" class="btn-primary" disabled={submitting}>
+						{submitting ? tx('送信中...', 'Asking...') : tx('質問する', 'Ask')}
+					</button>
+					<a class="btn-link btn-ghost" href="/">{tx('資料を見る', 'Open Documents')}</a>
+					<a class="btn-link btn-ghost" href="/evidence">{tx('根拠を見る', 'Open Evidence')}</a>
+				</div>
+			</form>
+
+			<div class={stateBannerClass()} aria-live="polite">
+				{stateBannerText()}
 			</div>
 		</article>
+
 		<article class="panel">
-			<p class="eyebrow">{tx('不明時の扱い', 'When the answer is unknown')}</p>
+			<p class="eyebrow">{tx('今の資料', 'Current documents')}</p>
+			<h2 class="section-title">
+				{tx(
+					'まずは「今の知識ベースで答えられるか」を見るための準備だけを出します。',
+					'This panel only shows whether the current knowledge base is ready to answer.'
+				)}
+			</h2>
+			<div class="surface-meta">
+				<div class="meta-card">
+					<p class="meta-label">{tx('登録済み資料', 'Registered documents')}</p>
+					<p class="meta-value">{data.sources.length}</p>
+				</div>
+				<div class="meta-card">
+					<p class="meta-label">{tx('有効な資料', 'Enabled documents')}</p>
+					<p class="meta-value">{enabledSources.length}</p>
+				</div>
+				<div class="meta-card">
+					<p class="meta-label">{tx('最終更新', 'Last updated')}</p>
+					<p class="meta-copy">{dt(latestUpdatedAt)}</p>
+				</div>
+			</div>
 			<ul class="flat-list">
 				<li>
 					{tx(
-						'分からないときは「分からない」と明示する。',
-						'Say clearly when the answer is unknown.'
+						'答えが出なくても失敗ではありません。資料不足か、質問が広い可能性があります。',
+						'Not getting an answer is not a failure. The documents may be missing, or the question may be too broad.'
 					)}
 				</li>
 				<li>
 					{tx(
-						'何が足りないかを出す。',
-						'Explain what is missing.'
+						'質問は 1 文で始めると整理しやすくなります。',
+						'Starting with a single-sentence question makes the result easier to understand.'
 					)}
 				</li>
 				<li>
 					{tx(
-						'次の一手を出す。資料追加、更新、質問具体化。',
-						'Suggest the next action: add documents, refresh the index, or make the question more specific.'
+						'答えを使う前に、Evidence で元資料を見直してください。',
+						'Before using an answer, revisit the original documents in Evidence.'
 					)}
 				</li>
 			</ul>
+			{#if data.sourcesDegraded && (data.sourcesMessageJa || data.sourcesMessageEn)}
+				<p class="section-copy">{tx(data.sourcesMessageJa ?? '', data.sourcesMessageEn ?? '')}</p>
+			{/if}
 		</article>
 	</section>
 
-	<section class="panel">
+	<section class="panel" aria-busy={submitting}>
 		<div class="section-head">
 			<div>
-				<p class="eyebrow">{tx('理想の返し方', 'Ideal response shape')}</p>
+				<p class="eyebrow">{tx('結果', 'Result')}</p>
 				<h2 class="section-title">
 					{tx(
-						'通常ユーザーには、内部契約ではなく4つの読みやすい塊だけを見せます。',
-						'Normal users should only see four readable blocks, not internal contracts.'
+						'返し方は 4 ブロックだけに絞ります。',
+						'The response stays limited to four blocks.'
 					)}
 				</h2>
 			</div>
+			{#if lastQuestion}
+				<p class="section-copy question-memory">
+					{tx('直前の質問', 'Latest question')}: {lastQuestion}
+				</p>
+			{/if}
 		</div>
-		<div class="card-grid">
-			{#each answerBlocks as block}
-				<article class="panel surface-card">
-					<h3 class="pipeline-title">{tx(block.ja, block.en)}</h3>
-					<p class="section-copy">{tx(block.copyJa, block.copyEn)}</p>
+
+		{#if showResultBlocks()}
+			<div class="result-grid">
+				<article class="surface-card result-card">
+					<p class="eyebrow">{tx('答え', 'Answer')}</p>
+					<p class="result-copy">{answerText()}</p>
 				</article>
-			{/each}
-		</div>
+
+				<article class="surface-card result-card">
+					<p class="eyebrow">{tx('根拠', 'Evidence')}</p>
+					{#if result?.evidence && result.evidence.length > 0}
+						<div class="evidence-list">
+							{#each result.evidence as item}
+								<div class="evidence-item">
+									<p class="result-strong">{item.sourceName}</p>
+									<p class="path">{item.sourcePath || tx('パス未設定', 'Path not set')}</p>
+									<p class="section-copy">{evidenceReasonText(item)}</p>
+									{#if item.preview}
+										<p class="snippet">{item.preview}</p>
+									{/if}
+								</div>
+							{/each}
+						</div>
+					{:else}
+						<p class="section-copy">{evidenceEmptyText()}</p>
+					{/if}
+				</article>
+
+				<article class="surface-card result-card">
+					<p class="eyebrow">{tx('使われた資料', 'Documents used')}</p>
+					{#if result?.documentsUsed && result.documentsUsed.length > 0}
+						<div class="document-list">
+							{#each result.documentsUsed as item}
+								<div class="document-item">
+									<p class="result-strong">{item.name}</p>
+									<p class="path">{item.path || tx('パス未設定', 'Path not set')}</p>
+								</div>
+							{/each}
+						</div>
+					{:else}
+						<p class="section-copy">{documentsEmptyText()}</p>
+					{/if}
+				</article>
+
+				<article class="surface-card result-card">
+					<p class="eyebrow">{tx('分からないこと / 注意点', 'Unknowns / Cautions')}</p>
+					{#if noteItems().length > 0}
+						<ul class="flat-list compact-list">
+							{#each noteItems() as item}
+								<li>{item}</li>
+							{/each}
+						</ul>
+					{:else}
+						<p class="section-copy">
+							{tx(
+								'今のところ追加の注意点はありません。',
+								'There are no extra cautions right now.'
+							)}
+						</p>
+					{/if}
+				</article>
+			</div>
+		{:else}
+			<div class="empty-state">
+				<p class="section-title">
+					{tx(
+						'質問すると、答え・根拠・使われた資料・注意点がここに並びます。',
+						'Once you ask, the answer, evidence, documents used, and cautions will appear here.'
+					)}
+				</p>
+				<p class="section-copy">
+					{tx(
+						'まずは、資料に書かれていそうなことを 1 つだけ聞いてください。',
+						'Start with one thing that should be contained in the current documents.'
+					)}
+				</p>
+			</div>
+		{/if}
 	</section>
 </div>
+
+<style>
+	.question-form {
+		display: grid;
+		gap: 12px;
+		margin-top: 18px;
+	}
+
+	.question-label {
+		font-family: 'IBM Plex Mono', monospace;
+		font-size: 0.76rem;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: var(--muted);
+	}
+
+	.question-input {
+		width: 100%;
+		min-height: 136px;
+		padding: 14px 16px;
+		border-radius: 16px;
+		border: 1px solid var(--line);
+		background: rgba(255, 255, 255, 0.92);
+		font: inherit;
+		line-height: 1.6;
+		resize: vertical;
+		color: var(--ink);
+	}
+
+	.question-input:focus {
+		outline: 2px solid rgba(11, 138, 164, 0.28);
+		outline-offset: 2px;
+	}
+
+	.question-toolbar {
+		display: flex;
+		gap: 8px;
+		flex-wrap: wrap;
+		align-items: center;
+	}
+
+	.status-banner {
+		margin-top: 16px;
+		padding: 12px 14px;
+		border-radius: 14px;
+		border: 1px solid var(--line);
+		line-height: 1.55;
+	}
+
+	.status-banner-info {
+		background: rgba(11, 138, 164, 0.08);
+		border-color: rgba(11, 138, 164, 0.2);
+	}
+
+	.status-banner-ok {
+		background: rgba(13, 134, 80, 0.1);
+		border-color: rgba(13, 134, 80, 0.24);
+	}
+
+	.status-banner-warn {
+		background: rgba(201, 113, 17, 0.12);
+		border-color: rgba(201, 113, 17, 0.24);
+	}
+
+	.status-banner-fail {
+		background: rgba(188, 38, 38, 0.1);
+		border-color: rgba(188, 38, 38, 0.24);
+	}
+
+	.result-grid {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 12px;
+	}
+
+	.result-card {
+		min-width: 0;
+		display: grid;
+		gap: 10px;
+	}
+
+	.result-copy {
+		line-height: 1.7;
+		white-space: pre-wrap;
+		word-break: break-word;
+	}
+
+	.result-strong {
+		font-weight: 700;
+	}
+
+	.evidence-list,
+	.document-list {
+		display: grid;
+		gap: 10px;
+	}
+
+	.evidence-item,
+	.document-item {
+		padding: 12px;
+		border-radius: 12px;
+		border: 1px solid var(--line);
+		background: rgba(255, 255, 255, 0.72);
+		display: grid;
+		gap: 6px;
+	}
+
+	.compact-list {
+		margin-top: 0;
+	}
+
+	.question-memory {
+		margin-top: 0;
+		max-width: 460px;
+		text-align: right;
+		word-break: break-word;
+	}
+
+	@media (max-width: 920px) {
+		.result-grid {
+			grid-template-columns: 1fr;
+		}
+	}
+</style>
