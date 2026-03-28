@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onDestroy } from 'svelte';
 	import { getContext } from 'svelte';
 
 	import { I18N_CONTEXT_KEY, type LocaleState } from '$lib/i18n';
@@ -29,6 +30,7 @@
 	let progressAt = $state<string | null>(null);
 	let progressClearTimer = $state<ReturnType<typeof setTimeout> | null>(null);
 	let refreshingOverview = $state(false);
+	const isBusy = $derived(running !== null || refreshingOverview);
 
 	const PIPELINE_ORDER: PipelineKey[] = ['quality', 'operator', 'rag', 'langchain', 'ml'];
 
@@ -84,6 +86,7 @@
 		progressStage = 'IDLE';
 		progressMessage = '';
 		progressAt = null;
+		runError = '';
 	}
 
 	function scheduleProgressClear(ms: number): void {
@@ -107,7 +110,7 @@
 	}
 
 	async function reloadOverview() {
-		if (refreshingOverview) {
+		if (refreshingOverview || running !== null) {
 			return;
 		}
 		refreshingOverview = true;
@@ -161,7 +164,7 @@
 	}
 
 	async function runPipeline(pipeline: PipelineKey | 'all') {
-		if (running !== null) {
+		if (running !== null || refreshingOverview) {
 			return;
 		}
 		if (progressClearTimer) {
@@ -215,6 +218,13 @@
 			running = null;
 		}
 	}
+
+	onDestroy(() => {
+		if (progressClearTimer) {
+			clearTimeout(progressClearTimer);
+			progressClearTimer = null;
+		}
+	});
 </script>
 
 <div class="surface-stack">
@@ -238,7 +248,7 @@
 				<button
 					class="btn-ghost"
 					type="button"
-					disabled={refreshingOverview}
+					disabled={isBusy}
 					onclick={reloadOverview}
 					data-testid="reload-overview"
 				>
@@ -247,7 +257,7 @@
 				<button
 					class="btn-primary"
 					type="button"
-					disabled={running !== null}
+					disabled={isBusy}
 					onclick={() => runPipeline('all')}
 				>
 					{tx('5系統を再生成', 'Regenerate All 5 Pipelines')}
@@ -331,7 +341,7 @@
 						<button
 							class="btn-ghost"
 							type="button"
-							disabled={running !== null}
+							disabled={isBusy}
 							data-testid={`regen-${pipeline.key}`}
 							onclick={() => runPipeline(pipeline.key)}
 						>

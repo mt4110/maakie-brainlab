@@ -1,3 +1,23 @@
+function mockOverview() {
+	return {
+		generatedAt: '2026-03-03T04:00:00.000Z',
+		repoRoot: '/tmp/repo',
+		health: { pass: 5, warn: 0, fail: 0, missing: 0 },
+		pipelines: [
+			{
+				key: 'rag',
+				title: 'RAG',
+				artifactPath: 'docs/evidence/s25-08/rag_tuning_latest.json',
+				schema: 'rag',
+				status: 'PASS',
+				capturedAt: '2026-03-03T04:00:00.000Z',
+				summary: 'RAG tuning snapshot',
+				metrics: [{ label: 'Hit Rate', value: '92%' }]
+			}
+		]
+	};
+}
+
 describe('phase 1 surface simplification', () => {
 	it('keeps internal routes out of the main nav and reachable via ops', () => {
 		cy.visit('/');
@@ -12,48 +32,49 @@ describe('phase 1 surface simplification', () => {
 		cy.get('a[href="/rag-lab"]').should('be.visible');
 		cy.get('a[href="/langchain-lab"]').should('be.visible');
 	});
-
-	it('can trigger overview regeneration and render status/logs', () => {
-		// Mock the overview data loaded by /ops/overview
-		cy.intercept('GET', '/api/dashboard/overview', {
+	it('runs regeneration from ops overview without exposing a broken status flow', () => {
+		cy.intercept('GET', '**/api/dashboard/overview*', {
 			statusCode: 200,
-			body: {
-				lastRunStatus: 'idle',
-				lastRunAt: null,
-			},
-		}).as('getOverview');
+			body: mockOverview()
+		}).as('overviewReload');
 
-		// Mock the pipeline run endpoint that drives the regeneration flow
-		cy.intercept('POST', '/api/dashboard/run', {
-			statusCode: 200,
-			body: {
-				status: 'completed',
-				message: 'Regeneration complete',
-				logs: [
-					'Starting regeneration pipeline...',
-					'Fetching latest data...',
-					'Regeneration complete.',
-				],
-			},
-		}).as('runOverview');
+		cy.intercept('POST', '**/api/dashboard/run', (req) => {
+			expect(req.body.pipeline).to.eq('rag');
+			req.reply({
+				delay: 200,
+				statusCode: 200,
+				body: {
+					status: 'PASS',
+					results: [
+						{
+							pipeline: 'rag',
+							command: ['python3', 'scripts/ops/s25_rag_tuning_loop.py'],
+							status: 'PASS',
+							exitCode: 0,
+							startedAt: '2026-03-03T04:00:10.000Z',
+							endedAt: '2026-03-03T04:00:11.000Z',
+							durationMs: 1000,
+							runDir: null,
+							stdout: 'Starting regeneration pipeline...\nRegeneration complete.',
+							stderr: ''
+						}
+					]
+				}
+			});
+		}).as('runRag');
 
-		// Visit the overview page in ops and wait for initial overview data
 		cy.visit('/ops/overview');
-		cy.wait('@getOverview');
+		cy.get('[data-testid="reload-overview"]').should('not.be.disabled');
+		cy.get('[data-testid="regen-rag"]').should('be.visible').and('not.be.disabled').click();
+		cy.get('[data-testid="reload-overview"]').should('be.disabled');
 
-		// Trigger regeneration via a button whose data-testid starts with "regen-"
-		cy.get('[data-testid^="regen-"]').click();
+		cy.wait('@runRag');
+		cy.wait('@overviewReload');
 
-		// Wait for the mocked run request to complete
-		cy.wait('@runOverview');
-
-		// Assert that the regeneration status is rendered
-		cy.get('[data-testid="regen-status"]').should('contain', 'Regeneration complete');
-
-		// Assert that logs from the mocked run are rendered in the UI
-		cy.get('[data-testid="regen-logs"]').within(() => {
-			cy.contains('Starting regeneration pipeline...').should('be.visible');
-			cy.contains('Regeneration complete.').should('be.visible');
-		});
+		cy.get('[data-testid="run-progress"]').should('contain.text', 'PASS');
+		cy.contains('h2', '直近の実行結果').should('be.visible');
+		cy.contains('p', /PASS 1/).should('be.visible');
+		cy.contains('details summary', 'rag').should('be.visible').click();
+		cy.contains('pre', 'Regeneration complete.').should('exist');
 	});
 });
