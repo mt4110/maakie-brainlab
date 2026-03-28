@@ -49,15 +49,17 @@
 			</h1>
 			<p class="muted">
 				{tx(
-					'Phase 1 では用語と導線だけを正し、Phase 2 で入力・回答・不明表示をこの面へ寄せます。RAG や lab 用語は main path から外します。',
-					'Phase 1 fixes the language and navigation. Phase 2 will move input, answer, and unknown handling onto this surface. RAG and lab jargon stays off the main path.'
+					'Phase 1 では main path と internal path を混ぜません。この画面では質問の形だけを教え、暫定 UI は Ops 側に退避します。',
+					'Phase 1 keeps the main path separate from internal flows. This page teaches the question shape while the transitional UI stays behind Ops.'
 				)}
 			</p>
 			<div class="inline-actions">
-				<a class="btn-link btn-primary" href="/chat-lab"
-					>{tx('暫定の質問フローを開く', 'Open the transitional question flow')}</a
+				<a class="btn-link btn-primary" href="/ops"
+					>{tx('暫定質問UIを開く（Ops）', 'Open the transitional question UI (Ops)')}</a
 				>
-				<a class="btn-link btn-ghost" href="/ops">{tx('Ops で内部面を見る', 'Open internal surfaces in Ops')}</a>
+				<a class="btn-link btn-ghost" href="/evidence"
+					>{tx('根拠の見え方を見る', 'See how evidence should look')}</a
+				>
 			</div>
 		</article>
 		<article class="panel">

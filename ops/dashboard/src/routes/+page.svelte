@@ -88,10 +88,16 @@
 			<p class="eyebrow">{tx('資料', 'Documents')}</p>
 			<h2 class="section-title">
 				{tx(
-					'この画面では、いま使える資料の輪郭だけを最初に掴めるようにしています。',
-					'This screen helps you grasp the currently available document set before anything else.'
+					'現在の知識ベース候補を確認する画面です。',
+					'This is the screen for confirming the current knowledge-base candidates.'
 				)}
 			</h2>
+			<p class="section-copy">
+				{tx(
+					'ここでは何が登録されているかだけを見ます。答えを得るのは質問、答えの裏付けを見るのは根拠です。',
+					'Use this screen only to see what is registered. Questions are for answers, and Evidence is for verification.'
+				)}
+			</p>
 			<div class="surface-meta">
 				<div class="meta-card">
 					<p class="meta-label">{tx('登録済み資料', 'Registered documents')}</p>
@@ -109,17 +115,35 @@
 			<ul class="flat-list">
 				<li>
 					{tx(
-						'登録済み資料を全件表示します。',
-						'This surface shows the full registered document list.'
+						'有効: 質問時の参照候補に入ります。',
+						'Enabled: included as a candidate during question answering.'
 					)}
 				</li>
 				<li>
 					{tx(
-						'資料追加や再インデックスの本実装は、製品導線に乗る形で Phase 2 に寄せます。',
-						'Document add and reindex actions will move here in Phase 2 once they fit the product path.'
+						'パス: 元資料の置き場所です。',
+						'Path: where the source document lives.'
+					)}
+				</li>
+				<li>
+					{tx(
+						'タグ: 資料の分類です。',
+						'Tags: how the document is categorized.'
 					)}
 				</li>
 			</ul>
+			<p class="section-copy">
+				{tx(
+					'資料を確認したら、次は質問に進んでください。詳しい追加・編集・再生成は Ops にあります。',
+					'After reviewing the documents, continue to Questions. Detailed add/edit/regenerate work stays in Ops.'
+				)}
+			</p>
+			<div class="inline-actions">
+				<a class="btn-link btn-primary" href="/questions"
+					>{tx('質問へ進む', 'Continue to Questions')}</a
+				>
+				<a class="btn-link btn-ghost" href="/ops">{tx('詳細管理は Ops', 'Detailed management in Ops')}</a>
+			</div>
 			{#if data.sourcesDegraded && data.sourcesMessage}
 				<p class="section-copy">{data.sourcesMessage}</p>
 			{/if}
@@ -137,8 +161,8 @@
 					)}
 				</h2>
 			</div>
-			<a class="btn-link btn-ghost" href="/ops"
-				>{tx('詳細管理は Ops', 'Detailed management in Ops')}</a
+			<a class="btn-link btn-ghost" href="/questions"
+				>{tx('一覧を見たら質問へ', 'After the list, go to Questions')}</a
 			>
 		</div>
 

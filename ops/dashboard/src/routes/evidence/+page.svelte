@@ -43,13 +43,13 @@
 			</h1>
 			<p class="muted">
 				{tx(
-					'Phase 1 では最近の証跡だけを静かに見せます。Phase 2 で回答単位の引用表示と、資料への追跡をここへ寄せます。',
-					'Phase 1 quietly exposes recent evidence artifacts. Phase 2 will move answer-level citations and document tracing onto this surface.'
+					'Phase 1 では最近の証跡だけを静かに見せます。詳細比較や履歴の深掘りは main path に漏らさず、Ops 側に置きます。',
+					'Phase 1 quietly exposes recent evidence artifacts. Deeper comparison and full timelines stay in Ops, not on the main path.'
 				)}
 			</p>
 			<div class="inline-actions">
-				<a class="btn-link btn-primary" href="/history"
-					>{tx('詳細履歴を開く', 'Open detailed history')}</a
+				<a class="btn-link btn-primary" href="/ops"
+					>{tx('詳細比較は Ops へ', 'Open detailed comparison in Ops')}</a
 				>
 				<a class="btn-link btn-ghost" href="/questions">{tx('質問面へ戻る', 'Back to Questions')}</a>
 			</div>
