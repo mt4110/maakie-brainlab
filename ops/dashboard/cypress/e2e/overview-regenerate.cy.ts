@@ -41,7 +41,7 @@ describe('phase 1 surface simplification', () => {
 		cy.intercept('POST', '**/api/dashboard/run', (req) => {
 			expect(req.body.pipeline).to.eq('rag');
 			req.reply({
-				delay: 200,
+				delay: 1500,
 				statusCode: 200,
 				body: {
 					status: 'PASS',
