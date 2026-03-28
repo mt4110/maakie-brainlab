@@ -1,25 +1,19 @@
-# Maakie Ops Dashboard (SvelteKit)
+# Maakie Brainlab UI / Ops (SvelteKit)
 
-SvelteKit + TypeScript で実装した運用ダッシュボードです。
+SvelteKit + TypeScript で実装した Brainlab UI です。
 
-- 主要画面
-    - `Overview`: RAG / LangChain / ML / Quality / Operator の最新指標
-    - `Evidence History`: `docs/evidence/**/_latest.json` と Contract違反ログの履歴 + JSON比較
-    - `Prompt Trace`: `il.compile.prompt.txt` + raw response + compile report
-    - `Fine-tune`: prompt loop 実行と履歴
-    - `AI Lab`: Local Model / MCP / AI CLI 実行と履歴登録
-    - `Chat + RAG`: Chatモード + RAG提案 + サイドメニューでRAGソースCRUD
-    - `Consensus IL`: CLI / LOCAL / API 合意形成（contract / guard / evidence / result / time）
-    - `ML Studio`: 手順とTipsつきチュートリアル
-    - `RAG Lab`: RAG調整実行と検証
-    - `LangChain Lab`: PoC実行とrollback運用ガイド
-    - `Site Map`: 画面機能の一覧と最短導線
-    - `Site Docs`: 画面/API/保存先/運用コマンドの詳細説明
+- 通常導線
+    - `資料` (`/`): 現在登録されている資料候補を確認する入口
+    - `質問` (`/questions`): 答え + 根拠 + 不明表示へ寄せていく入口
+    - `根拠` (`/evidence`): 最近の証跡を見る入口
+- 内部導線
+    - `Ops` (`/ops`): lab / operator / trace 系の退避面
+    - `Ops Overview` (`/ops/overview`): 全体状態確認と既存 pipeline 再生成
+    - 既存の `Prompt Trace`, `Fine-tune`, `AI Lab`, `Chat + RAG`, `Consensus IL`, `ML Studio`, `RAG Lab`, `LangChain Lab`, `Site Map`, `Site Docs` はここから開く
 - UI
     - ヘッダーから `JA / EN` 切替（初期値: `JA`、LocalStorage保存）
-    - 既存主要ページ本文も `JA / EN` 切替に対応
 - 実行API
-    - RAG tuning, LangChain PoC, ML experiment, quality burndown, operator export
+    - 既存APIは維持するが、通常ユーザーの main path では前面に出さない
 
 ## Why Vite (not RSPack)
 
@@ -35,7 +29,7 @@ cd /Users/takemuramasaki/dev/maakie-brainlab
 ```
 
 ```bash
-# terminal B: dashboard
+# terminal B: UI
 cd ops/dashboard
 cp .env.example .env # first time only
 export OPENAI_API_BASE=http://127.0.0.1:11434/v1
@@ -44,6 +38,8 @@ npm run dev
 ```
 
 Default port is fixed to `3033` (`strictPort=true`).
+
+起動後の通常導線は `資料 / 質問 / 根拠` です。運用面は `/ops` から入ってください。
 
 ## API Endpoints
 

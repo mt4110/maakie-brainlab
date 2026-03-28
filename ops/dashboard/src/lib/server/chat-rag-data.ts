@@ -71,6 +71,12 @@ interface ChatRunLogRecord {
 	error?: string;
 }
 
+export interface RagSourceReadOnlyResult {
+	items: RagSourceItem[];
+	degraded: boolean;
+	message: string | null;
+}
+
 function trimOutput(text: string): string {
 	if (text.length <= OUTPUT_LIMIT) {
 		return text;
@@ -256,6 +262,10 @@ function escapeSqlLike(value: string): string {
 
 async function readRagSourcesUnsafe(): Promise<RagSourceItem[]> {
 	const db = ensureRagStorage();
+	return readRagSourcesFromDb(db);
+}
+
+function readRagSourcesFromDb(db: DatabaseSync): RagSourceItem[] {
 	const rawRows = db
 		.prepare(
 			`SELECT id, name, description, path, tags_json, enabled, created_at, updated_at
@@ -270,6 +280,33 @@ async function readRagSourcesUnsafe(): Promise<RagSourceItem[]> {
 			out.push(normalized);
 		}
 	}
+	return out;
+}
+
+function readLegacyRagSourcesFileFromPath(legacyPath: string): RagSourceItem[] {
+	if (!existsSync(legacyPath)) {
+		return [];
+	}
+	let parsed: unknown;
+	try {
+		parsed = JSON.parse(readFileSync(legacyPath, 'utf-8'));
+	} catch {
+		return [];
+	}
+	if (!Array.isArray(parsed)) {
+		return [];
+	}
+	const out: RagSourceItem[] = [];
+	for (const item of parsed) {
+		if (!item || typeof item !== 'object' || Array.isArray(item)) {
+			continue;
+		}
+		const normalized = normalizeSource(item as Partial<RagSourceItem>);
+		if (normalized) {
+			out.push(normalized);
+		}
+	}
+	out.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 	return out;
 }
 
@@ -437,6 +474,61 @@ function sanitizeTurns(input: ChatTurn[] | undefined): ChatTurn[] {
 
 export async function listRagSources(): Promise<RagSourceItem[]> {
 	return readRagSourcesUnsafe();
+}
+
+export async function listRagSourcesReadOnlyFromPaths(paths: {
+	dbPath: string;
+	legacyPath: string;
+}): Promise<RagSourceReadOnlyResult> {
+	if (!existsSync(paths.dbPath)) {
+		return {
+			items: readLegacyRagSourcesFileFromPath(paths.legacyPath),
+			degraded: false,
+			message: null
+		};
+	}
+
+	try {
+		const db = new DatabaseSync(paths.dbPath, {
+			readOnly: true,
+			timeout: 5000
+		});
+		try {
+			const dbItems = readRagSourcesFromDb(db);
+			if (dbItems.length > 0) {
+				return {
+					items: dbItems,
+					degraded: false,
+					message: null
+				};
+			}
+			const legacyItems = readLegacyRagSourcesFileFromPath(paths.legacyPath);
+			return {
+				items: legacyItems,
+				degraded: false,
+				message: null
+			};
+		} finally {
+			db.close();
+		}
+	} catch {
+		const fallback = readLegacyRagSourcesFileFromPath(paths.legacyPath);
+		return {
+			items: fallback,
+			degraded: true,
+			message:
+				fallback.length > 0
+					? '資料一覧の保存領域を直接読めなかったため、保存済みの簡易一覧を表示しています。'
+					: '資料一覧の保存領域を読めなかったため、現在は空の一覧を表示しています。'
+		};
+	}
+}
+
+export async function listRagSourcesReadOnly(): Promise<RagSourceReadOnlyResult> {
+	return listRagSourcesReadOnlyFromPaths({
+		dbPath: RAG_SOURCES_DB_FILE,
+		legacyPath: LEGACY_RAG_SOURCES_FILE
+	});
 }
 
 export async function queryRagSources(

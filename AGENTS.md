@@ -25,3 +25,11 @@
   - DO: minimal implementation
   - CHECK: run standard checks
   - SHIP: commit + PR body (include test commands and results)
+
+## Product source of truth
+
+- Before implementation, read `PRODUCT.md`.
+- For product scope, UX, navigation, and feature priority, `PRODUCT.md` wins over existing UI, README, and legacy surface behavior.
+- `AGENTS.md` governs workflow, checks, and branch rules.
+- `PRODUCT.md` governs what to build and what to remove.
+- During migration, do not treat current dashboard surface as the target UX.

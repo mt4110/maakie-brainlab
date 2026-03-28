@@ -9,40 +9,24 @@ export const LOCALE_STORAGE_KEY = 'dashboard.locale';
 
 const DICT = {
 	ja: {
-		appTitle: 'Maakie Ops ダッシュボード',
-		brand: 'Maakie Brainlab Ops',
+		appTitle: 'Maakie Brainlab',
+		brand: 'Maakie Brainlab',
 		mainNavAria: 'メインナビゲーション',
 		languageSwitchAria: '言語切替',
-		navOverview: '概要',
-		navHistory: 'エビデンス履歴',
-		navPromptTrace: 'プロンプト追跡',
-		navFineTune: 'ファインチューン',
-		navAiLab: 'AI ラボ',
-		navChatLab: 'Chat + RAG',
-		navConsensus: 'コンセンサス IL',
-		navMlStudio: 'ML スタジオ',
-		navRagLab: 'RAG ラボ',
-		navLangChainLab: 'LangChain ラボ',
-		navSitemap: 'サイトマップ',
-		navDocs: 'サイトドキュメント'
+		navDocuments: '資料',
+		navQuestions: '質問',
+		navEvidence: '根拠',
+		utilityOps: 'Ops'
 	},
 	en: {
-		appTitle: 'Maakie Ops Dashboard',
-		brand: 'Maakie Brainlab Ops',
+		appTitle: 'Maakie Brainlab',
+		brand: 'Maakie Brainlab',
 		mainNavAria: 'Main navigation',
 		languageSwitchAria: 'Language switch',
-		navOverview: 'Overview',
-		navHistory: 'Evidence History',
-		navPromptTrace: 'Prompt Trace',
-		navFineTune: 'Fine-tune',
-		navAiLab: 'AI Lab',
-		navChatLab: 'Chat + RAG',
-		navConsensus: 'Consensus IL',
-		navMlStudio: 'ML Studio',
-		navRagLab: 'RAG Lab',
-		navLangChainLab: 'LangChain Lab',
-		navSitemap: 'Site Map',
-		navDocs: 'Site Docs'
+		navDocuments: 'Documents',
+		navQuestions: 'Questions',
+		navEvidence: 'Evidence',
+		utilityOps: 'Ops'
 	}
 } as const;
 

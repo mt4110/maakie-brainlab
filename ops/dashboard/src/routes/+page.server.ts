@@ -1,8 +1,10 @@
-import { getOverviewPayload } from '$lib/server/dashboard-data';
+import { listRagSourcesReadOnly } from '$lib/server/chat-rag-data';
 
 export async function load() {
-	const overview = await getOverviewPayload();
+	const sourceState = await listRagSourcesReadOnly();
 	return {
-		overview
+		sources: sourceState.items,
+		sourcesDegraded: sourceState.degraded,
+		sourcesMessage: sourceState.message
 	};
 }
