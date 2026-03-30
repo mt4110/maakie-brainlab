@@ -1,5 +1,6 @@
 import { json } from '@sveltejs/kit';
 
+import { classifyChatRunFailure } from '$lib/questions/presenter';
 import { runChatWithRag } from '$lib/server/chat-rag-data';
 import type { ChatRunRequest } from '$lib/server/types';
 
@@ -14,11 +15,14 @@ export async function POST({ request }: { request: Request }) {
 		const payload = await runChatWithRag(body);
 		return json(payload);
 	} catch (error) {
+		const message = error instanceof Error ? error.message : 'Chat execution failed.';
+		const kind = classifyChatRunFailure(message);
 		return json(
 			{
-				error: error instanceof Error ? error.message : 'Chat execution failed.'
+				error: message,
+				kind
 			},
-			{ status: 500 }
+			{ status: kind === 'backend_unavailable' ? 503 : 500 }
 		);
 	}
 }
