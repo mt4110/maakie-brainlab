@@ -278,6 +278,13 @@ def parse_json_object(raw: str) -> Dict[str, Any]:
     return parsed
 
 
+def trim_one_line(value: str, limit: int = 200) -> str:
+    text = " ".join(str(value or "").split()).strip()
+    if len(text) <= limit:
+        return text
+    return text[:limit].rstrip() + "..."
+
+
 def _looks_like_filesystem_path(text: str) -> bool:
     raw = str(text or "").strip()
     return (
@@ -379,7 +386,10 @@ def invoke_gemma_lab_bridge(
     if proc.stdout.strip():
         try:
             parsed = parse_json_object(proc.stdout)
-        except ValueError:
+        except ValueError as exc:
+            if proc.returncode == 0:
+                detail = trim_one_line(proc.stderr or proc.stdout or str(exc))
+                raise RuntimeError(f"gemma-lab bridge returned invalid JSON: {detail}") from exc
             parsed = {}
     if proc.returncode != 0:
         detail = str(parsed.get("error") or proc.stderr or proc.stdout).strip()

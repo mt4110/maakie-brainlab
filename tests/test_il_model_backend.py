@@ -157,6 +157,33 @@ class TestModelBackendHelpers(unittest.TestCase):
 
         self.assertIn("traceback detail", str(ctx.exception))
 
+    def test_invoke_gemma_lab_bridge_rejects_non_json_stdout_on_success(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            bridge = tmp_path / "bridge.py"
+            bridge.write_text("#!/usr/bin/env python3\n", encoding="utf-8")
+
+            class _OkProc:
+                returncode = 0
+                stdout = "warning: not json"
+                stderr = ""
+
+            with patch("src.il_model_backend.subprocess.run", return_value=_OkProc()):
+                with self.assertRaises(RuntimeError) as ctx:
+                    invoke_gemma_lab_bridge(
+                        mode="chat",
+                        model_id="dummy",
+                        messages=[{"role": "user", "content": "hello"}],
+                        gemma_root=tmp_path,
+                        python_path="python3",
+                        bridge_script=str(bridge),
+                        timeout_s=1,
+                        cwd=tmp_path,
+                    )
+
+        self.assertIn("invalid JSON", str(ctx.exception))
+        self.assertIn("warning: not json", str(ctx.exception))
+
     def test_blank_gemma_timeout_env_uses_default(self):
         with patch.dict(
             "os.environ",
