@@ -1,14 +1,23 @@
 #!/usr/bin/env python3
 import argparse
+import json
 import os
 import re
 import sqlite3
+import subprocess
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, Optional
 
 import requests
 
+try:
+    from dotenv import load_dotenv
+except ImportError:  # pragma: no cover - optional at runtime
+    load_dotenv = None
+
 ROOT = Path(__file__).resolve().parents[1]
+if load_dotenv is not None:
+    load_dotenv(ROOT / ".env", override=False)
 
 def normalize_rag_blocks(out: str) -> str:
     """
@@ -259,6 +268,90 @@ def chat_openai_compat(
     )
 
 
+def resolve_local_model_backend() -> str:
+    raw = os.getenv("LOCAL_MODEL_BACKEND", "openai_compat").strip().lower()
+    if raw == "gemma_lab":
+        return "gemma_lab"
+    return "openai_compat"
+
+
+def resolve_local_model_name(backend: Optional[str] = None) -> str:
+    resolved_backend = backend or resolve_local_model_backend()
+    if resolved_backend == "gemma_lab":
+        return os.getenv("GEMMA_MODEL_ID", "google/gemma-4-E2B-it").strip() or "google/gemma-4-E2B-it"
+    return os.getenv("LOCAL_GGUF_MODEL", "Qwen2.5-7B-Instruct-Q4_K_M.gguf").strip() or "Qwen2.5-7B-Instruct-Q4_K_M.gguf"
+
+
+def resolve_gemma_lab_root() -> Path:
+    raw = os.getenv("GEMMA_LAB_ROOT", "").strip()
+    if raw:
+        return Path(raw).expanduser().resolve()
+    return (ROOT.parent / "gemma-lab").resolve()
+
+
+def resolve_gemma_lab_python(root: Optional[Path] = None) -> str:
+    raw = os.getenv("GEMMA_LAB_PYTHON", "").strip()
+    if raw:
+        return str(Path(raw).expanduser())
+    gemma_root = root or resolve_gemma_lab_root()
+    return str(gemma_root / ".venv" / "bin" / "python")
+
+
+def gemma_lab_bridge_path() -> Path:
+    return ROOT / "scripts" / "gemma_lab_bridge.py"
+
+
+def parse_json_object(raw: str) -> Dict[str, Any]:
+    text = (raw or "").strip()
+    if not text:
+        return {}
+    parsed = json.loads(text)
+    if not isinstance(parsed, dict):
+        raise ValueError("expected JSON object")
+    return parsed
+
+
+def chat_gemma_lab(messages, model: str) -> str:
+    gemma_root = resolve_gemma_lab_root()
+    python = resolve_gemma_lab_python(gemma_root)
+    bridge = gemma_lab_bridge_path()
+    if not gemma_root.exists():
+        raise RuntimeError(f"gemma-lab root not found: {gemma_root}")
+    if os.sep in python and not Path(python).exists():
+        raise RuntimeError(f"gemma-lab python not found: {python}")
+    if not bridge.exists():
+        raise RuntimeError(f"gemma bridge script not found: {bridge}")
+
+    proc = subprocess.run(
+        [
+            python,
+            str(bridge),
+            "--mode",
+            "chat",
+            "--gemma-root",
+            str(gemma_root),
+            "--model-id",
+            model,
+        ],
+        cwd=str(ROOT),
+        input=json.dumps({"model_id": model, "messages": messages}, ensure_ascii=False),
+        text=True,
+        capture_output=True,
+        timeout=20 * 60,
+    )
+    payload = parse_json_object(proc.stdout) if proc.stdout.strip() else {}
+    if proc.returncode != 0:
+        detail = str(payload.get("error") or proc.stderr or proc.stdout).strip()
+        raise RuntimeError(detail or f"gemma-lab bridge failed with exit code {proc.returncode}")
+    if str(payload.get("status") or "").strip().lower() != "ok":
+        detail = str(payload.get("error") or proc.stderr or proc.stdout).strip()
+        raise RuntimeError(detail or "gemma-lab bridge did not return ok status")
+    content = str(payload.get("output_text") or "").strip()
+    if content:
+        return content
+    raise RuntimeError("gemma-lab returned empty content")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("question")
@@ -347,12 +440,27 @@ def main() -> None:
         {"role": "user", "content": user_prompt},
     ]
 
+    backend = resolve_local_model_backend()
     base_url = os.getenv("OPENAI_API_BASE", "http://127.0.0.1:11434/v1")
-    model = os.getenv("LOCAL_GGUF_MODEL", "Qwen2.5-7B-Instruct-Q4_K_M.gguf")
+    model = resolve_local_model_name(backend)
     try:
-        out = chat_openai_compat(base_url, model, messages, temperature=args.temperature)
+        if backend == "gemma_lab":
+            out = chat_gemma_lab(messages, model)
+        else:
+            out = chat_openai_compat(base_url, model, messages, temperature=args.temperature)
     except Exception as exc:
         refs = "\n".join(f"- {s}" for s in sources) if sources else "- 不明（参照なし）"
+        if backend == "gemma_lab":
+            uncertainty_lines = [
+                "- gemma-lab 実行系の初期化またはモデル読み込みに失敗しました。",
+                "- GEMMA_LAB_ROOT / GEMMA_LAB_PYTHON / GEMMA_MODEL_ID を確認してください。",
+                "- Hugging Face キャッシュ未配置やメモリ不足でも失敗します。",
+            ]
+        else:
+            uncertainty_lines = [
+                "- OPENAI_API_BASE が LLM サーバーを指していない可能性があります。",
+                "- 例: http://127.0.0.1:11434/v1",
+            ]
         out = "\n".join(
             [
                 "結論:",
@@ -365,8 +473,7 @@ def main() -> None:
                 refs,
                 "",
                 "不確実性:",
-                "- OPENAI_API_BASE が LLM サーバーを指していない可能性があります。",
-                "- 例: http://127.0.0.1:11434/v1",
+                *uncertainty_lines,
             ]
         )
         print(normalize_rag_blocks(out))

@@ -14,7 +14,13 @@ import {
 	toRepoRelative,
 	walkFiles
 } from './fs';
-import { resolveOpenAiCompatApiBase } from './openai-compat';
+import {
+	resolveGemmaLabPython,
+	resolveGemmaLabRoot,
+	resolveLocalModelBackend,
+	resolveLocalModelName,
+	resolveLocalModelRuntimeLabel
+} from './local-model';
 import {
 	extractReferenceRetrievals,
 	recordRunInspector,
@@ -251,17 +257,29 @@ export async function runAiLab(request: AiLabRunRequest): Promise<AiLabRunRespon
 				throw new Error('prompt is required for local-model channel.');
 			}
 			const requestedModel = asString(request.model).trim();
-			const model =
-				requestedModel ||
-				asString(process.env.LOCAL_GGUF_MODEL).trim() ||
-				'Qwen2.5-7B-Instruct';
-			const apiBase = resolveOpenAiCompatApiBase(process.env.OPENAI_API_BASE);
+			const model = requestedModel || resolveLocalModelName();
+			const apiBase = resolveLocalModelRuntimeLabel();
+			const backend = resolveLocalModelBackend();
+			const envOverrides: Record<string, string> =
+				backend === 'gemma_lab'
+					? {
+							LOCAL_MODEL_BACKEND: 'gemma_lab',
+							GEMMA_MODEL_ID: model,
+							GEMMA_LAB_ROOT: resolveGemmaLabRoot(),
+							GEMMA_LAB_PYTHON: resolveGemmaLabPython(),
+							LOCAL_GGUF_MODEL: model
+						}
+					: {
+							LOCAL_MODEL_BACKEND: 'openai_compat',
+							LOCAL_GGUF_MODEL: model,
+							OPENAI_API_BASE: apiBase
+						};
 			return runProcess({
 				command: [py, 'src/ask.py', prompt],
 				channel,
 				prompt,
 				artifactPath: null,
-				envOverrides: requestedModel ? { LOCAL_GGUF_MODEL: requestedModel } : undefined,
+				envOverrides,
 				model,
 				apiBase
 			});

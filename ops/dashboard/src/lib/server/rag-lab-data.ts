@@ -5,6 +5,12 @@ import path from 'node:path';
 
 import { REPO_ROOT, repoJoin, toRepoRelative } from './fs';
 import { resolveOpenAiCompatApiBase } from './openai-compat';
+import {
+	probeGemmaLabRuntime,
+	resolveLocalModelBackend,
+	resolveLocalModelName,
+	resolveLocalModelRuntimeLabel
+} from './local-model';
 
 export type RagGuideStatus = 'PASS' | 'WARN' | 'FAIL';
 
@@ -287,6 +293,32 @@ async function runBuildIndex(): Promise<{
 }
 
 async function checkLlm(apiBase: string): Promise<RagLabGuideCheck> {
+	if (resolveLocalModelBackend() === 'gemma_lab') {
+		const probe = await probeGemmaLabRuntime();
+		if (probe.status === 'ok' && probe.cacheExists) {
+			return {
+				id: 'llm',
+				status: 'PASS',
+				detail: `Gemma Lab runtime ready (${probe.modelId})`,
+				hint: 'Gemma runtime is ready. Next: check data/index and ask a sample question.'
+			};
+		}
+		if (probe.status === 'ok') {
+			return {
+				id: 'llm',
+				status: 'WARN',
+				detail: `Gemma Lab runtime found (${probe.modelId}), but cache was not found at ${probe.cacheDir}`,
+				hint: 'Ensure the model is cached locally or that Hugging Face access is available for the first run.'
+			};
+		}
+		return {
+			id: 'llm',
+			status: 'FAIL',
+			detail: `Gemma Lab runtime unavailable (${shortOneLine(probe.error || 'probe failed')})`,
+			hint: 'Check GEMMA_LAB_ROOT / GEMMA_LAB_PYTHON and the gemma-lab virtualenv.'
+		};
+	}
+
 	const attempts: string[] = [];
 	for (const url of modelCheckUrls(apiBase)) {
 		const response = await fetchTextWithTimeout(url);
@@ -527,8 +559,11 @@ async function checkIndexDb(): Promise<{
 }
 
 export async function getRagLabGuidePayload(): Promise<RagLabGuidePayload> {
-	const apiBase = resolveOpenAiCompatApiBase(process.env.OPENAI_API_BASE);
-	const model = (process.env.LOCAL_GGUF_MODEL || 'Qwen2.5-7B-Instruct').trim();
+	const apiBase =
+		resolveLocalModelBackend() === 'gemma_lab'
+			? resolveLocalModelRuntimeLabel()
+			: resolveOpenAiCompatApiBase(process.env.OPENAI_API_BASE);
+	const model = resolveLocalModelName();
 
 	const [llmCheck, dataCheck, indexCheck] = await Promise.all([
 		checkLlm(apiBase),
@@ -615,8 +650,20 @@ export async function getRagReadonlySnapshotPayload(): Promise<RagReadonlySnapsh
 }
 
 export async function getRagModelListPayload(): Promise<RagModelListPayload> {
+	if (resolveLocalModelBackend() === 'gemma_lab') {
+		const probe = await probeGemmaLabRuntime();
+		const selectedModel = probe.modelId || resolveLocalModelName();
+		return {
+			apiBase: resolveLocalModelRuntimeLabel(),
+			selectedModel,
+			models: [selectedModel],
+			resolvedEndpoint: probe.root || null,
+			error: probe.status === 'ok' ? null : probe.error || 'gemma-lab runtime unavailable'
+		};
+	}
+
 	const apiBase = resolveOpenAiCompatApiBase(process.env.OPENAI_API_BASE);
-	const selectedModel = (process.env.LOCAL_GGUF_MODEL || 'Qwen2.5-7B-Instruct').trim();
+	const selectedModel = resolveLocalModelName();
 	const attempts: string[] = [];
 
 	for (const url of modelCheckUrls(apiBase)) {

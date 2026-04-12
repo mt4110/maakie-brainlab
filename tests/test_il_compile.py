@@ -3,11 +3,30 @@ import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Optional
 
 from src.il_compile import compile_request_bundle
+from src.il_model_backend import ModelBackendResponse
 
 
 class TestILCompile(unittest.TestCase):
+    class _FakeModelBackend:
+        backend_id = "fake_backend"
+
+        def __init__(self, raw_text: str, target: str = "memory://fake", error: Optional[Exception] = None) -> None:
+            self.raw_text = raw_text
+            self.target = target
+            self.error = error
+
+        def invoke(self, _request) -> ModelBackendResponse:
+            if self.error is not None:
+                raise self.error
+            return ModelBackendResponse(
+                raw_text=self.raw_text,
+                backend_id=self.backend_id,
+                target=self.target,
+            )
+
     def _good_request_payload(self) -> dict:
         return {
             "schema": "IL_COMPILE_REQUEST_v1",
@@ -201,8 +220,77 @@ class TestILCompile(unittest.TestCase):
         self.assertEqual(bundle.get("status"), "OK")
         report = bundle.get("report", {})
         self.assertEqual(report.get("provider_selected"), "local_llm")
+        self.assertEqual(report.get("model_backend_requested"), "legacy_callable")
+        self.assertEqual(report.get("model_backend_used"), "legacy_callable")
         self.assertFalse(report.get("fallback_used"))
         self.assertTrue(report.get("canonical_sha256"))
+
+    def test_local_llm_provider_accepts_structured_model_backend(self):
+        req = self._good_request_payload()
+        backend = self._FakeModelBackend(
+            json.dumps(
+                {
+                    "il": {
+                        "opcodes": [
+                            {"op": "SEARCH_TERMS", "args": {}},
+                            {"op": "RETRIEVE", "args": {}},
+                        ],
+                        "search_terms": ["alpha", "beta"],
+                    },
+                    "meta": {"version": "il_contract_v1", "generator": "fake_backend"},
+                    "evidence": {"notes": "from structured backend"},
+                },
+                ensure_ascii=False,
+            ),
+            target="memory://structured",
+        )
+
+        bundle = compile_request_bundle(
+            req,
+            provider="local_llm",
+            model="dummy_local_model",
+            allow_fallback=False,
+            model_backend=backend,
+        )
+        self.assertEqual(bundle.get("status"), "OK")
+        report = bundle.get("report", {})
+        self.assertEqual(report.get("provider_selected"), "local_llm")
+        self.assertEqual(report.get("model_backend_requested"), "fake_backend")
+        self.assertEqual(report.get("model_backend_used"), "fake_backend")
+        self.assertEqual(report.get("model_backend_target"), "memory://structured")
+
+    def test_local_llm_unknown_model_backend_falls_back_when_allowed(self):
+        req = self._good_request_payload()
+        bundle = compile_request_bundle(
+            req,
+            provider="local_llm",
+            model="dummy_local_model",
+            allow_fallback=True,
+            model_backend_id="not_real_backend",
+        )
+        self.assertEqual(bundle.get("status"), "OK")
+        report = bundle.get("report", {})
+        self.assertEqual(report.get("provider_requested"), "local_llm")
+        self.assertEqual(report.get("provider_selected"), "rule_based")
+        self.assertEqual(report.get("model_backend_requested"), "not_real_backend")
+        self.assertTrue(report.get("fallback_used"))
+
+    def test_local_llm_unknown_model_backend_errors_without_fallback(self):
+        req = self._good_request_payload()
+        bundle = compile_request_bundle(
+            req,
+            provider="local_llm",
+            model="dummy_local_model",
+            allow_fallback=False,
+            model_backend_id="not_real_backend",
+        )
+        self.assertEqual(bundle.get("status"), "ERROR")
+        report = bundle.get("report", {})
+        self.assertEqual(report.get("provider_requested"), "local_llm")
+        self.assertEqual(report.get("provider_selected"), "local_llm")
+        self.assertEqual(report.get("model_backend_requested"), "not_real_backend")
+        codes = [e.get("code") for e in bundle.get("errors", [])]
+        self.assertIn("E_BACKEND", codes)
 
     def test_prompt_profile_affects_report_and_prompt(self):
         req = self._good_request_payload()

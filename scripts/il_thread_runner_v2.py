@@ -28,6 +28,7 @@ from src.il_compile import (
     normalize_prompt_profile_input,
     resolve_prompt_template_id,
 )
+from src.il_model_backend import resolve_requested_model_backend
 
 CASE_SCHEMA = "IL_THREAD_RUNNER_V2_CASE_v1"
 SUMMARY_SCHEMA = "IL_THREAD_RUNNER_V2_SUMMARY_v1"
@@ -43,7 +44,7 @@ def usage() -> str:
     return (
         "python3 scripts/il_thread_runner_v2.py "
         "--cases <cases.jsonl> --mode <validate-only|run> --out <out_dir> "
-        "[--provider <rule_based|local_llm>] [--model <name>] "
+        "[--provider <rule_based|local_llm>] [--model <name>] [--model-backend <openai_compat|gemma_lab>] "
         "[--prompt-profile <auto|v1|strict_json_v2|contract_json_v3>] [--seed <int>] [--no-fallback] "
         "[--entry-timeout-sec <int>] [--entry-retries <int>] [--entry-script <path>] "
         "[--resume] [--shard-index <int>] [--shard-count <int>] "
@@ -92,6 +93,7 @@ def parse_args(
     Optional[Path],
     str,
     str,
+    Optional[str],
     str,
     int,
     bool,
@@ -111,6 +113,7 @@ def parse_args(
     out_dir: Optional[Path] = None
     provider = DEFAULT_PROVIDER
     model = DEFAULT_MODEL
+    model_backend: Optional[str] = None
     prompt_profile = AUTO_PROMPT_PROFILE
     seed = 7
     allow_fallback = True
@@ -131,6 +134,7 @@ def parse_args(
             out_dir,
             provider,
             model,
+            model_backend,
             prompt_profile,
             seed,
             allow_fallback,
@@ -183,6 +187,13 @@ def parse_args(
                 i += 1
                 continue
             model = args[i + 1]
+            i += 2
+        elif token == "--model-backend":
+            if i + 1 >= len(args):
+                errors.append("missing value for --model-backend")
+                i += 1
+                continue
+            model_backend = args[i + 1]
             i += 2
         elif token == "--prompt-profile":
             if i + 1 >= len(args):
@@ -318,6 +329,7 @@ def parse_args(
         out_dir,
         provider,
         model,
+        model_backend,
         normalize_prompt_profile_input(prompt_profile),
         seed,
         allow_fallback,
@@ -581,6 +593,7 @@ def _build_summary(
     entry_retries: int,
     selected_entry_script: Path,
     *,
+    model_backend: str = "",
     resume: bool,
     shard_index: int,
     shard_count: int,
@@ -606,6 +619,7 @@ def _build_summary(
         "mode": mode,
         "provider": provider,
         "model": model,
+        "model_backend": model_backend,
         "prompt_profile": prompt_profile,
         "seed": seed,
         "allow_fallback": allow_fallback,
@@ -704,6 +718,7 @@ def _bundle_from_case_errors(
     errors: List[Dict[str, Any]],
     provider: str,
     model: str,
+    model_backend: Optional[str],
     prompt_profile: str,
     seed: int,
 ) -> Dict[str, Any]:
@@ -726,6 +741,11 @@ def _bundle_from_case_errors(
             "model": model,
             "provider_requested": provider,
             "provider_selected": provider,
+            "model_backend_requested": (
+                resolve_requested_model_backend(model_backend) if provider == "local_llm" else ""
+            ),
+            "model_backend_used": "",
+            "model_backend_target": "",
             "fallback_used": False,
             "repair_applied": False,
             "repair_rule_id": "",
@@ -852,6 +872,7 @@ def _run_thread_runner_impl(
     out_dir: Path,
     provider: str = DEFAULT_PROVIDER,
     model: str = DEFAULT_MODEL,
+    model_backend: Optional[str] = None,
     prompt_profile: str = AUTO_PROMPT_PROFILE,
     seed: int = 7,
     allow_fallback: bool = True,
@@ -866,11 +887,13 @@ def _run_thread_runner_impl(
 ) -> int:
     excluded_ids = excluded_ids or set()
     selected_entry_script = entry_script or (repo_root / "scripts" / "il_entry.py")
+    resolved_model_backend = resolve_requested_model_backend(model_backend) if provider == "local_llm" else ""
     log(
         "OK",
         (
             f"phase=boot mode={mode} out={out_dir} cases={cases_path} provider={provider} "
-            f"model={model} prompt_profile={prompt_profile} seed={seed} allow_fallback={allow_fallback} "
+            f"model={model} model_backend={resolved_model_backend} prompt_profile={prompt_profile} "
+            f"seed={seed} allow_fallback={allow_fallback} "
             f"entry_timeout_sec={entry_timeout_sec} entry_retries={entry_retries} entry_script={selected_entry_script} "
             f"resume={resume} shard={shard_index}/{shard_count} excluded={len(excluded_ids)}"
         ),
@@ -979,13 +1002,14 @@ def _run_thread_runner_impl(
         log("OK", f"phase=case_start index={idx} id={case_id}")
         if case_errors:
             case_errors.sort(key=lambda x: (x.get("path", ""), x.get("code", ""), x.get("message", "")))
-            bundle = _bundle_from_case_errors(case_errors, provider, model, prompt_profile, seed)
+            bundle = _bundle_from_case_errors(case_errors, provider, model, model_backend, prompt_profile, seed)
         else:
             bundle = compile_request_bundle(
                 case.get("request", {}),
                 model=model,
                 seed_override=seed,
                 provider=provider,
+                model_backend_id=model_backend,
                 allow_fallback=allow_fallback,
                 prompt_profile=prompt_profile,
             )
@@ -1144,6 +1168,7 @@ def _run_thread_runner_impl(
                 entry_timeout_sec=entry_timeout_sec,
                 entry_retries=entry_retries,
                 selected_entry_script=selected_entry_script,
+                model_backend=resolved_model_backend,
                 resume=resume,
                 shard_index=shard_index,
                 shard_count=shard_count,
@@ -1181,6 +1206,7 @@ def _run_thread_runner_impl(
         entry_timeout_sec=entry_timeout_sec,
         entry_retries=entry_retries,
         selected_entry_script=selected_entry_script,
+        model_backend=resolved_model_backend,
         resume=resume,
         shard_index=shard_index,
         shard_count=shard_count,
@@ -1211,6 +1237,7 @@ def run_thread_runner(
     out_dir: Path,
     provider: str = DEFAULT_PROVIDER,
     model: str = DEFAULT_MODEL,
+    model_backend: Optional[str] = None,
     prompt_profile: str = AUTO_PROMPT_PROFILE,
     seed: int = 7,
     allow_fallback: bool = True,
@@ -1230,6 +1257,7 @@ def run_thread_runner(
             out_dir=out_dir,
             provider=provider,
             model=model,
+            model_backend=model_backend,
             prompt_profile=prompt_profile,
             seed=seed,
             allow_fallback=allow_fallback,
@@ -1252,6 +1280,7 @@ def main(argv: List[str]) -> int:
         out_dir,
         provider,
         model,
+        model_backend,
         prompt_profile,
         seed,
         allow_fallback,
@@ -1282,6 +1311,7 @@ def main(argv: List[str]) -> int:
         out_dir=out_dir,
         provider=provider,
         model=model,
+        model_backend=model_backend,
         prompt_profile=prompt_profile,
         seed=seed,
         allow_fallback=allow_fallback,

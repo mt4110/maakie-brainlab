@@ -5,6 +5,12 @@ import re
 import time
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
+from src.il_model_backend import (
+    ModelBackendAdapter,
+    ModelBackendRequest,
+    resolve_model_backend_adapter,
+    resolve_requested_model_backend,
+)
 from src.il_validator import ILCanonicalizer, ILValidator
 
 
@@ -17,7 +23,6 @@ PROMPT_TEMPLATE_IDS = {
 }
 DEFAULT_MODEL = "rule_based_v1"
 DEFAULT_PROVIDER = "rule_based"
-DEFAULT_LOCAL_LLM_API_BASE = "http://127.0.0.1:11434/v1"
 DEFAULT_DETERMINISM = {
     "temperature": 0.0,
     "top_p": 1.0,
@@ -825,6 +830,52 @@ def _repair_missing_closing_braces(text: str) -> Optional[str]:
     return text + ("}" * depth)
 
 
+def _repair_missing_object_brace_before_array_close(text: str) -> Optional[str]:
+    # Allow a single missing object close immediately before an array close, e.g.
+    # {... "args": {...}}] -> {... "args": {...}}}] when the repaired payload parses.
+    stripped_end = len(text.rstrip())
+    in_string = False
+    escape = False
+    for idx, ch in enumerate(text):
+        if in_string:
+            if escape:
+                escape = False
+            elif ch == "\\":
+                escape = True
+            elif ch == '"':
+                in_string = False
+            continue
+        if ch == '"':
+            in_string = True
+            continue
+        if ch != "]":
+            continue
+
+        left = idx - 1
+        while left >= 0 and text[left] in {" ", "\t", "\r", "\n"}:
+            left -= 1
+        if left < 0 or text[left] != "}":
+            continue
+
+        right = idx + 1
+        while right < len(text) and text[right] in {" ", "\t", "\r", "\n"}:
+            right += 1
+        if right >= len(text) or text[right] not in {",", "}", "]"}:
+            continue
+
+        candidates = [text[:idx] + "}" + text[idx:]]
+        if stripped_end > 0 and text[stripped_end - 1] == "}":
+            candidates.append(text[:idx] + "}" + text[idx : stripped_end - 1] + text[stripped_end:])
+
+        for repaired in candidates:
+            try:
+                json.loads(repaired)
+                return repaired
+            except Exception:
+                continue
+    return None
+
+
 def _parse_candidate_with_repair(candidate: str) -> Tuple[Optional[Any], str, bool, str]:
     try:
         return json.loads(candidate), "", False, ""
@@ -834,6 +885,7 @@ def _parse_candidate_with_repair(candidate: str) -> Tuple[Optional[Any], str, bo
     # S32-08 bounded repair rules (allowlist only).
     repair_rules = [
         ("R_PARSE_TRAILING_COMMA", _repair_trailing_commas),
+        ("R_PARSE_CLOSE_OBJECT_BEFORE_ARRAY_END", _repair_missing_object_brace_before_array_close),
         ("R_PARSE_CLOSE_BRACE", _repair_missing_closing_braces),
     ]
     for rule_id, repair_fn in repair_rules:
@@ -884,105 +936,6 @@ def _parse_llm_json_response(raw_response: str) -> Tuple[Optional[Dict[str, Any]
             hint="return strict JSON object",
         )
     ], False, ""
-
-
-def _call_local_llm_default(prompt_text: str, model: str, determinism: Dict[str, Any]) -> str:
-    api_base = os.environ.get("IL_COMPILE_LLM_API_BASE", DEFAULT_LOCAL_LLM_API_BASE).rstrip("/")
-    api_key = os.environ.get("IL_COMPILE_LLM_API_KEY", "dummy")
-    timeout_s = int(os.environ.get("IL_COMPILE_LLM_TIMEOUT_S", "60"))
-    max_tokens = int(os.environ.get("IL_COMPILE_LLM_MAX_TOKENS", "1024"))
-
-    # Prefer project adapter first. If unavailable (e.g. llama_index missing), fallback to raw OpenAI-compatible HTTP.
-    try:
-        from src.local_llm import LocalLlamaCppLLM
-
-        llm = LocalLlamaCppLLM(
-            api_base=api_base,
-            model=model,
-            api_key=api_key,
-            temperature=float(determinism["temperature"]),
-            timeout_s=timeout_s,
-        )
-        resp = llm.complete(prompt_text, max_tokens=max_tokens, top_p=float(determinism["top_p"]))
-        text = getattr(resp, "text", "")
-        if isinstance(text, str) and text.strip():
-            return text
-    except Exception:
-        pass
-
-    payload = {
-        "model": model,
-        "temperature": float(determinism["temperature"]),
-        "top_p": float(determinism["top_p"]),
-        "messages": [{"role": "user", "content": prompt_text}],
-        "max_tokens": max_tokens,
-        "stream": False,
-    }
-    headers = {"Content-Type": "application/json"}
-    if api_key:
-        headers["Authorization"] = f"Bearer {api_key}"
-    def _chat_completion_urls(base: str) -> List[str]:
-        src = (base or "").rstrip("/")
-        if not src:
-            src = DEFAULT_LOCAL_LLM_API_BASE
-        if src.endswith("/chat/completions"):
-            src = src[: -len("/chat/completions")].rstrip("/")
-        rows = [f"{src}/chat/completions"]
-        if src.endswith("/v1"):
-            root = src[: -len("/v1")].rstrip("/")
-            if root:
-                rows.append(f"{root}/chat/completions")
-        else:
-            rows.append(f"{src}/v1/chat/completions")
-        uniq: List[str] = []
-        for item in rows:
-            if item and item not in uniq:
-                uniq.append(item)
-        return uniq
-
-    # Prefer requests when available.
-    try:
-        import requests  # type: ignore
-
-        attempts: List[str] = []
-        for url in _chat_completion_urls(api_base):
-            resp = requests.post(url, json=payload, headers=headers, timeout=timeout_s)
-            if resp.status_code == 404:
-                attempts.append(f"{url}:404")
-                continue
-            resp.raise_for_status()
-            data = resp.json()
-            return data["choices"][0]["message"]["content"]
-        raise RuntimeError(
-            f"local llm endpoint not found for api_base={api_base}; attempts={', '.join(attempts) or 'none'}"
-        )
-    except ModuleNotFoundError:
-        pass
-
-    # Stdlib fallback (no external deps).
-    try:
-        from urllib import error as urllib_error
-        from urllib import request as urllib_request
-
-        body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
-        for url in _chat_completion_urls(api_base):
-            req = urllib_request.Request(url, data=body, headers=headers, method="POST")
-            try:
-                with urllib_request.urlopen(req, timeout=timeout_s) as resp:  # nosec B310: URL from local config
-                    raw = resp.read().decode("utf-8")
-                data = json.loads(raw)
-                return data["choices"][0]["message"]["content"]
-            except urllib_error.HTTPError as exc:
-                if exc.code == 404:
-                    continue
-                detail = exc.read().decode("utf-8", errors="replace")
-                raise RuntimeError(f"local llm http_error status={exc.code} body={detail[:200]}") from exc
-        raise RuntimeError(f"local llm endpoint not found for api_base={api_base}")
-    except urllib_error.HTTPError as exc:
-        detail = exc.read().decode("utf-8", errors="replace")
-        raise RuntimeError(f"local llm http_error status={exc.code} body={detail[:200]}") from exc
-    except Exception as exc:
-        raise RuntimeError(f"local llm http request failed: {exc}") from exc
 
 
 def _compile_rule_based(
@@ -1039,11 +992,34 @@ def _compile_local_llm(
     prompt_text: str,
     determinism: Dict[str, Any],
     model: str,
+    model_backend: Optional[ModelBackendAdapter] = None,
+    model_backend_id: Optional[str] = None,
     llm_adapter: Optional[LLMAdapter] = None,
-) -> Tuple[Optional[Dict[str, Any]], str, List[Dict[str, Any]], bool, str]:
-    adapter = llm_adapter or _call_local_llm_default
+) -> Tuple[Optional[Dict[str, Any]], str, List[Dict[str, Any]], bool, str, str, str]:
     try:
-        raw_response = adapter(prompt_text, model, determinism)
+        adapter = resolve_model_backend_adapter(
+            adapter=model_backend or llm_adapter,
+            backend_id=model_backend_id,
+        )
+    except Exception as exc:
+        return None, "", [
+            _make_error(
+                "E_BACKEND",
+                f"model backend resolution failed: {exc}",
+                path="/model_backend",
+                hint="use openai_compat or gemma_lab",
+                retriable=True,
+            )
+        ], False, "", "", ""
+
+    try:
+        backend_response = adapter.invoke(
+            ModelBackendRequest(
+                prompt_text=prompt_text,
+                model=model,
+                determinism=determinism,
+            )
+        )
     except Exception as exc:
         return None, "", [
             _make_error(
@@ -1052,7 +1028,9 @@ def _compile_local_llm(
                 path="/",
                 retriable=True,
             )
-        ], False, ""
+        ], False, "", getattr(adapter, "backend_id", ""), ""
+
+    raw_response = backend_response.raw_text
 
     if not isinstance(raw_response, str) or not raw_response.strip():
         return None, "", [
@@ -1062,12 +1040,12 @@ def _compile_local_llm(
                 path="/",
                 retriable=True,
             )
-        ], False, ""
+        ], False, "", getattr(adapter, "backend_id", ""), backend_response.target
 
     parsed, parse_errors, repair_applied, repair_rule_id = _parse_llm_json_response(raw_response)
     if parse_errors:
-        return None, raw_response, parse_errors, False, ""
-    return parsed, raw_response, [], repair_applied, repair_rule_id
+        return None, raw_response, parse_errors, False, "", getattr(adapter, "backend_id", ""), backend_response.target
+    return parsed, raw_response, [], repair_applied, repair_rule_id, getattr(adapter, "backend_id", ""), backend_response.target
 
 
 def _finalize_compiled_output(
@@ -1112,6 +1090,8 @@ def compile_request_bundle(
     allow_fallback: bool = True,
     prompt_profile: str = AUTO_PROMPT_PROFILE,
     confidence_warn_threshold: Optional[float] = None,
+    model_backend_id: Optional[str] = None,
+    model_backend: Optional[ModelBackendAdapter] = None,
     llm_adapter: Optional[LLMAdapter] = None,
 ) -> Dict[str, Any]:
     started = time.perf_counter()
@@ -1127,6 +1107,15 @@ def compile_request_bundle(
             )
         )
         provider_requested = "rule_based"
+
+    model_backend_requested = ""
+    if provider_requested == "local_llm":
+        model_backend_requested = (
+            getattr(model_backend, "backend_id", "")
+            or (getattr(llm_adapter, "backend_id", "") if llm_adapter is not None else "")
+            or ("legacy_callable" if llm_adapter is not None else "")
+            or resolve_requested_model_backend(model_backend_id)
+        )
 
     prompt_profile_selected = DEFAULT_PROMPT_PROFILE
     prompt_template_id = resolve_prompt_template_id(prompt_profile_selected)
@@ -1168,12 +1157,24 @@ def compile_request_bundle(
         fallback_reason = ""
         repair_applied = False
         repair_rule_id = ""
+        model_backend_used = ""
+        model_backend_target = ""
 
         if provider_requested == "local_llm":
-            compiled, raw_response, compile_errors, repair_applied, repair_rule_id = _compile_local_llm(
+            (
+                compiled,
+                raw_response,
+                compile_errors,
+                repair_applied,
+                repair_rule_id,
+                model_backend_used,
+                model_backend_target,
+            ) = _compile_local_llm(
                 prompt_text=bundle["prompt_text"],
                 determinism=normalized["determinism"],
                 model=model,
+                model_backend=model_backend,
+                model_backend_id=model_backend_id,
                 llm_adapter=llm_adapter,
             )
         else:
@@ -1184,6 +1185,8 @@ def compile_request_bundle(
             )
             repair_applied = False
             repair_rule_id = ""
+            model_backend_used = ""
+            model_backend_target = ""
 
         bundle["raw_response_text"] = raw_response or "RULE_BASED_COMPILER: no IL output"
 
@@ -1220,6 +1223,8 @@ def compile_request_bundle(
         fallback_reason = ""
         repair_applied = False
         repair_rule_id = ""
+        model_backend_used = ""
+        model_backend_target = ""
 
     if not bundle["raw_response_text"]:
         bundle["raw_response_text"] = "RULE_BASED_COMPILER: no IL output"
@@ -1239,6 +1244,9 @@ def compile_request_bundle(
         "model": model,
         "provider_requested": provider_requested,
         "provider_selected": provider_selected,
+        "model_backend_requested": model_backend_requested,
+        "model_backend_used": model_backend_used,
+        "model_backend_target": model_backend_target,
         "fallback_used": fallback_used,
         "repair_applied": repair_applied,
         "repair_rule_id": repair_rule_id,

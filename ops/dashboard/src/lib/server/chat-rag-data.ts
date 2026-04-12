@@ -5,7 +5,11 @@ import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
 import { asString, repoJoin } from './fs';
-import { postOpenAiCompatChat, resolveOpenAiCompatApiBase } from './openai-compat';
+import {
+	postLocalModelChat,
+	resolveLocalModelName,
+	resolveLocalModelRuntimeLabel
+} from './local-model';
 import {
 	recordRunInspector,
 	summarizeFailureReason,
@@ -775,8 +779,8 @@ export async function runChatWithRag(request: ChatRunRequest): Promise<ChatRunRe
 		limit: 5
 	});
 
-	const apiBase = resolveOpenAiCompatApiBase(process.env.OPENAI_API_BASE);
-	const model = (process.env.LOCAL_GGUF_MODEL || 'Qwen2.5-7B-Instruct').trim();
+	const apiBase = resolveLocalModelRuntimeLabel();
+	const model = resolveLocalModelName();
 	const apiKey = (process.env.OPENAI_API_KEY || 'dummy').trim();
 	const history = sanitizeTurns(request.messages);
 	const systemPrompt = buildSystemPrompt(suggestions);
@@ -790,7 +794,7 @@ export async function runChatWithRag(request: ChatRunRequest): Promise<ChatRunRe
 	];
 
 	try {
-		const chat = await postOpenAiCompatChat({
+		const chat = await postLocalModelChat({
 			apiBase,
 			apiKey,
 			model,
@@ -798,7 +802,11 @@ export async function runChatWithRag(request: ChatRunRequest): Promise<ChatRunRe
 			messages
 		});
 		const assistantMessage = trimOutput(chat.content);
-		const resolvedApiBase = chat.resolvedUrl.replace(/\/chat\/completions$/, '');
+		const resolvedApiBase =
+			chat.backend === 'openai_compat'
+				? chat.resolvedTarget.replace(/\/chat\/completions$/, '')
+				: chat.resolvedTarget;
+		const resolvedModel = chat.model || model;
 
 		const log: ChatRunLogRecord = {
 			id: runId,
@@ -807,7 +815,7 @@ export async function runChatWithRag(request: ChatRunRequest): Promise<ChatRunRe
 			message,
 			assistantMessage,
 			apiBase: resolvedApiBase,
-			model,
+			model: resolvedModel,
 			durationMs: Date.now() - startedAt,
 			selectedRagIds: request.selectedRagIds || [],
 			suggestions
@@ -824,7 +832,7 @@ export async function runChatWithRag(request: ChatRunRequest): Promise<ChatRunRe
 				prompt: message,
 				outputText: assistantMessage,
 				command: 'POST /api/dashboard/chat/run',
-				model,
+				model: resolvedModel,
 				apiBase: resolvedApiBase,
 				durationMs: log.durationMs,
 				metadata: {
@@ -842,7 +850,7 @@ export async function runChatWithRag(request: ChatRunRequest): Promise<ChatRunRe
 			status: 'PASS',
 			assistantMessage,
 			ragSuggestions: suggestions,
-			model,
+			model: resolvedModel,
 			apiBase: resolvedApiBase,
 			runId,
 			inspector

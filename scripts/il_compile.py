@@ -17,6 +17,7 @@ if str(repo_root) not in sys.path:
     sys.path.insert(0, str(repo_root))
 
 from scripts.obs_writer import OBSWriter
+from src.il_model_backend import resolve_requested_model_backend
 from src.il_compile import (
     AUTO_PROMPT_PROFILE,
     DEFAULT_MODEL,
@@ -41,6 +42,7 @@ def _usage() -> str:
     return (
         "python3 scripts/il_compile.py --request <request_json> --out <out_dir> "
         "[--model <model_name>] [--provider <rule_based|local_llm>] "
+        "[--model-backend <openai_compat|gemma_lab>] "
         "[--prompt-profile <auto|v1|strict_json_v2|contract_json_v3>] [--seed <int>] [--no-fallback] "
         "[--confidence-warn-below <0.0-1.0>]"
     )
@@ -48,11 +50,12 @@ def _usage() -> str:
 
 def _parse_args(
     args: List[str],
-) -> Tuple[Optional[str], Optional[str], str, str, str, Optional[int], bool, Optional[float], List[str], bool]:
+) -> Tuple[Optional[str], Optional[str], str, str, Optional[str], str, Optional[int], bool, Optional[float], List[str], bool]:
     request_path: Optional[str] = None
     out_dir: Optional[str] = None
     model = DEFAULT_MODEL
     provider = DEFAULT_PROVIDER
+    model_backend: Optional[str] = None
     prompt_profile = AUTO_PROMPT_PROFILE
     seed: Optional[int] = None
     allow_fallback = True
@@ -60,7 +63,19 @@ def _parse_args(
     errors: List[str] = []
 
     if "--help" in args or "-h" in args:
-        return request_path, out_dir, model, provider, prompt_profile, seed, allow_fallback, confidence_warn_below, errors, True
+        return (
+            request_path,
+            out_dir,
+            model,
+            provider,
+            model_backend,
+            prompt_profile,
+            seed,
+            allow_fallback,
+            confidence_warn_below,
+            errors,
+            True,
+        )
 
     i = 0
     while i < len(args):
@@ -92,6 +107,13 @@ def _parse_args(
                 i += 1
                 continue
             provider = args[i + 1]
+            i += 2
+        elif token == "--model-backend":
+            if i + 1 >= len(args):
+                errors.append("missing value for --model-backend")
+                i += 1
+                continue
+            model_backend = args[i + 1]
             i += 2
         elif token == "--prompt-profile":
             if i + 1 >= len(args):
@@ -141,6 +163,7 @@ def _parse_args(
         out_dir,
         model,
         provider,
+        model_backend,
         prompt_profile,
         seed,
         allow_fallback,
@@ -186,6 +209,9 @@ def _build_explain_markdown(bundle: Dict[str, Any]) -> str:
         f"- status: `{status}`",
         f"- provider_requested: `{report.get('provider_requested', '')}`",
         f"- provider_selected: `{report.get('provider_selected', '')}`",
+        f"- model_backend_requested: `{report.get('model_backend_requested', '')}`",
+        f"- model_backend_used: `{report.get('model_backend_used', '')}`",
+        f"- model_backend_target: `{report.get('model_backend_target', '')}`",
         f"- fallback_used: `{report.get('fallback_used', False)}`",
         f"- prompt_profile: `{report.get('prompt_profile', '')}`",
         f"- profile_selected_by: `{report.get('profile_selected_by', '')}`",
@@ -245,6 +271,7 @@ def run_il_compile(
     out_dir: Optional[str] = None,
     model: str = DEFAULT_MODEL,
     provider: str = DEFAULT_PROVIDER,
+    model_backend_id: Optional[str] = None,
     prompt_profile: str = AUTO_PROMPT_PROFILE,
     seed: Optional[int] = None,
     allow_fallback: bool = True,
@@ -297,6 +324,7 @@ def run_il_compile(
             model=model,
             seed_override=seed,
             provider=provider,
+            model_backend_id=model_backend_id,
             allow_fallback=allow_fallback,
             prompt_profile=prompt_profile_selected,
             confidence_warn_threshold=confidence_warn_threshold,
@@ -324,6 +352,11 @@ def run_il_compile(
                 "model": model,
                 "provider_requested": provider,
                 "provider_selected": provider,
+                "model_backend_requested": (
+                    resolve_requested_model_backend(model_backend_id) if provider == "local_llm" else ""
+                ),
+                "model_backend_used": "",
+                "model_backend_target": "",
                 "fallback_used": False,
                 "repair_applied": False,
                 "repair_rule_id": "",
@@ -357,7 +390,19 @@ def run_il_compile(
 
 
 def main(args: List[str]) -> int:
-    request_path, out_dir, model, provider, prompt_profile, seed, allow_fallback, confidence_warn_below, arg_errors, show_help = _parse_args(args)
+    (
+        request_path,
+        out_dir,
+        model,
+        provider,
+        model_backend_id,
+        prompt_profile,
+        seed,
+        allow_fallback,
+        confidence_warn_below,
+        arg_errors,
+        show_help,
+    ) = _parse_args(args)
     if show_help:
         print(f"OK: usage: {_usage()}")
         return 0
@@ -371,6 +416,7 @@ def main(args: List[str]) -> int:
         out_dir=out_dir,
         model=model,
         provider=provider,
+        model_backend_id=model_backend_id,
         prompt_profile=prompt_profile,
         seed=seed,
         allow_fallback=allow_fallback,
