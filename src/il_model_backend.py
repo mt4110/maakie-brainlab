@@ -314,12 +314,26 @@ def invoke_gemma_lab_bridge(
     timeout_s: int,
     cwd: Optional[Path] = None,
 ) -> Dict[str, Any]:
-    if not gemma_root.exists():
-        raise RuntimeError(f"gemma-lab root not found: {gemma_root}")
-    if os.sep in python_path and not Path(python_path).exists():
-        raise RuntimeError(f"gemma-lab python not found: {python_path}")
-    if not Path(bridge_script).exists():
-        raise RuntimeError(f"gemma bridge script not found: {bridge_script}")
+    run_cwd = Path(cwd or repo_root()).resolve()
+    resolved_gemma_root = gemma_root.expanduser()
+    if not resolved_gemma_root.is_absolute():
+        resolved_gemma_root = (run_cwd / resolved_gemma_root).resolve()
+    resolved_python_path = python_path
+    if os.sep in python_path:
+        python_candidate = Path(python_path).expanduser()
+        if not python_candidate.is_absolute():
+            python_candidate = (run_cwd / python_candidate).resolve()
+        resolved_python_path = str(python_candidate)
+    resolved_bridge_script = Path(bridge_script).expanduser()
+    if not resolved_bridge_script.is_absolute():
+        resolved_bridge_script = (run_cwd / resolved_bridge_script).resolve()
+
+    if not resolved_gemma_root.exists():
+        raise RuntimeError(f"gemma-lab root not found: {resolved_gemma_root}")
+    if os.sep in resolved_python_path and not Path(resolved_python_path).exists():
+        raise RuntimeError(f"gemma-lab python not found: {resolved_python_path}")
+    if not resolved_bridge_script.exists():
+        raise RuntimeError(f"gemma bridge script not found: {resolved_bridge_script}")
 
     payload = {"model_id": model_id}
     if mode == "chat":
@@ -327,16 +341,16 @@ def invoke_gemma_lab_bridge(
 
     proc = subprocess.run(
         [
-            python_path,
-            bridge_script,
+            resolved_python_path,
+            str(resolved_bridge_script),
             "--mode",
             mode,
             "--gemma-root",
-            str(gemma_root),
+            str(resolved_gemma_root),
             "--model-id",
             model_id,
         ],
-        cwd=str(cwd or repo_root()),
+        cwd=str(run_cwd),
         input=json.dumps(payload, ensure_ascii=False),
         text=True,
         capture_output=True,

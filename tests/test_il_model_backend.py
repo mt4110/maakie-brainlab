@@ -168,3 +168,38 @@ class TestModelBackendHelpers(unittest.TestCase):
             )
 
         self.assertEqual(adapter.timeout_s, 600)
+
+    def test_invoke_gemma_lab_bridge_resolves_relative_overrides_against_run_cwd(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            run_cwd = tmp_path / "workspace"
+            run_cwd.mkdir()
+            gemma_root = tmp_path / "gemma-lab"
+            python_path = gemma_root / ".venv" / "bin" / "python"
+            python_path.parent.mkdir(parents=True)
+            python_path.write_text("#!/usr/bin/env python3\n", encoding="utf-8")
+            bridge = run_cwd / "bridge.py"
+            bridge.write_text("#!/usr/bin/env python3\n", encoding="utf-8")
+
+            class _OkProc:
+                returncode = 0
+                stdout = '{"status":"ok","output_text":"hi"}'
+                stderr = ""
+
+            with patch("src.il_model_backend.subprocess.run", return_value=_OkProc()) as run_mock:
+                invoke_gemma_lab_bridge(
+                    mode="chat",
+                    model_id="dummy",
+                    messages=[{"role": "user", "content": "hello"}],
+                    gemma_root=Path("../gemma-lab"),
+                    python_path="../gemma-lab/.venv/bin/python",
+                    bridge_script="bridge.py",
+                    timeout_s=1,
+                    cwd=run_cwd,
+                )
+
+        args = run_mock.call_args.args[0]
+        self.assertEqual(args[0], str(python_path.resolve()))
+        self.assertEqual(args[1], str(bridge.resolve()))
+        self.assertEqual(args[5], str(gemma_root.resolve()))
+        self.assertEqual(run_mock.call_args.kwargs["cwd"], str(run_cwd.resolve()))
