@@ -33,8 +33,11 @@ except ImportError:  # pragma: no cover - direct script execution
     )
 
 ROOT = Path(__file__).resolve().parents[1]
-if load_dotenv is not None:
-    load_dotenv(ROOT / ".env", override=False)
+
+
+def load_repo_dotenv() -> None:
+    if load_dotenv is not None:
+        load_dotenv(ROOT / ".env", override=False)
 
 def normalize_rag_blocks(out: str) -> str:
     """
@@ -301,7 +304,7 @@ def resolve_local_model_name(backend: Optional[str] = None) -> str:
 
 
 def chat_gemma_lab(messages, model: str) -> str:
-    gemma_root = resolve_gemma_lab_root_path(os.getenv("GEMMA_LAB_ROOT", "").strip()).resolve()
+    gemma_root = resolve_gemma_lab_root_path(os.getenv("GEMMA_LAB_ROOT", "").strip())
     python = resolve_gemma_lab_python_path(os.getenv("GEMMA_LAB_PYTHON", "").strip(), gemma_root)
     payload = invoke_gemma_lab_bridge(
         mode="chat",
@@ -323,6 +326,7 @@ def chat_gemma_lab(messages, model: str) -> str:
 
 
 def main() -> None:
+    load_repo_dotenv()
     ap = argparse.ArgumentParser()
     ap.add_argument("question")
     ap.add_argument("--index-dir", default="index")

@@ -278,21 +278,40 @@ def parse_json_object(raw: str) -> Dict[str, Any]:
     return parsed
 
 
+def _looks_like_filesystem_path(text: str) -> bool:
+    raw = str(text or "").strip()
+    return (
+        raw.startswith(".")
+        or raw.startswith("~")
+        or "/" in raw
+        or "\\" in raw
+        or bool(Path(raw).anchor)
+    )
+
+
 def resolve_gemma_lab_root_path(raw: Optional[str] = None) -> Path:
     text = str(raw or "").strip()
     if text:
-        return Path(text).expanduser()
-    return repo_root().parent / "gemma-lab"
+        path = Path(text).expanduser()
+        if not path.is_absolute():
+            path = repo_root() / path
+        return path.resolve()
+    return (repo_root().parent / "gemma-lab").resolve()
 
 
 def resolve_gemma_lab_python_path(
     raw: Optional[str] = None,
     gemma_root: Optional[Path] = None,
 ) -> str:
+    root = (gemma_root or resolve_gemma_lab_root_path()).resolve()
     text = str(raw or "").strip()
     if text:
-        return str(Path(text).expanduser())
-    root = gemma_root or resolve_gemma_lab_root_path()
+        if not _looks_like_filesystem_path(text):
+            return text
+        path = Path(text).expanduser()
+        if not path.is_absolute():
+            path = root / path
+        return str(path.resolve())
     return str(root / ".venv" / "bin" / "python")
 
 
@@ -319,7 +338,7 @@ def invoke_gemma_lab_bridge(
     if not resolved_gemma_root.is_absolute():
         resolved_gemma_root = (run_cwd / resolved_gemma_root).resolve()
     resolved_python_path = python_path
-    if os.sep in python_path:
+    if _looks_like_filesystem_path(python_path):
         python_candidate = Path(python_path).expanduser()
         if not python_candidate.is_absolute():
             python_candidate = (run_cwd / python_candidate).resolve()
@@ -330,7 +349,7 @@ def invoke_gemma_lab_bridge(
 
     if not resolved_gemma_root.exists():
         raise RuntimeError(f"gemma-lab root not found: {resolved_gemma_root}")
-    if os.sep in resolved_python_path and not Path(resolved_python_path).exists():
+    if _looks_like_filesystem_path(resolved_python_path) and not Path(resolved_python_path).exists():
         raise RuntimeError(f"gemma-lab python not found: {resolved_python_path}")
     if not resolved_bridge_script.exists():
         raise RuntimeError(f"gemma bridge script not found: {resolved_bridge_script}")

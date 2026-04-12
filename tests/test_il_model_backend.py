@@ -12,6 +12,8 @@ from src.il_model_backend import (
     ModelBackendRequest,
     OpenAICompatModelBackendAdapter,
     invoke_gemma_lab_bridge,
+    resolve_gemma_lab_python_path,
+    resolve_gemma_lab_root_path,
     resolve_local_ui_requested_model_backend,
 )
 
@@ -168,6 +170,18 @@ class TestModelBackendHelpers(unittest.TestCase):
             )
 
         self.assertEqual(adapter.timeout_s, 600)
+
+    def test_resolve_gemma_lab_root_path_anchors_relative_to_repo_root(self):
+        expected = (Path(__file__).resolve().parent.parent / "../gemma-lab").resolve()
+        self.assertEqual(resolve_gemma_lab_root_path("../gemma-lab"), expected)
+
+    def test_resolve_gemma_lab_python_path_anchors_relative_overrides_to_gemma_root(self):
+        gemma_root = Path("/tmp/gemma-lab")
+        self.assertEqual(
+            resolve_gemma_lab_python_path(".venv/bin/python", gemma_root),
+            str((gemma_root / ".venv/bin/python").resolve()),
+        )
+        self.assertEqual(resolve_gemma_lab_python_path("python3", gemma_root), "python3")
 
     def test_invoke_gemma_lab_bridge_resolves_relative_overrides_against_run_cwd(self):
         with tempfile.TemporaryDirectory() as tmp:
