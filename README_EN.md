@@ -1,60 +1,99 @@
 # maakie-brainlab
 
-**maakie-brainlab** is a lightweight project for managing code, prompts, and evaluations for the Maakie AI system. It operates via symlinks to `maakie-brainvault` (which contains data, indexes, and models).
+**maakie-brainlab** is a local research cockpit that turns natural-language goals into **IL plans**, step execution, evidence, artifacts, next actions, and resumable state.
 
-> **Note:** This software is currently under active development and is not yet feature-complete.
+The north-star surface on this branch is **`/ops/agent`**.
+Today, the operator shell still starts from `/ops`, while the dedicated cockpit is being pulled into `/ops/agent`.
+The public Q&A path (`/`, `/questions`, `/evidence`) still exists in the repo, but it is treated as a legacy/public track and is not the main optimization target here.
 
-## Overview & Architecture
+## Current direction
 
-The system facilitates execution and evaluation loops for AI agents. It consists of multiple entry points (now unified) and a strict validation mechanism to ensure consistency.
+The core loop on this branch is:
 
-```mermaid
-graph TD
-    A[User / CI] --> B{il_entry.py (Canonical Entrypoint)}
-    B --> C[Guard / Validation]
-    B --> D[Execution (il_exec)]
-    B --> E[Verification (il_check)]
-    C --> F((.local/obs/ Logs))
-    D --> F
-    E --> F
-    
-    subgraph Legacy (Forbidden)
-    G[il_exec.py] -.-> B
-    H[il_check.py] -.-> B
-    I[il_guard.py] -.-> B
-    end
-```
+**Goal -> Normalize -> IL Plan -> Approve -> Execute -> Evidence -> Artifact -> Next Action -> Resume**
 
-*   **Stopless Architecture**: The system uses a strict "no-exit" policy. Scripts return a `STOP` variable and output `OK`/`ERROR`/`SKIP` logs instead of crashing, allowing for comprehensive auditing.
-*   **OBS Logging**: All operations append rigorous logs to `.local/obs/` for traceability.
+The priority is:
 
-## Milestones Status
+- deterministic state
+- typed blocked reasons
+- evidence linkage
+- pause and resume
 
-The project is structured around specific milestones (S21, S22 series). Many core operational foundations have been completed:
+## Read These First
 
+1. `AGENTS.override.md`
+2. `IL_PIVOT_PRODUCT.md`
+3. `AGENTS.md`
+4. `PRODUCT.md`
+5. `docs/ops/README.md`
+6. `docs/il/IL_CONTRACT_v1.md` and related contracts
 
-*   **Completed (Merged)**: S21-02, S21-03, S21-04, S21-05, S21-06, S21-07, S22-01, S22-03, S22-04, S22-05, S22-06, S22-07, S22-08, S22-09, S22-10, S22-11, S22-12, S22-13, S22-14.
-*   **Active / Next Up**: AMBI-01, S21-01, S22-02 (In Review).
+Notes:
+
+- `PRODUCT.md` defines the legacy/public product track
+- `IL_PIVOT_PRODUCT.md` is the active research north star on this branch
+- `docs/ops/S*.md` files are historical records, not current source of truth
 
 ## Quickstart
 
-To get started with verifying the system's integrity (Gate-1):
+Choose a local model backend first.
 
-1.  **Clone the repository** (ensure symlinks to `maakie-brainvault` are valid).
-2.  **Start the llama-server** (dependency for AI operations).
-3.  **Build the index**.
-4.  **Run Queries or Verification**:
+OpenAI-compatible:
 
 ```bash
-# Normal mode (Executes evaluation)
-make gate1
-
-# Verification mode (Checks existing results)
-bash ops/gate1.sh --verify-only
+export LOCAL_MODEL_BACKEND=openai_compat
+export OPENAI_API_BASE=http://127.0.0.1:11434/v1
+export OPENAI_API_KEY=dummy
 ```
 
-*(If you received a review pack, run `./VERIFY.sh` inside it to check integrity and Gate-1 passes).*
+`gemma-lab`:
+
+```bash
+export LOCAL_MODEL_BACKEND=gemma_lab
+export GEMMA_MODEL_ID=google/gemma-4-E2B-it
+```
+
+Start the dashboard:
+
+```bash
+cd ops/dashboard
+cp .env.example .env
+npm install
+npm run dev
+```
+
+Open `http://127.0.0.1:3033/ops` first.
+
+If you want to smoke-test the local model runtime first, `http://127.0.0.1:3033/rag-lab` is still useful as an operator check surface.
+If your checkout already includes the dedicated cockpit route, use `http://127.0.0.1:3033/ops/agent`.
+
+## What This Branch Is Building
+
+- an operator/research cockpit under `/ops/agent`
+- deterministic IL compile and execution contracts
+- evidence and artifact attachment per step
+- typed blocked reasons and resume flow
+- model/backend switching that does not change UI semantics
+
+## What Is Not The Main Focus Here
+
+- polishing the public Q&A path
+- crawler infrastructure
+- web-scale ingestion
+- flashy autonomy
+- a new public-facing product surface
+
+## Documentation Hygiene
+
+To keep the repo readable:
+
+- current direction lives in `AGENTS.override.md` and `IL_PIVOT_PRODUCT.md`
+- legacy/public product definition lives in `PRODUCT.md`
+- implementation entrypoints live in `README.md` and `docs/ops/README.md`
+- runtime contracts live in `docs/il/*`
+- historical thread docs under `docs/ops/S*.md` are archive-only
+- progress belongs in the PR body, not `STATUS.md`
 
 ## License
 
-This project is licensed under a **Commercial License**. Unauthorized copying, modification, or distribution is strictly prohibited. (Currently intended for personal/internal use only).
+This project is licensed under a **Commercial License**. Unauthorized copying, modification, or redistribution is prohibited.
