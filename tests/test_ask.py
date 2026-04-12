@@ -30,6 +30,18 @@ class TestAskBackendResolution(unittest.TestCase):
         ):
             self.assertEqual(resolve_local_model_backend(), "openai_compat")
 
+    def test_resolve_local_model_name_matches_dashboard_default(self):
+        with patch.dict(
+            os.environ,
+            {
+                "LOCAL_MODEL_BACKEND": "openai_compat",
+                "LOCAL_GGUF_MODEL": "",
+                "IL_COMPILE_MODEL_BACKEND": "",
+            },
+            clear=False,
+        ):
+            self.assertEqual(resolve_local_model_name(), "Qwen2.5-7B-Instruct")
+
     def test_resolve_local_model_backend_rejects_unknown_values(self):
         with patch.dict(
             os.environ,

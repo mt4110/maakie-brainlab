@@ -559,10 +559,7 @@ async function checkIndexDb(): Promise<{
 }
 
 export async function getRagLabGuidePayload(): Promise<RagLabGuidePayload> {
-	const apiBase =
-		resolveLocalModelBackend() === 'gemma_lab'
-			? resolveLocalModelRuntimeLabel()
-			: resolveOpenAiCompatApiBase(process.env.OPENAI_API_BASE);
+	const apiBase = resolveLocalModelRuntimeLabel();
 	const model = resolveLocalModelName();
 
 	const [llmCheck, dataCheck, indexCheck] = await Promise.all([

@@ -84,9 +84,21 @@ describe('local-model resolvers', () => {
 		expect(resolveGemmaLabRoot()).toBe(path.join(process.env.HOME || '', 'custom-gemma-lab'));
 	});
 
+	it('resolves relative gemma root overrides against the repo root', () => {
+		process.env.GEMMA_LAB_ROOT = '../gemma-lab';
+		expect(resolveGemmaLabRoot()).toBe(path.resolve(REPO_ROOT, '..', 'gemma-lab'));
+	});
+
 	it('preserves PATH-based gemma python overrides', () => {
 		process.env.GEMMA_LAB_PYTHON = 'python3';
 		expect(resolveGemmaLabPython()).toBe('python3');
+	});
+
+	it('resolves relative gemma python overrides against the repo root', () => {
+		process.env.GEMMA_LAB_PYTHON = '../gemma-lab/.venv/bin/python';
+		expect(resolveGemmaLabPython()).toBe(
+			path.resolve(REPO_ROOT, '../gemma-lab/.venv/bin/python')
+		);
 	});
 
 	it('lets LOCAL_MODEL_BACKEND override IL_COMPILE_MODEL_BACKEND', () => {

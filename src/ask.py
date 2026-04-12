@@ -297,7 +297,7 @@ def resolve_local_model_name(backend: Optional[str] = None) -> str:
     resolved_backend = backend or resolve_local_model_backend()
     if resolved_backend == "gemma_lab":
         return os.getenv("GEMMA_MODEL_ID", "google/gemma-4-E2B-it").strip() or "google/gemma-4-E2B-it"
-    return os.getenv("LOCAL_GGUF_MODEL", "Qwen2.5-7B-Instruct-Q4_K_M.gguf").strip() or "Qwen2.5-7B-Instruct-Q4_K_M.gguf"
+    return os.getenv("LOCAL_GGUF_MODEL", "Qwen2.5-7B-Instruct").strip() or "Qwen2.5-7B-Instruct"
 
 
 def chat_gemma_lab(messages, model: str) -> str:

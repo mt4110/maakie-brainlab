@@ -117,7 +117,7 @@ function resolveExecutableOverride(raw: string): string {
 		return path.join(os.homedir(), raw.slice(2));
 	}
 	if (raw.startsWith('.') || raw.includes('/') || raw.includes('\\')) {
-		return path.resolve(raw);
+		return path.resolve(REPO_ROOT, raw);
 	}
 	return raw;
 }
@@ -129,7 +129,7 @@ function resolveFsOverride(raw: string): string {
 	if (raw.startsWith('~/') || raw.startsWith('~\\')) {
 		return path.join(os.homedir(), raw.slice(2));
 	}
-	return path.resolve(raw);
+	return path.resolve(REPO_ROOT, raw);
 }
 
 function parseLocalModelBackend(
