@@ -40,6 +40,12 @@ describe('classifyChatRunFailure', () => {
 			'backend_unavailable'
 		);
 	});
+
+	it('treats gemma bridge payload errors as backend unavailable', () => {
+		expect(
+			classifyChatRunFailure('gemma-lab chat failed: ModuleNotFoundError: no module named x')
+		).toBe('backend_unavailable');
+	});
 });
 
 describe('presentQuestionRun', () => {

@@ -122,6 +122,16 @@ function resolveExecutableOverride(raw: string): string {
 	return raw;
 }
 
+function resolveFsOverride(raw: string): string {
+	if (!raw) {
+		return raw;
+	}
+	if (raw.startsWith('~/') || raw.startsWith('~\\')) {
+		return path.join(os.homedir(), raw.slice(2));
+	}
+	return path.resolve(raw);
+}
+
 function parseLocalModelBackend(
 	raw: string,
 	source: 'LOCAL_MODEL_BACKEND' | 'IL_COMPILE_MODEL_BACKEND'
@@ -170,7 +180,7 @@ export function resolveLocalModelRuntimeLabel(): string {
 export function resolveGemmaLabRoot(): string {
 	const envRoot = envValue('GEMMA_LAB_ROOT');
 	if (envRoot) {
-		return path.resolve(envRoot);
+		return resolveFsOverride(envRoot);
 	}
 	return path.resolve(REPO_ROOT, '..', 'gemma-lab');
 }
@@ -335,7 +345,8 @@ export async function postLocalModelChat(
 			messages: request.messages
 		});
 		if (asString(payload.status).trim().toLowerCase() !== 'ok') {
-			throw new Error(asString(payload.error).trim() || 'gemma-lab chat failed');
+			const detail = asString(payload.error).trim();
+			throw new Error(detail ? `gemma-lab chat failed: ${detail}` : 'gemma-lab chat failed');
 		}
 		const content = asString(payload.output_text).trim();
 		if (!content) {

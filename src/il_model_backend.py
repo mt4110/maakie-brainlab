@@ -52,10 +52,19 @@ def resolve_model_backend_from_candidates(*candidates: Optional[str]) -> str:
 
 
 def resolve_requested_model_backend(explicit: Optional[str] = None) -> str:
+    # Compile/runner entrypoints intentionally let the IL-scoped override win.
     return resolve_model_backend_from_candidates(
         explicit,
         os.environ.get("IL_COMPILE_MODEL_BACKEND"),
         os.environ.get("LOCAL_MODEL_BACKEND"),
+    )
+
+
+def resolve_local_ui_requested_model_backend() -> str:
+    # Operator/UI paths intentionally let the direct local-model selection win.
+    return resolve_model_backend_from_candidates(
+        os.environ.get("LOCAL_MODEL_BACKEND"),
+        os.environ.get("IL_COMPILE_MODEL_BACKEND"),
     )
 
 
@@ -311,7 +320,12 @@ def invoke_gemma_lab_bridge(
         capture_output=True,
         timeout=timeout_s,
     )
-    parsed = parse_json_object(proc.stdout) if proc.stdout.strip() else {}
+    parsed: Dict[str, Any] = {}
+    if proc.stdout.strip():
+        try:
+            parsed = parse_json_object(proc.stdout)
+        except ValueError:
+            parsed = {}
     if proc.returncode != 0:
         detail = str(parsed.get("error") or proc.stderr or proc.stdout).strip()
         raise RuntimeError(detail or f"gemma-lab bridge failed with exit code {proc.returncode}")

@@ -1,11 +1,18 @@
 import sys
+import tempfile
 import types
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 import requests
 
-from src.il_model_backend import ModelBackendRequest, OpenAICompatModelBackendAdapter
+from src.il_model_backend import (
+    ModelBackendRequest,
+    OpenAICompatModelBackendAdapter,
+    invoke_gemma_lab_bridge,
+    resolve_local_ui_requested_model_backend,
+)
 
 
 class _FakeResponse:
@@ -80,3 +87,42 @@ class TestOpenAICompatModelBackendAdapter(unittest.TestCase):
             "local_llama_error=RuntimeError: local llama bootstrap failed",
             str(ctx.exception),
         )
+
+
+class TestModelBackendHelpers(unittest.TestCase):
+    def test_resolve_local_ui_requested_model_backend_prefers_local_backend(self):
+        with patch.dict(
+            "os.environ",
+            {
+                "LOCAL_MODEL_BACKEND": "openai_compat",
+                "IL_COMPILE_MODEL_BACKEND": "gemma_lab",
+            },
+            clear=False,
+        ):
+            self.assertEqual(resolve_local_ui_requested_model_backend(), "openai_compat")
+
+    def test_invoke_gemma_lab_bridge_tolerates_non_json_stdout_on_failure(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            bridge = tmp_path / "bridge.py"
+            bridge.write_text("#!/usr/bin/env python3\n", encoding="utf-8")
+
+            class _FailedProc:
+                returncode = 1
+                stdout = "warning: not json"
+                stderr = "traceback detail"
+
+            with patch("src.il_model_backend.subprocess.run", return_value=_FailedProc()):
+                with self.assertRaises(RuntimeError) as ctx:
+                    invoke_gemma_lab_bridge(
+                        mode="chat",
+                        model_id="dummy",
+                        messages=[{"role": "user", "content": "hello"}],
+                        gemma_root=tmp_path,
+                        python_path="python3",
+                        bridge_script=str(bridge),
+                        timeout_s=1,
+                        cwd=tmp_path,
+                    )
+
+        self.assertIn("traceback detail", str(ctx.exception))

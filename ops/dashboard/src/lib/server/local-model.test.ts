@@ -71,6 +71,11 @@ describe('local-model resolvers', () => {
 		expect(resolveGemmaLabPython()).toBe('/tmp/custom-gemma-lab/.venv/bin/python');
 	});
 
+	it('expands tilde-prefixed gemma root overrides', () => {
+		process.env.GEMMA_LAB_ROOT = '~/custom-gemma-lab';
+		expect(resolveGemmaLabRoot()).toBe(path.join(process.env.HOME || '', 'custom-gemma-lab'));
+	});
+
 	it('preserves PATH-based gemma python overrides', () => {
 		process.env.GEMMA_LAB_PYTHON = 'python3';
 		expect(resolveGemmaLabPython()).toBe('python3');

@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import argparse
-import json
 import os
 import re
 import sqlite3
@@ -21,7 +20,7 @@ try:
         normalize_model_backend_id,
         resolve_gemma_lab_python_path,
         resolve_gemma_lab_root_path,
-        resolve_model_backend_from_candidates,
+        resolve_local_ui_requested_model_backend,
     )
 except ImportError:  # pragma: no cover - direct script execution
     from il_model_backend import (
@@ -30,7 +29,7 @@ except ImportError:  # pragma: no cover - direct script execution
         normalize_model_backend_id,
         resolve_gemma_lab_python_path,
         resolve_gemma_lab_root_path,
-        resolve_model_backend_from_candidates,
+        resolve_local_ui_requested_model_backend,
     )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -287,10 +286,7 @@ def chat_openai_compat(
 
 
 def resolve_local_model_backend() -> str:
-    requested = resolve_model_backend_from_candidates(
-        os.getenv("LOCAL_MODEL_BACKEND"),
-        os.getenv("IL_COMPILE_MODEL_BACKEND"),
-    )
+    requested = resolve_local_ui_requested_model_backend()
     normalized = normalize_model_backend_id(requested)
     if normalized is None:
         raise ValueError(f"unsupported local model backend: {requested}")
