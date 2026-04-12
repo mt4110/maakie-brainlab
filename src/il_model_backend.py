@@ -77,6 +77,28 @@ def normalize_model_backend_id(raw: Optional[str]) -> Optional[str]:
     return None
 
 
+def resolve_int_setting(
+    *,
+    explicit: Optional[int],
+    default: int,
+    env_names: List[str],
+) -> int:
+    if explicit is not None:
+        return int(explicit)
+    for name in env_names:
+        raw = os.environ.get(name)
+        if raw is None:
+            continue
+        text = str(raw).strip()
+        if not text:
+            continue
+        try:
+            return int(text)
+        except ValueError as exc:
+            raise ValueError(f"{name} must be an integer, got {raw!r}") from exc
+    return default
+
+
 def _chat_completion_urls(base: str) -> List[str]:
     src = (base or "").rstrip("/")
     if not src:
@@ -133,15 +155,15 @@ class OpenAICompatModelBackendAdapter:
             or os.environ.get("OPENAI_API_KEY", "").strip()
             or "dummy"
         )
-        self.timeout_s = int(
-            timeout_s
-            if timeout_s is not None
-            else os.environ.get("IL_COMPILE_LLM_TIMEOUT_S", "60")
+        self.timeout_s = resolve_int_setting(
+            explicit=timeout_s,
+            default=60,
+            env_names=["IL_COMPILE_LLM_TIMEOUT_S"],
         )
-        self.max_tokens = int(
-            max_tokens
-            if max_tokens is not None
-            else os.environ.get("IL_COMPILE_LLM_MAX_TOKENS", "1024")
+        self.max_tokens = resolve_int_setting(
+            explicit=max_tokens,
+            default=1024,
+            env_names=["IL_COMPILE_LLM_MAX_TOKENS"],
         )
 
     def invoke(self, request: ModelBackendRequest) -> ModelBackendResponse:
@@ -363,10 +385,10 @@ class GemmaLabModelBackendAdapter:
             self.python_path = resolve_gemma_lab_python_path(None, self.gemma_root)
 
         self.bridge_script = gemma_lab_bridge_script_path(bridge_script)
-        self.timeout_s = int(
-            timeout_s
-            if timeout_s is not None
-            else os.environ.get("IL_COMPILE_GEMMA_LAB_TIMEOUT_S", "600")
+        self.timeout_s = resolve_int_setting(
+            explicit=timeout_s,
+            default=600,
+            env_names=["IL_COMPILE_GEMMA_LAB_TIMEOUT_S"],
         )
 
     def invoke(self, request: ModelBackendRequest) -> ModelBackendResponse:

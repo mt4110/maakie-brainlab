@@ -8,6 +8,7 @@ from unittest.mock import patch
 import requests
 
 from src.il_model_backend import (
+    GemmaLabModelBackendAdapter,
     ModelBackendRequest,
     OpenAICompatModelBackendAdapter,
     invoke_gemma_lab_bridge,
@@ -88,6 +89,33 @@ class TestOpenAICompatModelBackendAdapter(unittest.TestCase):
             str(ctx.exception),
         )
 
+    def test_blank_numeric_env_values_fall_back_to_defaults(self):
+        with patch.dict(
+            "os.environ",
+            {
+                "IL_COMPILE_LLM_TIMEOUT_S": "",
+                "IL_COMPILE_LLM_MAX_TOKENS": "",
+            },
+            clear=False,
+        ):
+            adapter = OpenAICompatModelBackendAdapter(api_base="http://127.0.0.1:11434/v1")
+
+        self.assertEqual(adapter.timeout_s, 60)
+        self.assertEqual(adapter.max_tokens, 1024)
+
+    def test_invalid_numeric_env_values_raise_clear_error(self):
+        with patch.dict(
+            "os.environ",
+            {
+                "IL_COMPILE_LLM_TIMEOUT_S": "not-a-number",
+            },
+            clear=False,
+        ):
+            with self.assertRaises(ValueError) as ctx:
+                OpenAICompatModelBackendAdapter(api_base="http://127.0.0.1:11434/v1")
+
+        self.assertIn("IL_COMPILE_LLM_TIMEOUT_S must be an integer", str(ctx.exception))
+
 
 class TestModelBackendHelpers(unittest.TestCase):
     def test_resolve_local_ui_requested_model_backend_prefers_local_backend(self):
@@ -126,3 +154,17 @@ class TestModelBackendHelpers(unittest.TestCase):
                     )
 
         self.assertIn("traceback detail", str(ctx.exception))
+
+    def test_blank_gemma_timeout_env_uses_default(self):
+        with patch.dict(
+            "os.environ",
+            {"IL_COMPILE_GEMMA_LAB_TIMEOUT_S": ""},
+            clear=False,
+        ):
+            adapter = GemmaLabModelBackendAdapter(
+                gemma_root="/tmp/gemma-lab",
+                python_path="python3",
+                bridge_script="/tmp/gemma_lab_bridge.py",
+            )
+
+        self.assertEqual(adapter.timeout_s, 600)
