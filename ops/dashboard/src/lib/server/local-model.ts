@@ -109,7 +109,7 @@ function envValue(name: string): string {
 	return asString(readDashboardEnv()[name]).trim();
 }
 
-function resolveExecutableOverride(raw: string): string {
+function resolveExecutableOverride(raw: string, baseDir = REPO_ROOT): string {
 	if (!raw) {
 		return raw;
 	}
@@ -117,7 +117,7 @@ function resolveExecutableOverride(raw: string): string {
 		return path.join(os.homedir(), raw.slice(2));
 	}
 	if (raw.startsWith('.') || raw.includes('/') || raw.includes('\\')) {
-		return path.resolve(REPO_ROOT, raw);
+		return path.resolve(baseDir, raw);
 	}
 	return raw;
 }
@@ -188,7 +188,7 @@ export function resolveGemmaLabRoot(): string {
 export function resolveGemmaLabPython(): string {
 	const envPython = envValue('GEMMA_LAB_PYTHON');
 	if (envPython) {
-		return resolveExecutableOverride(envPython);
+		return resolveExecutableOverride(envPython, resolveGemmaLabRoot());
 	}
 	return path.join(resolveGemmaLabRoot(), '.venv', 'bin', 'python');
 }
