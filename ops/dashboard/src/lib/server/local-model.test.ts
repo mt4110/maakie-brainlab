@@ -23,14 +23,22 @@ const ORIGINAL_ENV = {
 	OPENAI_API_BASE: process.env.OPENAI_API_BASE
 };
 
+function restoreEnv(name: keyof typeof ORIGINAL_ENV, value: string | undefined) {
+	if (value === undefined) {
+		delete process.env[name];
+		return;
+	}
+	process.env[name] = value;
+}
+
 afterEach(() => {
-	process.env.IL_COMPILE_MODEL_BACKEND = ORIGINAL_ENV.IL_COMPILE_MODEL_BACKEND;
-	process.env.LOCAL_MODEL_BACKEND = ORIGINAL_ENV.LOCAL_MODEL_BACKEND;
-	process.env.LOCAL_GGUF_MODEL = ORIGINAL_ENV.LOCAL_GGUF_MODEL;
-	process.env.GEMMA_MODEL_ID = ORIGINAL_ENV.GEMMA_MODEL_ID;
-	process.env.GEMMA_LAB_ROOT = ORIGINAL_ENV.GEMMA_LAB_ROOT;
-	process.env.GEMMA_LAB_PYTHON = ORIGINAL_ENV.GEMMA_LAB_PYTHON;
-	process.env.OPENAI_API_BASE = ORIGINAL_ENV.OPENAI_API_BASE;
+	restoreEnv('IL_COMPILE_MODEL_BACKEND', ORIGINAL_ENV.IL_COMPILE_MODEL_BACKEND);
+	restoreEnv('LOCAL_MODEL_BACKEND', ORIGINAL_ENV.LOCAL_MODEL_BACKEND);
+	restoreEnv('LOCAL_GGUF_MODEL', ORIGINAL_ENV.LOCAL_GGUF_MODEL);
+	restoreEnv('GEMMA_MODEL_ID', ORIGINAL_ENV.GEMMA_MODEL_ID);
+	restoreEnv('GEMMA_LAB_ROOT', ORIGINAL_ENV.GEMMA_LAB_ROOT);
+	restoreEnv('GEMMA_LAB_PYTHON', ORIGINAL_ENV.GEMMA_LAB_PYTHON);
+	restoreEnv('OPENAI_API_BASE', ORIGINAL_ENV.OPENAI_API_BASE);
 });
 
 describe('local-model resolvers', () => {

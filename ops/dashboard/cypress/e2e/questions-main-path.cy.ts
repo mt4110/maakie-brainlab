@@ -22,25 +22,26 @@ describe('questions main path', () => {
 
 	beforeEach(() => {
 		createdSourceIds = [];
-		cy.wrap(seedSources).each((item) => {
-			cy.request('POST', '/api/dashboard/rag-sources', item)
+		return cy.wrap(seedSources).each((item) => {
+			return cy.request('POST', '/api/dashboard/rag-sources', item)
 				.its('body.item.id')
 				.then((id) => {
 					createdSourceIds.push(String(id));
 				});
-		})
+		});
 	});
 
 	afterEach(() => {
 		if (createdSourceIds.length === 0) {
 			return;
 		}
-		cy.wrap(createdSourceIds).each((id) => {
-			cy.request('DELETE', `/api/dashboard/rag-sources/${id}`);
-		});
-		cy.then(() => {
-			createdSourceIds = [];
-		});
+		return cy.wrap(createdSourceIds)
+			.each((id) => {
+				return cy.request('DELETE', `/api/dashboard/rag-sources/${id}`);
+			})
+			.then(() => {
+				createdSourceIds = [];
+			});
 	});
 
 	it('shows corpus-aware examples and keeps the answer on the same screen', () => {

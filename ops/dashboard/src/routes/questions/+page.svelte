@@ -54,7 +54,7 @@
 	const questionGuidance = $derived(
 		buildQuestionGuidance({
 			locale: localeState.value,
-			question: lastQuestion || question,
+			question: submitting ? lastQuestion : question,
 			sources: enabledSources,
 			selectedScopeId: selectedScope?.id ?? null,
 			uiState,
@@ -348,9 +348,7 @@
 
 	function applySuggestion(item: QuestionSuggestion) {
 		question = item.text;
-		if (item.sourceId !== undefined) {
-			selectedScopeId = item.sourceId;
-		}
+		selectedScopeId = item.sourceId;
 	}
 
 	function showResultBlocks(): boolean {

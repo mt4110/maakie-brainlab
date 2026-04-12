@@ -102,9 +102,8 @@ function readDashboardEnv(): Record<string, string> {
 }
 
 function envValue(name: string): string {
-	const direct = asString(process.env[name]).trim();
-	if (direct) {
-		return direct;
+	if (Object.prototype.hasOwnProperty.call(process.env, name)) {
+		return asString(process.env[name]).trim();
 	}
 	return asString(readDashboardEnv()[name]).trim();
 }
@@ -256,6 +255,7 @@ async function runGemmaLabBridge(
 		});
 		child.on('close', (code: number | null) => {
 			clearTimeout(timer);
+			const exitCode = code ?? 1;
 			const text = stdout.trim();
 			let parsed: GemmaLabBridgePayload = {};
 			if (text) {
@@ -265,24 +265,28 @@ async function runGemmaLabBridge(
 						parsed = candidate as GemmaLabBridgePayload;
 					}
 				} catch (error) {
-					reject(
-						new Error(
-							`gemma bridge returned invalid JSON: ${trimOneLine(
-								error instanceof Error ? error.message : String(error)
-							)}`
-						)
-					);
-					return;
+					if (exitCode === 0) {
+						reject(
+							new Error(
+								`gemma bridge returned invalid JSON: ${trimOneLine(
+									error instanceof Error ? error.message : String(error)
+								)}`
+							)
+						);
+						return;
+					}
 				}
 			}
 			if (timedOut) {
 				reject(new Error('gemma bridge timed out after 20 minutes'));
 				return;
 			}
-			if ((code ?? 1) !== 0 && asString(parsed.error).trim() === '') {
+			if (exitCode !== 0 && asString(parsed.error).trim() === '') {
 				reject(
 					new Error(
-						trimOneLine(stderr || stdout || `gemma bridge exited with code ${code ?? 1}`)
+						`gemma bridge failed: ${trimOneLine(
+							stderr || stdout || `gemma bridge exited with code ${exitCode}`
+						)}`
 					)
 				);
 				return;
