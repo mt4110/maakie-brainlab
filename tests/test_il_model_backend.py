@@ -198,6 +198,39 @@ class TestModelBackendHelpers(unittest.TestCase):
 
         self.assertEqual(adapter.timeout_s, 600)
 
+    def test_gemma_adapter_uses_gemma_model_env_for_generic_compile_model(self):
+        with patch.dict(
+            "os.environ",
+            {"GEMMA_MODEL_ID": "google/gemma-4-E2B-it"},
+            clear=False,
+        ):
+            adapter = GemmaLabModelBackendAdapter(
+                gemma_root="/tmp/gemma-lab",
+                python_path="python3",
+                bridge_script="/tmp/gemma_lab_bridge.py",
+            )
+            with patch(
+                "src.il_model_backend.invoke_gemma_lab_bridge",
+                return_value={
+                    "status": "ok",
+                    "model_id": "google/gemma-4-E2B-it",
+                    "output_text": "hello",
+                },
+            ) as invoke_mock:
+                response = adapter.invoke(
+                    ModelBackendRequest(
+                        prompt_text="hello",
+                        model="rule_based_v1",
+                        determinism={"temperature": 0.0, "top_p": 1.0},
+                    )
+                )
+
+        self.assertEqual(
+            invoke_mock.call_args.kwargs["model_id"],
+            "google/gemma-4-E2B-it",
+        )
+        self.assertEqual(response.metadata["model_id"], "google/gemma-4-E2B-it")
+
     def test_resolve_gemma_lab_root_path_anchors_relative_to_repo_root(self):
         expected = (Path(__file__).resolve().parent.parent / "../gemma-lab").resolve()
         self.assertEqual(resolve_gemma_lab_root_path("../gemma-lab"), expected)

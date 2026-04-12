@@ -11,6 +11,7 @@ from typing import Any, Callable, Dict, List, Optional, Protocol, runtime_checka
 DEFAULT_MODEL_BACKEND = "openai_compat"
 SUPPORTED_MODEL_BACKENDS = ("openai_compat", "gemma_lab")
 DEFAULT_OPENAI_COMPAT_API_BASE = "http://127.0.0.1:11434/v1"
+GENERIC_COMPILE_MODEL_IDS = {"rule_based_v1"}
 
 
 LegacyLLMCallable = Callable[[str, str, Dict[str, Any]], str]
@@ -322,6 +323,13 @@ def resolve_gemma_lab_python_path(
     return str(root / ".venv" / "bin" / "python")
 
 
+def resolve_gemma_lab_model_id(raw: Optional[str] = None) -> str:
+    text = str(raw or "").strip()
+    if text and text not in GENERIC_COMPILE_MODEL_IDS:
+        return text
+    return os.environ.get("GEMMA_MODEL_ID", "").strip()
+
+
 def gemma_lab_bridge_script_path(raw: Optional[str] = None) -> str:
     text = str(raw or "").strip()
     if text:
@@ -435,9 +443,10 @@ class GemmaLabModelBackendAdapter:
         )
 
     def invoke(self, request: ModelBackendRequest) -> ModelBackendResponse:
+        model_id = resolve_gemma_lab_model_id(request.model)
         payload = invoke_gemma_lab_bridge(
             mode="chat",
-            model_id=request.model,
+            model_id=model_id,
             messages=[{"role": "user", "content": request.prompt_text}],
             gemma_root=self.gemma_root,
             python_path=self.python_path,
@@ -454,7 +463,7 @@ class GemmaLabModelBackendAdapter:
             raw_text=content,
             backend_id=self.backend_id,
             target=str(self.gemma_root),
-            metadata={"model_id": str(payload.get("model_id") or request.model)},
+            metadata={"model_id": str(payload.get("model_id") or model_id)},
         )
 
 
