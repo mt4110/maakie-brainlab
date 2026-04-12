@@ -214,23 +214,37 @@ class OpenAICompatModelBackendAdapter:
 
             attempts: List[str] = []
             for url in _chat_completion_urls(self.api_base):
+                resp = None
                 try:
                     resp = requests.post(url, json=payload, headers=headers, timeout=self.timeout_s)
+                    if resp.status_code == 404:
+                        attempts.append(f"{url}:404")
+                        continue
+                    resp.raise_for_status()
+                    data = resp.json()
+                    return ModelBackendResponse(
+                        raw_text=data["choices"][0]["message"]["content"],
+                        backend_id=self.backend_id,
+                        target=url,
+                        metadata=metadata,
+                    )
                 except Exception as exc:
+                    status_code = getattr(resp, "status_code", None)
+                    attempts_suffix = f"; attempts={', '.join(attempts)}" if attempts else ""
+                    if status_code is None:
+                        raise RuntimeError(
+                            f"openai-compatible request failed for url={url}{attempts_suffix}: {exc}{local_llama_suffix}"
+                        ) from exc
+
+                    detail = ""
+                    try:
+                        detail = trim_one_line(getattr(resp, "text", ""))
+                    except Exception:
+                        detail = ""
+                    detail_suffix = f" body={detail}" if detail else ""
                     raise RuntimeError(
-                        f"openai-compatible request failed for url={url}: {exc}{local_llama_suffix}"
+                        f"openai-compatible request failed for url={url} status={status_code}{detail_suffix}{attempts_suffix}: {exc}{local_llama_suffix}"
                     ) from exc
-                if resp.status_code == 404:
-                    attempts.append(f"{url}:404")
-                    continue
-                resp.raise_for_status()
-                data = resp.json()
-                return ModelBackendResponse(
-                    raw_text=data["choices"][0]["message"]["content"],
-                    backend_id=self.backend_id,
-                    target=url,
-                    metadata=metadata,
-                )
             raise RuntimeError(
                 f"openai-compatible endpoint not found for api_base={self.api_base}; attempts={', '.join(attempts) or 'none'}{local_llama_suffix}"
             )

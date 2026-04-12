@@ -91,6 +91,44 @@ class TestOpenAICompatModelBackendAdapter(unittest.TestCase):
             str(ctx.exception),
         )
 
+    def test_http_invalid_shape_surfaces_runtime_context(self):
+        fake_module = types.ModuleType("src.local_llm")
+
+        class FailingLocalLLM:
+            def __init__(self, **_kwargs) -> None:
+                pass
+
+            def complete(self, *_args, **_kwargs):
+                raise RuntimeError("local llama bootstrap failed")
+
+        class _BadShapeResponse:
+            status_code = 200
+            text = "{}"
+
+            def raise_for_status(self):
+                return None
+
+            def json(self):
+                return {}
+
+        fake_module.LocalLlamaCppLLM = FailingLocalLLM
+        adapter = OpenAICompatModelBackendAdapter(api_base="http://127.0.0.1:11434/v1")
+
+        with patch.dict(sys.modules, {"src.local_llm": fake_module}):
+            with patch("requests.post", return_value=_BadShapeResponse()):
+                with self.assertRaises(RuntimeError) as ctx:
+                    adapter.invoke(self._request())
+
+        self.assertIn(
+            "openai-compatible request failed for url=http://127.0.0.1:11434/v1/chat/completions status=200",
+            str(ctx.exception),
+        )
+        self.assertIn("body={}", str(ctx.exception))
+        self.assertIn(
+            "local_llama_error=RuntimeError: local llama bootstrap failed",
+            str(ctx.exception),
+        )
+
     def test_blank_numeric_env_values_fall_back_to_defaults(self):
         with patch.dict(
             "os.environ",

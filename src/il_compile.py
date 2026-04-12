@@ -64,6 +64,8 @@ _WIN_ABS_RE = re.compile(r"^[A-Za-z]:[\\/]")
 _TOKEN_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{1,31}")
 _CODE_FENCE_RX = re.compile(r"```(?:json)?\s*([\s\S]*?)```", re.IGNORECASE)
 _MAX_REPAIR_CLOSE_DEPTH = 6
+_MAX_REPAIR_ARRAY_CLOSE_WINDOW = 4096
+_MAX_REPAIR_ARRAY_CLOSE_POSITIONS = 4
 
 
 def is_auto_prompt_profile(prompt_profile: Optional[str]) -> bool:
@@ -833,10 +835,16 @@ def _repair_missing_closing_braces(text: str) -> Optional[str]:
 def _repair_missing_object_brace_before_array_close(text: str) -> Optional[str]:
     # Allow a single missing object close immediately before an array close, e.g.
     # {... "args": {...}}] -> {... "args": {...}}}] when the repaired payload parses.
+    # Keep the search bounded to the tail of the payload because this repair is
+    # only meant for a narrow malformed Gemma shape near the end.
     stripped_end = len(text.rstrip())
+    if stripped_end == 0:
+        return None
+    scan_start = max(0, stripped_end - _MAX_REPAIR_ARRAY_CLOSE_WINDOW)
     in_string = False
     escape = False
-    for idx, ch in enumerate(text):
+    candidate_positions: List[int] = []
+    for idx, ch in enumerate(text[:stripped_end]):
         if in_string:
             if escape:
                 escape = False
@@ -858,13 +866,20 @@ def _repair_missing_object_brace_before_array_close(text: str) -> Optional[str]:
             continue
 
         right = idx + 1
-        while right < len(text) and text[right] in {" ", "\t", "\r", "\n"}:
+        while right < stripped_end and text[right] in {" ", "\t", "\r", "\n"}:
             right += 1
-        if right >= len(text) or text[right] not in {",", "}", "]"}:
+        if right >= stripped_end or text[right] not in {",", "}", "]"}:
             continue
 
+        if idx < scan_start:
+            continue
+        candidate_positions.append(idx)
+        if len(candidate_positions) > _MAX_REPAIR_ARRAY_CLOSE_POSITIONS:
+            candidate_positions.pop(0)
+
+    for idx in reversed(candidate_positions):
         candidates = [text[:idx] + "}" + text[idx:]]
-        if stripped_end > 0 and text[stripped_end - 1] == "}":
+        if text[stripped_end - 1] == "}":
             candidates.append(text[:idx] + "}" + text[idx : stripped_end - 1] + text[stripped_end:])
 
         for repaired in candidates:
