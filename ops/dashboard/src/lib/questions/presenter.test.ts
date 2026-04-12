@@ -28,6 +28,12 @@ describe('classifyChatRunFailure', () => {
 			'server_failure'
 		);
 	});
+
+	it('treats gemma runtime setup failures as backend unavailable', () => {
+		expect(classifyChatRunFailure('gemma-lab root not found: /tmp/gemma-lab')).toBe(
+			'backend_unavailable'
+		);
+	});
 });
 
 describe('presentQuestionRun', () => {

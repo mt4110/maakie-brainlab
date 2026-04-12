@@ -275,6 +275,28 @@ class TestILCompile(unittest.TestCase):
         self.assertEqual(report.get("model_backend_requested"), "not_real_backend")
         self.assertTrue(report.get("fallback_used"))
 
+    def test_local_llm_fallback_clears_attempted_backend_report_fields(self):
+        req = self._good_request_payload()
+        backend = self._FakeModelBackend(
+            "",
+            target="memory://structured",
+            error=RuntimeError("simulated structured backend failure"),
+        )
+        bundle = compile_request_bundle(
+            req,
+            provider="local_llm",
+            model="dummy_local_model",
+            allow_fallback=True,
+            model_backend=backend,
+        )
+        self.assertEqual(bundle.get("status"), "OK")
+        report = bundle.get("report", {})
+        self.assertEqual(report.get("provider_selected"), "rule_based")
+        self.assertEqual(report.get("model_backend_requested"), "fake_backend")
+        self.assertEqual(report.get("model_backend_used"), "")
+        self.assertEqual(report.get("model_backend_target"), "")
+        self.assertTrue(report.get("fallback_used"))
+
     def test_local_llm_unknown_model_backend_errors_without_fallback(self):
         req = self._good_request_payload()
         bundle = compile_request_bundle(

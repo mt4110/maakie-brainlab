@@ -133,6 +133,7 @@ class OpenAICompatModelBackendAdapter:
         )
 
     def invoke(self, request: ModelBackendRequest) -> ModelBackendResponse:
+        local_llama_error = ""
         try:
             from src.local_llm import LocalLlamaCppLLM
 
@@ -155,8 +156,11 @@ class OpenAICompatModelBackendAdapter:
                     backend_id=self.backend_id,
                     target=self.api_base,
                 )
-        except Exception:
-            pass
+        except Exception as exc:
+            local_llama_error = f"{type(exc).__name__}: {exc}"
+
+        metadata = {"local_llama_error": local_llama_error} if local_llama_error else {}
+        local_llama_suffix = f"; local_llama_error={local_llama_error}" if local_llama_error else ""
 
         payload = {
             "model": request.model,
@@ -175,7 +179,12 @@ class OpenAICompatModelBackendAdapter:
 
             attempts: List[str] = []
             for url in _chat_completion_urls(self.api_base):
-                resp = requests.post(url, json=payload, headers=headers, timeout=self.timeout_s)
+                try:
+                    resp = requests.post(url, json=payload, headers=headers, timeout=self.timeout_s)
+                except Exception as exc:
+                    raise RuntimeError(
+                        f"openai-compatible request failed for url={url}: {exc}{local_llama_suffix}"
+                    ) from exc
                 if resp.status_code == 404:
                     attempts.append(f"{url}:404")
                     continue
@@ -185,9 +194,10 @@ class OpenAICompatModelBackendAdapter:
                     raw_text=data["choices"][0]["message"]["content"],
                     backend_id=self.backend_id,
                     target=url,
+                    metadata=metadata,
                 )
             raise RuntimeError(
-                f"openai-compatible endpoint not found for api_base={self.api_base}; attempts={', '.join(attempts) or 'none'}"
+                f"openai-compatible endpoint not found for api_base={self.api_base}; attempts={', '.join(attempts) or 'none'}{local_llama_suffix}"
             )
         except ModuleNotFoundError:
             pass
@@ -206,15 +216,22 @@ class OpenAICompatModelBackendAdapter:
                     raw_text=data["choices"][0]["message"]["content"],
                     backend_id=self.backend_id,
                     target=url,
+                    metadata=metadata,
                 )
             except urllib_error.HTTPError as exc:
                 if exc.code == 404:
                     continue
                 detail = exc.read().decode("utf-8", errors="replace")
                 raise RuntimeError(
-                    f"openai-compatible http_error status={exc.code} body={detail[:200]}"
+                    f"openai-compatible http_error status={exc.code} body={detail[:200]}{local_llama_suffix}"
                 ) from exc
-        raise RuntimeError(f"openai-compatible endpoint not found for api_base={self.api_base}")
+            except urllib_error.URLError as exc:
+                raise RuntimeError(
+                    f"openai-compatible url_error reason={exc.reason}{local_llama_suffix}"
+                ) from exc
+        raise RuntimeError(
+            f"openai-compatible endpoint not found for api_base={self.api_base}{local_llama_suffix}"
+        )
 
 
 def _parse_json_object(raw: str) -> Dict[str, Any]:

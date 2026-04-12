@@ -1202,6 +1202,8 @@ def compile_request_bundle(
             bundle["raw_response_text"] = fallback_raw_response
             repair_applied = False
             repair_rule_id = ""
+            model_backend_used = ""
+            model_backend_target = ""
 
         if compile_errors:
             bundle["errors"].extend(compile_errors)

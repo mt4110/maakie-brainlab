@@ -15,6 +15,11 @@ try:
 except ImportError:  # pragma: no cover - optional at runtime
     load_dotenv = None
 
+try:
+    from src.il_model_backend import normalize_model_backend_id, resolve_requested_model_backend
+except ImportError:  # pragma: no cover - direct script execution
+    from il_model_backend import normalize_model_backend_id, resolve_requested_model_backend
+
 ROOT = Path(__file__).resolve().parents[1]
 if load_dotenv is not None:
     load_dotenv(ROOT / ".env", override=False)
@@ -269,10 +274,11 @@ def chat_openai_compat(
 
 
 def resolve_local_model_backend() -> str:
-    raw = os.getenv("LOCAL_MODEL_BACKEND", "openai_compat").strip().lower()
-    if raw == "gemma_lab":
-        return "gemma_lab"
-    return "openai_compat"
+    requested = resolve_requested_model_backend()
+    normalized = normalize_model_backend_id(requested)
+    if normalized is None:
+        raise ValueError(f"unsupported local model backend: {requested}")
+    return normalized
 
 
 def resolve_local_model_name(backend: Optional[str] = None) -> str:
@@ -440,17 +446,24 @@ def main() -> None:
         {"role": "user", "content": user_prompt},
     ]
 
-    backend = resolve_local_model_backend()
     base_url = os.getenv("OPENAI_API_BASE", "http://127.0.0.1:11434/v1")
-    model = resolve_local_model_name(backend)
+    backend = ""
     try:
+        backend = resolve_local_model_backend()
+        model = resolve_local_model_name(backend)
         if backend == "gemma_lab":
             out = chat_gemma_lab(messages, model)
         else:
             out = chat_openai_compat(base_url, model, messages, temperature=args.temperature)
     except Exception as exc:
         refs = "\n".join(f"- {s}" for s in sources) if sources else "- 不明（参照なし）"
-        if backend == "gemma_lab":
+        message = str(exc).strip().lower()
+        if "unsupported local model backend" in message:
+            uncertainty_lines = [
+                "- LOCAL_MODEL_BACKEND / IL_COMPILE_MODEL_BACKEND には openai_compat か gemma_lab を指定してください。",
+                "- gemma-lab を使う場合は GEMMA_MODEL_ID も確認してください。",
+            ]
+        elif backend == "gemma_lab":
             uncertainty_lines = [
                 "- gemma-lab 実行系の初期化またはモデル読み込みに失敗しました。",
                 "- GEMMA_LAB_ROOT / GEMMA_LAB_PYTHON / GEMMA_MODEL_ID を確認してください。",

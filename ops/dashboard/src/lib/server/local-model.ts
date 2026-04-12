@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { spawn } from 'node:child_process';
+import os from 'node:os';
 import path from 'node:path';
 
 import { REPO_ROOT, asString, repoJoin } from './fs';
@@ -108,6 +109,19 @@ function envValue(name: string): string {
 	return asString(readDashboardEnv()[name]).trim();
 }
 
+function resolveExecutableOverride(raw: string): string {
+	if (!raw) {
+		return raw;
+	}
+	if (raw.startsWith('~/') || raw.startsWith('~\\')) {
+		return path.join(os.homedir(), raw.slice(2));
+	}
+	if (raw.startsWith('.') || raw.includes('/') || raw.includes('\\')) {
+		return path.resolve(raw);
+	}
+	return raw;
+}
+
 export function resolveLocalModelBackend(): LocalModelBackend {
 	const raw = envValue('LOCAL_MODEL_BACKEND').toLowerCase();
 	return raw === 'gemma_lab' ? 'gemma_lab' : 'openai_compat';
@@ -144,7 +158,7 @@ export function resolveGemmaLabRoot(): string {
 export function resolveGemmaLabPython(): string {
 	const envPython = envValue('GEMMA_LAB_PYTHON');
 	if (envPython) {
-		return path.resolve(envPython);
+		return resolveExecutableOverride(envPython);
 	}
 	return path.join(resolveGemmaLabRoot(), '.venv', 'bin', 'python');
 }
