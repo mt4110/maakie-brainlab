@@ -844,7 +844,8 @@ def _repair_missing_object_brace_before_array_close(text: str) -> Optional[str]:
     in_string = False
     escape = False
     candidate_positions: List[int] = []
-    for idx, ch in enumerate(text[:stripped_end]):
+    for offset, ch in enumerate(text[scan_start:stripped_end]):
+        idx = scan_start + offset
         if in_string:
             if escape:
                 escape = False
@@ -871,8 +872,6 @@ def _repair_missing_object_brace_before_array_close(text: str) -> Optional[str]:
         if right >= stripped_end or text[right] not in {",", "}", "]"}:
             continue
 
-        if idx < scan_start:
-            continue
         candidate_positions.append(idx)
         if len(candidate_positions) > _MAX_REPAIR_ARRAY_CLOSE_POSITIONS:
             candidate_positions.pop(0)
@@ -1203,7 +1202,12 @@ def compile_request_bundle(
             model_backend_used = ""
             model_backend_target = ""
 
-        bundle["raw_response_text"] = raw_response or "RULE_BASED_COMPILER: no IL output"
+        if raw_response:
+            bundle["raw_response_text"] = raw_response
+        elif provider_selected == "local_llm":
+            bundle["raw_response_text"] = "LOCAL_LLM_COMPILER: no raw response"
+        else:
+            bundle["raw_response_text"] = "RULE_BASED_COMPILER: no IL output"
 
         if compile_errors and provider_requested == "local_llm" and allow_fallback:
             fallback_used = True
