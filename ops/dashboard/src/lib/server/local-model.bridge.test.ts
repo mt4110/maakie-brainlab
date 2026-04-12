@@ -99,4 +99,22 @@ describe('gemma bridge timeout handling', () => {
 		await vi.advanceTimersByTimeAsync(5 * 1000);
 		expect(child.kill).toHaveBeenNthCalledWith(2, 'SIGKILL');
 	});
+
+	it('treats non-zero exits with parsed errors as failures', async () => {
+		const child = new FakeChild();
+		spawnMock.mockReturnValue(child);
+
+		const probePromise = probeGemmaLabRuntime();
+
+		child.stdout.emit(
+			'data',
+			'{"status":"error","error":"ModuleNotFoundError: missing gemma runtime"}'
+		);
+		child.emit('close', 1);
+
+		await expect(probePromise).resolves.toMatchObject({
+			status: 'error',
+			error: 'gemma bridge failed: ModuleNotFoundError: missing gemma runtime'
+		});
+	});
 });

@@ -313,11 +313,14 @@ async function runGemmaLabBridge(
 					}
 				}
 			}
-			if (exitCode !== 0 && asString(parsed.error).trim() === '') {
+			if (exitCode !== 0) {
 				rejectOnce(
 					new Error(
 						`gemma bridge failed: ${trimOneLine(
-							stderr || stdout || `gemma bridge exited with code ${exitCode}`
+							asString(parsed.error).trim() ||
+								stderr ||
+								stdout ||
+								`gemma bridge exited with code ${exitCode}`
 						)}`
 					)
 				);
