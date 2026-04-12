@@ -52,6 +52,7 @@ export interface GemmaLabProbeResult {
 const DEFAULT_OPENAI_MODEL = 'Qwen2.5-7B-Instruct';
 const DEFAULT_GEMMA_MODEL = 'google/gemma-4-E2B-it';
 const GEMMA_BRIDGE_TIMEOUT_MS = 20 * 60 * 1000;
+const GEMMA_BRIDGE_KILL_GRACE_MS = 5 * 1000;
 let cachedDashboardEnv: Record<string, string> | null = null;
 
 function trimOneLine(value: string, limit = 180): string {
@@ -231,10 +232,41 @@ async function runGemmaLabBridge(
 
 		let stdout = '';
 		let stderr = '';
-		let timedOut = false;
+		let settled = false;
+		let killTimer: ReturnType<typeof setTimeout> | null = null;
+
+		function clearKillTimer() {
+			if (killTimer) {
+				clearTimeout(killTimer);
+				killTimer = null;
+			}
+		}
+
+		function rejectOnce(error: Error) {
+			if (settled) {
+				return;
+			}
+			settled = true;
+			clearTimeout(timer);
+			reject(error);
+		}
+
+		function resolveOnce(payload: GemmaLabBridgePayload) {
+			if (settled) {
+				return;
+			}
+			settled = true;
+			clearTimeout(timer);
+			resolve(payload);
+		}
+
 		const timer = setTimeout(() => {
-			timedOut = true;
-			child.kill('SIGTERM');
+			rejectOnce(new Error('gemma bridge timed out after 20 minutes'));
+			if (child.kill('SIGTERM') !== false) {
+				killTimer = setTimeout(() => {
+					child.kill('SIGKILL');
+				}, GEMMA_BRIDGE_KILL_GRACE_MS);
+			}
 		}, GEMMA_BRIDGE_TIMEOUT_MS);
 
 		child.stdout.on('data', (chunk: Buffer | string) => {
@@ -244,8 +276,8 @@ async function runGemmaLabBridge(
 			stderr += chunk.toString();
 		});
 		child.on('error', (error) => {
-			clearTimeout(timer);
-			reject(
+			clearKillTimer();
+			rejectOnce(
 				new Error(
 					`gemma bridge spawn failed: ${trimOneLine(
 						error instanceof Error ? error.message : String(error)
@@ -255,6 +287,10 @@ async function runGemmaLabBridge(
 		});
 		child.on('close', (code: number | null) => {
 			clearTimeout(timer);
+			clearKillTimer();
+			if (settled) {
+				return;
+			}
 			const exitCode = code ?? 1;
 			const text = stdout.trim();
 			let parsed: GemmaLabBridgePayload = {};
@@ -266,7 +302,7 @@ async function runGemmaLabBridge(
 					}
 				} catch (error) {
 					if (exitCode === 0) {
-						reject(
+						rejectOnce(
 							new Error(
 								`gemma bridge returned invalid JSON: ${trimOneLine(
 									error instanceof Error ? error.message : String(error)
@@ -277,12 +313,8 @@ async function runGemmaLabBridge(
 					}
 				}
 			}
-			if (timedOut) {
-				reject(new Error('gemma bridge timed out after 20 minutes'));
-				return;
-			}
 			if (exitCode !== 0 && asString(parsed.error).trim() === '') {
-				reject(
+				rejectOnce(
 					new Error(
 						`gemma bridge failed: ${trimOneLine(
 							stderr || stdout || `gemma bridge exited with code ${exitCode}`
@@ -291,7 +323,7 @@ async function runGemmaLabBridge(
 				);
 				return;
 			}
-			resolve(parsed);
+			resolveOnce(parsed);
 		});
 
 		if (mode === 'chat') {
