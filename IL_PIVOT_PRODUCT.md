@@ -146,9 +146,9 @@ Do not restart public main-path polishing in this branch.
 - resume success rate
 - median manual interventions per run
 
-## 12. Done for this PR
+## 12. V0 done target for this branch
 
-This PR is done when:
+The pivot is functionally done for V0 when:
 
 - one natural-language goal can be entered
 - a plan preview is shown

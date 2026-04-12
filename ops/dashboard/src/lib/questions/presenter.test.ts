@@ -34,6 +34,12 @@ describe('classifyChatRunFailure', () => {
 			'backend_unavailable'
 		);
 	});
+
+	it('treats gemma bridge spawn failures as backend unavailable', () => {
+		expect(classifyChatRunFailure('gemma bridge spawn failed: spawn python3 ENOENT')).toBe(
+			'backend_unavailable'
+		);
+	});
 });
 
 describe('presentQuestionRun', () => {

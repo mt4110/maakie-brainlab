@@ -4,9 +4,8 @@ import json
 import os
 import re
 import sqlite3
-import subprocess
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import requests
 
@@ -16,9 +15,23 @@ except ImportError:  # pragma: no cover - optional at runtime
     load_dotenv = None
 
 try:
-    from src.il_model_backend import normalize_model_backend_id, resolve_requested_model_backend
+    from src.il_model_backend import (
+        gemma_lab_bridge_script_path,
+        invoke_gemma_lab_bridge,
+        normalize_model_backend_id,
+        resolve_gemma_lab_python_path,
+        resolve_gemma_lab_root_path,
+        resolve_model_backend_from_candidates,
+    )
 except ImportError:  # pragma: no cover - direct script execution
-    from il_model_backend import normalize_model_backend_id, resolve_requested_model_backend
+    from il_model_backend import (
+        gemma_lab_bridge_script_path,
+        invoke_gemma_lab_bridge,
+        normalize_model_backend_id,
+        resolve_gemma_lab_python_path,
+        resolve_gemma_lab_root_path,
+        resolve_model_backend_from_candidates,
+    )
 
 ROOT = Path(__file__).resolve().parents[1]
 if load_dotenv is not None:
@@ -274,7 +287,10 @@ def chat_openai_compat(
 
 
 def resolve_local_model_backend() -> str:
-    requested = resolve_requested_model_backend()
+    requested = resolve_model_backend_from_candidates(
+        os.getenv("LOCAL_MODEL_BACKEND"),
+        os.getenv("IL_COMPILE_MODEL_BACKEND"),
+    )
     normalized = normalize_model_backend_id(requested)
     if normalized is None:
         raise ValueError(f"unsupported local model backend: {requested}")
@@ -288,69 +304,21 @@ def resolve_local_model_name(backend: Optional[str] = None) -> str:
     return os.getenv("LOCAL_GGUF_MODEL", "Qwen2.5-7B-Instruct-Q4_K_M.gguf").strip() or "Qwen2.5-7B-Instruct-Q4_K_M.gguf"
 
 
-def resolve_gemma_lab_root() -> Path:
-    raw = os.getenv("GEMMA_LAB_ROOT", "").strip()
-    if raw:
-        return Path(raw).expanduser().resolve()
-    return (ROOT.parent / "gemma-lab").resolve()
-
-
-def resolve_gemma_lab_python(root: Optional[Path] = None) -> str:
-    raw = os.getenv("GEMMA_LAB_PYTHON", "").strip()
-    if raw:
-        return str(Path(raw).expanduser())
-    gemma_root = root or resolve_gemma_lab_root()
-    return str(gemma_root / ".venv" / "bin" / "python")
-
-
-def gemma_lab_bridge_path() -> Path:
-    return ROOT / "scripts" / "gemma_lab_bridge.py"
-
-
-def parse_json_object(raw: str) -> Dict[str, Any]:
-    text = (raw or "").strip()
-    if not text:
-        return {}
-    parsed = json.loads(text)
-    if not isinstance(parsed, dict):
-        raise ValueError("expected JSON object")
-    return parsed
-
-
 def chat_gemma_lab(messages, model: str) -> str:
-    gemma_root = resolve_gemma_lab_root()
-    python = resolve_gemma_lab_python(gemma_root)
-    bridge = gemma_lab_bridge_path()
-    if not gemma_root.exists():
-        raise RuntimeError(f"gemma-lab root not found: {gemma_root}")
-    if os.sep in python and not Path(python).exists():
-        raise RuntimeError(f"gemma-lab python not found: {python}")
-    if not bridge.exists():
-        raise RuntimeError(f"gemma bridge script not found: {bridge}")
-
-    proc = subprocess.run(
-        [
-            python,
-            str(bridge),
-            "--mode",
-            "chat",
-            "--gemma-root",
-            str(gemma_root),
-            "--model-id",
-            model,
-        ],
-        cwd=str(ROOT),
-        input=json.dumps({"model_id": model, "messages": messages}, ensure_ascii=False),
-        text=True,
-        capture_output=True,
-        timeout=20 * 60,
+    gemma_root = resolve_gemma_lab_root_path(os.getenv("GEMMA_LAB_ROOT", "").strip()).resolve()
+    python = resolve_gemma_lab_python_path(os.getenv("GEMMA_LAB_PYTHON", "").strip(), gemma_root)
+    payload = invoke_gemma_lab_bridge(
+        mode="chat",
+        model_id=model,
+        messages=messages,
+        gemma_root=gemma_root,
+        python_path=python,
+        bridge_script=gemma_lab_bridge_script_path(),
+        timeout_s=20 * 60,
+        cwd=ROOT,
     )
-    payload = parse_json_object(proc.stdout) if proc.stdout.strip() else {}
-    if proc.returncode != 0:
-        detail = str(payload.get("error") or proc.stderr or proc.stdout).strip()
-        raise RuntimeError(detail or f"gemma-lab bridge failed with exit code {proc.returncode}")
     if str(payload.get("status") or "").strip().lower() != "ok":
-        detail = str(payload.get("error") or proc.stderr or proc.stdout).strip()
+        detail = str(payload.get("error") or "").strip()
         raise RuntimeError(detail or "gemma-lab bridge did not return ok status")
     content = str(payload.get("output_text") or "").strip()
     if content:

@@ -14,6 +14,7 @@ import {
 } from './local-model';
 
 const ORIGINAL_ENV = {
+	IL_COMPILE_MODEL_BACKEND: process.env.IL_COMPILE_MODEL_BACKEND,
 	LOCAL_MODEL_BACKEND: process.env.LOCAL_MODEL_BACKEND,
 	LOCAL_GGUF_MODEL: process.env.LOCAL_GGUF_MODEL,
 	GEMMA_MODEL_ID: process.env.GEMMA_MODEL_ID,
@@ -23,6 +24,7 @@ const ORIGINAL_ENV = {
 };
 
 afterEach(() => {
+	process.env.IL_COMPILE_MODEL_BACKEND = ORIGINAL_ENV.IL_COMPILE_MODEL_BACKEND;
 	process.env.LOCAL_MODEL_BACKEND = ORIGINAL_ENV.LOCAL_MODEL_BACKEND;
 	process.env.LOCAL_GGUF_MODEL = ORIGINAL_ENV.LOCAL_GGUF_MODEL;
 	process.env.GEMMA_MODEL_ID = ORIGINAL_ENV.GEMMA_MODEL_ID;
@@ -33,6 +35,7 @@ afterEach(() => {
 
 describe('local-model resolvers', () => {
 	it('defaults to the existing openai-compatible backend', () => {
+		process.env.IL_COMPILE_MODEL_BACKEND = '';
 		process.env.LOCAL_MODEL_BACKEND = 'openai_compat';
 		process.env.LOCAL_GGUF_MODEL = '';
 		process.env.OPENAI_API_BASE = 'http://127.0.0.1:11434/v1';
@@ -44,6 +47,7 @@ describe('local-model resolvers', () => {
 	});
 
 	it('switches to gemma-lab when requested', () => {
+		process.env.IL_COMPILE_MODEL_BACKEND = '';
 		process.env.LOCAL_MODEL_BACKEND = 'gemma_lab';
 		process.env.GEMMA_MODEL_ID = 'google/gemma-4-E2B-it';
 
@@ -70,5 +74,24 @@ describe('local-model resolvers', () => {
 	it('preserves PATH-based gemma python overrides', () => {
 		process.env.GEMMA_LAB_PYTHON = 'python3';
 		expect(resolveGemmaLabPython()).toBe('python3');
+	});
+
+	it('lets LOCAL_MODEL_BACKEND override IL_COMPILE_MODEL_BACKEND', () => {
+		process.env.LOCAL_MODEL_BACKEND = 'openai_compat';
+		process.env.IL_COMPILE_MODEL_BACKEND = 'gemma_lab';
+		expect(resolveLocalModelBackend()).toBe('openai_compat');
+	});
+
+	it('falls back to IL_COMPILE_MODEL_BACKEND when LOCAL_MODEL_BACKEND is empty', () => {
+		process.env.LOCAL_MODEL_BACKEND = '';
+		process.env.IL_COMPILE_MODEL_BACKEND = 'gemma_lab';
+		expect(resolveLocalModelBackend()).toBe('gemma_lab');
+	});
+
+	it('rejects unsupported backend values', () => {
+		process.env.LOCAL_MODEL_BACKEND = 'not_real_backend';
+		expect(() => resolveLocalModelBackend()).toThrow(
+			'Expected one of: openai_compat, gemma_lab.'
+		);
 	});
 });

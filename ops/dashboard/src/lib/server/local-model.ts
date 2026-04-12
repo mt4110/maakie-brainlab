@@ -122,9 +122,29 @@ function resolveExecutableOverride(raw: string): string {
 	return raw;
 }
 
+function parseLocalModelBackend(
+	raw: string,
+	source: 'LOCAL_MODEL_BACKEND' | 'IL_COMPILE_MODEL_BACKEND'
+): LocalModelBackend {
+	const normalized = raw.trim().toLowerCase();
+	if (normalized === 'openai_compat' || normalized === 'gemma_lab') {
+		return normalized;
+	}
+	throw new Error(
+		`Unsupported local model backend "${raw}" from ${source}. Expected one of: openai_compat, gemma_lab.`
+	);
+}
+
 export function resolveLocalModelBackend(): LocalModelBackend {
-	const raw = envValue('LOCAL_MODEL_BACKEND').toLowerCase();
-	return raw === 'gemma_lab' ? 'gemma_lab' : 'openai_compat';
+	const localBackend = envValue('LOCAL_MODEL_BACKEND');
+	if (localBackend) {
+		return parseLocalModelBackend(localBackend, 'LOCAL_MODEL_BACKEND');
+	}
+	const compileBackend = envValue('IL_COMPILE_MODEL_BACKEND');
+	if (compileBackend) {
+		return parseLocalModelBackend(compileBackend, 'IL_COMPILE_MODEL_BACKEND');
+	}
+	return 'openai_compat';
 }
 
 export function resolveOpenAiModelName(): string {
@@ -216,7 +236,13 @@ async function runGemmaLabBridge(
 		});
 		child.on('error', (error) => {
 			clearTimeout(timer);
-			reject(error);
+			reject(
+				new Error(
+					`gemma bridge spawn failed: ${trimOneLine(
+						error instanceof Error ? error.message : String(error)
+					)}`
+				)
+			);
 		});
 		child.on('close', (code: number | null) => {
 			clearTimeout(timer);
