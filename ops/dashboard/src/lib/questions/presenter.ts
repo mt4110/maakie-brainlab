@@ -156,6 +156,9 @@ export function classifyChatRunFailure(message: string): QuestionsFailureKind {
 	) {
 		return 'backend_unavailable';
 	}
+	if (/gemma-lab|gemma bridge/.test(compact)) {
+		return 'backend_unavailable';
+	}
 	return 'server_failure';
 }
 

@@ -4,11 +4,40 @@ import os
 import re
 import sqlite3
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 import requests
 
+try:
+    from dotenv import load_dotenv
+except ImportError:  # pragma: no cover - optional at runtime
+    load_dotenv = None
+
+try:
+    from src.il_model_backend import (
+        gemma_lab_bridge_script_path,
+        invoke_gemma_lab_bridge,
+        normalize_model_backend_id,
+        resolve_gemma_lab_python_path,
+        resolve_gemma_lab_root_path,
+        resolve_local_ui_requested_model_backend,
+    )
+except ImportError:  # pragma: no cover - direct script execution
+    from il_model_backend import (
+        gemma_lab_bridge_script_path,
+        invoke_gemma_lab_bridge,
+        normalize_model_backend_id,
+        resolve_gemma_lab_python_path,
+        resolve_gemma_lab_root_path,
+        resolve_local_ui_requested_model_backend,
+    )
+
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def load_repo_dotenv() -> None:
+    if load_dotenv is not None:
+        load_dotenv(ROOT / ".env", override=False)
 
 def normalize_rag_blocks(out: str) -> str:
     """
@@ -259,7 +288,45 @@ def chat_openai_compat(
     )
 
 
+def resolve_local_model_backend() -> str:
+    requested = resolve_local_ui_requested_model_backend()
+    normalized = normalize_model_backend_id(requested)
+    if normalized is None:
+        raise ValueError(f"unsupported local model backend: {requested}")
+    return normalized
+
+
+def resolve_local_model_name(backend: Optional[str] = None) -> str:
+    resolved_backend = backend or resolve_local_model_backend()
+    if resolved_backend == "gemma_lab":
+        return os.getenv("GEMMA_MODEL_ID", "google/gemma-4-E2B-it").strip() or "google/gemma-4-E2B-it"
+    return os.getenv("LOCAL_GGUF_MODEL", "Qwen2.5-7B-Instruct").strip() or "Qwen2.5-7B-Instruct"
+
+
+def chat_gemma_lab(messages, model: str) -> str:
+    gemma_root = resolve_gemma_lab_root_path(os.getenv("GEMMA_LAB_ROOT", "").strip())
+    python = resolve_gemma_lab_python_path(os.getenv("GEMMA_LAB_PYTHON", "").strip(), gemma_root)
+    payload = invoke_gemma_lab_bridge(
+        mode="chat",
+        model_id=model,
+        messages=messages,
+        gemma_root=gemma_root,
+        python_path=python,
+        bridge_script=gemma_lab_bridge_script_path(),
+        timeout_s=20 * 60,
+        cwd=ROOT,
+    )
+    if str(payload.get("status") or "").strip().lower() != "ok":
+        detail = str(payload.get("error") or "").strip()
+        raise RuntimeError(detail or "gemma-lab bridge did not return ok status")
+    content = str(payload.get("output_text") or "").strip()
+    if content:
+        return content
+    raise RuntimeError("gemma-lab returned empty content")
+
+
 def main() -> None:
+    load_repo_dotenv()
     ap = argparse.ArgumentParser()
     ap.add_argument("question")
     ap.add_argument("--index-dir", default="index")
@@ -348,11 +415,33 @@ def main() -> None:
     ]
 
     base_url = os.getenv("OPENAI_API_BASE", "http://127.0.0.1:11434/v1")
-    model = os.getenv("LOCAL_GGUF_MODEL", "Qwen2.5-7B-Instruct-Q4_K_M.gguf")
+    backend = ""
     try:
-        out = chat_openai_compat(base_url, model, messages, temperature=args.temperature)
+        backend = resolve_local_model_backend()
+        model = resolve_local_model_name(backend)
+        if backend == "gemma_lab":
+            out = chat_gemma_lab(messages, model)
+        else:
+            out = chat_openai_compat(base_url, model, messages, temperature=args.temperature)
     except Exception as exc:
         refs = "\n".join(f"- {s}" for s in sources) if sources else "- 不明（参照なし）"
+        message = str(exc).strip().lower()
+        if "unsupported local model backend" in message:
+            uncertainty_lines = [
+                "- LOCAL_MODEL_BACKEND / IL_COMPILE_MODEL_BACKEND には openai_compat か gemma_lab を指定してください。",
+                "- gemma-lab を使う場合は GEMMA_MODEL_ID も確認してください。",
+            ]
+        elif backend == "gemma_lab":
+            uncertainty_lines = [
+                "- gemma-lab 実行系の初期化またはモデル読み込みに失敗しました。",
+                "- GEMMA_LAB_ROOT / GEMMA_LAB_PYTHON / GEMMA_MODEL_ID を確認してください。",
+                "- Hugging Face キャッシュ未配置やメモリ不足でも失敗します。",
+            ]
+        else:
+            uncertainty_lines = [
+                "- OPENAI_API_BASE が LLM サーバーを指していない可能性があります。",
+                "- 例: http://127.0.0.1:11434/v1",
+            ]
         out = "\n".join(
             [
                 "結論:",
@@ -365,8 +454,7 @@ def main() -> None:
                 refs,
                 "",
                 "不確実性:",
-                "- OPENAI_API_BASE が LLM サーバーを指していない可能性があります。",
-                "- 例: http://127.0.0.1:11434/v1",
+                *uncertainty_lines,
             ]
         )
         print(normalize_rag_blocks(out))

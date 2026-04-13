@@ -28,6 +28,24 @@ describe('classifyChatRunFailure', () => {
 			'server_failure'
 		);
 	});
+
+	it('treats gemma runtime setup failures as backend unavailable', () => {
+		expect(classifyChatRunFailure('gemma-lab root not found: /tmp/gemma-lab')).toBe(
+			'backend_unavailable'
+		);
+	});
+
+	it('treats gemma bridge spawn failures as backend unavailable', () => {
+		expect(classifyChatRunFailure('gemma bridge spawn failed: spawn python3 ENOENT')).toBe(
+			'backend_unavailable'
+		);
+	});
+
+	it('treats gemma bridge payload errors as backend unavailable', () => {
+		expect(
+			classifyChatRunFailure('gemma-lab chat failed: ModuleNotFoundError: no module named x')
+		).toBe('backend_unavailable');
+	});
 });
 
 describe('presentQuestionRun', () => {

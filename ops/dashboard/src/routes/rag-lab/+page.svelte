@@ -136,7 +136,7 @@
 	let activeTipId = $state('');
 	let lastAction = $state<ActionTrace | null>(null);
 	let simpleView = $state(true);
-	let selectedModel = $state('Qwen2.5-7B-Instruct');
+	let selectedModel = $state('');
 	let newDataFileName = $state('note_new.md');
 	let newDataContent = $state('');
 	let savingData = $state(false);
@@ -184,7 +184,7 @@
 	});
 	$effect(() => {
 		const candidate = (modelCatalog.selectedModel || '').trim();
-		if (candidate && (!selectedModel.trim() || selectedModel === 'Qwen2.5-7B-Instruct')) {
+		if (candidate && !selectedModel.trim()) {
 			selectedModel = candidate;
 		}
 	});

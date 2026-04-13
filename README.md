@@ -1,207 +1,119 @@
 # maakie-brainlab
 
-**maakie-brainlab** は、非AI研究者のための **根拠付きローカル知識ワークベンチ** です。
+**maakie-brainlab** は、自然言語の目的を **IL plan** に正規化し、step 実行・evidence・artifact・next action・resume まで追えるローカル研究コックピットです。
 
-難しい設定や内部概念を先に覚えるためのソフトではありません。
-まずは **資料を確認する → 質問する → 根拠を見る** の 3 つだけで進めます。
+この branch の北極星 surface は **`/ops/agent`** です。
+現時点の operator shell は `/ops` を使いつつ、専用 cockpit を `/ops/agent` へ寄せていきます。
+`/`, `/questions`, `/evidence` は legacy/public track として repo に残しますが、この branch では **maintenance-only** として扱います。
 
-> **注意:** 本ソフトウェアは現在開発中（WIP）です。いまは Phase 1 として、通常導線を **`資料 / 質問 / 根拠`** に整理しています。運用・再生成・実験・詳細比較は **`/ops`** にあります。
+## 今の方向性
 
-## はじめての30秒
+この line で固定したい loop は次です。
 
-### まずやること
+**Goal -> Normalize -> IL Plan -> Approve -> Execute -> Evidence -> Artifact -> Next Action -> Resume**
 
-1. ローカルモデルサーバーを起動する
-2. UI を起動する
-3. ブラウザで `http://127.0.0.1:3033` を開く
-4. **資料** で、今入っている資料を確認する
-5. **質問** で、まずは短く具体的に聞く
-6. **根拠** で、答えの裏付けを確認する
+重視しているのは次の 4 点です。
 
-### 起動方法
+- deterministic state
+- typed blocked reason
+- evidence linkage
+- pause / resume
 
-#### Terminal A: ローカルモデルサーバー
+派手さより、**再実行できること** と **後から検証できること** を優先します。
+
+## まず読むもの
+
+迷ったら、次の順で読んでください。
+
+1. `AGENTS.override.md`
+2. `IL_PIVOT_PRODUCT.md`
+3. `AGENTS.md`
+4. `PRODUCT.md`
+5. `docs/ops/README.md`
+6. `docs/il/IL_CONTRACT_v1.md` と関連 contract
+
+補足:
+
+- `PRODUCT.md` は legacy/public track の定義です
+- `IL_PIVOT_PRODUCT.md` がこの branch の研究 north star です
+- `docs/ops/S*.md` は historical records であり、現在の source of truth ではありません
+
+## Quickstart
+
+### 1. モデル backend を決める
+
+OpenAI-compatible runtime を使う場合:
 
 ```bash
-./infra/run-llama-server.sh <PATH_TO_GGUF_MODEL>
+export LOCAL_MODEL_BACKEND=openai_compat
+export OPENAI_API_BASE=http://127.0.0.1:11434/v1
+export OPENAI_API_KEY=dummy
 ```
 
-#### Terminal B: UI
+`gemma-lab` を使う場合:
+
+```bash
+export LOCAL_MODEL_BACKEND=gemma_lab
+export GEMMA_MODEL_ID=google/gemma-4-E2B-it
+```
+
+必要なら次も上書きできます。
+
+- `GEMMA_LAB_ROOT`
+- `GEMMA_LAB_PYTHON`
+
+### 2. Dashboard を起動する
 
 ```bash
 cd ops/dashboard
 cp .env.example .env
-export OPENAI_API_BASE=http://127.0.0.1:11434/v1
 npm install
 npm run dev
 ```
 
-ブラウザで `http://127.0.0.1:3033` を開いてください。
+まずはブラウザで `http://127.0.0.1:3033/ops` を開いてください。
 
-最初に使う画面は 3 つだけです。
+runtime の接続確認だけ先に見たい場合は `http://127.0.0.1:3033/rag-lab` も使えます。
+専用 cockpit route が入っている checkout では `http://127.0.0.1:3033/ops/agent` を使います。
 
-1. **資料**  
-   今入っている資料を確認します。  
-   ここでは「何が参照候補に入っているか」を把握します。
+## この branch で作っているもの
 
-2. **質問**  
-   知りたいことを聞きます。  
-   まずは短く具体的な質問から始めてください。
+主に作っているのは次です。
 
-3. **根拠**  
-   答えの裏付けを確認します。  
-   どの資料のどの内容を見て答えたかを追います。
+- `/ops/agent` の goal input と recent runs
+- `/ops/agent/[id]` の plan / steps / evidence / artifacts / blocked reason / next action
+- IL compile / execute の deterministic core
+- model/backend switching を UI 意味論から分離した runtime contract
 
-答えが出ないときは失敗ではありません。  
-資料が足りないか、質問が広すぎる可能性があります。
+## いま主戦場ではないもの
 
-運用・再生成・実験・詳細比較は **Ops** にあります。  
-最初は **資料 / 質問 / 根拠** だけを使ってください。
+この branch では、次に main effort を置きません。
 
-## この製品は何をしてくれるのか
+- `/`, `/questions`, `/evidence` の public Q&A polish
+- crawler infrastructure
+- web-scale ingestion
+- flashy autonomy
+- 新しい public-facing product surface
 
-この製品の目的は、AI の内部仕組みを理解させることではありません。
+## docs の整理方針
 
-知りたいのは次の 4 つです。
+混乱を避けるため、文書は次のルールで読みます。
 
-- どの資料が入っているか
-- 質問への答えは何か
-- その答えの根拠はどこか
-- 根拠が足りないなら、どこまで分かって何が足りないのか
+- 現在の方向性: `AGENTS.override.md` と `IL_PIVOT_PRODUCT.md`
+- legacy/public track: `PRODUCT.md`
+- 実装の入口: `README.md` と `docs/ops/README.md`
+- runtime / schema: `docs/il/*`
+- historical thread docs: `docs/ops/S*.md` は archive-only
+- progress: `STATUS.md` ではなく PR body
 
-**RAG / LangChain / chunk / rerank / eval の知識を前提にしない**ことを重視します。
-
-## 通常の使い方
-
-### 1. 資料
-
-**資料** では、現在使える資料を確認します。
-
-ここで分かるべきことは、まず次の 3 つです。
-
-- 何の資料が入っているか
-- どの資料が知識ベース候補か
-- 更新が必要そうか
-
-### 2. 質問
-
-**質問** では、自然言語でそのまま聞きます。
-
-理想の体験は、次の形です。
-
-- **答え**
-- **根拠**
-- **使われた資料**
-- **分からないこと / 注意点**
-
-答えが出ないときに **「分からない」と返ることは失敗ではありません**。
-資料が足りない、または質問が広すぎる可能性があります。
-
-### 3. 根拠
-
-**根拠** では、どの資料のどの部分が答えを支えているかを確認します。
-
-ここで見たいのは、次のような情報です。
-
-- 出典ファイル名
-- 引用スニペット
-- 必要なら内部参照（例: `path#chunk-N`）
-
-**答えだけでなく、根拠まで見えること**がこの製品の中心です。
-
-## 迷ったとき
-
-### 資料が見つからない / 足りない
-
-- 取り込み対象を見直す
-- 資料を追加する
-- インデックスや更新状態を確認する
-
-### 答えが弱い / 不明になる
-
-- 質問を具体化する
-- 関連資料を増やす
-- 根拠画面で、どこまで拾えているか確認する
-
-### 内部画面に行きたくなった
-
-- 通常利用では、まず **資料 / 質問 / 根拠** の 3 面だけで進めてください
-- 運用・再生成・実験・追跡は **`/ops`** から入ってください
-
-## `/ops` は何のためにあるのか
-
-`/ops` は、開発者・運用者・検証担当向けの補助導線です。
-
-たとえば、次のような画面は通常導線の主役ではありません。
-
-- Prompt Trace
-- Fine-tune
-- AI Lab
-- Chat + RAG
-- Consensus IL
-- ML Studio
-- RAG Lab
-- LangChain Lab
-- そのほか operator / trace 系の画面
-
-これらは **不要** ではありません。
-ただし **通常ユーザーの最短導線からは外す** 方針です。
-
-## `make gate1` について
-
-`make gate1` は **検証用** です。
-
-通常の初回利用では必須にしません。
-
-まずは、次だけで始められる状態を優先します。
-
-1. UI を開く
-2. 資料を見る
-3. 質問する
-4. 根拠を見る
-
-厳格な検証や CI フローは、その後でよいです。
-
-### gate1 を使う場合
-
-`gate1` は、外部ストレージへのシンボリックリンクや検証系の前提を持ちます。通常利用よりも、開発・検証向けです。
-
-必要になったときだけ使ってください。
-
-## 開発向けの最小コマンド
-
-通常の開発導線で表に出すのは、まず次です。
+## よく使う確認コマンド
 
 ```bash
-cd ops/dashboard
-npm run check
-npm run lint
-npm run test:unit
-npm run build
+python3 -m unittest -v tests/test_il_compile.py tests/test_il_thread_runner_v2.py
+cd ops/dashboard && npm run check && npm run test:unit
 ```
 
-次は maintainer / CI 向けに残しますが、通常 README の主導線には出しません。
-
-- `npm run dev:ci`
-- `npm run cy:run`
-- `npm run test:e2e`
-- `npm run prepare`
-- `npm run check:watch`
-- `npm run test:unit:watch`
-- `npm run lint:fix`
-- `npm run format`
-- `npm run format:check`
-- `npm run preview`
-
-## 設計の考え方
-
-この repo は、次を前面に出すために育てます。
-
-- **根拠が見えること**
-- **分からないときに分からないと言えること**
-- **後から検証できること**
-
-つまり、**表は単純、裏は厳密** です。
+PR 作成や更新の前には、repo root で `ci-self up --ref "$(git branch --show-current)"` を実行します。
 
 ## ライセンス
 

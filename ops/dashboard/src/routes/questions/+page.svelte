@@ -9,6 +9,12 @@
 		type QuestionNoticeCode,
 		type QuestionsFailureKind
 	} from '$lib/questions/presenter';
+	import {
+		buildQuestionGuidance,
+		deriveQuestionExamples,
+		deriveQuestionScopeChips,
+		type QuestionSuggestion
+	} from '$lib/questions/asking';
 	import { I18N_CONTEXT_KEY, type LocaleState } from '$lib/i18n';
 	import type { ChatRunResponse, RagSourceItem } from '$lib/server/types';
 
@@ -35,9 +41,26 @@
 	let uiState = $state<QuestionUiState>('idle');
 	let result = $state<PresentedQuestionRun | null>(null);
 	let lastQuestion = $state('');
+	let selectedScopeId = $state<string | null>(null);
 
 	const enabledSources = $derived(data.sources.filter((item) => item.enabled));
 	const enabledSourceIds = $derived(enabledSources.map((item) => item.id));
+	const selectedScope = $derived(enabledSources.find((item) => item.id === selectedScopeId) ?? null);
+	const effectiveSourceIds = $derived(selectedScope ? [selectedScope.id] : enabledSourceIds);
+	const scopeChips = $derived(deriveQuestionScopeChips(enabledSources, localeState.value));
+	const exampleQuestions = $derived(
+		deriveQuestionExamples(enabledSources, localeState.value, selectedScope?.id ?? null)
+	);
+	const questionGuidance = $derived(
+		buildQuestionGuidance({
+			locale: localeState.value,
+			question: submitting ? lastQuestion : question,
+			sources: enabledSources,
+			selectedScopeId: selectedScope?.id ?? null,
+			uiState,
+			result
+		})
+	);
 	const latestUpdatedAt = $derived(data.sources[0]?.updatedAt ?? null);
 
 	function tx(ja: string, en: string): string {
@@ -91,9 +114,12 @@
 					'The answer and related documents are summarized on the same screen.'
 				);
 			case 'unknown':
-				return tx(
-					'不明は失敗ではありません。今の資料で足りない点を下に示します。',
-					'Unknown is not a failure. The missing support in the current documents is shown below.'
+				return (
+					questionGuidance.diagnosis ||
+					tx(
+						'不明は失敗ではありません。今の資料で足りない点を下に示します。',
+						'Unknown is not a failure. The missing support in the current documents is shown below.'
+					)
 				);
 			case 'backend_unavailable':
 				return tx(
@@ -310,18 +336,19 @@
 		for (const code of result?.notices || []) {
 			items.push(noticeText(code));
 		}
-		if (uiState === 'unknown') {
-			items.push(
-				tx(
-					'次は、文書名や対象範囲を質問文に入れてもう一度試してください。',
-					'Next, include the document name or scope in the question and try again.'
-				)
-			);
-		}
 		if (data.sourcesDegraded && (data.sourcesMessageJa || data.sourcesMessageEn)) {
 			items.push(tx(data.sourcesMessageJa ?? '', data.sourcesMessageEn ?? ''));
 		}
 		return Array.from(new Set(items.filter(Boolean)));
+	}
+
+	function setScope(sourceId: string | null) {
+		selectedScopeId = sourceId;
+	}
+
+	function applySuggestion(item: QuestionSuggestion) {
+		question = item.text;
+		selectedScopeId = item.sourceId;
 	}
 
 	function showResultBlocks(): boolean {
@@ -350,7 +377,7 @@
 				headers: { 'content-type': 'application/json' },
 				body: JSON.stringify({
 					message: text,
-					selectedRagIds: enabledSourceIds
+					selectedRagIds: effectiveSourceIds
 				})
 			});
 			const payload = (await res.json()) as
@@ -381,14 +408,14 @@
 			<p class="eyebrow">{tx('質問', 'Questions')}</p>
 			<h1 class="title">
 				{tx(
-					'資料に入っていることを、1回で確かめるための質問面です。',
-					'This is the question surface for checking one thing from your loaded documents.'
+					'普通の言い方で、そのまま質問できる面です。',
+					'Ask in ordinary language without adapting to the system.'
 				)}
 			</h1>
 			<p class="muted">
 				{tx(
-					'ここでは、質問して、答えと根拠候補を同じ画面で読み切ります。内部ルートへ飛ばさず、まず 1 回完走できることを優先します。',
-					'Ask a question and read the answer plus supporting document candidates on the same screen. The priority is to complete one useful pass without jumping into internal routes.'
+					'資料名を正確に覚えていなくても大丈夫です。今の資料を裏で見に行き、答えと関連資料候補を同じ画面にまとめます。',
+					'You do not need exact document names. The system will look through the current documents behind the scenes and keep the answer plus related document candidates on this page.'
 				)}
 			</p>
 
@@ -396,16 +423,59 @@
 				<label class="question-label" for="main-question-input">
 					{tx('知りたいこと', 'What do you want to know?')}
 				</label>
+				<p class="question-helper-copy">
+					{tx(
+						'まずはいつもの言い方で聞いてください。必要なら下の例や任意の範囲指定で少しだけ絞れます。',
+						'Start with your normal wording. If helpful, use the examples or the optional scope chips below to narrow it a little.'
+					)}
+				</p>
 				<textarea
 					id="main-question-input"
 					class="question-input"
 					bind:value={question}
 					rows="5"
 					placeholder={tx(
-						'例: PRODUCT.md で main path は何面に整理されている？',
-						'Example: According to PRODUCT.md, how many surfaces define the main path?'
+						'例: main path は何面に整理されている？',
+						'Example: How is the main path organized right now?'
 					)}
 				></textarea>
+				<div class="question-helper-group">
+					<p class="question-helper-label">
+						{tx('必要なら範囲を絞る', 'Optional scope')}
+					</p>
+					<p class="question-helper-copy question-helper-copy-compact">
+						{tx(
+							'指定しなくても質問できます。選ぶと、その資料を優先して裏で見に行きます。',
+							'You can ask without choosing one. If you pick one, the system will prefer that document behind the scenes.'
+						)}
+					</p>
+					<div class="chip-row">
+						{#each scopeChips as item}
+							<button
+								type="button"
+								class={`chip-btn ${selectedScope?.id === item.sourceId || (!selectedScope && item.sourceId === null) ? 'chip-btn-active' : ''}`}
+								aria-pressed={selectedScope?.id === item.sourceId || (!selectedScope && item.sourceId === null)}
+								onclick={() => setScope(item.sourceId)}>{item.label}</button
+							>
+						{/each}
+					</div>
+				</div>
+				{#if exampleQuestions.length > 0}
+					<div class="question-helper-group">
+						<p class="question-helper-label">
+							{tx('今の資料から聞きやすい例', 'Good questions for the current documents')}
+						</p>
+						<div class="chip-row">
+							{#each exampleQuestions as item}
+								<button
+									type="button"
+									class="chip-btn chip-btn-soft"
+									onclick={() => applySuggestion(item)}>{item.text}</button
+								>
+							{/each}
+						</div>
+					</div>
+				{/if}
 				<div class="question-toolbar">
 					<button type="submit" class="btn-primary" disabled={submitting}>
 						{submitting ? tx('送信中...', 'Asking...') : tx('質問する', 'Ask')}
@@ -424,8 +494,8 @@
 			<p class="eyebrow">{tx('今の資料', 'Current documents')}</p>
 			<h2 class="section-title">
 				{tx(
-					'まずは「今の知識ベースで答えられるか」を見るための準備だけを出します。',
-					'This panel only shows whether the current knowledge base is ready to answer.'
+					'今の資料でどこまで答えられそうかだけを先に確認できます。',
+					'This panel only tells you how ready the current documents are to answer.'
 				)}
 			</h2>
 			<div class="surface-meta">
@@ -445,20 +515,20 @@
 			<ul class="flat-list">
 				<li>
 					{tx(
-						'答えが出なくても失敗ではありません。資料不足か、質問が広い可能性があります。',
-						'Not getting an answer is not a failure. The documents may be missing, or the question may be too broad.'
+						'資料名が曖昧でも大丈夫です。近い資料があれば後で案内します。',
+						'Exact document names are not required. If a close current document exists, the page will guide you to it.'
 					)}
 				</li>
 				<li>
 					{tx(
-						'質問は 1 文で始めると整理しやすくなります。',
-						'Starting with a single-sentence question makes the result easier to understand.'
+						'答えが出なくても失敗ではありません。質問が広すぎるか、根拠がまだ弱い可能性があります。',
+						'Not getting an answer is not a failure. The question may still be too broad, or the support may still be too weak.'
 					)}
 				</li>
 				<li>
 					{tx(
-						'答えを使う前に、Evidence で元資料を見直してください。',
-						'Before using an answer, revisit the original documents in Evidence.'
+						'必要なら下の同じ画面で次の質問候補も出します。',
+						'When needed, the same screen will suggest a few next questions to try.'
 					)}
 				</li>
 			</ul>
@@ -531,19 +601,51 @@
 
 				<article class="surface-card result-card">
 					<p class="eyebrow">{tx('分からないこと / 注意点', 'Unknowns / Cautions')}</p>
+					{#if questionGuidance.diagnosis}
+						<p class="section-copy guidance-diagnosis">{questionGuidance.diagnosis}</p>
+					{/if}
+					{#if questionGuidance.likelyMatches.length > 0}
+						<div class="document-list guidance-match-list">
+							<p class="question-helper-label">
+								{tx('近い現在資料', 'Likely current documents')}
+							</p>
+							{#each questionGuidance.likelyMatches as item}
+								<div class="document-item">
+									<p class="result-strong">{item.name}</p>
+									<p class="path">{item.path || tx('パス未設定', 'Path not set')}</p>
+								</div>
+							{/each}
+						</div>
+					{/if}
 					{#if noteItems().length > 0}
 						<ul class="flat-list compact-list">
 							{#each noteItems() as item}
 								<li>{item}</li>
 							{/each}
 						</ul>
-					{:else}
+					{:else if !questionGuidance.diagnosis}
 						<p class="section-copy">
 							{tx(
 								'今のところ追加の注意点はありません。',
 								'There are no extra cautions right now.'
 							)}
 						</p>
+					{/if}
+					{#if questionGuidance.reaskSuggestions.length > 0}
+						<div class="question-helper-group guidance-actions">
+							<p class="question-helper-label">
+								{tx('次に試す質問', 'Try one of these next')}
+							</p>
+							<div class="chip-row">
+								{#each questionGuidance.reaskSuggestions as item}
+									<button
+										type="button"
+										class="chip-btn chip-btn-soft"
+										onclick={() => applySuggestion(item)}>{item.text}</button
+									>
+								{/each}
+							</div>
+						</div>
 					{/if}
 				</article>
 			</div>
@@ -581,6 +683,24 @@
 		color: var(--muted);
 	}
 
+	.question-helper-label {
+		font-family: 'IBM Plex Mono', monospace;
+		font-size: 0.72rem;
+		letter-spacing: 0.05em;
+		text-transform: uppercase;
+		color: var(--muted);
+	}
+
+	.question-helper-copy {
+		color: var(--muted);
+		line-height: 1.55;
+	}
+
+	.question-helper-copy-compact {
+		margin-top: 4px;
+		font-size: 0.9rem;
+	}
+
 	.question-input {
 		width: 100%;
 		min-height: 136px;
@@ -604,6 +724,38 @@
 		gap: 8px;
 		flex-wrap: wrap;
 		align-items: center;
+	}
+
+	.question-helper-group {
+		display: grid;
+		gap: 8px;
+	}
+
+	.chip-row {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+	}
+
+	.chip-btn {
+		padding: 9px 12px;
+		border-radius: 999px;
+		border: 1px solid rgba(11, 138, 164, 0.2);
+		background: rgba(255, 255, 255, 0.88);
+		color: var(--ink);
+		font-weight: 600;
+		line-height: 1.35;
+		text-align: left;
+	}
+
+	.chip-btn-active {
+		border-color: rgba(11, 138, 164, 0.45);
+		background: rgba(11, 138, 164, 0.14);
+	}
+
+	.chip-btn-soft {
+		background: rgba(236, 106, 31, 0.08);
+		border-color: rgba(236, 106, 31, 0.22);
 	}
 
 	.status-banner {
@@ -674,6 +826,19 @@
 
 	.compact-list {
 		margin-top: 0;
+	}
+
+	.guidance-diagnosis {
+		margin-top: 0;
+		color: var(--ink);
+	}
+
+	.guidance-match-list {
+		gap: 8px;
+	}
+
+	.guidance-actions {
+		padding-top: 4px;
 	}
 
 	.question-memory {
