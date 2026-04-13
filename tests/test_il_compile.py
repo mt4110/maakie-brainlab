@@ -188,6 +188,8 @@ class TestILCompile(unittest.TestCase):
         self.assertEqual(report.get("provider_requested"), "local_llm")
         self.assertEqual(report.get("provider_selected"), "local_llm")
         self.assertFalse(report.get("fallback_used"))
+        self.assertEqual(report.get("model_backend_used"), "")
+        self.assertEqual(report.get("model_backend_target"), "")
         self.assertEqual(bundle.get("raw_response_text"), "LOCAL_LLM_COMPILER: no raw response")
         codes = [e.get("code") for e in bundle.get("errors", [])]
         self.assertIn("E_MODEL", codes)

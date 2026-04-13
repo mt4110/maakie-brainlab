@@ -1042,7 +1042,7 @@ def _compile_local_llm(
                 path="/",
                 retriable=True,
             )
-        ], False, "", getattr(adapter, "backend_id", ""), ""
+        ], False, "", "", ""
 
     raw_response = backend_response.raw_text
 

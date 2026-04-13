@@ -400,7 +400,7 @@ export async function postLocalModelChat(
 	}
 
 	const apiBase = resolveOpenAiCompatApiBase(request.apiBase);
-	const apiKey = asString(request.apiKey).trim() || process.env.OPENAI_API_KEY || 'dummy';
+	const apiKey = asString(request.apiKey).trim() || envValue('OPENAI_API_KEY') || 'dummy';
 	const model = asString(request.model).trim() || resolveOpenAiModelName();
 	const response: OpenAiCompatChatResponse = await postOpenAiCompatChat({
 		apiBase,
